@@ -1,0 +1,25 @@
+From a4f37487167456673f9584bfe5050fa2223dba9a Mon Sep 17 00:00:00 2001
+From: Smita Ghosh <smitag@codeaurora.org>
+Date: Tue, 17 Jul 2012 14:52:23 -0700
+Subject: [PATCH 1/1] pimb-multicast-support-on-network
+
+---
+ config.c |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/config.c b/config.c
+index b624e83..de81631 100644
+--- a/config.c
++++ b/config.c
+@@ -191,7 +191,7 @@ void config_vifs_from_kernel(void)
+                 continue;
+             if (v->uv_flags & VIFF_POINT_TO_POINT)
+                 continue;
+-#if 0
++#if 1
+             /*
+              * TODO: to allow different interfaces belong to
+              * overlapping subnet addresses, use this version instead
+-- 
+1.7.8.3
+
