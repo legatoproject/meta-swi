@@ -1,0 +1,2572 @@
+Index: u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/reset.c
+===================================================================
+--- u-boot-2011.03.orig/arch/arm/cpu/arm926ejs/ykem/reset.c	2013-05-17 10:13:12.578217259 +0200
++++ u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/reset.c	2013-05-17 10:13:12.654217259 +0200
+@@ -26,6 +26,8 @@
+ void reset_cpu(ulong ignored)
+ {
+ 	extern void tcm_config(void);
++	printf("Closing ICC\n");
++	ykem_icc_close();
+ 
+ 	tcm_config();
+ 
+Index: u-boot-2011.03/arch/arm/lib/bootm.c
+===================================================================
+--- u-boot-2011.03.orig/arch/arm/lib/bootm.c	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/arch/arm/lib/bootm.c	2013-05-17 10:13:12.654217259 +0200
+@@ -125,6 +125,13 @@
+ 	debug ("## Transferring control to Linux (at address %08lx) ...\n",
+ 	       (ulong) kernel_entry);
+ 
++
++#ifdef	CONFIG_ARCH_YKEM
++	extern void ykem_icc_close(void);
++	printf("Closing ICC\n");
++	ykem_icc_close();
++#endif
++
+ #if defined (CONFIG_SETUP_MEMORY_TAGS) || \
+     defined (CONFIG_CMDLINE_TAG) || \
+     defined (CONFIG_INITRD_TAG) || \
+Index: u-boot-2011.03/board/ykem/Makefile
+===================================================================
+--- u-boot-2011.03.orig/board/ykem/Makefile	2013-05-17 10:13:12.586217259 +0200
++++ u-boot-2011.03/board/ykem/Makefile	2013-05-17 10:13:12.654217259 +0200
+@@ -22,7 +22,7 @@
+ 
+ LIB	= $(obj)lib$(BOARD).o
+ 
+-COBJS	:= ykem.o
++COBJS	:= ykem.o ykem_icc_ram.o ykem_icc.o ykem_icc_flash.o
+ SOBJS	:= lowlevel_init.o
+ 
+ SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
+Index: u-boot-2011.03/board/ykem/bsp_icc_sys.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/board/ykem/bsp_icc_sys.h	2013-05-17 10:13:12.654217259 +0200
+@@ -0,0 +1,160 @@
++/*
++ * arch/arm/mach-ykem/icc/bsp_icc_sys.h - YKEM SYS access through ICC structures
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ *
++ */
++
++
++/**
++ * @file bsp_icc_sys.h
++ * @brief internal IFS for the SYS channel
++ * @author gpe
++ * @version 1.0
++ * @date 2012-07-19
++ */
++
++
++/**
++ * @brief CPU definition
++ */
++typedef enum {
++	BSP_ICC_SYS_CPU_M0,
++	BSP_ICC_SYS_CPU_MST,
++	BSP_ICC_SYS_CPU_NB,
++	BSP_ICC_SYS_CPU_PADDING = 0x7fffffff
++} e_BspIccSysCpu_t;
++
++
++/**
++ * @brief command definition
++ */
++typedef enum {
++	BSP_ICC_SYS_CMD_NONE,
++	BSP_ICC_SYS_CMD_NU1,
++	BSP_ICC_SYS_CMD_NU2,
++	BSP_ICC_SYS_CMD_PMU,
++	BSP_ICC_SYS_CMD_FMS,
++	BSP_ICC_SYS_CMD_LAST,
++} e_BspIccSysCmd_t;
++
++
++/**
++ * @brief error definition
++ */
++typedef enum {
++	BSP_ICC_SYS_ERR_NONE = BSP_ICC_DPRAM_ERR_NO,
++	BSP_ICC_SYS_ERR_RESET = BSP_ICC_DPRAM_ERR_REMOTE_RESET  ///< we've reseted
++} e_BspIccSysErr_t;
++
++
++/**
++ * @brief info definition
++ */
++typedef enum {
++	BSP_ICC_SYS_INFO_NONE,
++	BSP_ICC_SYS_INFO_CLOSE			///< the dpram is closed
++} e_BspIccSysInfo_t;
++
++
++/**
++ * @brief message type definition
++ */
++typedef enum {
++	BSP_ICC_SYS_TYPE_DATA,			///< data message, #value contains the data size (in bytes)
++	BSP_ICC_SYS_TYPE_CMD,			///< command message, #value contains the command number (see #e_Cmd_t)
++	BSP_ICC_SYS_TYPE_INFO,			///< info message, #value contains the information (see #e_Info_t)
++	BSP_ICC_SYS_TYPE_ERR			///< error message, #value contains the error (see #e_Err_t)
++} e_BspIccSysType_t;
++
++
++/**
++ * @brief constant for the SYS channel
++ */
++enum {
++	BSP_ICC_SYS_HEADER_SIZE_IN_BITS = BSP_ICC_DPRAM_SYS_HEADER_SIZE * 8,
++	BSP_ICC_SYS_VALUE_SIZE_IN_BITS = 7,
++	BSP_ICC_SYS_VALUE_MSK = (1<<BSP_ICC_SYS_VALUE_SIZE_IN_BITS) - 1,
++	BSP_ICC_SYS_CMD_SIZE_IN_BITS = 2,
++	BSP_ICC_SYS_RESERVED_SIZE_IN_BITS = BSP_ICC_SYS_HEADER_SIZE_IN_BITS - BSP_ICC_SYS_CMD_SIZE_IN_BITS - BSP_ICC_SYS_VALUE_SIZE_IN_BITS
++};
++
++
++/**
++ * @brief sys header definition
++ */
++typedef struct {
++	u32 value		:BSP_ICC_SYS_VALUE_SIZE_IN_BITS;	///< value field, it depends of #type field
++	u32 reserved		:BSP_ICC_SYS_RESERVED_SIZE_IN_BITS;
++	e_BspIccSysType_t type  :BSP_ICC_SYS_CMD_SIZE_IN_BITS;	///< message type
++} __attribute__((packed)) bf_BspIccSysHeader_t;
++
++
++/**
++ * PMU command and return definition
++ */
++typedef struct {
++	u8	cmd;
++	u8	cmd_param;
++} __attribute__((packed)) s_BspIccSysCmdPmu_t; 
++
++typedef struct {
++	s8	cmd_ret;
++} __attribute__((packed)) s_BspIccSysRetCmdPmu_t; 
++
++
++/**
++ * FMS/Flash command and return definition
++ */
++typedef enum {
++	 BSP_ICC_SYS_CMD_FMS_READ_FIRSTBLOCK,
++	 BSP_ICC_SYS_CMD_FMS_ERASE,
++	 BSP_ICC_SYS_CMD_FMS_PROTECT,
++	 BSP_ICC_SYS_CMD_FMS_UNPROTECT,
++	 BSP_ICC_SYS_CMD_FMS_WRITE,
++	 BSP_ICC_SYS_CMD_FMS_WRITE_BUFFER,
++	 BSP_ICC_SYS_CMD_FMS_WRITE_VALUE,
++	 BSP_ICC_SYS_CMD_FMS_LAST = BSP_ICC_SYS_CMD_FMS_WRITE_VALUE,
++} e_BspIccSysCmdFms_t;
++
++typedef struct {
++	u8			cmd;
++	u32			address;
++	u32			len;
++	u32			src;
++} __attribute__((packed)) s_BspIccSysCmdFms_t; 
++
++typedef struct {
++	s8			ret;
++	u32			address;
++	u32			len;
++} __attribute__((packed)) s_BspIccSysRetCmdFms_t; 
++
++/**
++ * @brief SYS message definition
++ */
++typedef struct {
++	bf_BspIccSysHeader_t	header;   ///< message header
++	union {
++		u8			ab_Data[0];	///< data
++		s_BspIccSysCmdPmu_t	s_CmdPmu;
++		s_BspIccSysRetCmdPmu_t	s_RetCmdPmu;
++		s_BspIccSysCmdFms_t	s_CmdFms;
++		s_BspIccSysRetCmdFms_t	s_RetCmdFms;
++	};
++} __attribute__((packed)) s_BspIccSysMsg_t;
++
+Index: u-boot-2011.03/board/ykem/ykem.c
+===================================================================
+--- u-boot-2011.03.orig/board/ykem/ykem.c	2013-05-17 10:13:12.586217259 +0200
++++ u-boot-2011.03/board/ykem/ykem.c	2013-05-17 10:13:12.654217259 +0200
+@@ -36,6 +36,8 @@
+  */
+ 
+ #include <common.h>
++#include "ykem_icc_ram.h"
++#include "bsp_icc_sys.h"
+ #include <config.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+@@ -53,6 +55,10 @@
+ 
+ int board_init(void)
+ {
++	s_BspIccDpramSize_t asSize[BSP_ICC_DPRAM_CPU_NB] = {
++		{ 0x81000200, 64, 64, 128, 128 },
++		{ 0x20F00000, 128, 128, 4096, 4096 },
++	};
+ 	// All Master divisors set to 0
+ 	*(volatile int*)0x90010014 = 0;
+ 	*(volatile int*)0x90010070 = 0;
+@@ -65,6 +71,9 @@
+ 
+ 	*(volatile int*)0x70130014 = 0;
+ 	
++
++	ykem_icc_ram_Init( &asSize );
++
+ 	/* arch number of Versatile Board */
+ 	gd->bd->bi_arch_number = MACH_TYPE_YKEM;
+ 
+@@ -76,6 +85,8 @@
+ 
+ 	icache_enable ();
+ 	
++	ykem_icc_open();
++
+ 	return 0;
+ }
+ 
+Index: u-boot-2011.03/board/ykem/ykem_icc.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/board/ykem/ykem_icc.c	2013-05-17 11:12:59.658216829 +0200
+@@ -0,0 +1,225 @@
++/*
++ * board/ykem/ykem_icc.c - YKEM High Level ICC driver
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++
++#include <common.h>
++
++#include "ykem_icc_ram.h"
++#include "bsp_icc_sys.h"
++
++u32 ykem_handle[BSP_ICC_DPRAM_CPU_NB];
++u8 ykem_isok[BSP_ICC_DPRAM_CPU_NB] = { FALSE, FALSE, };
++s_BspIccSysMsg_t ykem_icc_sysbuf;
++u8 ykem_icc_sysrx_rdy = 0;
++
++extern int ykem_icc_debug;
++#define DEBUG_PRINTK    if( ykem_icc_debug & 0xE ) printf
++
++static void ykem_fifo_rx( u32 *handle, s_BspIccDpramFifoEvtRx_t event )
++{
++	unsigned int len = event.DataLen;
++	unsigned int flow = event.Flow;
++
++	DEBUG_PRINTK("ykem_fifo_rx: CPU/channel %u/%u, len %u\n", (handle - ykem_handle), flow, len );
++
++	ykem_icc_ram_FifoRead( *handle, NULL, &len );
++}
++
++static void ykem_fifo_ack( u32 *handle, void* ev_param /*u8 flow*/ )
++{
++	DEBUG_PRINTK("ykem_fifo_ack: Ack for CPU %u flow %d\n",
++		(handle - ykem_handle), (u8)ev_param);
++}
++
++static void ykem_sys_ack( u32 *handle, void* ev_param /*NULL*/ )
++{
++	DEBUG_PRINTK("ykem_sys_ack: Ack from CPU %d\n", (handle - ykem_handle) );
++}
++
++static void ykem_sys_ack_close( u32 *handle, void* ev_param /*NULL*/ )
++{
++	DEBUG_PRINTK("ykem_sys_ack_close: Ack from CPU %u\n", (handle - ykem_handle) );
++	ykem_isok[ (handle - ykem_handle) ] = FALSE;
++}
++
++static void ykem_sys_ack_remoteok( u32 *handle, void* ev_param /*NULL*/ )
++{
++	sGCbDesc_t evthdl = { handle, ykem_sys_ack };
++	unsigned long size;
++
++	DEBUG_PRINTK("ykem_sys_ack_remoteok: CPU %u\n", (handle - ykem_handle) );
++	ykem_isok[ (handle - ykem_handle) ] = TRUE;
++	ykem_icc_ram_SetHandler( *handle, BSP_ICC_DPRAM_NOTIF_SYSACK, &evthdl );
++	size = flash_init();
++	puts( "Flash: " );
++	print_size( size, "\n" );
++}
++
++static void ykem_sys_rx( u32 *handle, void* ev_param /*u8*/)
++{
++	e_BspIccSysType_t type = ((bf_BspIccSysHeader_t *)ev_param)->type;
++	unsigned int value = ((bf_BspIccSysHeader_t *)ev_param)->value;
++	unsigned int rdlen = (type == BSP_ICC_SYS_TYPE_DATA ? value + sizeof(bf_BspIccSysHeader_t) :
++				sizeof( s_BspIccSysMsg_t ) );
++
++	{
++	char *_str[] = { "DATA", "CMD", "INFO", "ERR", };
++	DEBUG_PRINTK("ykem_sys_rx: CPU %u, %02X, type %s len %u\n",
++			(handle - ykem_handle), *(u16*)ev_param, _str[type], value);
++	}
++	if( type == BSP_ICC_SYS_TYPE_INFO && value == BSP_ICC_SYS_INFO_CLOSE ) {
++		sGCbDesc_t evthdl = { handle, ykem_sys_ack_remoteok };
++
++		printf("CPU %u sends a Close for ICC\n", (handle - ykem_handle) );
++		ykem_icc_ram_Info( *handle, (e_BspIccDpramInfo_t)value );
++		ykem_icc_ram_SetHandler( *handle, BSP_ICC_DPRAM_NOTIF_SYSACK, &evthdl );
++		ykem_icc_ram_SysAck( *handle );
++		return;
++	}
++	else if( type == BSP_ICC_SYS_TYPE_ERR && value == BSP_ICC_SYS_ERR_RESET ) {
++		printf("CPU %u sends a Reset for ICC: remote %d\n",
++			(handle - ykem_handle), ykem_isok[(handle - ykem_handle)]);
++		ykem_icc_ram_Err( *handle, (e_BspIccDpramErr_t)BSP_ICC_DPRAM_ERR_REMOTE_RESET );
++		ykem_icc_ram_SysAck( *handle );
++		return;
++	}
++	if( CH_STATUS_NORMAL != ykem_icc_ram_SysRead( *handle, &ykem_icc_sysbuf, &rdlen ) ) {
++		DEBUG_PRINTK("ykem_icc_ram_SysRead() failed\n");
++	}
++	ykem_icc_sysrx_rdy = 1;
++	if( ykem_icc_debug & 0xE ) {
++		int i;
++		for( i = 0; i < sizeof(s_BspIccSysMsg_t); i++ )
++			DEBUG_PRINTK("%02x ", ((u8*)&ykem_icc_sysbuf)[i]);
++		DEBUG_PRINTK("\n");
++	}
++	ykem_icc_ram_SysAck( *handle );
++	return;
++}
++
++static void ykem_event_err( u32 *handle, void* ev_param )
++{
++	e_BspIccDpramErr_t err = (e_BspIccDpramErr_t)ev_param;
++
++	DEBUG_PRINTK("ykem_event_err: CPU %d err %d\n", (handle - ykem_handle), (int)ev_param);
++
++	switch( err ) {
++		case BSP_ICC_DPRAM_ERR_NO:
++			printf( "CPU %d is connected and ready\n", (handle - ykem_handle) );
++			break;
++		case BSP_ICC_DPRAM_ERR_REMOTE_RESET:
++			printf( "CPU %d has reset\n", (handle - ykem_handle) );
++			break;
++		default:
++			printf( "ykem_event_err: Unknown error %d for CPU %d\n",
++					(int)ev_param, (handle - ykem_handle) );
++			break;
++	}
++
++}
++
++void ykem_icc_send_reset()
++{
++	int icpu;
++
++	for( icpu = 0; icpu < BSP_ICC_DPRAM_CPU_NB; icpu++ ) {
++		s_BspIccSysMsg_t msg = { 
++			.header.value = BSP_ICC_SYS_ERR_RESET & BSP_ICC_SYS_VALUE_MSK,
++			.header.type  = BSP_ICC_SYS_TYPE_ERR
++		};
++    		int len = sizeof(msg);
++
++       		DEBUG_PRINTK("Send BSP_ICC_SYS_ERR_RESET to cpu %u\n", icpu);
++   		if( CH_STATUS_PENDING != ykem_icc_ram_SysWrite( ykem_handle[icpu], &msg, &len ) )
++       			DEBUG_PRINTK("Failed to send BSP_ICC_SYS_ERR_RESET\n");
++
++		ykem_icc_ram_poll();
++		udelay( 1000 );
++		ykem_icc_ram_poll();
++	}
++}
++
++
++void ykem_icc_send_close()
++{
++	int icpu;
++
++	for( icpu = 0; icpu < BSP_ICC_DPRAM_CPU_NB; icpu++ ) {
++    		s_BspIccSysMsg_t msg = {
++       			.header.value = BSP_ICC_SYS_INFO_CLOSE,
++       			.header.type  = BSP_ICC_SYS_TYPE_INFO
++    		};
++    		int len = sizeof(msg);
++       		sGCbDesc_t evthdl = { &ykem_handle[icpu], ykem_sys_ack_close };
++
++       		ykem_icc_ram_SetHandler( ykem_handle[icpu], BSP_ICC_DPRAM_NOTIF_SYSACK, &evthdl );
++       		DEBUG_PRINTK("Send BSP_ICC_SYS_INFO_CLOSE to cpu %u\n", icpu);
++   		if( CH_STATUS_PENDING != ykem_icc_ram_SysWrite( ykem_handle[icpu], &msg, &len ) )
++       			DEBUG_PRINTK("Failed to send BSP_ICC_SYS_INFO_CLOSE\n");
++
++		ykem_icc_ram_poll();
++		udelay( 1000 );
++		ykem_icc_ram_poll();
++	}
++}
++
++
++void ykem_icc_open( void )
++{
++	int icpu;
++
++	for( icpu = 0; icpu < BSP_ICC_DPRAM_CPU_NB; icpu++ ) {
++		s_BspIccDpramOpen_t asOpen = {
++			{ &ykem_handle[icpu], ykem_sys_rx, },
++			{ &ykem_handle[icpu], ykem_sys_ack_remoteok, },
++			{ &ykem_handle[icpu], ykem_fifo_rx, },
++			{ &ykem_handle[icpu], ykem_fifo_ack, },
++			{ &ykem_handle[icpu], ykem_event_err, },
++			(e_BspIccDpramCpu_t)icpu,
++		};
++		ykem_handle[icpu] = ykem_icc_ram_Open( &asOpen );
++		DEBUG_PRINTK("%d : CPU is open: Handle %08X\n", icpu, ykem_handle[icpu]);
++		ykem_icc_ram_poll();
++		udelay( 1000 );
++		ykem_icc_ram_poll();
++	}
++}
++
++void ykem_icc_close( void )
++{
++	int icpu, idelay;
++
++	ykem_icc_send_close();
++
++	for( idelay = 0; idelay < 10; idelay++ ) {
++		udelay( 1000 );
++		ykem_icc_ram_poll();
++	}
++
++	for( icpu = 0; icpu < BSP_ICC_DPRAM_CPU_NB; icpu++ ) {
++		ykem_icc_ram_Close( ykem_handle[icpu] );
++		DEBUG_PRINTK("%d : CPU is Closed: Handle %08X\n", icpu, ykem_handle[icpu]);
++	}
++}
++
+Index: u-boot-2011.03/board/ykem/ykem_icc_flash.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/board/ykem/ykem_icc_flash.c	2013-05-17 10:13:12.654217259 +0200
+@@ -0,0 +1,121 @@
++/*
++ * board/ykem/ykem_icc.c - YKEM High Level ICC driver
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++
++#include <common.h>
++
++#include "ykem_icc_ram.h"
++#include "bsp_icc_sys.h"
++
++extern const u32	ykem_handle[BSP_ICC_DPRAM_CPU_NB];
++extern const u8		ykem_isok[BSP_ICC_DPRAM_CPU_NB];
++extern s_BspIccSysMsg_t	ykem_icc_sysbuf;
++extern u8		ykem_icc_sysrx_rdy;
++
++extern int ykem_icc_debug;
++#define DEBUG_PRINTK    if( ykem_icc_debug & 0x10 ) printf
++
++static int ykem_icc_sys_flash( u8 cmd, u32 address, u32 len, u32 src, s8 *ret, u32 *ret_addr, u32 *ret_len )
++{
++	s_BspIccSysMsg_t msg = {
++		.header.type = BSP_ICC_SYS_TYPE_CMD,
++		.header.value = BSP_ICC_SYS_CMD_FMS,
++	};
++
++	int upollwait = 20000;
++	int wrlen = sizeof(msg);
++
++	msg.s_CmdFms.cmd = cmd;
++	msg.s_CmdFms.address = address;
++	msg.s_CmdFms.len = len;
++	msg.s_CmdFms.src = src;
++	ykem_icc_sysrx_rdy = 0;
++
++	DEBUG_PRINTK("ykem_icc_sys_flash: %d, %08X, %d, %08X\n", cmd, address, len, src);
++   	if( CH_STATUS_PENDING != ykem_icc_ram_SysWrite( ykem_handle[1], &msg, &wrlen ) ) {
++       		printf("Failed to send BSP_ICC_SYS_CMD_FMS\n");
++		return ERR_TIMOUT;
++	}
++
++	do {
++		ykem_icc_ram_poll();
++		udelay( 1000 );
++	} while( !ykem_icc_sysrx_rdy && --upollwait );
++	if( !upollwait ) {
++		printf("ykem_icc_sys_flash: cmd %d -->>>> TIMEDOUT (%d) rdy %d\n\n",
++			cmd, upollwait, ykem_icc_sysrx_rdy );
++		return ERR_TIMOUT;
++	}
++
++	*ret = ykem_icc_sysbuf.s_RetCmdFms.ret;
++	*ret_addr = ykem_icc_sysbuf.s_RetCmdFms.address;
++	*ret_len = ykem_icc_sysbuf.s_RetCmdFms.len;
++	ykem_icc_sysrx_rdy = 0;
++
++	DEBUG_PRINTK("ykem_icc_sys_flash CMD %d (RET): %d, %08X, %d\n", cmd, *ret, *ret_addr, *ret_len);
++	return ERR_OK;
++}
++
++int ykem_icc_flash_cmd_cfi( u32 address, u32 len, s8 *ret, u32 *ret_addr, u32 *ret_len )
++{
++	return ykem_icc_sys_flash( BSP_ICC_SYS_CMD_FMS_READ_FIRSTBLOCK,
++				address, len, 0, ret, ret_addr, ret_len );
++}
++
++int ykem_icc_flash_cmd_protect( u32 address, u32 len, s8 *ret, u32 *ret_addr, u32 *ret_len )
++{
++	return ykem_icc_sys_flash( BSP_ICC_SYS_CMD_FMS_PROTECT,
++				address, len, 0, ret, ret_addr, ret_len );
++}
++
++int ykem_icc_flash_cmd_unprotect( u32 address, u32 len, s8 *ret, u32 *ret_addr, u32 *ret_len )
++{
++	return ykem_icc_sys_flash( BSP_ICC_SYS_CMD_FMS_UNPROTECT,
++				address, len, 0, ret, ret_addr, ret_len );
++}
++
++int ykem_icc_flash_cmd_erase( u32 address, u32 len, s8 *ret, u32 *ret_addr, u32 *ret_len )
++{
++	return ykem_icc_sys_flash( BSP_ICC_SYS_CMD_FMS_ERASE,
++				address, len, 0, ret, ret_addr, ret_len );
++}
++
++int ykem_icc_flash_cmd_write( u32 address, u32 len, u32 src, s8 *ret, u32 *ret_addr, u32 *ret_len )
++{
++	return ykem_icc_sys_flash( BSP_ICC_SYS_CMD_FMS_WRITE,
++				address, len, src, ret, ret_addr, ret_len );
++}
++
++int ykem_icc_flash_cmd_write_value( u32 address, u32 len, u32 src, s8 *ret, u32 *ret_addr, u32 *ret_len )
++{
++	return ykem_icc_sys_flash( BSP_ICC_SYS_CMD_FMS_WRITE_VALUE,
++				address, len, src, ret, ret_addr, ret_len );
++}
++
++int ykem_icc_flash_cmd_write_buffer( u32 address, u32 len, u32 src, s8 *ret, u32 *ret_addr, u32 *ret_len )
++{
++	return ykem_icc_sys_flash( BSP_ICC_SYS_CMD_FMS_WRITE_BUFFER,
++				address, len, src, ret, ret_addr, ret_len );
++}
++
+Index: u-boot-2011.03/board/ykem/ykem_icc_ram.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/board/ykem/ykem_icc_ram.c	2013-05-17 11:09:08.762216857 +0200
+@@ -0,0 +1,1216 @@
++/*
++ * board/ykem/ykem_icc_ram.c - YKEM High Level ICC driver
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++
++#include <common.h>
++
++#include "ykem_icc_ram.h"
++#include "bsp_icc_sys.h"
++
++#define MBOX_BASE_ADD		0x90070010
++#define ULP_MBOX_BASE_ADD	0x90080010
++#define ULP_DPRAM_START_ADDRESS	0x81000000
++
++int ykem_icc_debug = 0x0;
++#define DEBUG_PRINTK	if( ykem_icc_debug & 0x1 ) printf
++
++/* 
++ *    CPU APP                                                    CPU TEL / Cortex M0
++ *     
++ * p_BaseAdd ->       +---------------------------------------+
++ *                    |                                       |
++ *                    |                                       |
++ *                    /                                       /
++ *                    /                                       /
++ *                    |                                       |
++ *                    | h_Offset +-----------------------+    |
++ * MBOX IRQ 0         |          |       <-----          |    |    MBOX EVENT 0
++ *                    |          |   SYS READ BUFFER     |    |
++ * MBOX EVENT 0 (ACK) |          |       ----->          |    |    MBOX IRQ 0
++ *                    |          +-----------------------+    |
++ * MBOX EVENT 1       |          |       ----->          |    |    MBOX IRQ 1
++ *                    |          |   SYS WRITE BUFFER    |    |
++ * MBOX IRQ 1         |          |       <-----          |    |    MBOX EVENT 1 (ACK)
++ *                    |          +-----------------------+    |
++ * MBOX IRQ 2         |          |       <-----          |    |    MBOX EVENT 2
++ *                    |          |   FIFO READ BUFFER    |    |
++ * MBOX EVENT 2 (ACK) |          |       ----->          |    |    MBOX IRQ 2
++ *                    |          +-----------------------+    |
++ * MBOX EVENT 3       |          |       ----->          |    |    MBOX IRQ 3
++ *                    |          |   FIFO WRITE BUFFER   |    |
++ * MBOX IRQ 3         |          |       <-----          |    |    MBOX EVENT 3 (ACK)
++ *                    |          +-----------------------+    |
++ *                    |                                       |
++ *                    |                                       |
++ *                    /                                       /
++ *                    /                                       /
++ *                    |                                       |
++ *                    +---------------------------------------+
++ */
++
++
++/*
++ * SYS BUFFER configuration
++ *     
++ * w_BaseAdd ->       +------------------------------------------+
++ *                    |               SYS HEADER                 |
++ *                    |  (BSP_ICC_DPRAM_SYS_HEADER_SIZE bytes)   |
++ *                    +------------------------------------------+
++ *                    |                                          |
++ *                    /                                          /
++ *                    /                                          /
++ *                    |                                          |
++ *                    |                  data                    |
++ *                    |                                          |
++ *                    /                                          /
++ *                    /                                          /
++ *                    |                                          |
++ *                    +------------------------------------------+
++ */
++
++
++/*
++ * Constants
++ */
++enum {
++	HANDLE_ID = 0x44505241 /* DPRA */
++};
++
++enum {
++	MBOX_FLAG_SYS_WR_OS,
++	MBOX_FLAG_SYS_RD_OS,
++	MBOX_FLAG_FIFO_WR_OS,
++	MBOX_FLAG_FIFO_RD_OS,
++	MBOX_FLAG_SYS_RD_MSK = 1 << MBOX_FLAG_SYS_RD_OS,
++	MBOX_FLAG_SYS_WR_MSK = 1 << MBOX_FLAG_SYS_WR_OS,
++	MBOX_FLAG_FIFO_RD_MSK = 1 << MBOX_FLAG_FIFO_RD_OS,
++	MBOX_FLAG_FIFO_WR_MSK = 1 << MBOX_FLAG_FIFO_WR_OS,
++	DPRAM_SYS_SIZE_MAX = 128,
++	DPRAM_FIFO_SIZE_MAX = 512,
++	MSG_HEADER_LEN_MSK = 0x7ff,
++	MSG_HEADER_FLOW_OS = 11,
++	MSG_HEADER_FLOW_MSK = 0x1f,
++};
++
++/*
++ * These strings are used to valid the communication with the remote CPUs.
++ * They must have the same length.
++ */
++#define INIT_LOCAL_APP_STRING   "DPRAM APP V1.00"
++#define INIT_REMOTE_CM0_STRING  "DPRAM CM0 V1.00"
++#define INIT_REMOTE_TEL_STRING  "DPRAM TEL V1.00"
++#define INIT_STRING_SIZE	sizeof(INIT_LOCAL_APP_STRING)
++
++/*
++ * Macros
++ */
++#define SYS_WR_ADDR(_ctx_)	((void*)(_ctx_)->s_Size.w_BaseAdd)
++#define SYS_WR_DATA_ADDR(_ctx_)	((void*)((u32)SYS_WR_ADDR(_ctx_) + BSP_ICC_DPRAM_SYS_HEADER_SIZE))
++#define SYS_RD_ADDR(_ctx_)	((void*)((_ctx_)->s_Size.w_BaseAdd + (_ctx_)->s_Size.b_SysSizeWr))
++#define SYS_RD_DATA_ADDR(_ctx_)	((void*)((u32)SYS_RD_ADDR(_ctx_) + BSP_ICC_DPRAM_SYS_HEADER_SIZE))
++#define CHECK_HANDLE(_h_)	\
++	do { \
++		if( !(_h_) || ( (_h_)->w_Id != (u32)HANDLE_ID ) ) { /* bad handle */ \
++			return CH_STATUS_HANDLE_ERR; \
++		} \
++	} while(0)
++#define MODULO(_val_, _mod_)	\
++	do { \
++		if( (_val_) >= (_mod_) ) { \
++			(_val_) -= (_mod_); \
++		} \
++	} while (0)
++
++
++/*
++ * Structures
++ */
++typedef u8	bool;
++
++typedef struct  {
++	u32	mask;
++	u32	status;
++	u32	raw_status;
++	u32	status_clear;
++} cpu_mbox_interrupt_rs;
++
++typedef struct  {
++	u32	send_flag;
++	u32	source_status;
++	u32	source_clear;
++} cpu_mbox_cpu_event_rs;
++
++typedef struct  {
++	cpu_mbox_interrupt_rs	interrupt;
++	cpu_mbox_cpu_event_rs	cpu_event;
++} cpu_mbox_rs;
++
++
++typedef struct {
++	u16			h_FillIdx;	// Next free byte
++	volatile const u16	h_PurgeIdx;	// Next free byte to read
++	u8			*pb_Buf;
++} __attribute__((packed)) s_FifoWr_t, *ps_FifoWr_t;
++
++typedef struct {
++	volatile const u16	h_FillIdx;	// Next free byte
++	u16			h_PurgeIdx;	// Next free byte to read
++	u8			*pb_Buf;
++} __attribute__((packed)) s_FifoRd_t, *ps_FifoRd_t;
++
++typedef struct {
++	u32				w_Id;
++	volatile cpu_mbox_rs *const	ps_MboxReg;
++	/* warning !!!: the event must be in the same order as e_BspIccDpramNotif_t */
++	sGCbDesc_t			s_SysEvtRx;
++	sGCbDesc_t			s_SysEvtAck;
++	sGCbDesc_t			s_FifoEvtRx;
++	sGCbDesc_t			s_FifoEvtAck;
++	sGCbDesc_t			s_EvtErr;
++	void				(*pv_Isr)( void * );
++	s_BspIccDpramSize_t		s_Size;
++	ps_FifoWr_t			ps_FifoWr;
++	ps_FifoRd_t			ps_FifoRd;
++	u8				b_CurWrFlow;
++	bool				f_RemoteOk;
++} s_DpramCtx_t, *ps_DpramCtx_t;
++
++typedef struct {
++	u16	Header;
++	u8	pb_Data[];
++} __attribute__((packed)) s_Msg_t, *ps_Msg_t;
++
++enum {
++	MSG_HEADER_SIZE = sizeof(((ps_Msg_t)0)->Header),
++	FIFO_INDEX_SIZE = sizeof(((ps_FifoWr_t)0)->h_FillIdx) + sizeof(((ps_FifoWr_t)0)->h_PurgeIdx)
++};
++
++/*
++ * Prototypes
++ */
++static void ykem_icc_ram_Isr( s_DpramCtx_t * );
++static void ykem_icc_ram_SendErr( ps_DpramCtx_t ps_Ctx, e_BspIccDpramErr_t e_Err );
++
++/*
++ * Global variables
++ */
++
++static s_DpramCtx_t ykem_icc_ram_gas_Ctx[BSP_ICC_DPRAM_CPU_NB] = {
++	[0].ps_MboxReg = (volatile cpu_mbox_rs *)ULP_MBOX_BASE_ADD,
++	[0].w_Id = 0,
++	[1].ps_MboxReg = (volatile cpu_mbox_rs *)MBOX_BASE_ADD,
++	[1].w_Id = 0,
++};
++
++/*
++ * Local functions
++ */
++
++/** 
++ * @brief Clear the event source and interrupt status
++ * 
++ * @param[in] ps_MboxReg the registers
++ * @param[in] mask the bit mask to clear
++ */
++static void ykem_icc_ram_IsrClear( volatile cpu_mbox_rs *const ps_MboxReg, u32 mask )
++{
++	ps_MboxReg->cpu_event.source_clear = mask;
++	while( ps_MboxReg->cpu_event.source_clear & mask )
++		;
++	ps_MboxReg->interrupt.status_clear = mask;
++} /* end of ykem_icc_ram_IsrClear() */
++
++
++/**
++ * @brief Check if the remote part is alive
++ *
++ * @param[in] ps_Ctx Dpram context
++ *
++ * @return true or false
++ */
++static bool ykem_icc_ram_IsRemoteOk( s_DpramCtx_t *ps_Ctx, e_BspIccDpramCpu_t e_CpuDest )
++{
++	u8 str[][INIT_STRING_SIZE] = { INIT_REMOTE_CM0_STRING, INIT_REMOTE_TEL_STRING };
++	s32 cmp_sys = memcmp( SYS_RD_DATA_ADDR(ps_Ctx), str[ e_CpuDest ], sizeof( str[ e_CpuDest ] ) );
++	s32 cmp_fifo = 0;
++	if( ps_Ctx->s_Size.h_FifoSizeWr ) {
++		cmp_fifo = memcmp( &ps_Ctx->ps_FifoRd->pb_Buf, str[ e_CpuDest ], sizeof( str[ e_CpuDest ] ) );
++	}
++	if( ykem_icc_debug ) {
++		u8 remstr[INIT_STRING_SIZE + 1];
++		memcpy(remstr, SYS_RD_DATA_ADDR(ps_Ctx), INIT_STRING_SIZE);
++		remstr[INIT_STRING_SIZE] = 0;
++		DEBUG_PRINTK("ICC REMOTE %p %s\n", SYS_RD_DATA_ADDR(ps_Ctx), remstr);
++		memcpy(remstr, &ps_Ctx->ps_FifoRd->pb_Buf, INIT_STRING_SIZE);
++		remstr[INIT_STRING_SIZE] = 0;
++		DEBUG_PRINTK("ICC REMOTE FIFO %p %s\n", &ps_Ctx->ps_FifoRd->pb_Buf, remstr);
++	}
++	return ( ( cmp_sys == 0 ) && ( cmp_fifo == 0 ) );
++} /* end of ykem_icc_ram_IsRemoteOk() */
++
++
++/**
++ * @brief Init end actions
++ *
++ * @param[in] ps_Ctx Dpram context
++ */
++void ykem_icc_ram_InitEnd( s_DpramCtx_t *ps_Ctx )
++{
++	/* remove init string and RESET CMD */
++	*(u32*)SYS_WR_ADDR(ps_Ctx) = 0;
++	ps_Ctx->f_RemoteOk = true;
++	/* inform the SU that the remote part is ready */
++	ykem_icc_ram_SendErr( ps_Ctx, BSP_ICC_DPRAM_ERR_NO );
++
++	/* enable the interrupt for fifo channel */
++	u32 mask = 0;
++	if( ps_Ctx->s_Size.h_FifoSizeWr ) {
++		mask = MBOX_FLAG_FIFO_WR_MSK;
++	}
++	if( ps_Ctx->s_Size.h_FifoSizeRd ) {
++		mask |= MBOX_FLAG_FIFO_RD_MSK;
++	}
++	ps_Ctx->ps_MboxReg->interrupt.mask |= mask;
++} /*end of ykem_icc_ram_InitEnd() */
++
++
++/**
++ * @brief Find the next message to write in the fifo
++ *
++ * @param[in] ps_Fifo fifo parameters
++ * @param[in] FifoSize fifo size
++ *
++ * @return pointer on the message
++ */
++static ps_Msg_t ykem_icc_ram_FindNextMsgToWrite( ps_FifoWr_t ps_Fifo, u32 FifoSize )
++{
++	u32 PurgeIdx = ps_Fifo->h_PurgeIdx;
++
++	/* check if there is the space to store the next header */
++	PurgeIdx = ( ( PurgeIdx + MSG_HEADER_SIZE ) > FifoSize ) ? 0 : PurgeIdx;
++
++	return (ps_Msg_t)((u8*)&ps_Fifo->pb_Buf + PurgeIdx);
++} /* end of ykem_icc_ram_FindNextMsgToWrite() */
++
++
++/**
++ * @brief Find the next message to read in the fifo
++ *
++ * @param[in] ps_Fifo fifo parameters
++ * @param[in] FifoSize fifo size
++ *
++ * @return pointer on the message
++ */
++static ps_Msg_t ykem_icc_ram_FindMsgToRead( ps_FifoRd_t ps_Fifo, u32 FifoSize )
++{
++	u32 PurgeIdx = ps_Fifo->h_PurgeIdx;
++
++	/* check if there is the space to store the next header */
++	PurgeIdx = ( ( PurgeIdx + MSG_HEADER_SIZE ) > FifoSize ) ? 0 : PurgeIdx;
++	ps_Fifo->h_PurgeIdx = PurgeIdx;
++
++	return (ps_Msg_t)((u8*)&ps_Fifo->pb_Buf + PurgeIdx);
++} /* end of ykem_icc_ram_FindMsgToRead() */
++
++
++/**
++ * @brief Interrupt routine during initialization phase
++ *
++ * @param[in] ps_Ctx Dpram context
++ */
++static void ykem_icc_ram_InitIsr( s_DpramCtx_t *ps_Ctx )
++{
++	u32 status;
++	volatile cpu_mbox_rs *const ps_MboxReg = ps_Ctx->ps_MboxReg;
++
++	DEBUG_PRINTK("ykem_icc_ram_InitIsr: status=%08X ps_Ctx=%p cpu=%d\n",
++		status, ps_Ctx, (e_BspIccDpramCpu_t)( ps_Ctx - ykem_icc_ram_gas_Ctx ));
++
++	while( ( status = ps_MboxReg->interrupt.status ) != 0 ) {
++		if( status & MBOX_FLAG_SYS_RD_MSK ) {/* data are available in SYS read buffer */
++			ykem_icc_ram_IsrClear( ps_MboxReg, MBOX_FLAG_SYS_RD_MSK );
++			e_BspIccDpramCpu_t e_CpuDest = (e_BspIccDpramCpu_t)( ps_Ctx - ykem_icc_ram_gas_Ctx ) ;
++			bool IsOk = ykem_icc_ram_IsRemoteOk( ps_Ctx, e_CpuDest );
++			if( IsOk ) {
++				DEBUG_PRINTK("Installing ykem_icc_ram_Isr IRQ handler\n");
++				ps_Ctx->pv_Isr = (void (*)(void *))ykem_icc_ram_Isr;
++				/* remove init string */
++				ps_Ctx->ps_FifoRd->pb_Buf = 0;
++				ykem_icc_ram_SysAck( (u32)ps_Ctx );
++				ykem_icc_ram_InitEnd( ps_Ctx );
++				psGCbDesc_t ps_Evt = &ps_Ctx->s_SysEvtAck;
++				if( ps_Evt )
++					ps_Evt->evt_hdl( ps_Evt->user_data, (void*)ps_Ctx->f_RemoteOk );
++			}
++		}
++		if( status & MBOX_FLAG_SYS_WR_MSK ) {/* SYS write buffer is free */
++			ykem_icc_ram_IsrClear( ps_MboxReg, MBOX_FLAG_SYS_WR_MSK );
++		}
++
++		/* FIFO buffer */
++		if( status & MBOX_FLAG_FIFO_RD_MSK ) {
++			ykem_icc_ram_IsrClear( ps_MboxReg, MBOX_FLAG_FIFO_RD_MSK );
++		}
++		if( status & MBOX_FLAG_FIFO_WR_MSK ) {
++			ykem_icc_ram_IsrClear( ps_MboxReg, MBOX_FLAG_FIFO_WR_MSK );
++		}
++	}
++} /* end of ykem_icc_ram_InitIsr */
++
++
++/** 
++ * @brief Interrupt routine
++ * 
++ * @param[in] ps_Ctx Dpram context
++ */
++static void ykem_icc_ram_Isr( s_DpramCtx_t *ps_Ctx )
++{
++	u32 status;
++	volatile cpu_mbox_rs *const ps_MboxReg = ps_Ctx->ps_MboxReg;
++
++	DEBUG_PRINTK("ykem_icc_ram_Isr: status=%08X\n", ps_MboxReg->interrupt.status);
++
++	while( ( status = ps_MboxReg->interrupt.status ) != 0 ) {
++		/* SYS buffer : must be treated before FIFO buffer */
++		if( status & MBOX_FLAG_SYS_WR_MSK ) {/* SYS write buffer is free */
++			ykem_icc_ram_IsrClear( ps_MboxReg, MBOX_FLAG_SYS_WR_MSK );
++			if( ps_MboxReg->cpu_event.send_flag & MBOX_FLAG_SYS_WR_MSK ) {
++				_ERROR((_SYS, "BSP DPRAM Isr: !!! ERROR !!! MBOX_FLAG_SYS_WR_MSK isn't cleared" ));
++			}
++			if( ps_Ctx->f_RemoteOk ){
++			}
++			else {
++				/* the remote part has read our init strings */
++				ykem_icc_ram_InitEnd( ps_Ctx );
++			}
++				psGCbDesc_t ps_Evt = &ps_Ctx->s_SysEvtAck;
++				if( ps_Evt )
++					ps_Evt->evt_hdl( (void*)ps_Evt->user_data, (void*)ps_Ctx->f_RemoteOk);
++		}
++		if( status & MBOX_FLAG_SYS_RD_MSK ) {/* data are available in SYS read buffer */
++			psGCbDesc_t ps_Evt = &ps_Ctx->s_SysEvtRx;
++			if( ps_Evt )
++				ps_Evt->evt_hdl( ps_Evt->user_data, (void*)SYS_RD_ADDR( ps_Ctx ) );
++			ykem_icc_ram_IsrClear( ps_MboxReg, MBOX_FLAG_SYS_RD_MSK );
++		}
++
++		/* FIFO buffer */
++		if( status & MBOX_FLAG_FIFO_RD_MSK ) {/* data are available in FIFO read buffer */
++			ykem_icc_ram_IsrClear( ps_MboxReg, MBOX_FLAG_FIFO_RD_MSK );
++			ps_FifoRd_t ps_Fifo = ps_Ctx->ps_FifoRd;
++			if( ps_Fifo ) {
++				ps_Msg_t ps_Msg = ykem_icc_ram_FindMsgToRead( ps_Fifo, ps_Ctx->s_Size.h_FifoSizeRd );
++				psGCbDesc_t ps_Evt = &ps_Ctx->s_FifoEvtRx;
++				if( ps_Evt->evt_hdl ) {
++					ps_Evt->evt_hdl( ps_Evt->user_data, (void *)ps_Msg->Header);
++				}
++				else { /* flush the FIFO */
++					u32 DataLen = ps_Msg->Header & MSG_HEADER_LEN_MSK;
++					ykem_icc_ram_FifoRead( (u32)ps_Ctx, NULL, &DataLen );
++				}
++			}
++		}
++		if( status & MBOX_FLAG_FIFO_WR_MSK ) {/* FIFO write buffer is free */
++			ykem_icc_ram_IsrClear( ps_MboxReg, MBOX_FLAG_FIFO_WR_MSK );
++			if( ps_MboxReg->cpu_event.send_flag & MBOX_FLAG_FIFO_WR_MSK ) {
++				_ERROR((_SYS, "BSP DPRAM Isr: !!! ERROR !!! MBOX_FLAG_FIFO_WR_MSK isn't cleared" ));
++			}
++			psGCbDesc_t ps_Evt = &ps_Ctx->s_FifoEvtAck;
++			if( ps_Evt->evt_hdl ) {
++				ps_Evt->evt_hdl( ps_Evt->user_data, (void *)ps_Ctx->b_CurWrFlow );
++			}
++			/* Are there another data in the fifo ? */
++			ps_FifoWr_t ps_Fifo = ps_Ctx->ps_FifoWr;
++			if( ps_Fifo ) {
++				u32 PurgeIdx = ps_Fifo->h_PurgeIdx;
++				if( ps_Fifo->h_FillIdx != PurgeIdx ) {
++					/* change the current flow */
++					ps_Msg_t ps_Msg = ykem_icc_ram_FindNextMsgToWrite( ps_Fifo,
++										ps_Ctx->s_Size.h_FifoSizeWr );
++					/* there are more data in the fifo => send flag to remote */
++					ps_Ctx->ps_MboxReg->cpu_event.send_flag = MBOX_FLAG_FIFO_WR_MSK;
++				}
++			}
++		}
++	}
++
++} /* end of ykem_icc_ram_Isr() */
++
++
++/**
++ * @brief Send the error to the ICC level
++ *
++ * @param[in] ps_Ctx dpram context
++ * @param[in] e_Err the error
++ */
++static void ykem_icc_ram_SendErr( ps_DpramCtx_t ps_Ctx, e_BspIccDpramErr_t e_Err )
++{
++	psGCbDesc_t ps_Evt = &ps_Ctx->s_EvtErr;
++	if( ps_Evt->evt_hdl ) {
++		ps_Evt->evt_hdl( ps_Evt->user_data, (void *)e_Err );
++	}
++} /* end of ykem_icc_ram_SendErr() */
++
++
++/**
++ * @brief write initialization values in DPRAM and send MBOX_FLAG_SYS_WR flag
++ *
++ * @param[in] ps_Ctx Dpram context
++ */
++static void ykem_icc_ram_SetInitValue( ps_DpramCtx_t ps_Ctx )
++{
++	s_BspIccSysMsg_t msg = {
++		.header.value = BSP_ICC_DPRAM_ERR_REMOTE_RESET,
++		.header.type  = BSP_ICC_SYS_TYPE_ERR
++	};
++
++	memcpy( SYS_WR_ADDR(ps_Ctx), &msg, BSP_ICC_DPRAM_SYS_HEADER_SIZE );
++	memcpy( SYS_WR_DATA_ADDR(ps_Ctx), INIT_LOCAL_APP_STRING, INIT_STRING_SIZE );
++	DEBUG_PRINTK("Initializing ICC %08X : %p %p\n",
++		ps_Ctx->s_Size.w_BaseAdd, SYS_WR_DATA_ADDR(ps_Ctx), SYS_WR_DATA_ADDR(ps_Ctx));
++	if( ps_Ctx->s_Size.h_FifoSizeWr ) {
++		memcpy( &ps_Ctx->ps_FifoWr->pb_Buf, INIT_LOCAL_APP_STRING, INIT_STRING_SIZE );
++		/* reset the fill index */
++		ps_Ctx->ps_FifoWr->h_FillIdx = 0;
++	}
++	
++	if( ps_Ctx->s_Size.h_FifoSizeRd ) {
++		/* reset the purge index */
++		ps_Ctx->ps_FifoRd->h_PurgeIdx = 0;
++	}
++
++	/* send flag to remote */
++	ps_Ctx->ps_MboxReg->cpu_event.send_flag = MBOX_FLAG_SYS_WR_MSK;
++} /* end of ykem_icc_ram_SetInitValue() */
++
++
++/**
++ * @brief set the dpram level in reset state when the remote has been reseted or at opening
++ *
++ * @param[in] ps_Ctx Dpram context
++ * @param[in] e_CpuDest cpu destination
++ */
++static void ykem_icc_ram_ResetState( ps_DpramCtx_t ps_Ctx, e_BspIccDpramCpu_t e_CpuDest  )
++{
++	/* stop transaction by setting remote status to false */
++	ps_Ctx->f_RemoteOk = false;
++
++	/* disable the fifo interrupts */
++	ps_Ctx->ps_MboxReg->interrupt.mask &= ~( MBOX_FLAG_FIFO_WR_MSK | MBOX_FLAG_FIFO_RD_MSK );
++
++	/* check if the remote is online */
++	bool IsRemoteOk = ykem_icc_ram_IsRemoteOk( ps_Ctx, e_CpuDest );
++	ps_Ctx->pv_Isr = IsRemoteOk ? (void *) ykem_icc_ram_Isr : (void *) ykem_icc_ram_InitIsr;
++
++	/* clear the interrupts */
++	u32 mask_to_clear = MBOX_FLAG_FIFO_WR_MSK | MBOX_FLAG_FIFO_RD_MSK;
++	if( IsRemoteOk ) {
++		/* we can clear the SYS interrupts because the next one will follow the ykem_icc_ram_SetInitValue() */
++		mask_to_clear |= MBOX_FLAG_SYS_WR_MSK | MBOX_FLAG_SYS_RD_MSK;
++	}
++	volatile cpu_mbox_rs *const ps_MboxReg = ps_Ctx->ps_MboxReg;
++	ykem_icc_ram_IsrClear( ps_MboxReg, mask_to_clear );
++
++	/* initialize the dpram with special value to inform the remote part that we are alive */
++	ykem_icc_ram_SetInitValue( ps_Ctx );
++
++} /* end of ykem_icc_ram_ResetState() */
++
++
++/** 
++ * @brief check the parameters for read/write functions
++ * 
++ * @param[in] w_Handle the handle
++ * @param[in] pb_Buf pointer to data
++ * @param[in,out] pw_Len data length (in bytes)
++ * 
++ * @return the check status
++ */
++static eChStatus_t ykem_icc_ram_CheckParam( u32 w_Handle, u8 *pb_Buf, u32 *pw_Len )
++{
++	if( !pb_Buf || !pw_Len ) {
++		return CH_STATUS_ERROR;
++	}
++
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++
++	CHECK_HANDLE( ps_Ctx );
++
++	return CH_STATUS_NORMAL;
++} /* end of ykem_icc_ram_CheckParam() */
++
++
++/*
++ * Public functions
++ */
++
++void ykem_icc_ram_poll( void )
++{
++	int icpu;
++
++	for( icpu = 0; icpu < BSP_ICC_DPRAM_CPU_NB; icpu++ ) {
++		if( ykem_icc_ram_gas_Ctx[icpu].w_Id && ykem_icc_ram_gas_Ctx[icpu].pv_Isr &&
++			ykem_icc_ram_gas_Ctx[icpu].ps_MboxReg->interrupt.status )
++			ykem_icc_ram_gas_Ctx[icpu].pv_Isr( &ykem_icc_ram_gas_Ctx[icpu] );
++	}
++}
++
++/** 
++ * @brief Close a handle
++ * 
++ * @param[in] w_Handle The handle to close.
++ * 
++ * @return The action status
++ * @retval CH_STATUS_HANDLE_ERR bad w_Handle value
++ * @retval CH_STATUS_NORMAL exit without error
++ */
++eChStatus_t ykem_icc_ram_Close( u32 w_Handle )
++{
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++
++	CHECK_HANDLE( ps_Ctx );
++
++	ps_Ctx->ps_MboxReg->interrupt.mask &= (MBOX_FLAG_FIFO_WR_MSK | MBOX_FLAG_SYS_RD_MSK |
++						MBOX_FLAG_FIFO_WR_MSK | MBOX_FLAG_FIFO_RD_MSK);
++	ps_Ctx->w_Id = 0;
++	ps_Ctx->s_SysEvtRx.evt_hdl = NULL;
++	ps_Ctx->s_SysEvtAck.evt_hdl = NULL;
++	ps_Ctx->s_FifoEvtRx.evt_hdl = NULL;
++	ps_Ctx->s_FifoEvtAck.evt_hdl = NULL;
++	ps_Ctx->ps_FifoWr = NULL;
++	ps_Ctx->ps_FifoRd = NULL;
++	ps_Ctx->f_RemoteOk = false;
++	ps_Ctx->s_Size.h_FifoSizeWr += FIFO_INDEX_SIZE;
++	ps_Ctx->s_Size.h_FifoSizeRd += FIFO_INDEX_SIZE;
++
++	return CH_STATUS_NORMAL;
++} /* end of ykem_icc_ram_Close() */
++
++
++/** 
++ * @brief Write in SYS part of the dpram
++ * 
++ * @param[in] w_Handle the handle
++ * @param[in] pb_Buf pointer to data
++ * @param[in,out] pw_Len data length (in bytes)
++ * 
++ * @return The action status
++ * @retval CH_STATUS_PENDING Write is running
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_SysWrite( u32 w_Handle, u8 *pb_Buf, u32 *pw_Len )
++{
++	eChStatus_t ret = ykem_icc_ram_CheckParam( w_Handle, pb_Buf, pw_Len );
++	if( ret != CH_STATUS_NORMAL ) {
++		*pw_Len = 0;
++		return ret;
++	}
++
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++
++	/* disable the sys read to avoid reset during writing */
++	ps_Ctx->ps_MboxReg->interrupt.mask &= ~MBOX_FLAG_SYS_RD_MSK;
++
++	/* check if remote is alive, must be done after disabling sys read interrupt */
++	if( !ps_Ctx->f_RemoteOk ) {
++		ret = CH_STATUS_ERROR;
++		goto end;
++	}
++
++	if( *pw_Len > ps_Ctx->s_Size.b_SysSizeWr ) {
++		*pw_Len = 0;
++		ret = CH_STATUS_ERROR;
++		goto end;
++	}
++
++	/* check if the channel is free */
++	if( ps_Ctx->ps_MboxReg->cpu_event.send_flag & MBOX_FLAG_SYS_WR_MSK ) {
++		*pw_Len = 0;
++		ret = CH_STATUS_ERROR;
++		goto end;
++	}
++
++	/* copy the data in dpram */
++	memcpy( SYS_WR_ADDR(ps_Ctx), pb_Buf, *pw_Len );
++
++	/* send flag to remote */
++	ps_Ctx->ps_MboxReg->cpu_event.send_flag = MBOX_FLAG_SYS_WR_MSK;
++
++	ret = CH_STATUS_PENDING;
++
++end:
++	/* re enable sys read interrupt */
++	ps_Ctx->ps_MboxReg->interrupt.mask |= MBOX_FLAG_SYS_RD_MSK;
++
++	return ret;
++} /* end of ykem_icc_ram_SysWrite() */
++
++
++/**
++ * @brief compute the free space in fifo write
++ *
++ * @param FifoSize fifo size
++ * @param FillIdx fill index
++ * @param PurgeIdx purge index
++ *
++ * @return the free space
++ */
++u32 ykem_icc_ram_FifoWrFreeSpace( u32 FifoSize, u32 FillIdx, u32 PurgeIdx )
++{
++	u32 free_space = FifoSize - FillIdx + PurgeIdx - 1;
++	MODULO( free_space, FifoSize );
++	return free_space;
++} /* end of ykem_icc_ram_FifoWrFreeSpace() */
++
++/**
++ * @brief get the free user space in fifo write
++ *
++ * @param[in] w_Handle the dpram handle
++ * @param[out] pw_FreeSpace the free user space
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_FifoWriteGetFree( u32 w_Handle, u32 *pw_FreeUserSpace )
++{
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++	CHECK_HANDLE( ps_Ctx );
++
++	/* disable the sys read to avoid reset during writing */
++	ps_Ctx->ps_MboxReg->interrupt.mask &= ~MBOX_FLAG_SYS_RD_MSK;
++
++	u32 FreeFifoSpace;
++	if( ps_Ctx->f_RemoteOk ) {
++		ps_FifoWr_t ps_Fifo = ps_Ctx->ps_FifoWr;
++		u32 FifoSize = ps_Ctx->s_Size.h_FifoSizeWr;
++		FreeFifoSpace = ykem_icc_ram_FifoWrFreeSpace( FifoSize, ps_Fifo->h_FillIdx, ps_Fifo->h_PurgeIdx );
++		FreeFifoSpace -= MSG_HEADER_SIZE;
++	}
++	else {
++		FreeFifoSpace = 0;
++	}
++	*pw_FreeUserSpace = FreeFifoSpace;
++
++	/* re enable sys read interrupt */
++	ps_Ctx->ps_MboxReg->interrupt.mask |= MBOX_FLAG_SYS_RD_MSK;
++
++	return CH_STATUS_NORMAL;
++} /* end of ykem_icc_ram_FifoWriteGetFree */
++
++
++/** 
++ * @brief Write in FIFO part of the dpram
++ * 
++ * @param[in] w_Handle the handle
++ * @param[in] pb_Buf pointer to data
++ * @param[in,out] pw_Len data length (in bytes)
++ * @param[in] w_Flow the destination flow 
++ * 
++ * @return The action status
++ * @retval CH_STATUS_PENDING Write is running
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_FifoWrite( u32 w_Handle, u8 *pb_Buf, u32 *pw_Len, u32 w_Flow )
++{
++	eChStatus_t ret = ykem_icc_ram_CheckParam( w_Handle, pb_Buf, pw_Len );
++	if( ret != CH_STATUS_NORMAL ) {
++		*pw_Len = 0;
++		return ret;
++	}
++
++        if( (*pw_Len & ~(MSG_HEADER_LEN_MSK)) ) {
++		*pw_Len = 0;
++		return CH_STATUS_ERROR;
++	}
++
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++
++	/* disable the fifo write interrupt because the fifo is managed by interrupt too.
++	 * disable the sys read to avoid reset during writing */
++	ps_Ctx->ps_MboxReg->interrupt.mask &= ~( MBOX_FLAG_FIFO_WR_MSK | MBOX_FLAG_SYS_RD_MSK );
++
++	/* check if remote is alive, must be done after disabling sys read interrupt */
++	if( !ps_Ctx->f_RemoteOk ) {
++		ret = CH_STATUS_ERROR;
++		goto end;
++	}
++
++	/* check free space */
++	u32 FifoSize = ps_Ctx->s_Size.h_FifoSizeWr;
++	ps_FifoWr_t ps_Fifo = ps_Ctx->ps_FifoWr;
++	u32 FillIdx = ps_Fifo->h_FillIdx;
++	u32 PurgeIdx = ps_Fifo->h_PurgeIdx;
++	u32 FreeSpace = ykem_icc_ram_FifoWrFreeSpace( FifoSize, FillIdx, PurgeIdx );
++	u32 LenToWrite = *pw_Len;
++
++	DEBUG_PRINTK("ykem_icc_ram_FifoWrite: FreeSpace=%u, LenToWrite=%u,MSG_HEADER_SIZE=%u\n",
++		FreeSpace, LenToWrite,MSG_HEADER_SIZE);
++	if( ( LenToWrite + MSG_HEADER_SIZE > FreeSpace ) || ( LenToWrite & ~MSG_HEADER_LEN_MSK ) ) {
++		*pw_Len = 0;
++		ret = CH_STATUS_ERROR;
++		goto end;
++	}
++
++	u32 WriteIdx = FillIdx;
++	/* check if there is the space to store the next header */
++	WriteIdx = ( ( WriteIdx + MSG_HEADER_SIZE ) > FifoSize ) ? 0 : WriteIdx;
++	ps_Msg_t ps_Msg = (ps_Msg_t)((u8*)&ps_Fifo->pb_Buf + WriteIdx);
++	/* write the header in dpram */
++	ps_Msg->Header = ( LenToWrite & MSG_HEADER_LEN_MSK ) | ( w_Flow << MSG_HEADER_FLOW_OS );
++	WriteIdx += MSG_HEADER_SIZE;
++	 
++	u8 *pb_Data = ps_Msg->pb_Data;
++	u16 NextFillIdx = WriteIdx + LenToWrite;
++	if( ( WriteIdx < PurgeIdx ) || ( NextFillIdx <= FifoSize ) ) { /* data can be written in one time */
++		memcpy( pb_Data, pb_Buf, LenToWrite );
++	}
++	else { /* data can't be written in one time */
++		u32 LenDataToFull = FifoSize - WriteIdx;
++		/* write data from fill index to fifo end */
++		memcpy( pb_Data, pb_Buf, LenDataToFull );
++		/* write data from fifo start to data end */
++		memcpy( &ps_Fifo->pb_Buf, pb_Buf + LenDataToFull, LenToWrite - LenDataToFull );
++	}
++
++	/* update the fill index */
++	MODULO( NextFillIdx, FifoSize );
++	ps_Fifo->h_FillIdx = NextFillIdx;
++
++	if( FillIdx == PurgeIdx ) { /* none transaction is pending => launch it */
++		/* set the current flow */
++		ps_Ctx->b_CurWrFlow = w_Flow & 0xf;
++		/* check if the channel is free */
++		if( ps_Ctx->ps_MboxReg->cpu_event.send_flag & MBOX_FLAG_FIFO_WR_MSK ) {
++			ret = CH_STATUS_ERROR;
++			goto end;
++		}
++		/* send flag to remote */
++		ps_Ctx->ps_MboxReg->cpu_event.send_flag = MBOX_FLAG_FIFO_WR_MSK;
++	}
++
++	ret = CH_STATUS_PENDING;
++
++end:
++	/* re enable the fifo write and sys read interrupt */
++	ps_Ctx->ps_MboxReg->interrupt.mask |= ( MBOX_FLAG_FIFO_WR_MSK | MBOX_FLAG_SYS_RD_MSK);
++
++	return ret;
++} /* end of ykem_icc_ram_FifoWrite() */
++
++
++/** 
++ * @brief Read in SYS part of the dpram
++ * @warning there is no ack at the end (see #ykem_icc_ram_SysAck)
++ * 
++ * @param[in] w_Handle the handle
++ * @param[out] pb_Buf pointer to data
++ * @param[in,out] pw_Len data length (in bytes)
++ * 
++ * @return The action status
++ * @retval CH_STATUS_NORMAL OK
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_SysRead( u32 w_Handle, u8 *pb_Buf, u32 *pw_Len )
++{
++	eChStatus_t ret = ykem_icc_ram_CheckParam( w_Handle, pb_Buf, pw_Len );
++	if( ret != CH_STATUS_NORMAL ) {
++		*pw_Len = 0;
++		return ret;
++	}
++
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++
++	if( *pw_Len > ps_Ctx->s_Size.b_SysSizeRd ) {
++		*pw_Len = 0;
++		return CH_STATUS_ERROR;
++	}
++
++	/* read data from dpram */
++	memcpy( pb_Buf, SYS_RD_ADDR(ps_Ctx), *pw_Len );
++
++	return CH_STATUS_NORMAL;
++} /* end of ykem_icc_ram_SysRead() */
++
++
++/**
++ * @brief Ack the SYS read buffer
++ *
++ * @param[in] w_Handle the handle
++ *
++ * @return The action status
++ * @retval CH_STATUS_NORMAL OK
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_SysAck( u32 w_Handle )
++{
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++	CHECK_HANDLE( ps_Ctx );
++
++	/* ack the read */
++	ps_Ctx->ps_MboxReg->cpu_event.send_flag = 1 << MBOX_FLAG_SYS_RD_OS;
++
++	return CH_STATUS_NORMAL;
++} /* end of ykem_icc_ram_SysAck() */
++
++//#pragma diag_suppress 546
++
++/** 
++ * @brief Read in FIFO part of the dpram
++ * 
++ * @param[in] w_Handle the handle
++ * @param[out] pb_Buf pointer to data
++ * @param[in,out] pw_Len data length (in bytes)
++ * 
++ * @return The action status
++ * @retval CH_STATUS_NORMAL OK
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_FifoRead( u32 w_Handle, u8 *pb_Buf, u32 *pw_Len )
++{
++	eChStatus_t ret = ykem_icc_ram_CheckParam( w_Handle, pb_Buf, pw_Len );
++	if( ret != CH_STATUS_NORMAL && pb_Buf ) {
++		DEBUG_PRINTK("ykem_icc_ram_FifoRead(1):ret=%d\n",ret);
++		*pw_Len = 0;
++		return ret;
++	}
++
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++
++	/* disable the sys read to avoid reset during writing */
++	ps_Ctx->ps_MboxReg->interrupt.mask &= ~MBOX_FLAG_SYS_RD_MSK;
++
++	/* check if remote is alive, must be done after disabling sys read interrupt */
++	if( !ps_Ctx->f_RemoteOk ) {
++		DEBUG_PRINTK("ykem_icc_ram_FifoRead(2):remote not ok\n");
++		ret = CH_STATUS_ERROR;
++		goto end;
++	}
++
++	if( *pw_Len > ps_Ctx->s_Size.h_FifoSizeRd ) {
++		*pw_Len = 0;
++		DEBUG_PRINTK("ykem_icc_ram_FifoRead(3):bad len %u > %u\n",*pw_Len,ps_Ctx->s_Size.h_FifoSizeRd);
++		ret = CH_STATUS_ERROR;
++		goto end;
++	}
++
++	ps_FifoRd_t ps_Fifo = ps_Ctx->ps_FifoRd;
++	u32 FifoSize = ps_Ctx->s_Size.h_FifoSizeRd;
++	u32 FillIdx = ps_Fifo->h_FillIdx;
++
++	if( ps_Fifo->h_PurgeIdx == FillIdx ) {
++		/* no data in dpram */
++		DEBUG_PRINTK("ykem_icc_ram_FifoRead(4):no data Idx %u %u\n",ps_Fifo->h_PurgeIdx,FillIdx);
++		*pw_Len = 0;
++		ret = CH_STATUS_ERROR;
++		goto end;
++	}
++
++	ps_Msg_t ps_Msg = ykem_icc_ram_FindMsgToRead( ps_Fifo, FifoSize );
++	u32 PurgeIdx = ps_Fifo->h_PurgeIdx;
++	/* read the message size */
++	u32 DataSize = ps_Msg->Header & MSG_HEADER_LEN_MSK;
++	if( *pw_Len < DataSize ) {
++		DEBUG_PRINTK("ykem_icc_ram_FifoRead(5):no room %u %u\n",*pw_Len,DataSize);
++		*pw_Len = 0;
++		ret = CH_STATUS_ERROR;
++		goto end;
++	}
++	else {
++		*pw_Len = DataSize;
++	}
++	PurgeIdx += MSG_HEADER_SIZE;
++
++	/* read data */
++	if( pb_Buf ) {
++		u8 *pb_Data = ps_Msg->pb_Data;
++		if( PurgeIdx + DataSize <= FifoSize ) {
++			/* all data can be read in on time */
++			memcpy( pb_Buf, pb_Data, DataSize );
++		}
++		else {
++			u32 LenDataToFull = FifoSize - PurgeIdx;
++			/* read data from purge index to fifo end */
++			memcpy( pb_Buf, pb_Data, LenDataToFull );
++			/* read data from fifo start to message end */
++			memcpy( pb_Buf+LenDataToFull, &ps_Fifo->pb_Buf, DataSize - LenDataToFull );
++		}
++	}
++
++	/* update the purge index */
++	PurgeIdx += DataSize;
++	MODULO( PurgeIdx, FifoSize );
++	ps_Fifo->h_PurgeIdx = PurgeIdx;
++	DEBUG_PRINTK("FifoRead %p %d Idx %d %d\n", pb_Buf, *pw_Len, ps_Fifo->h_PurgeIdx, ps_Fifo->h_FillIdx);
++	
++	/* ack the read */
++	ps_Ctx->ps_MboxReg->cpu_event.send_flag = MBOX_FLAG_FIFO_RD_MSK;
++
++	ret = CH_STATUS_NORMAL;
++
++end:
++	/* re enable sys read interrupt */
++	ps_Ctx->ps_MboxReg->interrupt.mask |= MBOX_FLAG_SYS_RD_MSK;
++
++	return ret;
++} /* end of ykem_icc_ram_FifoRead() */
++
++
++/** 
++ * @brief Opening function
++ * 
++ * @param[in] ps_Param DPRAM configuration
++ * 
++ * @return a handle to access to the DPRAM
++ * @retval 0 error
++ * @retval other a valid handle
++ */
++u32 ykem_icc_ram_Open( ps_BspIccDpramOpen_t ps_Param )
++{
++	if( !ps_Param ) {
++		DEBUG_PRINTK("ykem_icc_ram_Open : ps_Param = 0\n");
++		return 0;
++	}
++
++	ps_DpramCtx_t ps_Ctx = &ykem_icc_ram_gas_Ctx[ ps_Param->e_CpuDest ];
++
++	/* check the parameters */
++	ps_BspIccDpramSize_t ps_Size = &ps_Ctx->s_Size;
++
++	if( ( ps_Size->b_SysSizeWr == 0 ) || ( ps_Size->b_SysSizeRd == 0 ) ) {
++		DEBUG_PRINTK("ykem_icc_ram_Open(1)\n");
++		return 0;
++	}
++
++	if( ( ps_Param->s_FifoEvtRx.evt_hdl ) && ( ps_Size->h_FifoSizeRd == 0 ) ) {
++		DEBUG_PRINTK("ykem_icc_ram_Open(2)\n");
++		return 0;
++	}
++
++	if( ( ps_Param->s_FifoEvtAck.evt_hdl ) && ( ps_Size->h_FifoSizeWr == 0 ) ) {
++		DEBUG_PRINTK("ykem_icc_ram_Open(3)\n");
++		return 0;
++	}
++
++	/* critical section */
++	if( ps_Ctx->w_Id == (u32)HANDLE_ID ) { /* already used */
++		return 0;
++	}
++	ps_Ctx->w_Id = (u32)HANDLE_ID;
++	/* end critical section */
++
++	/* configure the handle */
++	ps_Ctx->s_SysEvtRx = ps_Param->s_SysEvtRx;
++	ps_Ctx->s_SysEvtAck = ps_Param->s_SysEvtAck;
++	ps_Ctx->s_EvtErr = ps_Param->s_EvtErr;
++
++	u32 FreeIdx = ps_Size->b_SysSizeWr + ps_Size->b_SysSizeRd;
++
++	if( ps_Size->h_FifoSizeWr ) {
++		ps_Ctx->ps_FifoWr = (void *)((u32)ps_Ctx->s_Size.w_BaseAdd + FreeIdx);
++		ps_Ctx->ps_FifoWr->h_FillIdx = 0;
++		ps_Ctx->s_FifoEvtAck = ps_Param->s_FifoEvtAck;
++		FreeIdx += ps_Size->h_FifoSizeWr; // + FIFO_INDEX_SIZE;
++		ps_Size->h_FifoSizeWr -= FIFO_INDEX_SIZE;
++	}
++	else {
++		ps_Ctx->s_FifoEvtAck.evt_hdl = NULL;
++	}
++
++	if( ps_Size->h_FifoSizeRd ) {
++		ps_Ctx->ps_FifoRd = (void *)((u32)ps_Ctx->s_Size.w_BaseAdd + FreeIdx);
++		ps_Ctx->ps_FifoRd->h_PurgeIdx = 0;
++		ps_Ctx->s_FifoEvtRx  = ps_Param->s_FifoEvtRx;
++		ps_Size->h_FifoSizeRd -= FIFO_INDEX_SIZE;
++	}
++	else {
++		ps_Ctx->s_FifoEvtRx.evt_hdl = NULL;
++	}
++
++	/* clear the interrupts */
++	ykem_icc_ram_IsrClear( ps_Ctx->ps_MboxReg,
++				MBOX_FLAG_SYS_WR_MSK | MBOX_FLAG_SYS_RD_MSK |
++				MBOX_FLAG_FIFO_WR_MSK | MBOX_FLAG_FIFO_RD_MSK);
++
++	ykem_icc_ram_ResetState( ps_Ctx, ps_Param->e_CpuDest );
++
++	ps_Ctx->ps_MboxReg->interrupt.mask = MBOX_FLAG_SYS_WR_MSK | MBOX_FLAG_SYS_RD_MSK;
++
++	DEBUG_PRINTK("ykem_icc_ram_Open : cpu %u, handle = %08X\n", (u32)ps_Param->e_CpuDest, (u32)ps_Ctx);
++
++	return (u32)ps_Ctx;
++} /* end of ykem_icc_ram_Open() */
++
++
++/**
++ * @brief get the dpram handle for a specified cpu
++ *
++ * @param[in] e_CpuDest the cpu which you want the handle
++ *
++ * @retval 0 error, the handle isn't initialized
++ * @retval other the handle
++ */
++u32 ykem_icc_ram_GetHandle( e_BspIccDpramCpu_t e_CpuDest )
++{
++	u32 ret = 0;
++
++	if( e_CpuDest < BSP_ICC_DPRAM_CPU_NB ) {
++		ps_DpramCtx_t ps_Handle = &ykem_icc_ram_gas_Ctx[ e_CpuDest ];
++		ret = ( ps_Handle->w_Id != 0 ) ? (u32)ps_Handle : 0;
++	}
++
++	return ret;
++} /* end of ykem_icc_ram_GetHandle() */
++
++
++/**
++ * @brief Set a notification handler
++ *
++ * @param[in] w_Handle the handle
++ * @param[in] e_Notif the notification to modify
++ * @param[in] ps_EvtNew the new handler
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_SetHandler( u32 w_Handle, e_BspIccDpramNotif_t e_Notif, psGCbDesc_t ps_EvtNew )
++{
++	if( ( e_Notif > BSP_ICC_DPRAM_NOTIF_LAST ) || ( !ps_EvtNew ) ) {
++		return CH_STATUS_ERROR;
++	}
++
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++	CHECK_HANDLE( ps_Ctx );
++	psGCbDesc_t ps_Evt = &ps_Ctx->s_SysEvtRx;
++
++	*(ps_Evt + e_Notif) = *ps_EvtNew;
++	
++	return CH_STATUS_NORMAL;
++} /* end of ykem_icc_ram_SetHandler() */
++
++
++/**
++ * @brief error management
++ *
++ * @param[in] w_Handle the handle
++ * @param[in] e_Err the error
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_Err( u32 w_Handle, e_BspIccDpramErr_t e_Err )
++{
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++	CHECK_HANDLE( ps_Ctx );
++
++	switch( e_Err ) {
++		case BSP_ICC_DPRAM_ERR_REMOTE_RESET:
++			{
++			e_BspIccDpramCpu_t e_CpuDest = (e_BspIccDpramCpu_t)( ps_Ctx - ykem_icc_ram_gas_Ctx ) ;
++			ykem_icc_ram_ResetState( ps_Ctx, e_CpuDest );
++			ykem_icc_ram_SendErr( ps_Ctx, e_Err );
++			}
++			break;
++		default:
++			/* unknown error => nothing to do */
++			_ERROR(( _SYS, "ykem_icc_ram_Err : !!! error %d is unknown", e_Err ));
++			return CH_STATUS_INVALID_CMD;
++	}
++
++	return CH_STATUS_NORMAL;
++} /* end of ykem_icc_ram_Err() */
++
++
++/**
++ * @brief info management
++ *
++ * @param[in] w_Handle the handle
++ * @param[in] e_Info the info
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_Info( u32 w_Handle, e_BspIccDpramInfo_t e_Info )
++{
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++	CHECK_HANDLE( ps_Ctx );
++
++	switch( e_Info ) {
++		case BSP_ICC_DPRAM_INFO_REMOTE_CLOSED:
++			{
++			e_BspIccDpramCpu_t e_CpuDest = (e_BspIccDpramCpu_t)( ps_Ctx - ykem_icc_ram_gas_Ctx ) ;
++			ykem_icc_ram_ResetState( ps_Ctx, e_CpuDest );
++			}
++			break;
++		default:
++			/* unknown info => nothing to do */
++			_ERROR(( _SYS, "ykem_icc_ram_Info : !!! info %d is unknown", e_Info ));
++			return CH_STATUS_INVALID_CMD;
++	}
++
++	return CH_STATUS_NORMAL;
++} /* end of ykem_icc_ram_Info() */
++
++eChStatus_t ykem_icc_ram_IsRemoteReady( u32 w_Handle )
++{
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++	CHECK_HANDLE( ps_Ctx );
++
++	e_BspIccDpramCpu_t e_CpuDest = (e_BspIccDpramCpu_t)( ps_Ctx - ykem_icc_ram_gas_Ctx ) ;
++	DEBUG_PRINTK("ykem_icc_ram_IsRemoteReady( cpu %d, IsRemoteOK = %d\n", e_CpuDest, ps_Ctx->f_RemoteOk);
++	return ps_Ctx->f_RemoteOk ? CH_STATUS_NORMAL : CH_STATUS_ERROR;
++}
++
++/**
++ * @brief DPRAM initialization after bootloader
++ *
++ * @param[in] as_Size[] the DPRAM sizes
++ */
++void ykem_icc_ram_Init( s_BspIccDpramSize_t as_Size[] )
++{
++	u32 i;
++	for( i = 0; i < BSP_ICC_DPRAM_CPU_NB; i++ ) {
++		memcpy(&ykem_icc_ram_gas_Ctx[i].s_Size, &as_Size[i], sizeof(s_BspIccDpramSize_t) );
++		DEBUG_PRINTK("ICC[%i]={ %08X, %u, %u, %u, %u }\n", i,
++			ykem_icc_ram_gas_Ctx[i].s_Size.w_BaseAdd,
++			ykem_icc_ram_gas_Ctx[i].s_Size.b_SysSizeRd,
++			ykem_icc_ram_gas_Ctx[i].s_Size.b_SysSizeWr,
++			ykem_icc_ram_gas_Ctx[i].s_Size.h_FifoSizeRd,
++			ykem_icc_ram_gas_Ctx[i].s_Size.h_FifoSizeWr);
++	}
++} /* end of ykem_icc_ram_Init() */
++
++/**
++ * @brief get the remote state
++ *
++ * @param[in] w_Handle the dpram handle
++ * @param[out] pf_RemoteOk the remote status : <code>true</code> if OK, <code>false</code> otherwise
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_GetRemoteState( u32 w_Handle, bool *pf_RemoteOk )
++{
++	ps_DpramCtx_t ps_Ctx = (ps_DpramCtx_t)w_Handle;
++	CHECK_HANDLE( ps_Ctx );
++
++	*pf_RemoteOk = ps_Ctx->f_RemoteOk;
++
++	return CH_STATUS_NORMAL;
++} /* end of ykem_icc_ram_GetRemoteState() */
++
+Index: u-boot-2011.03/board/ykem/ykem_icc_ram.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/board/ykem/ykem_icc_ram.h	2013-05-17 10:13:12.654217259 +0200
+@@ -0,0 +1,341 @@
++/*
++ * board/ykem/ykem_icc_ram.h - YKEM High Level ICC driver
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#ifndef __YKEM_ICC_RAM_H__
++#define __YKEM_ICC_RAM_H__
++
++/****************************************************************************/
++/*
++ * Standardized Operation Status
++ */
++typedef enum
++{
++	CH_STATUS_NOT_SUPPORTED	= -5L,
++	CH_STATUS_ALREADY_USED	= -4L,
++	CH_STATUS_INVALID_CMD	= -3L,
++	CH_STATUS_HANDLE_ERR	= -2L,
++	CH_STATUS_ERROR		= -1L,		// operation failed     (sync/async)
++	CH_STATUS_NORMAL	= 0,		// operation succeeded  (sync)
++	CH_STATUS_PENDING	= 0x7FFFFFFEL,	// operation is pending (async)
++	CH_STATUS_ALIGN		= 0x7FFFFFFFL
++} eChStatus_t;
++
++#define _ERROR(...)
++
++/****************************************************************************/
++/*                       BOOLEAN RELATED DEFINITIONS                        */
++/****************************************************************************/
++
++/* The bool type is a standard type in C++,
++ * note that ISO C99 has introduced a new boolean type for C, "_Bool" */
++#ifndef __cplusplus
++
++#define TRUE	1
++#define FALSE	0
++#define true	TRUE
++#define false	FALSE
++
++#endif
++
++
++/*
++ * GENERIC event notification function prototype
++ */
++typedef void ( *pGEvtNotif_t )( void* user_data, void* ev_param );
++
++
++/*
++ * GENERIC Event Handler Descriptor
++ */
++typedef struct
++{
++	void		*user_data;	/* individual user data to be given back during
++					 * notification valid only if not null
++					 */
++	pGEvtNotif_t	evt_hdl;	/* @ of the event handler to be called during
++					 * notification
++					 */
++} sGCbDesc_t, *psGCbDesc_t, **ppsGCbDesc_t;
++
++
++/**
++ * @brief general constants
++ */
++enum {
++	BSP_ICC_DPRAM_SYS_HEADER_SIZE = sizeof(unsigned short)	///< header size in the SYS buffer
++};
++
++
++/** 
++ * @brief buffers configuration in DPRAM
++ */
++typedef struct {
++	u32	w_BaseAdd;	///< base address of the DPRAM [0..n]
++	u8	b_SysSizeRd;	///< size (in bytes) for the read chunk of the system buffer [0..128]
++	u8	b_SysSizeWr;	///< size (in bytes) for the write chunk of the system buffer [0..128]
++	u16	h_FifoSizeRd;	///< size (in bytes) for the read chunk of the FIFO buffer [0..512]
++	u16	h_FifoSizeWr;	///< size (in bytes) for the write chunk of the FIFO buffer [0..512]
++} s_BspIccDpramSize_t, *ps_BspIccDpramSize_t;
++
++
++/**
++ * @brief parameter type for the #s_FifoEvtRx event
++ */
++typedef struct {
++	u16	DataLen:11;
++	u16	Flow:5;
++} __attribute__((packed)) s_BspIccDpramFifoEvtRx_t;
++
++
++/**
++ * @brief CPU definition
++ */
++typedef enum {
++	BSP_ICC_DPRAM_CPU_M0,
++	BSP_ICC_DPRAM_CPU_TEL,
++	BSP_ICC_DPRAM_CPU_NB
++} e_BspIccDpramCpu_t;
++
++
++/**
++ * @brief info definition
++ */
++typedef enum {
++	BSP_ICC_DPRAM_INFO_NO,
++	BSP_ICC_DPRAM_INFO_REMOTE_CLOSED,
++	BSP_ICC_DPRAM_INFO_PADDING = 0x7fffffff
++} e_BspIccDpramInfo_t;
++
++
++/**
++ * @brief parameter type for #s_EvtErr event
++ */
++typedef enum {
++	BSP_ICC_DPRAM_ERR_NO,
++	BSP_ICC_DPRAM_ERR_REMOTE_RESET,
++	BSP_ICC_DPRAM_ERR_PADDING = 0x7fffffff
++} e_BspIccDpramErr_t;
++
++
++/**
++ * @brief Notification types
++ */
++typedef enum {
++	BSP_ICC_DPRAM_NOTIF_SYSRX,
++	BSP_ICC_DPRAM_NOTIF_SYSACK,
++	BSP_ICC_DPRAM_NOTIF_FIFORX,
++	BSP_ICC_DPRAM_NOTIF_FIFOACK,
++	BSP_ICC_DPRAM_NOTIF_FIFOERR,
++	BSP_ICC_DPRAM_NOTIF_NB,
++	BSP_ICC_DPRAM_NOTIF_LAST = BSP_ICC_DPRAM_NOTIF_NB - 1
++} e_BspIccDpramNotif_t;
++
++/** 
++ * @brief Open parameters
++ */
++typedef struct {
++	sGCbDesc_t	s_SysEvtRx;	///< event handler to call when data have been received in SYS buffer
++		///< @note the <code>ev_param</code> of the <code>evt_hdl</code> function has the <code>u8 *</code> type and is a pointer on data
++	sGCbDesc_t	s_SysEvtAck;	///< event handler to call when an ack has been received for SYS buffer
++		///< @note the <code>ev_param</code> of the <code>evt_hdl</code> function isn't used (can be <code>NULL</code>)
++	sGCbDesc_t	s_FifoEvtRx;	///< event handler to call when data have been received in FIFO buffer
++		///< @note the <code>ev_param</code> of the <code>evt_hdl</code> function has the #s_BspIccDpramFifoEvtRx_t type
++	sGCbDesc_t	s_FifoEvtAck;	///< event handler to call when ack has been received for FIFO buffer
++		///< @note the <code>ev_param</code> of the <code>evt_hdl</code> function has the <code>u8</code> type and contains the flow identifier 
++	sGCbDesc_t	s_EvtErr;	///< event handler to call when an error has been detected in the communication
++		///< @note the <code>ev_param</code> of the <code>evt_hdl</code> function has the #e_BspIccDpramErr_t type 
++	e_BspIccDpramCpu_t	e_CpuDest;	///< CPU destination
++} s_BspIccDpramOpen_t, *ps_BspIccDpramOpen_t;
++
++/** 
++ * @brief Opening function
++ * 
++ * @param[in] ps_Param DPRAM configuration
++ * 
++ * @return a handle to access to the DPRAM
++ * @retval 0 error
++ * @retval other a valid handle
++ */
++u32 ykem_icc_ram_Open( s_BspIccDpramOpen_t *p_Param );
++
++
++/** 
++ * @brief Close a handle
++ * 
++ * @param[in] w_Handle The handle to close.
++ * 
++ * @return The action status
++ */
++eChStatus_t ykem_icc_ram_Close( u32 w_Handle );
++
++
++/** 
++ * @brief Write in SYS part of the dpram
++ * 
++ * @param[in] w_Handle the handle
++ * @param[in] pb_Buf pointer to data
++ * @param[in,out] pw_Len data length (in bytes)
++ * 
++ * @return The action status
++ * @retval CH_STATUS_PENDING Write is running
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_SysWrite( u32 w_Handle, u8 *pb_Buf, u32 *pw_Len );
++
++
++/** 
++ * @brief Read in SYS part of the dpram
++ * 
++ * @param[in] w_Handle the handle
++ * @param[out] pb_Buf pointer to data
++ * @param[in,out] pw_Len data length (in bytes)
++ * 
++ * @return The action status
++ * @retval CH_STATUS_NORMAL OK
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_SysRead( u32 w_Handle, u8 *pb_Buf, u32 *pw_Len );
++
++
++/**
++ * @brief Ack the SYS read buffer
++ *
++ * @param[in] handle the handle
++ *
++ * @return The action status
++ * @retval CH_STATUS_NORMAL OK
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_SysAck( u32 handle );
++
++
++/** 
++ * @brief Write in FIFO part of the dpram
++ * 
++ * @param[in] w_Handle the handle
++ * @param[in] pb_Buf pointer to data
++ * @param[in,out] pw_Len data length (in bytes)
++ * @param[in] w_Flow the destination flow 
++ * 
++ * @return The action status
++ * @retval CH_STATUS_PENDING Write is running
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_FifoWrite( u32 w_Handle, u8 *pb_Buf, u32 *pw_Len, u32 w_Flow );
++
++
++/** 
++ * @brief Read in FIFO part of the dpram
++ * 
++ * @param[in] w_Handle the handle
++ * @param[out] pb_Buf pointer to data
++ * @param[in,out] pw_Len data length (in bytes)
++ * 
++ * @return The action status
++ * @retval CH_STATUS_NORMAL OK
++ * @retval other an error is occurred
++ */
++eChStatus_t ykem_icc_ram_FifoRead( u32 w_Handle, u8 *pb_Buf, u32 *pw_Len );
++
++
++/**
++ * @brief get the free user space in fifo write
++ *
++ * @param[in] w_Handle the dpram handle
++ * @param[out] pw_FreeSpace the free user space
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_FifoWriteGetFree( u32 w_Handle, u32 *pw_FreeSpace );
++
++
++/**
++ * @brief get the dpram handle for a specified cpu
++ *
++ * @param[in] e_CpuDest the cpu which you want the handle
++ *
++ * @retval 0 error, the handle isn't initialized
++ * @retval other the handle
++ */
++u32 ykem_icc_ram_GetHandle( e_BspIccDpramCpu_t e_CpuDest );
++
++
++/**
++ * @brief get the remote state
++ *
++ * @param[in] w_Handle the dpram handle
++ * @param[out] pf_RemoteOk the remote status : <code>true</code> if OK, <code>false</code> otherwise
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_GetRemoteState( u32 w_Handle, u8 *pf_RemoteOk );
++
++
++/**
++ * @brief Set a notification handler
++ *
++ * @param[in] w_Handle the handle
++ * @param[in] e_Notif the notification to modify
++ * @param[in] ps_EvtNew the new handler
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_SetHandler( u32 w_Handle, e_BspIccDpramNotif_t e_Notif, psGCbDesc_t ps_EvtNew );
++
++
++/**
++ * @brief error management
++ *
++ * @param[in] w_Handle the handle
++ * @param[in] e_Err the error
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_Err( u32 w_Handle, e_BspIccDpramErr_t e_Err );
++
++
++/**
++ * @brief info management
++ *
++ * @param[in] w_Handle the handle
++ * @param[in] e_Info the info
++ *
++ * @return the action status
++ */
++eChStatus_t ykem_icc_ram_Info( u32 w_Handle, e_BspIccDpramInfo_t e_Info );
++
++
++eChStatus_t ykem_icc_ram_IsRemoteReady( u32 w_Handle );
++
++
++/**
++ * @brief DPRAM initialization after bootloader
++ *
++ * @param[in] as_Size[] the DPRAM sizes
++ */
++void ykem_icc_ram_Init( s_BspIccDpramSize_t as_Size[] );
++
++
++#endif // __YKEM_ICC_RAM_H__
++
+Index: u-boot-2011.03/common/cmd_boot.c
+===================================================================
+--- u-boot-2011.03.orig/common/cmd_boot.c	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/common/cmd_boot.c	2013-05-17 10:13:12.654217259 +0200
+@@ -51,7 +51,21 @@
+ 	 * pass address parameter as argv[0] (aka command name),
+ 	 * and all remaining args
+ 	 */
++
++#ifdef CONFIG_ARCH_YKEM
++	extern void ykem_icc_close(void);
++	printf("Closing ICC\n");
++	ykem_icc_close();
++#endif
++
+ 	rc = do_go_exec ((void *)addr, argc - 1, argv + 1);
++
++#ifdef CONFIG_ARCH_YKEM
++	extern void ykem_icc_open(void);
++	printf("Opening ICC\n");
++	ykem_icc_open();
++#endif
++
+ 	if (rc != 0) rcode = 1;
+ 
+ 	printf ("## Application terminated, rc = 0x%lX\n", rc);
+Index: u-boot-2011.03/drivers/mtd/cfi_flash.c
+===================================================================
+--- u-boot-2011.03.orig/drivers/mtd/cfi_flash.c	2013-05-17 10:13:12.590217259 +0200
++++ u-boot-2011.03/drivers/mtd/cfi_flash.c	2013-05-17 10:45:55.482217023 +0200
+@@ -78,6 +78,31 @@
+ #define CONFIG_SYS_FLASH_CFI_WIDTH	FLASH_CFI_8BIT
+ #endif
+ 
++#ifdef CONFIG_ARCH_YKEM
++
++extern int ykem_icc_flash_cmd_cfi( u32, u32, s8 *, u32 *, u32 * );
++extern int ykem_icc_flash_cmd_protect( u32, u32, s8 *, u32 *, u32 * );
++extern int ykem_icc_flash_cmd_unprotect( u32, u32, s8 *, u32 *, u32 * );
++extern int ykem_icc_flash_cmd_erase( u32, u32, s8 *, u32 *, u32 * );
++extern int ykem_icc_flash_cmd_write( u32, u32, u32 , s8 *, u32 *, u32 * );
++extern int ykem_icc_flash_cmd_write_value( u32, u32, u32 , s8 *, u32 *, u32 * );
++#ifdef CFG_FLASH_USE_BUFFER_WRITE
++extern int ykem_icc_flash_cmd_write_buffer( u32, u32, u32 , s8 *, u32 *, u32 * );
++#endif
++
++struct {
++	uchar	cmd;
++	int	(*icccmd)( u32, u32, s8*, u32*, u32* );
++} flash_cmd_to_icc[] = {
++	{ FLASH_CMD_CFI,		ykem_icc_flash_cmd_cfi, },
++	{ FLASH_CMD_PROTECT_SET,	ykem_icc_flash_cmd_protect, },
++	{ FLASH_CMD_PROTECT_CLEAR,	ykem_icc_flash_cmd_unprotect, },
++	{ FLASH_CMD_BLOCK_ERASE,	ykem_icc_flash_cmd_erase, },
++};
++static s8 ykem_icc_last_ret = -1;
++#endif
++
++
+ /*
+  * 0xffff is an undefined value for the configuration register. When
+  * this value is returned, the configuration register shall not be
+@@ -114,6 +139,7 @@
+ unsigned long cfi_flash_bank_size(int i)
+ 	__attribute__((weak, alias("__cfi_flash_bank_size")));
+ 
++#ifndef CONFIG_ARCH_YKEM
+ static void __flash_write8(u8 value, void *addr)
+ {
+ 	__raw_writeb(value, addr);
+@@ -134,6 +160,7 @@
+ 	/* No architectures currently implement __raw_writeq() */
+ 	*(volatile u64 *)addr = value;
+ }
++#endif
+ 
+ static u8 __flash_read8(void *addr)
+ {
+@@ -211,7 +238,10 @@
+ {
+ 	unsigned int byte_offset = offset * info->portwidth;
+ 
+-	return (void *)(info->start[sect] + byte_offset);
++	if( info->cmd_cfi == 0x98 )
++		return (void *)((uchar*)info->first_block + byte_offset);
++	else
++		return (void *)(info->start[sect] + byte_offset);
+ }
+ 
+ static inline void flash_unmap(flash_info_t *info, flash_sect_t sect,
+@@ -364,24 +394,31 @@
+ 	cfiword_t cword;
+ 
+ 	addr = flash_map (info, sect, offset);
++	
+ 	flash_make_cmd (info, cmd, &cword);
+ 	switch (info->portwidth) {
+ 	case FLASH_CFI_8BIT:
+ 		debug ("fwc addr %p cmd %x %x 8bit x %d bit\n", addr, cmd,
+ 		       cword.c, info->chipwidth << CFI_FLASH_SHIFT_WIDTH);
++#ifndef CONFIG_ARCH_YKEM
+ 		flash_write8(cword.c, addr);
++#endif		
+ 		break;
+ 	case FLASH_CFI_16BIT:
+ 		debug ("fwc addr %p cmd %x %4.4x 16bit x %d bit\n", addr,
+ 		       cmd, cword.w,
+ 		       info->chipwidth << CFI_FLASH_SHIFT_WIDTH);
++#ifndef CONFIG_ARCH_YKEM		       
+ 		flash_write16(cword.w, addr);
++#endif		
+ 		break;
+ 	case FLASH_CFI_32BIT:
+ 		debug ("fwc addr %p cmd %x %8.8lx 32bit x %d bit\n", addr,
+ 		       cmd, cword.l,
+ 		       info->chipwidth << CFI_FLASH_SHIFT_WIDTH);
++#ifndef CONFIG_ARCH_YKEM		       
+ 		flash_write32(cword.l, addr);
++#endif		
+ 		break;
+ 	case FLASH_CFI_64BIT:
+ #ifdef DEBUG
+@@ -395,14 +432,38 @@
+ 			       info->chipwidth << CFI_FLASH_SHIFT_WIDTH);
+ 		}
+ #endif
++#ifndef CONFIG_ARCH_YKEM
+ 		flash_write64(cword.ll, addr);
++#endif		
+ 		break;
+ 	}
+-
++#ifndef CONFIG_ARCH_YKEM
+ 	/* Ensure all the instructions are fully finished */
+ 	sync();
+-
+ 	flash_unmap(info, sect, offset, addr);
++#else
++	if( cmd == 0xff ) {
++		info->cmd_cfi = 0xFF;
++	}
++	else {
++		int i;
++        u32 ret_addr, ret_len;
++        
++		debug( "ICC >> ykem addr %p cmd %x\n", addr, cmd );
++		for( i = 0; i < sizeof(flash_cmd_to_icc)/sizeof(flash_cmd_to_icc[0]); i++ )
++			if( flash_cmd_to_icc[i].cmd == cmd ) {
++				if( ERR_TIMOUT == flash_cmd_to_icc[i].icccmd( (u32)addr, 0,
++									&ykem_icc_last_ret, &ret_addr, &ret_len ) )
++					break;
++				if( (ykem_icc_last_ret == 0) && (cmd == FLASH_CMD_CFI) ) {
++					info->first_block = (ushort *) ret_addr;
++					info->cmd_cfi = cmd;
++				}
++				break;
++			}
++		return;
++	}
++#endif
+ }
+ 
+ static void flash_unlock_seq (flash_info_t * info, flash_sect_t sect)
+@@ -601,6 +662,9 @@
+ {
+ 	int retcode;
+ 
++#ifdef CONFIG_ARCH_YKEM
++	retcode = ykem_icc_last_ret;
++#else
+ 	retcode = flash_status_check (info, sector, tout, prompt);
+ 	switch (info->vendor) {
+ 	case CFI_CMDSET_INTEL_PROG_REGIONS:
+@@ -635,6 +699,7 @@
+ 	default:
+ 		break;
+ 	}
++#endif	
+ 	return retcode;
+ }
+ 
+@@ -777,8 +842,10 @@
+ {
+ 	void *dstaddr = (void *)dest;
+ 	int flag;
++#ifndef CONFIG_ARCH_YKEM
+ 	flash_sect_t sect = 0;
+ 	char sect_found = 0;
++#endif
+ 
+ 	/* Check if Flash is (sufficiently) erased */
+ 	switch (info->portwidth) {
+@@ -801,6 +868,36 @@
+ 	if (!flag)
+ 		return ERR_NOT_ERASED;
+ 
++#ifdef CONFIG_ARCH_YKEM
++	{
++		s8 ret;
++		int retcode=0;
++		u32 ret_addr, ret_len;
++
++		switch (info->portwidth) {
++		case FLASH_CFI_8BIT:
++			debug ("ICC >> fwc addr %p %x\n", (flash_read8(dstaddr) & cword.c), cword.c);
++			retcode = ykem_icc_flash_cmd_write_value( (flash_read8(dstaddr) & cword.c), 1, cword.c, &ret, &ret_addr, &ret_len );
++			break;
++		case FLASH_CFI_16BIT:
++			debug ("ICC >> fwc addr %p %4.4x\n", (flash_read16(dstaddr) & cword.w), cword.w);
++			retcode = ykem_icc_flash_cmd_write_value( (flash_read16(dstaddr) & cword.w), 2, cword.w, &ret, &ret_addr, &ret_len );
++			break;
++		case FLASH_CFI_32BIT:
++			debug ("ICC >> fwc addr %p %8.8lx\n", (flash_read32(dstaddr) & cword.l), cword.l);
++			retcode = ykem_icc_flash_cmd_write_value( (flash_read32(dstaddr) & cword.l), 4, cword.l, &ret, &ret_addr, &ret_len );
++			break;
++		case FLASH_CFI_64BIT:
++			break;
++		}
++		if( retcode == ERR_TIMOUT )
++			return retcode;
++		debug("flash_write_cfiword: RET = %d\n", ykem_icc_last_ret);
++		if( (ykem_icc_last_ret == 0) )
++			return ERR_OK;
++		return ERR_INVAL;
++	}
++#else
+ 	/* Disable interrupts which might cause a timeout here */
+ 	flag = disable_interrupts ();
+ 
+@@ -856,6 +953,7 @@
+ 	else
+ 		return flash_full_status_check(info, sect,
+ 					       info->write_tout, "write");
++#endif					       
+ }
+ 
+ #ifdef CONFIG_SYS_FLASH_USE_BUFFER_WRITE
+@@ -863,16 +961,21 @@
+ static int flash_write_cfibuffer (flash_info_t * info, ulong dest, uchar * cp,
+ 				  int len)
+ {
+-	flash_sect_t sector;
+ 	int cnt;
+ 	int retcode;
+ 	void *src = cp;
+ 	void *dst = (void *)dest;
++	unsigned int shift;
++#ifndef CONFIG_ARCH_YKEM
++	flash_sect_t sector;
+ 	void *dst2 = dst;
+ 	int flag = 1;
+ 	uint offset = 0;
+-	unsigned int shift;
+ 	uchar write_cmd;
++#else
++	s8 ret;
++	u32 ret_addr, ret_len;
++#endif	
+ 
+ 	switch (info->portwidth) {
+ 	case FLASH_CFI_8BIT:
+@@ -894,6 +997,16 @@
+ 
+ 	cnt = len >> shift;
+ 
++#ifdef CONFIG_ARCH_YKEM
++		debug ("ICC >> fwc addr %p -> %p cnt %d\n", src, dst, cnt);
++		retcode = ykem_icc_flash_cmd_write_buffer( dst, cnt, src, &ret, &ret_addr, &ret_len );
++		if( retcode == ERR_TIMOUT )
++			return retcode;
++		debug("flash_write_cfibuffer: RET = %d\n", ykem_icc_last_ret);
++		if ( ykem_icc_last_ret == 0)
++			return ERR_OK;
++		return ERR_INVAL;
++#else
+ 	while ((cnt-- > 0) && (flag == 1)) {
+ 		switch (info->portwidth) {
+ 		case FLASH_CFI_8BIT:
+@@ -1033,6 +1146,7 @@
+ 		retcode = ERR_INVAL;
+ 		break;
+ 	}
++#endif
+ 
+ out_unmap:
+ 	return retcode;
+@@ -2127,6 +2241,13 @@
+ 	getenv_f("unlock", s, sizeof(s));
+ #endif
+ 
++#ifdef CONFIG_ARCH_YKEM
++	if( flash_info[0].first_block ) {
++		debug("ICC >>> Flash already detected\n");
++		return flash_info[0].size;
++	}
++#endif
++
+ 	/* Init: no FLASHes known */
+ 	for (i = 0; i < CONFIG_SYS_MAX_FLASH_BANKS; ++i) {
+ 		flash_info[i].flash_id = FLASH_UNKNOWN;
+Index: u-boot-2011.03/drivers/serial/ns16550.c
+===================================================================
+--- u-boot-2011.03.orig/drivers/serial/ns16550.c	2013-05-17 10:13:12.590217259 +0200
++++ u-boot-2011.03/drivers/serial/ns16550.c	2013-05-17 10:13:12.658217259 +0200
+@@ -140,6 +140,11 @@
+ 		extern void usbtty_poll(void);
+ 		usbtty_poll();
+ #endif
++#ifdef CONFIG_ARCH_YKEM
++		extern void ykem_icc_ram_poll(void);
++		ykem_icc_ram_poll();
++#endif
++
+ 		WATCHDOG_RESET();
+ 	}
+ #ifdef CONFIG_ARCH_YKEM
+Index: u-boot-2011.03/include/configs/ykem.h
+===================================================================
+--- u-boot-2011.03.orig/include/configs/ykem.h	2013-05-17 10:13:12.590217259 +0200
++++ u-boot-2011.03/include/configs/ykem.h	2013-05-17 10:13:12.658217259 +0200
+@@ -31,11 +31,11 @@
+ #define CONFIG_YKEM		1	/* in Versatile Platform Board	*/
+ #define CONFIG_INTEGRATOR	1	/* Specific ASIC interrupt and timer */
+ 
+-#define CONFIG_SYS_MEMTEST_START       0x20000000
++#define CONFIG_SYS_MEMTEST_START       0x21000000
+ #define CONFIG_SYS_MEMTEST_END         0x23DFFFFF
+ #define CONFIG_SYS_HZ					1000
+ #define CONFIG_SYS_HZ_CLOCK            (26000000)       /* Timer 1 is clocked at 26Mhz */
+-#define CONFIG_SYS_TIMERBASE           0x90030020	/* GTB1 base */
++#define CONFIG_SYS_TIMERBASE           0x90040020	/* GTB2 base */
+ 
+ /*#define CONFIG_SHOW_BOOT_PROGRESS	1 */
+ #define CONFIG_CMDLINE_TAG		1	/* enable passing of ATAGs  */
+@@ -81,7 +81,7 @@
+ #define CONFIG_BOOTP_MASK	CONFIG_BOOTP_DEFAULT
+ 
+ #define CONFIG_BOOTDELAY	100
+-#define CONFIG_BOOTARGS "mem=64M earlyprintk=serial,ttyS0 console=ttyS0 debug"
++#define CONFIG_BOOTARGS "mem=48M earlyprintk=serial,ttyS0 console=ttyS0 debug"
+ #define CONFIG_BOOTCOMMAND ""
+ 
+ /*
+@@ -123,8 +123,8 @@
+  * Physical Memory Map
+  */
+ #define CONFIG_NR_DRAM_BANKS    1	/* we have 1 bank of DRAM */
+-#define PHYS_SDRAM_1            0x20000000	/* SDRAM Bank #1 */
+-#define PHYS_SDRAM_1_SIZE       0x04000000	/* 64 MB */
++#define PHYS_SDRAM_1            0x21000000	/* SDRAM Bank #1 */
++#define PHYS_SDRAM_1_SIZE       0x03000000	/* 64 MB */
+ 
+ #define CONFIG_SYS_SDRAM_BASE	PHYS_SDRAM_1
+ #define CONFIG_SYS_SDRAM_SIZE	PHYS_SDRAM_1_SIZE
+@@ -140,10 +140,10 @@
+ #define CONFIG_FLASH_CFI_DRIVER	1	/* Use drivers/mtd/cfi_flash.c */
+ #define CONFIG_SYS_FLASH_PROTECTION
+ #define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
+-#define CONFIG_SYS_FLASH_BASE       0x40000000
+-#define CONFIG_SYS_FLASH_SIZE		0x02000000	/* 16MB */
+ #define CONFIG_SYS_MAX_FLASH_BANKS	1		/* max number of memory banks */
+ #define CONFIG_SYS_MAX_FLASH_SECT	(259)
++#define CONFIG_SYS_FLASH_BASE       0x40000000
++#define CONFIG_SYS_FLASH_SIZE		0x02000000	/* 32MB */
+ 
+ #define CONFIG_ENV_OVERWRITE	1
+ #define CONFIG_ENV_IS_IN_FLASH     1               /* env in flash instead of CONFIG_ENV_IS_NOWHERE */
+Index: u-boot-2011.03/include/flash.h
+===================================================================
+--- u-boot-2011.03.orig/include/flash.h	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/include/flash.h	2013-05-17 10:13:12.658217259 +0200
+@@ -56,6 +56,12 @@
+ 	ulong   addr_unlock2;		/* unlock address 2 for AMD flash roms  */
+ 	const char *name;		/* human-readable name	                */
+ #endif
++#ifdef CONFIG_ARCH_YKEM
++	// YKEM
++	ushort	*first_block;
++	uchar	cmd_cfi;
++#endif
++
+ } flash_info_t;
+ 
+ extern flash_info_t flash_info[]; /* info for FLASH chips	*/
+Index: u-boot-2011.03/arch/arm/lib/board.c
+===================================================================
+--- u-boot-2011.03.orig/arch/arm/lib/board.c	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/arch/arm/lib/board.c	2013-05-17 10:13:12.658217259 +0200
+@@ -480,7 +480,7 @@
+ 	malloc_start = dest_addr - TOTAL_MALLOC_LEN;
+ 	mem_malloc_init (malloc_start, TOTAL_MALLOC_LEN);
+ 
+-#if !defined(CONFIG_SYS_NO_FLASH)
++#if !defined(CONFIG_SYS_NO_FLASH) && !defined(CONFIG_ARCH_YKEM)
+ 	puts ("Flash: ");
+ 
+ 	if ((flash_size = flash_init ()) > 0) {

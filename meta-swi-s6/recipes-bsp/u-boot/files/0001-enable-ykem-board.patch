@@ -1,0 +1,2068 @@
+From e67a54047eac57b088d96cc86b1456680f0ddef3 Mon Sep 17 00:00:00 2001
+From: Herve Patriarche <herve.patriarche@windriver.com>
+Date: Wed, 13 Mar 2013 15:28:29 +0100
+Subject: [PATCH] enable ykem board
+
+---
+ Makefile                               |    7 +
+ arch/arm/cpu/arm926ejs/ykem/Makefile   |   49 +++
+ arch/arm/cpu/arm926ejs/ykem/reset.c    |   54 ++++
+ arch/arm/cpu/arm926ejs/ykem/tcm.S      |   46 +++
+ arch/arm/cpu/arm926ejs/ykem/timer.c    |  178 ++++++++++
+ arch/arm/cpu/arm926ejs/ykem/ulc_uart.c |  137 ++++++++
+ arch/arm/include/asm/mach-types.h      |   14 +-
+ board/ykem/Makefile                    |   48 +++
+ board/ykem/config.mk                   |    7 +
+ board/ykem/lowlevel_init.S             |  160 +++++++++
+ board/ykem/split_by_variant.sh         |   31 ++
+ board/ykem/u-boot.lds                  |   51 +++
+ board/ykem/ykem.c                      |  122 +++++++
+ boards.cfg                             |    1 +
+ common/serial.c                        |    2 +-
+ drivers/net/Makefile                   |    1 +
+ drivers/net/ax88796c.c                 |  558 ++++++++++++++++++++++++++++++++
+ drivers/net/ax88796c.h                 |  215 ++++++++++++
+ drivers/serial/ns16550.c               |   52 ++-
+ include/configs/ykem.h                 |  167 ++++++++++
+ include/ns16550.h                      |   15 +
+ include/serial.h                       |    2 +-
+ net/eth.c                              |    3 +
+ 23 files changed, 1885 insertions(+), 35 deletions(-)
+ create mode 100644 arch/arm/cpu/arm926ejs/ykem/Makefile
+ create mode 100644 arch/arm/cpu/arm926ejs/ykem/reset.c
+ create mode 100644 arch/arm/cpu/arm926ejs/ykem/tcm.S
+ create mode 100644 arch/arm/cpu/arm926ejs/ykem/timer.c
+ create mode 100644 arch/arm/cpu/arm926ejs/ykem/ulc_uart.c
+ create mode 100644 board/ykem/Makefile
+ create mode 100644 board/ykem/config.mk
+ create mode 100644 board/ykem/lowlevel_init.S
+ create mode 100755 board/ykem/split_by_variant.sh
+ create mode 100644 board/ykem/u-boot.lds
+ create mode 100644 board/ykem/ykem.c
+ create mode 100644 drivers/net/ax88796c.c
+ create mode 100644 drivers/net/ax88796c.h
+ create mode 100644 include/configs/ykem.h
+
+Index: u-boot-2011.03/Makefile
+===================================================================
+--- u-boot-2011.03.orig/Makefile	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/Makefile	2013-04-03 11:21:27.614211630 +0200
+@@ -1035,6 +1035,16 @@
+ versatilepb_config :	unconfig
+ 	@board/armltd/versatile/split_by_variant.sh $@
+ 
++#========================================================================
++# ARM Sierra Wireless YKEM board
++#========================================================================
++ykem_config	\
++ykemab_config	\
++ykempb_config :	unconfig
++	@mkdir -p $(obj)include
++	@echo "#define CONFIG_ARCH_YKEM" >> $(obj)include/config.h
++	@$(MKCONFIG) -a ykem arm arm926ejs ykem - ykem
++	
+ #########################################################################
+ ## XScale Systems
+ #########################################################################
+Index: u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/Makefile
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/Makefile	2013-04-03 11:21:27.614211630 +0200
+@@ -0,0 +1,49 @@
++#
++# Copyright (C) Sierra Wireless, Inc. 2013.
++#
++# This program is free software; you can redistribute it and/or
++# modify it under the terms of the GNU General Public License
++# as published by the Free Software Foundation; either version 2
++# of the License, or (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++#
++
++include $(TOPDIR)/config.mk
++
++LIB	= $(obj)lib$(BOARD).o
++
++COBJS	= timer.o reset.o
++SOBJS	= tcm.o
++
++SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
++OBJS	:= $(addprefix $(obj),$(COBJS))
++SOBJS	:= $(addprefix $(obj),$(SOBJS))
++
++
++all:	$(LIB)
++
++$(LIB):	$(obj).depend $(OBJS) $(SOBJS)
++	$(call cmd_link_o_target, $(OBJS) $(SOBJS))
++	
++clean:
++	rm -f $(SOBJS) $(OBJS)
++
++distclean:	clean
++	rm -f $(LIB) core *.bak $(obj).depend	
++
++#########################################################################
++
++# defines $(obj).depend target
++include $(SRCTREE)/rules.mk
++
++sinclude $(obj).depend
++
++#########################################################################
+Index: u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/reset.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/reset.c	2013-04-03 11:21:27.618211630 +0200
+@@ -0,0 +1,54 @@
++/*
++ * board/ykem/reset.c - YKEM APP core reset procedure
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ *
++ */
++
++#include <common.h>
++
++#define SYS_CPU_BASE_ADD	0x70290000
++
++void reset_cpu(ulong ignored)
++{
++	extern void tcm_config(void);
++
++	tcm_config();
++
++	// Prepare the first instruction in ITCM (addresse 0) to be a branch to 0x20014 (boot loader D1C)
++	*(unsigned long*)0 = 0xE59F3000;	// ldr	r3,=$pc+4
++	*(unsigned long*)4 = 0xE12FFF33;	// blx	r3
++	*(unsigned long*)8 = 0x41E00000;	// u-boot flash address
++
++	// Reset the APP core
++	*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x480) = 0;
++	*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x478) = 0xAA;
++	*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x480) = 1;
++	*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x47c) = 0;
++	*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x474) = 0xAA;
++	*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x47c) = 1;
++
++	*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x3fc) = (*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x3fc)
++                                                                 & 0x0FFFF);
++	*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x3f4) = (*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x3f4)
++                                                                 & 0x0FFFF) | 0x10000;
++
++	*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x460) = (*(volatile unsigned long*)(SYS_CPU_BASE_ADD + 0x460)
++                                                                 & 0x17) | 0x8;
++	
++	while (1);
++}
+Index: u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/tcm.S
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/tcm.S	2013-04-03 11:21:27.618211630 +0200
+@@ -0,0 +1,46 @@
++/*
++ *  armboot - Startup Code for ARM926EJS CPU-core
++ *
++ *  ----- Adapted for OMAP1610 OMAP730 from YKEM ARM926-ejs code ------
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ *  Copyright (c) 2003  Texas Instruments
++ *
++ *  ----- Adapted for OMAP1610 OMAP730 from ARM925t code ------
++ *
++ *  Copyright (c) 2001	Marius Gröger <mag@sysgo.de>
++ *  Copyright (c) 2002	Alex Züpke <azu@sysgo.de>
++ *  Copyright (c) 2002	Gary Jennejohn <gj@denx.de>
++ *  Copyright (c) 2003	Richard Woodruff <r-woodruff2@ti.com>
++ *  Copyright (c) 2003	Kshitij <kshitij@ti.com>
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++	.align	5
++	.globl	tcm_config
++tcm_config:
++	ldr	r0, =0x44000000
++	orr	r0, r0, #(0x4 << 2)|0x1	// 8KB DTCM(FPGA) + DTCM_BASE + enable
++	mcr	p15, 0, r0, c9, c1, 0		// Enable D-TCM        
++	ldr	r0, =(0x5 << 2)|0x1		// 16KB ITCM + enable
++	mcr	p15, 0, r0, c9, c1, 1		// Enable I-TCM        
++	mov	pc,lr
++
+Index: u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/timer.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/arch/arm/cpu/arm926ejs/ykem/timer.c	2013-04-03 11:21:27.618211630 +0200
+@@ -0,0 +1,137 @@
++/*
++ * cpu/arm926ejs/ykem/timer.c - YKEM GTB access and management
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * (C) Copyright 2003
++ * Texas Instruments <www.ti.com>
++ *
++ * (C) Copyright 2002
++ * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
++ * Marius Groeger <mgroeger@sysgo.de>
++ *
++ * (C) Copyright 2002
++ * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
++ * Alex Zuepke <azu@sysgo.de>
++ *
++ * (C) Copyright 2002-2004
++ * Gary Jennejohn, DENX Software Engineering, <gj@denx.de>
++ *
++ * (C) Copyright 2004
++ * Philippe Robin, ARM Ltd. <philippe.robin@arm.com>
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.	 See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#include <common.h>
++
++#define TIMER_LOAD_VAL 0xffffffff
++
++/* macro to read the 32 bit timer */
++#define READ_TIMER (*(volatile ulong *)(CONFIG_SYS_TIMERBASE+4))
++
++DECLARE_GLOBAL_DATA_PTR;
++/* Using gd->tbu from timestamp and gd->tbl for lastdec */
++
++
++/* nothing really to do with interrupts, just starts up a counter. */
++int timer_init (void)
++{
++	*(volatile ulong *)(CONFIG_SYS_TIMERBASE + 0) = 1; /* Just reset */
++
++	/* init the timestamp and lastdec value */
++	reset_timer_masked();
++
++	return 0;
++}
++
++/*
++ * timer without interrupts
++ */
++
++void reset_timer (void)
++{
++	reset_timer_masked ();
++}
++
++ulong get_timer (ulong base)
++{
++	return ((get_timer_masked() / (CONFIG_SYS_HZ_CLOCK / 1000)) -
++		base);
++}
++
++void set_timer (ulong t)
++{
++	gd->tbu = t;
++}
++
++void __udelay(unsigned long usec)
++{
++	ulong delayticks;
++	ulong endtime;
++
++	delayticks = (usec * (CONFIG_SYS_HZ_CLOCK / 1000000));
++	endtime = get_timer_masked() + delayticks;
++
++	while (get_timer_masked() < endtime);
++}
++
++void reset_timer_masked (void)
++{
++	/* reset time */
++	gd->tbl = READ_TIMER;  /* capure current decrementer value time */
++	gd->tbu = 0;	       /* start "advancing" time stamp from 0 */
++}
++
++ulong get_timer_masked (void)
++{
++	ulong now = READ_TIMER;		/* current tick value */
++
++	if (now >= gd->tbl) {
++		/* normal mode */
++		gd->tbu += now - gd->tbl;
++	} else {
++		/* we have an overflow ... */
++		gd->tbu += now + TIMER_LOAD_VAL - gd->tbl;
++	}
++	gd->tbl = now;
++
++	return gd->tbu;
++}
++
++/*
++ * This function is derived from PowerPC code (read timebase as long long).
++ * On ARM it just returns the timer value.
++ */
++unsigned long long get_ticks(void)
++{
++	return get_timer(0);
++}
++
++/*
++ * This function is derived from PowerPC code (timebase clock frequency).
++ * On ARM it returns the number of timer ticks per second.
++ */
++ulong get_tbclk (void)
++{
++	ulong tbclk;
++
++	tbclk = CONFIG_SYS_HZ;
++	return tbclk;
++}
+Index: u-boot-2011.03/arch/arm/include/asm/mach-types.h
+===================================================================
+--- u-boot-2011.03.orig/arch/arm/include/asm/mach-types.h	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/arch/arm/include/asm/mach-types.h	2013-04-03 11:21:27.622211628 +0200
+@@ -2946,7 +2946,7 @@
+ #define MACH_TYPE_NETVIZ               2964
+ #define MACH_TYPE_FLEXIBITY            2965
+ #define MACH_TYPE_WLAN_COMPUTER        2966
+-#define MACH_TYPE_LPC24XX              2967
++#define MACH_TYPE_YKEM		           2967
+ #define MACH_TYPE_SPICA                2968
+ #define MACH_TYPE_GPSDISPLAY           2969
+ #define MACH_TYPE_BIPNET               2970
+@@ -42913,6 +42913,18 @@
+ # define machine_is_goflexhome()	(0)
+ #endif
+ 
++#ifdef CONFIG_MACH_YKEM
++# ifdef machine_arch_type
++#  undef machine_arch_type
++#  define machine_arch_type	__machine_arch_type
++# else
++#  define machine_arch_type	MACH_TYPE_YKEM
++# endif
++# define machine_is_ykem()	(machine_arch_type == MACH_TYPE_YKEM)
++#else
++# define machine_is_ykem()	(0)
++#endif
++
+ /*
+  * These have not yet been registered
+  */
+Index: u-boot-2011.03/board/ykem/Makefile
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/board/ykem/Makefile	2013-04-03 11:21:27.622211628 +0200
+@@ -0,0 +1,48 @@
++#
++# board/ykem/Makefile - YKEM board
++#
++# Copyright (C) Sierra Wireless, Inc. 2013.
++#
++# This program is free software; you can redistribute it and/or
++# modify it under the terms of the GNU General Public License
++# as published by the Free Software Foundation; either version 2
++# of the License, or (at your option) any later version.
++#
++# This program is distributed in the hope that it will be useful,
++# but WITHOUT ANY WARRANTY; without even the implied warranty of
++# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++# GNU General Public License for more details.
++#
++# You should have received a copy of the GNU General Public License
++# along with this program; if not, write to the Free Software
++# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++#
++
++include $(TOPDIR)/config.mk
++
++LIB	= $(obj)lib$(BOARD).o
++
++COBJS	:= ykem.o
++SOBJS	:= lowlevel_init.o
++
++SRCS	:= $(SOBJS:.o=.S) $(COBJS:.o=.c)
++OBJS	:= $(addprefix $(obj),$(COBJS))
++SOBJS	:= $(addprefix $(obj),$(SOBJS))
++
++$(LIB):	$(obj).depend $(OBJS) $(SOBJS)
++	$(call cmd_link_o_target, $(OBJS) $(SOBJS))
++
++clean:
++	rm -f $(SOBJS) $(OBJS)
++
++distclean:	clean
++	rm -f $(LIB) core *.bak $(obj).depend
++
++#########################################################################
++
++# defines $(obj).depend target
++include $(SRCTREE)/rules.mk
++
++sinclude $(obj).depend
++
++#########################################################################
+Index: u-boot-2011.03/board/ykem/config.mk
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/board/ykem/config.mk	2013-04-03 11:21:27.626211627 +0200
+@@ -0,0 +1,13 @@
++#
++# image should be loaded at the end of DDR space
++#
++
++#PLATFORM_CPPFLAGS += -DDEBUG
++
++CONFIG_SYS_TEXT_BASE = 0x41e00000
++
++
++# to load it in RAM with Jtag Probe use 
++#CONFIG_SYS_TEXT_BASE = 0x23F00000
++# and then in TRACE32 : data.load.elf <path_to>/u-boot
++
+Index: u-boot-2011.03/board/ykem/lowlevel_init.S
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/board/ykem/lowlevel_init.S	2013-04-03 11:21:27.626211627 +0200
+@@ -0,0 +1,159 @@
++/*
++ * board/ykem/low_level_init.S - YKEM board specific setup info
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ */
++
++#include <config.h>
++#include <version.h>
++
++#define PARIF_DIRECT_CMD	0x78011010
++#define PARIF_SET_TIMING	0x4
++#define PARIF_SET_OPMODE	0x8
++
++#if (CONFIG_DRIVER_AX88796C)
++#if (CONFIG_PARIF_MUXED)
++#define PARIF_CS0_TIMING	((4<<0)|(4<<4)|(2<<8)|(2<<11)|(1<<17))
++#define PARIF_CS1_TIMING	((4<<0)|(4<<4)|(2<<8)|(2<<11)|(1<<17))
++#else
++#define PARIF_CS0_TIMING	((7<<0)|(7<<4)|(2<<8)|(3<<11)|(1<<17))
++#define PARIF_CS1_TIMING	((4<<0)|(4<<4)|(2<<8)|(2<<11)|(1<<17))
++#endif
++#else
++#define PARIF_CS0_TIMING	(0x29255)
++#define PARIF_CS1_TIMING	(0x29255)
++#endif
++
++#if (CONFIG_16BIT_MODE)
++#define PARIF_CS0_OPMODE	0x801 // ADV signal + 16-bits
++#else
++#define PARIF_CS0_OPMODE	0x800 // ADV signal + 8-bits
++#endif
++
++#define	PARIF_CS0		(0x0<<23)
++#define PARIF_CS1_OPMODE	0x801 // ADV signal + 16-bits
++#define	PARIF_CS1		(0x1<<23)
++#define PARIF_CS2_TIMING	((3<<0)|(3<<4)|(1<<8)|(2<<11)|(1<<17))
++#define PARIF_CS2_OPMODE	0x800 // ADV signal + 16-bits
++#define	PARIF_CS2		(0x2<<23)
++#define PARIF_CS3_TIMING	((3<<0)|(3<<4)|(1<<8)|(2<<11)|(1<<17))
++#define PARIF_CS3_OPMODE	0x800 // ADV signal + 16-bits
++#define	PARIF_CS3		(0x3<<23)
++
++#define SYS_CMU_PARIF_CONFIG	0x702903C4
++#define SYS_CMU_PARIF_CS0	0x4
++#define SYS_CMU_PARIF_CS1	0x8
++#define SYS_CMU_PARIF_CS2	0xC
++#define SYS_CMU_PARIF_CS3	0x10
++#define	SYS_CMU_PARIF_NON_MUXED	(0<<16)
++#define	SYS_CMU_PARIF_MUXED	(1<<16)
++#if (CONFIG_PARIF_MUXED)
++#define SYS_CMU_PARIF		SYS_CMU_PARIF_MUXED
++#else
++#define SYS_CMU_PARIF		SYS_CMU_PARIF_NON_MUXED
++#endif
++
++#define GPIO_DIRECTION_0_ADD					0x68070060
++#define GPIO_DIRECTION_1_ADD					0x68070064
++#define GPIO_DIRECTION_2_ADD					0x68070068
++#define GPIO_DATA_OUT_1_ADD					0x68070044
++
++/* Set up the platform, once the cpu has been initialized */
++.globl lowlevel_init
++lowlevel_init:
++
++	/* Fixes settings for PARIF: 16-bits, burst, and timings */
++	ldr	r2, =PARIF_DIRECT_CMD
++	// CS0
++	ldr	r1, =PARIF_CS0_TIMING
++	ldr	r0, =PARIF_CS0_OPMODE
++	str	r1, [r2, #PARIF_SET_TIMING]
++	str	r0, [r2, #PARIF_SET_OPMODE]
++	mov	r0, #(PARIF_CS0 | (2 << 21))
++	str	r0, [r2]
++	// CS1
++	ldr	r1, =PARIF_CS1_TIMING
++	ldr	r0, =PARIF_CS1_OPMODE
++	str	r1, [r2, #PARIF_SET_TIMING]
++	str	r0, [r2, #PARIF_SET_OPMODE]
++	mov	r0, #(PARIF_CS1 | (2 << 21))
++	str	r0, [r2]
++	// CS2
++	ldr	r1, =PARIF_CS2_TIMING
++	ldr	r0, =PARIF_CS2_OPMODE
++	str	r1, [r2, #PARIF_SET_TIMING]
++	str	r0, [r2, #PARIF_SET_OPMODE]
++	mov	r0, #(PARIF_CS2 | (2 << 21))
++	str	r0, [r2]
++	// CS3
++	ldr	r1, =PARIF_CS3_TIMING
++	ldr	r0, =PARIF_CS3_OPMODE
++	str	r1, [r2, #PARIF_SET_TIMING]
++	str	r0, [r2, #PARIF_SET_OPMODE]
++	mov	r0, #(PARIF_CS3 | (2 << 21))
++	str	r0, [r2]
++
++	// SYS_CPU
++	ldr	r2, =SYS_CMU_PARIF_CONFIG
++#if (CONFIG_DRIVER_AX88796C)
++	ldr	r0, =(0x60FF | SYS_CMU_PARIF) // Non multiplexed
++	str	r0, [r2, #SYS_CMU_PARIF_CS0]
++	ldr	r0, =(0x61FF | SYS_CMU_PARIF) // Non multiplexed
++	str	r0, [r2, #SYS_CMU_PARIF_CS1]
++#else
++	ldr	r0, =(0x6061 | SYS_CMU_PARIF) // Non multiplexed
++	str	r0, [r2, #SYS_CMU_PARIF_CS0]
++	ldr	r0, =(0x6161 | SYS_CMU_PARIF) // Non multiplexed
++	str	r0, [r2, #SYS_CMU_PARIF_CS1]
++#endif
++	ldr	r0, =(0x62FF | SYS_CMU_PARIF) // Non multiplexed
++	str	r0, [r2, #SYS_CMU_PARIF_CS2]
++	ldr	r0, =(0x63FF | SYS_CMU_PARIF) // Non multiplexed
++	str	r0, [r2, #SYS_CMU_PARIF_CS3]
++
++#if (CONFIG_DRIVER_AX88796C)
++	// Set gpio80 dircetion to INPUT
++	ldr	r2, =GPIO_DIRECTION_2_ADD // gpio[95:64]
++	ldr	r1, [r2]
++	ldr	r0, =(1<<16) // gpio80
++	orr	r1, r1, r0
++	str	r1, [r2]
++
++	// Configure gpio33 for output
++	ldr	r2, =GPIO_DIRECTION_1_ADD
++	ldr	r1, [r2]
++	bic	r1, #2
++	str	r1, [r2]
++
++	// gpio33 is in RESET
++	ldr	r2, =GPIO_DATA_OUT_1_ADD
++	ldr	r1, [r2]
++	orr	r1, r1, #2
++	str	r1, [r2]
++#endif
++
++#if (CONFIG_PARIF_MUXED)
++	// Configure gpio31 for output - AEN should be 0 in non-muxed
++	ldr	r2, =GPIO_DIRECTION_0_ADD
++	ldr	r1, [r2]
++	bic	r1, #0x80000000
++	str	r1, [r2]
++#endif
++
++	/* All done by Versatile's boot monitor! */
++	mov	pc, lr
++
+Index: u-boot-2011.03/board/ykem/ykem.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/board/ykem/ykem.c	2013-04-03 11:21:27.626211627 +0200
+@@ -0,0 +1,106 @@
++/*
++ * (C) Copyright 2002
++ * Sysgo Real-Time Solutions, GmbH <www.elinos.com>
++ * Marius Groeger <mgroeger@sysgo.de>
++ *
++ * (C) Copyright 2002
++ * David Mueller, ELSOFT AG, <d.mueller@elsoft.ch>
++ *
++ * (C) Copyright 2003
++ * Texas Instruments, <www.ti.com>
++ * Kshitij Gupta <Kshitij@ti.com>
++ *
++ * (C) Copyright 2004
++ * ARM Ltd.
++ * Philippe Robin, <philippe.robin@arm.com>
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * See file CREDITS for list of people who contributed to this
++ * project.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 59 Temple Place, Suite 330, Boston,
++ * MA 02111-1307 USA
++ */
++
++#include <common.h>
++#include <config.h>
++
++DECLARE_GLOBAL_DATA_PTR;
++
++#if defined(CONFIG_SHOW_BOOT_PROGRESS)
++void show_boot_progress(int progress)
++{
++    printf("Boot reached stage %d\n", progress);
++}
++#endif
++
++/*
++ * Miscellaneous platform dependent initialisations
++ */
++
++int board_init(void)
++{
++	// All Master divisors set to 0
++	*(volatile int*)0x90010014 = 0;
++	*(volatile int*)0x90010070 = 0;
++	*(volatile int*)0x90010084 = 0;
++	*(volatile int*)0x900100E0 = 0;
++	*(volatile int*)0x90010104 = 0;
++	*(volatile int*)0x90010160 = 0;
++	*(volatile int*)0x90010184 = 0;
++	*(volatile int*)0x900101E0 = 0;
++
++	*(volatile int*)0x70130014 = 0;
++	
++	/* arch number of Versatile Board */
++	gd->bd->bi_arch_number = MACH_TYPE_YKEM;
++
++#ifdef CONFIG_CMDLINE_TAG
++	gd->bd->bi_boot_params = CONFIG_SYS_SDRAM_BASE + 0x100;
++#endif
++
++	gd->flags = 0;
++
++	icache_enable ();
++	
++	return 0;
++}
++
++int board_eth_init(bd_t *bis)
++{
++	int rc = 0;
++	int num = 0;
++	
++	rc= ax88796c_initialize(bis);
++	if (!rc)
++		num++;
++	return num;
++}
++
++void dram_init_banksize(void)
++{
++	gd->bd->bi_dram[0].start = PHYS_SDRAM_1;
++	gd->bd->bi_dram[0].size = PHYS_SDRAM_1_SIZE;
++}
++
++int dram_init (void)
++{
++	/* dram_init must store complete ramsize in gd->ram_size */
++	gd->ram_size = get_ram_size((volatile long *)CONFIG_SYS_SDRAM_BASE,
++			CONFIG_SYS_SDRAM_SIZE);
++
++	return 0;
++}
+Index: u-boot-2011.03/boards.cfg
+===================================================================
+--- u-boot-2011.03.orig/boards.cfg	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/boards.cfg	2013-04-03 11:21:27.626211627 +0200
+@@ -106,6 +106,7 @@
+ omap5912osk                  arm         arm926ejs   -                   ti             omap
+ edminiv2                     arm         arm926ejs   -                   LaCie          orion5x
+ dkb			     arm         arm926ejs   -                   Marvell        pantheon
++ykem	                     arm         arm926ejs   ykem               Sierra	        Sierra
+ ca9x4_ct_vxp                 arm         armv7       vexpress            armltd
+ efikamx                      arm         armv7       efikamx             -              mx5
+ mx51evk                      arm         armv7       mx51evk             freescale      mx5
+Index: u-boot-2011.03/common/serial.c
+===================================================================
+--- u-boot-2011.03.orig/common/serial.c	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/common/serial.c	2013-04-03 11:21:27.626211627 +0200
+@@ -42,7 +42,7 @@
+    || defined(CONFIG_MB86R0x) || defined(CONFIG_MPC5xxx) \
+    || defined(CONFIG_MPC83xx) || defined(CONFIG_MPC85xx) \
+    || defined(CONFIG_MPC86xx) || defined(CONFIG_SYS_SC520) \
+-   || defined(CONFIG_TEGRA2)
++   || defined(CONFIG_TEGRA2) || defined(CONFIG_YKEM)
+ #if defined(CONFIG_CONS_INDEX) && defined(CONFIG_SYS_NS16550_SERIAL)
+ #if (CONFIG_CONS_INDEX==1)
+ 	return &eserial1_device;
+Index: u-boot-2011.03/drivers/net/Makefile
+===================================================================
+--- u-boot-2011.03.orig/drivers/net/Makefile	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/drivers/net/Makefile	2013-04-03 11:21:27.626211627 +0200
+@@ -61,6 +61,7 @@
+ COBJS-$(CONFIG_NATSEMI) += natsemi.o
+ COBJS-$(CONFIG_DRIVER_NE2000) += ne2000.o ne2000_base.o
+ COBJS-$(CONFIG_DRIVER_AX88796L) += ax88796.o ne2000_base.o
++COBJS-$(CONFIG_DRIVER_AX88796C) += ax88796c.o
+ COBJS-$(CONFIG_DRIVER_NETARMETH) += netarm_eth.o
+ COBJS-$(CONFIG_NETCONSOLE) += netconsole.o
+ COBJS-$(CONFIG_DRIVER_NS7520_ETHERNET) += ns7520_eth.o
+Index: u-boot-2011.03/drivers/net/ax88796c.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/drivers/net/ax88796c.c	2013-04-03 11:21:27.626211627 +0200
+@@ -0,0 +1,558 @@
++/*
++ * ASIX AX88796C Ethernet
++ * (C) Copyright 2010
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License along
++ *  with this program; if not, write to the Free Software Foundation, Inc.,
++ *  59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
++ *
++ * History:
++ *   1.2.0  12/22/2010	  Refine the source code and add reseting MAC function after rx. 
++ *
++ *   1.1.0  04/26/2010    Add watchdog function.
++ *
++ *   1.0.0  03/15/2010    Initial release.
++ */
++
++#include <common.h>
++#include <command.h>
++#include <malloc.h>
++#include <net.h>
++#include <asm/errno.h>
++#include <linux/mii.h>
++#include <config.h>
++#include "ax88796c.h"
++
++#if defined (CONFIG_S3C2440A_SMDK)
++#include <s3c2440.h>
++#endif
++
++#ifdef CONFIG_DRIVER_AX88796C
++#if defined(CONFIG_CMD_NET)
++
++#if (CONFIG_AX88796B_PIN_COMPATIBLE)
++#define AX_CONVERT_ADDR(a)	(a)
++#else
++# if (CONFIG_16BIT_MODE)
++# define AX_CONVERT_ADDR(a)	(((a) & 0xFFFFFF00) | (((a) & 0xFF) << 1))
++# else
++# define AX_CONVERT_ADDR(a)	(((a) & 0xFFFFFF00) | (((a) & 0xFF) << 1))
++# endif
++#endif
++
++#define be2le(a)	((((a) & 0xFF00) >> 8) | (((a) & 0x00FF) << 8))
++#define le2be(a)	((((a) & 0xFF00) >> 8) | (((a) & 0x00FF) << 8))
++
++#if (CONFIG_16BIT_MODE)
++static inline unsigned short get_reg16 (struct eth_device *dev, 
++		unsigned int regno)
++{
++	return (*((volatile unsigned short *)AX_CONVERT_ADDR(dev->iobase + regno)));
++}
++
++static inline void put_reg16 (struct eth_device *dev, unsigned int regno, 
++		unsigned short val)
++{
++	*((volatile unsigned short *)AX_CONVERT_ADDR(dev->iobase + regno)) = val;
++}
++#else
++static inline unsigned short get_reg16 (struct eth_device *dev, 
++		unsigned int regno)
++{
++	unsigned short data;
++	
++	data = *((volatile unsigned char *)AX_CONVERT_ADDR(dev->iobase + regno));
++	data |= (*((volatile unsigned char *)AX_CONVERT_ADDR(dev->iobase + regno + 1)) << 8);
++	
++	return data;
++}
++
++static inline void put_reg16 (struct eth_device *dev, unsigned int regno, 
++		unsigned short val)
++{
++	*((volatile unsigned char *) AX_CONVERT_ADDR(dev->iobase + regno)) = (val & 0x00FF);
++	*((volatile unsigned char *) AX_CONVERT_ADDR(dev->iobase + regno + 1)) = (val >> 8);
++}
++#endif
++
++static int ax88796c_reset (struct eth_device *dev)
++{
++	unsigned long time_out;
++
++	put_reg16 (dev, P0_PSR, PSR_RESET);
++	put_reg16 (dev, P0_PSR, PSR_RESET_CLR);
++
++	time_out = get_timer(0) + (CONFIG_SYS_HZ / 100);
++	while (!(get_reg16 (dev, P0_PSR) & PSR_DEV_READY)) {
++		if (get_timer(0) > time_out) {
++			return -ENXIO;
++		}
++	}
++	
++	return 0;
++}
++
++static int ax88796c_mdio_write (struct eth_device *dev, int phy_id, int loc, int value)
++{
++	unsigned short reg;
++	unsigned long time_out;
++
++	reg = get_reg16 (dev, P0_PSR);
++	
++	put_reg16 (dev, P0_PSR, (reg & PSR_PAGE_MASK) | PAGE2);
++	put_reg16 (dev, P2_MRDR, value);
++	put_reg16 (dev, P2_MRCR, MRCR_RADDR(loc) | 
++			MRCR_FADDR(phy_id) | MRCR_WRITE);
++
++	time_out = get_timer(0) + (CONFIG_SYS_HZ / 100);
++	while ((get_reg16 (dev, P2_MRCR) & MRCR_VALID) == 0) {
++		if (get_timer(0) > time_out) {
++			put_reg16 (dev, P0_PSR, reg);
++			return -EIO;
++		}
++	}
++	
++	put_reg16 (dev, P0_PSR, reg);
++	
++	return 0;
++}
++
++unsigned short ax88796c_mdio_read (struct eth_device *dev, int phy_id, int loc)
++{
++	unsigned short reg;
++	unsigned long time_out;
++	unsigned short val;
++
++	reg = get_reg16 (dev, P0_PSR);
++	put_reg16 (dev, P0_PSR, (reg & PSR_PAGE_MASK) | PAGE2);
++	put_reg16 (dev, P2_MRCR, MRCR_RADDR(loc) | 
++			MRCR_FADDR(phy_id) | MRCR_READ);
++
++	time_out = get_timer(0) + (CONFIG_SYS_HZ / 100);
++	while ((get_reg16 (dev, P2_MRCR) & MRCR_VALID) == 0) {
++		if (get_timer(0) > time_out) {
++			put_reg16 (dev, P0_PSR, reg);
++			return -EIO;
++		}
++	}
++	
++	val = get_reg16 (dev, P2_MRDR);
++
++	put_reg16 (dev, P0_PSR, reg);
++
++	return val;
++}
++
++static void ax88796c_get_enetaddr (struct eth_device *dev)
++{
++	int reg;
++	unsigned short mac_addr;
++
++	reg = get_reg16 (dev, P0_PSR);
++	
++	/*Get MAC Address from Registers*/
++	put_reg16 (dev, P0_PSR, (reg & PSR_PAGE_MASK) | PAGE3);
++	
++	mac_addr = get_reg16 (dev, P3_MACASR0);
++	dev->enetaddr[5] = mac_addr & 0x00FF;
++	dev->enetaddr[4] = mac_addr >> 8;
++	mac_addr = get_reg16 (dev, P3_MACASR1);
++	dev->enetaddr[3] = mac_addr & 0x00FF;
++	dev->enetaddr[2] = mac_addr >> 8;
++	mac_addr = get_reg16 (dev, P3_MACASR2);
++	dev->enetaddr[1] = mac_addr & 0x00FF;
++	dev->enetaddr[0] = mac_addr >> 8;
++
++	if ((dev->enetaddr[0] & 0x01) ||
++	    ((dev->enetaddr[0] == 0) && (dev->enetaddr[1] == 0) &&
++	    (dev->enetaddr[2] == 0) && (dev->enetaddr[3] == 0) &&
++	    (dev->enetaddr[4] == 0) && (dev->enetaddr[5] == 0))) {
++		dev->enetaddr[0] = 0x08;
++		dev->enetaddr[1] = 0x00;
++		dev->enetaddr[2] = 0x3e;
++		dev->enetaddr[3] = 0x26;
++		dev->enetaddr[4] = 0x0a;
++		dev->enetaddr[5] = 0x5b;
++	}
++	
++	put_reg16 (dev, P0_PSR, reg);
++}
++
++static void ax88796c_set_enetaddr (struct eth_device *dev)
++{
++	int reg;
++
++	reg = get_reg16 (dev, P0_PSR);
++	
++	put_reg16 (dev, P0_PSR, (reg & PSR_PAGE_MASK) | PAGE3);
++	
++	put_reg16 (dev, P3_MACASR0, (dev->enetaddr[4] << 8) | dev->enetaddr[5]);
++	put_reg16 (dev, P3_MACASR1, (dev->enetaddr[2] << 8) | dev->enetaddr[3]);
++	put_reg16 (dev, P3_MACASR2, (dev->enetaddr[0] << 8) | dev->enetaddr[1]);
++	
++	put_reg16 (dev, P0_PSR, reg);
++}
++
++static void ax88796c_halt (struct eth_device *dev)
++{
++	ax88796c_reset(dev);
++}
++
++static int ax88796c_init (struct eth_device *dev, bd_t * bd)
++{
++	unsigned short reg;
++	struct ax88796c_private *ax_local = 
++		(struct ax88796c_private *) dev->priv;
++
++	ax_local->seq_num = 0 ;
++	ax_local->link = 0;
++		
++	reg = get_reg16 (dev, P0_PSR);
++	
++	put_reg16 (dev, P0_PSR, (reg & PSR_PAGE_MASK) | PAGE1);
++
++	/*Enable RX packet process*/
++	put_reg16 (dev, P1_RPPER, 0x01);
++
++	/*Disable RX Stuffing Padding*/
++	put_reg16 (dev, P1_RXBSPCR, 0);
++
++	/*Byte Swap, Enable TX RX bridge*/
++	put_reg16 (dev, P0_PSR, (reg & PSR_PAGE_MASK) | PAGE0);
++	
++	put_reg16 (dev, P0_FER, get_reg16 (dev, P0_FER) | FER_BSWAP | FER_RXEN 
++		| FER_TXEN);
++
++	/*Set MAC address*/
++	ax88796c_set_enetaddr(dev);
++
++	/*Set Unicast + Broadcast*/
++	put_reg16 (dev, P0_PSR, (reg & PSR_PAGE_MASK) | PAGE2);
++	
++	put_reg16 (dev, P2_RXCR, RXCR_BROADCAST);
++	
++	/*Setup LED mode*/
++	put_reg16 (dev, P2_LCR0, LCR_LED0_EN | LCR_LED0_DUPLEX | LCR_LED1_EN |
++		    LCR_LED1_100MODE);
++	put_reg16 (dev, P2_LCR1, (get_reg16 (dev, P2_LCR1) & LCR_LED2_MASK) |
++		    LCR_LED2_EN | LCR_LED2_LINK);
++
++
++	/* Init PHY auto-polling */
++	put_reg16 (dev, P2_POOLCR, (PHY_ID << 8) | POOLCR_POLL_EN | 
++		POOLCR_POLL_BMCR);
++
++	/* Return to page 0 */
++	put_reg16 (dev, P0_PSR, (reg & PSR_PAGE_MASK));
++	
++	ax_local->w_state = chk_cable;
++	ax_local->timeout = get_timer(0) + CONFIG_SYS_HZ; 
++
++	return 0;
++}
++
++static unsigned char nic_to_pc (struct eth_device *dev)
++{
++	unsigned short rcphr, rxlen, pio_len, i, burst_len;
++	unsigned char *addr;
++	unsigned long time_out;
++	struct rx_header hdr;
++
++	rcphr = get_reg16 (dev, P0_RCPHR);
++	
++	/*Check the correctness of packet */
++	if (!((rcphr & RX_HDR_ERROR) == 0)) {
++		put_reg16 (dev, P0_RXBCR1, RXBCR1_RXB_DISCARD);
++		return -EIO;
++	}
++
++	rxlen = (rcphr & RX_HDR_LEN);
++	if ((rxlen < 60) || (rxlen > 1518)) {
++		put_reg16 (dev, P0_RXBCR1, RXBCR1_RXB_DISCARD);
++		return -EIO;
++	}
++
++	/* 
++	 * Burst Word Count (header length + packet length has
++	 * to be double word alignment)
++	 */
++	burst_len = ((rxlen + sizeof(struct rx_header) + 3) & 0xFFFC) >> 1;
++	put_reg16 (dev, P0_RXBCR1, (burst_len | RXBCR1_RXB_START));
++	
++	time_out = get_timer(0) + (CONFIG_SYS_HZ / 100);
++	while ((get_reg16 (dev, P0_RXBCR2) & RXBCR2_RXB_READY) == 0) {
++		if (get_timer(0) > time_out) {
++			put_reg16 (dev, P0_RXBCR1, RXBCR1_RXB_DISCARD);
++			goto error_out;
++		}
++	}
++	
++	/*Receive RX Header*/
++	hdr.hdr1.flags_len = get_reg16 (dev, P0_RTDPR);
++	hdr.hdr1.seq_lenbar = get_reg16 (dev, P0_RTDPR);
++	hdr.hdr2 = get_reg16 (dev, P0_RTDPR);
++#if (CONFIG_PARIF_MUXED)
++	hdr.hdr1.flags_len = be2le(hdr.hdr1.flags_len);
++	hdr.hdr1.seq_lenbar = be2le(hdr.hdr1.seq_lenbar);
++	hdr.hdr2 = be2le(hdr.hdr2);
++#endif
++
++	/*Receive RX Data*/
++	addr = (unsigned char *) NetRxPackets[0];
++	for (i = 0; i < burst_len-3 ; i++) {
++		*((u16 *) addr + i) = 
++#if (CONFIG_PARIF_MUXED)
++			get_reg16 (dev, P0_RTDPR);
++		*((u16 *) addr + i) = be2le(*((u16 *) addr + i));
++#else
++			get_reg16 (dev, DATA_PORT_ADDR);
++#endif
++	}
++
++	time_out = get_timer(0) + (CONFIG_SYS_HZ / 100);
++	while ((get_reg16 (dev, P0_RXBCR2) & RXBCR2_RXB_IDLE) == 0) {
++		if (get_timer(0) > time_out) {
++			goto error_out;
++		}
++	}
++	
++	/* Pass the packet up to the protocol layers. */
++	NetReceive (NetRxPackets[0], rxlen);
++	
++	return 0;
++
++error_out:
++	put_reg16 (dev, P0_RXBCR2, RXBCR2_RXB_REINIT);
++	
++	return -EIO;	
++}
++
++/*
++ * ----------------------------------------------------------------------------
++ * Function Name: ax88796c_check_media
++ * Purpose: Process media link status
++ * ----------------------------------------------------------------------------
++ */
++static void ax88796c_check_media (struct eth_device *dev)
++{
++	struct ax88796c_private *ax_local = 
++		(struct ax88796c_private *)dev->priv;
++	u16 bmsr;
++
++	bmsr = ax88796c_mdio_read (dev, PHY_ID, MII_BMSR);
++
++	if (!(bmsr & BMSR_LSTATUS) && ax_local->link) {
++		ax_local->link = 0;
++		ax_local->w_state = chk_cable;
++		ax_local->timeout = get_timer(0) + CONFIG_SYS_HZ;
++	} else {
++		ax_local->link = 1;
++	}
++
++	return;	
++}
++
++static void ax88796c_watchdog (struct eth_device *dev)
++{
++	struct ax88796c_private *ax_local = 
++		(struct ax88796c_private *)dev->priv;
++	unsigned short phy_status;
++
++	phy_status = get_reg16 (dev, P0_PSCR);
++
++	if (!(phy_status & PSCR_PHYCOFF)) {
++	/* The ethernet cable has been plugged */
++		if (ax_local->w_state == chk_cable) {
++			ax_local->w_state = chk_link;
++			ax_local->w_ticks = 0;
++		} else {
++			if (++ax_local->w_ticks == AX88796C_WATCHDOG_RESTART) {
++				ax88796c_mdio_write (dev, PHY_ID, MII_BMCR,
++						BMCR_SPEED100 | 
++						BMCR_ANENABLE | 
++						BMCR_ANRESTART|BMCR_FULLDPLX);
++						
++				ax_local->w_ticks = 0;
++			}
++		}
++	} else {
++		ax_local->w_state = chk_cable;
++	}
++}
++
++static int ax88796c_recv (struct eth_device *dev)
++{
++	struct ax88796c_private *ax_local = 
++		(struct ax88796c_private *)dev->priv;
++	unsigned short interrupts;
++
++	interrupts = get_reg16 (dev, P0_ISR);
++
++	/* Acknowledge all interrupts */
++	put_reg16 (dev, P0_ISR, interrupts);
++	
++	if(interrupts & ISR_LINK){
++		ax88796c_check_media(dev);
++	}
++
++	if((interrupts & ISR_RXPCT) && ax_local->link){
++		nic_to_pc(dev);
++	}
++
++	if (!ax_local->link && (get_timer(0) >= ax_local->timeout)) {
++		ax88796c_watchdog (dev);
++		ax_local->timeout = get_timer(0) + CONFIG_SYS_HZ;
++	}
++
++	return 0;
++}
++
++static void ax88796c_handle_tx_hdr (struct tx_header * txhdr, 
++		unsigned short len, unsigned short seq_num)
++{
++	unsigned short len_bar = (~len & TX_HDR_SOP_PKTLENBAR);
++
++	/*SOP Header*/
++	txhdr->sop.flags_pktlen = len;
++	txhdr->sop.seqnum_pktlenbar =  TX_HDR_SEQNUM (seq_num) | len_bar;
++
++	/*Segment Header*/
++	txhdr->seg.flags_seqnum_seglen = TX_HDR_SEG_FS | TX_HDR_SEG_LS | len;
++	txhdr->seg.eo_so_seglenbar = len_bar;
++
++	/*EOP Header*/
++	txhdr->eop.seqnum_pktlen = TX_HDR_SEQNUM (seq_num) | len;
++	txhdr->eop.seqnumbar_pktlenbar = TX_HDR_SEQNUM(~seq_num) | len_bar;
++
++}
++
++static int ax88796c_send (struct eth_device *dev, volatile void *packet, 
++		int length)
++{
++	unsigned int i, word_len;
++	unsigned long time_out;
++	struct tx_header hdr;
++	struct ax88796c_private *ax_local = 
++		(struct ax88796c_private *)dev->priv;
++
++	ax88796c_handle_tx_hdr (&hdr, length, ax_local->seq_num);
++	
++	put_reg16 (dev, P0_TSNR, TSNR_TXB_START | TSNR_PKT_CNT(1));
++	
++	/*Send SOP, Segment Header*/
++	put_reg16 (dev, P0_RTDPR, hdr.sop.flags_pktlen);
++	put_reg16 (dev, P0_RTDPR, hdr.sop.seqnum_pktlenbar);
++	put_reg16 (dev, P0_RTDPR, hdr.seg.flags_seqnum_seglen);
++	put_reg16 (dev, P0_RTDPR, hdr.seg.eo_so_seglenbar);
++
++	/*Send Data*/
++	word_len = ((length + 3) & 0xFFFC) / 2;
++	for (i = 0; i < word_len; i++){ 
++#if (CONFIG_PARIF_MUXED)
++		put_reg16 (dev,P0_RTDPR,
++			le2be(*((unsigned short *) (packet + i * 2))));
++#else
++		put_reg16 (dev,DATA_PORT_ADDR,
++			*((unsigned short *) (packet + i * 2)));
++#endif
++	}
++ 	
++	/*Send EOP Header*/
++	put_reg16 (dev, P0_RTDPR, hdr.eop.seqnum_pktlen);
++	put_reg16 (dev, P0_RTDPR, hdr.eop.seqnumbar_pktlenbar);
++
++	time_out = get_timer(0) + (CONFIG_SYS_HZ / 100);
++	while ((get_reg16 (dev, P0_TSNR) & TXNR_TXB_IDLE) == 0) {
++		if (get_timer(0) > time_out) {
++			goto error_out;
++		}
++	}
++	
++	if(get_reg16 (dev, P0_ISR) & ISR_TXERR) {
++		goto error_out;
++	}
++	
++	ax_local->seq_num++;
++	ax_local->seq_num &= 0x1F;
++	
++	return 0;
++	
++error_out:
++	put_reg16 (dev, P0_TSNR, TSNR_TXB_REINIT);
++	
++	ax_local->seq_num = 0;
++	
++	return -EBUSY;
++
++}
++
++/*
++* =========================================================
++* <<<<<<           Exported SubProgram Bodies         >>>>>>
++* =========================================================
++*/
++int ax88796c_initialize (bd_t *bis)
++{
++	struct eth_device *dev;
++	struct ax88796c_private *ax_local;
++	
++	// Reset the AX88796C by GPIO 33
++        *(volatile unsigned long *)0x68070044 &= ~(1<<1);
++        udelay(100000);
++        *(volatile unsigned long *)0x68070044 |= (1<<1);
++        udelay(100000);
++
++	dev = (struct eth_device *)malloc (sizeof *dev);
++	if (NULL == dev)
++		return -EFAULT;
++
++	ax_local = (struct ax88796c_private *)malloc (sizeof *ax_local);
++	if (NULL == ax_local)
++		return -EFAULT;
++
++	memset (dev, 0, sizeof *dev);
++	memset (ax_local, 0, sizeof *ax_local);
++	
++	sprintf (dev->name, "ax88796c");
++	dev->iobase = AX88796C_BASE;
++	dev->priv = ax_local;
++	dev->init = ax88796c_init;
++	dev->halt = ax88796c_halt;
++	dev->send = ax88796c_send;
++	dev->recv = ax88796c_recv;
++
++	if (!ax88796c_reset (dev)){
++		unsigned short reg = get_reg16 (dev, P0_PSR);
++
++		ax88796c_get_enetaddr (dev);
++		
++		/*Setup LED mode*/
++		put_reg16 (dev, P0_PSR, (reg & PSR_PAGE_MASK) | PAGE2);
++		put_reg16 (dev, P2_LCR0, LCR_LED0_EN | LCR_LED0_DUPLEX | LCR_LED1_EN | 
++			LCR_LED1_100MODE);
++		put_reg16 (dev, P2_LCR1, (get_reg16 (dev, P2_LCR1) & LCR_LED2_MASK) | 
++			LCR_LED2_EN | LCR_LED2_LINK);
++
++		ax88796c_mdio_write (dev, PHY_ID, MII_ADVERTISE, PHY_ADV);
++		ax88796c_mdio_write (dev, PHY_ID, MII_BMCR,
++			BMCR_SPEED100 | BMCR_ANENABLE | BMCR_ANRESTART);
++
++		eth_register (dev);
++	}
++
++	return 0;
++}
++
++#endif /* CONFIG_NET */
++
++#endif /* CONFIG_DRIVER_AX88796C */
+Index: u-boot-2011.03/drivers/net/ax88796c.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/drivers/net/ax88796c.h	2013-04-03 11:21:27.626211627 +0200
+@@ -0,0 +1,215 @@
++/*
++ * ASIX AX88796C Ethernet
++ * (C) Copyright 2010
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License as
++ * published by the Free Software Foundation; either version 2 of
++ * the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ *  You should have received a copy of the GNU General Public License along
++ *  with this program; if not, write to the Free Software Foundation, Inc.,
++ *  59 Temple Place - Suite 330, Boston MA 02111-1307, USA.
++ *
++ */
++
++#include <asm/types.h>
++#include <config.h>
++
++
++#ifdef CONFIG_DRIVER_AX88796C
++
++enum watchdog_state {
++	chk_link = 0,
++	chk_cable,
++};
++
++struct ax88796c_private {
++	unsigned short seq_num;
++	enum watchdog_state w_state;
++	unsigned long w_ticks;
++#define AX88796C_WATCHDOG_RESTART	7
++	unsigned long timeout;
++	unsigned link:1;  /*bit field*/
++};
++
++/* Sturctures declaration */
++
++/* Tx headers structure */
++struct tx_sop_header {
++	/* bit 15-11: flags, bit 10-0: packet length */
++	u16 flags_pktlen;
++	/* bit 15-11: sequence number, bit 11-0: packet length bar */
++	u16 seqnum_pktlenbar; 
++} __attribute__((packed));
++
++struct tx_segment_header {
++	/* bit 15-14: flags, bit 13-11: segment number, bit 10-0: segment length */
++	u16 flags_seqnum_seglen;
++	/* bit 15-14: end offset, bit 13-11: start offset */
++	/* bit 10-0: segment length bar */
++	u16 eo_so_seglenbar;
++} __attribute__((packed));
++
++struct tx_eop_header {
++	/* bit 15-11: sequence number, bit 10-0: packet length */
++	u16 seqnum_pktlen;
++	/* bit 15-11: sequence number bar, bit 10-0: packet length bar */
++	u16 seqnumbar_pktlenbar;
++} __attribute__((packed));
++
++struct tx_header {
++	struct tx_sop_header sop;
++	struct tx_segment_header seg;
++	struct tx_eop_header eop;
++} __attribute__((packed));
++
++struct rx_hdr1 {
++	u16 flags_len;
++	u16 seq_lenbar;
++}__attribute__((packed));
++
++struct rx_header {
++	struct rx_hdr1 hdr1;
++	u16 hdr2;
++} __attribute__((packed));
++
++
++#if (CONFIG_AX88796B_PIN_COMPATIBLE)
++#define AX_SHIFT(x)				((x) << 1)
++#else
++#define AX_SHIFT(x)				((x) << 0)
++#endif
++
++#define PHY_ID					0x10
++#define PHY_ADV					0x25E1
++
++#define PG_HOST_WAKEUP				0x1F
++#if (CONFIG_AX88796B_PIN_COMPATIBLE)
++	#define DATA_PORT_ADDR			(0x4000 >> 3)
++#else
++	#define DATA_PORT_ADDR			(0x80)
++#endif
++/*TX Header*/
++#define TX_HDR_SEG_FS				0x8000
++#define TX_HDR_SEG_LS				0x4000
++#define TX_HDR_SOP_PKTLENBAR			0x07FF
++#define TX_HDR_SEQNUM(x)			(((x) & 0x1F) << 11)
++/*RX Header*/
++#define RX_HDR_ERROR 				0x7000
++#define RX_HDR_LEN 				0x07FF
++
++
++
++/*Register */
++#define P0_PSR				AX_SHIFT(0x00)
++	#define PSR_PAGE_MASK			0xFFF8
++	#define PAGE0 				0x8000
++	#define PAGE1				0x8001
++	#define PAGE2				0x8002
++	#define PAGE3				0x8003
++	#define PAGE4				0x8004
++	#define PSR_BUS_MASK			0xFF8F
++	#define PSR_RESET			(0 << 15)
++	#define PSR_RESET_CLR			(1 << 15)
++	#define PSR_DEV_READY			(1 << 7)
++#define P0_BOR				AX_SHIFT(0x02)
++#define P0_FER				AX_SHIFT(0x04)
++	#define FER_BSWAP			(1 << 9)
++	#define FER_RXEN			(1 << 14)
++	#define FER_TXEN			(1 << 15)
++#define P0_ISR				AX_SHIFT(0x06)
++	#define ISR_RXPCT			(1 << 0)
++	#define ISR_TXERR			(1 << 8)
++	#define ISR_LINK			(1 << 9)
++#define P0_PSCR				AX_SHIFT(0x0C)
++	#define PSCR_PS_MASK		(0xFFF0)
++	#define PSCR_PS_D0		(0)
++	#define PSCR_PS_D1		(1 << 0)
++	#define PSCR_PS_D2		(1 << 1)
++	#define PSCR_FPS		(1 << 3) /* Enable fiber mode PS */
++	#define PSCR_SWPS		(1 << 4) /* Enable software PS control */
++	#define PSCR_WOLPS		(1 << 5) /* Enable WOL PS */
++	#define PSCR_SWWOL		(1 << 6) /* Enable software select WOL PS */
++	#define PSCR_PHYOSC		(1 << 7) /* Internal PHY OSC control */
++	#define PSCR_FOFEF		(1 << 8) /* Force PHY generate FEF */
++	#define PSCR_FOF		(1 << 9) /* Force PHY in fiber mode */
++	#define PSCR_PHYPD		(1 << 10) /* PHY power down. Active high */
++	#define PSCR_PHYRST		(1 << 11) /* PHY reset signal. Active low */
++	#define PSCR_PHYCSIL		(1 << 12) /* PHY cable energy detect */
++	#define PSCR_PHYCOFF		(1 << 13) /* PHY cable off */
++	#define PSCR_PHYLINK		(1 << 14) /* PHY link status */
++	#define PSCR_EEPOK		(1 << 15) /* EEPROM load complete */
++#define P0_MACCR				0x0E
++	#define MACCR_RXPATH			1 << 0
++	#define MACCR_RFC			1<<3
++#define P0_TSNR				AX_SHIFT(0x12)
++	#define TSNR_PKT_CNT(x)			(x << 8)
++	#define TSNR_TXB_START			(1 << 15)
++	#define TSNR_TXB_REINIT			(1 << 14)
++	#define TXNR_TXB_IDLE			(1 << 6)
++#define P0_RTDPR			AX_SHIFT(0x14)
++#define P0_RXBCR1			AX_SHIFT(0x16)
++	#define RXBCR1_RXB_DISCARD		(1 << 14)
++	#define RXBCR1_RXB_START		(1 << 15)
++#define P0_RXBCR2			AX_SHIFT(0x18)
++	#define RXBCR2_RXPC			0xFF
++	#define RXBCR2_RXB_READY		(1 << 13)
++	#define RXBCR2_RXB_IDLE			(1 << 14)
++	#define RXBCR2_RXB_REINIT		(1 << 15)
++#define P0_RCPHR			AX_SHIFT(0x1C)
++#define P0_RTWCR 	AX_SHIFT(0x1A)
++#define RTWCR_RXWC	0x2000
++#define RTWCR_RX_LATCH	(1<<15)
++
++
++
++#define P1_RPPER			AX_SHIFT(0x02)
++#define P1_RXBSPCR			AX_SHIFT(0x10)
++#define P1_RXMCR			AX_SHIFT(0x12)
++#define P1_RXMCR_STP			0x1000
++
++
++
++
++#define P2_POOLCR			AX_SHIFT(0x04)
++	#define POOLCR_POLL_EN			(1 << 0)
++	#define POOLCR_POLL_FC			(1<<1)
++	#define POOLCR_POLL_BMCR		(1 << 2)
++	#define POOLCR_PHYID(x)			((x) << 8)
++
++#define P2_MRDR				AX_SHIFT(0x08)
++#define P2_MRCR				AX_SHIFT(0x0A)
++	#define MRCR_RADDR(x)			((x) & 0x1F)
++	#define MRCR_FADDR(x)			(((x) & 0x1F) << 8)
++	#define MRCR_VALID			(1 << 13)
++	#define MRCR_READ			(1 << 14)
++	#define MRCR_WRITE			(1 << 15)
++
++#define P2_LCR0				AX_SHIFT(0x0C)
++	#define LCR_LED0_EN			(1 << 0)
++	#define LCR_LED0_DUPLEX			(1 << 2)
++	#define LCR_LED1_EN			(1 << 8)
++	#define LCR_LED1_100MODE		(1 << 9)
++#define P2_LCR1				AX_SHIFT(0x0E)
++	#define LCR_LED2_MASK			0XFF00
++	#define LCR_LED2_EN			(1 << 0)
++	#define LCR_LED2_LINK			(1 << 3)
++#define P2_RXCR				AX_SHIFT(0x16)
++	#define RXCR_PROMISCUS			0x0001
++	#define RXCR_BROADCAST			(1 << 3)
++#define P3_MACASR0			AX_SHIFT(0x02)
++#define P3_MACASR1			AX_SHIFT(0x04)
++#define P3_MACASR2			AX_SHIFT(0x06)
++
++#define P4_COERCR0			AX_SHIFT(0x12)
++	#define COERCR0_ALLON			0x1FFF
++#define P4_COERCR1			AX_SHIFT(0x14)
++	#define COERCR1_DROP_ALL		0x7FFF
++#define PHY_ANAR_PAUSE			0x400
++#endif /*end of CONFIG_DRIVER_AX88796B*/
+Index: u-boot-2011.03/drivers/serial/ns16550.c
+===================================================================
+--- u-boot-2011.03.orig/drivers/serial/ns16550.c	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/drivers/serial/ns16550.c	2013-04-03 11:29:16.070203600 +0200
+@@ -11,8 +11,13 @@
+ #include <asm/io.h>
+ 
+ #define UART_LCRVAL UART_LCR_8N1		/* 8 data, 1 stop, no parity */
++#ifdef CONFIG_ARCH_YKEM
++#define UART_MCRVAL (UART_MCR_RTS | \	
++		     UART_MCR_AUTO_RTS_CTS)		/* RTS, Auto RTS/CTS */
++#else
+ #define UART_MCRVAL (UART_MCR_DTR | \
+ 		     UART_MCR_RTS)		/* RTS/DTR */
++#endif		     
+ #define UART_FCRVAL (UART_FCR_FIFO_EN |	\
+ 		     UART_FCR_RXSR |	\
+ 		     UART_FCR_TXSR)		/* Clear & enable FIFOs */
+@@ -30,19 +35,36 @@
+ 
+ void NS16550_init (NS16550_t com_port, int baud_divisor)
+ {
++#ifdef CONFIG_ARCH_YKEM
++	NS16550_t sp_port; // Special register
++	
++	sp_port=(unsigned int)com_port + 0x100;
++#endif
++	
+ 	serial_out(CONFIG_SYS_NS16550_IER, &com_port->ier);
+ #if defined(CONFIG_OMAP) && !defined(CONFIG_OMAP3_ZOOM2)
+ 	serial_out(0x7, &com_port->mdr1);	/* mode select reset TL16C750*/
+ #endif
+ 	serial_out(UART_LCR_BKSE | UART_LCRVAL, (ulong)&com_port->lcr);
++#ifdef CONFIG_ARCH_YKEM
++	serial_out(0, &sp_port->dll);
++	serial_out(0, &sp_port->dlm);
++#else
+ 	serial_out(0, &com_port->dll);
+ 	serial_out(0, &com_port->dlm);
++#endif
+ 	serial_out(UART_LCRVAL, &com_port->lcr);
+ 	serial_out(UART_MCRVAL, &com_port->mcr);
+ 	serial_out(UART_FCRVAL, &com_port->fcr);
+ 	serial_out(UART_LCR_BKSE | UART_LCRVAL, &com_port->lcr);
++	
++#ifdef CONFIG_ARCH_YKEM
++	serial_out(baud_divisor & 0xff, &sp_port->dll);
++	serial_out((baud_divisor >> 8) & 0xff, &sp_port->dlm);
++#else
+ 	serial_out(baud_divisor & 0xff, &com_port->dll);
+ 	serial_out((baud_divisor >> 8) & 0xff, &com_port->dlm);
++#endif	
+ 	serial_out(UART_LCRVAL, &com_port->lcr);
+ #if defined(CONFIG_OMAP) && !defined(CONFIG_OMAP3_ZOOM2)
+ #if defined(CONFIG_APTIX)
+@@ -51,21 +73,38 @@
+ 	serial_out(0, &com_port->mdr1);	/* /16 is proper to hit 115200 with 48MHz */
+ #endif
+ #endif /* CONFIG_OMAP */
++
+ }
+ 
+ #ifndef CONFIG_NS16550_MIN_FUNCTIONS
+ void NS16550_reinit (NS16550_t com_port, int baud_divisor)
+ {
++#ifdef CONFIG_ARCH_YKEM
++	NS16550_t sp_port; // Special register
++	
++	sp_port=(unsigned int)com_port + 0x100;
++#endif
++
+ 	serial_out(CONFIG_SYS_NS16550_IER, &com_port->ier);
+ 	serial_out(UART_LCR_BKSE | UART_LCRVAL, &com_port->lcr);
++#ifdef CONFIG_ARCH_YKEM
++	serial_out(0, &sp_port->dll);
++	serial_out(0, &sp_port->dlm);
++#else
+ 	serial_out(0, &com_port->dll);
+ 	serial_out(0, &com_port->dlm);
++#endif	
+ 	serial_out(UART_LCRVAL, &com_port->lcr);
+ 	serial_out(UART_MCRVAL, &com_port->mcr);
+ 	serial_out(UART_FCRVAL, &com_port->fcr);
+ 	serial_out(UART_LCR_BKSE, &com_port->lcr);
++#ifdef CONFIG_ARCH_YKEM
++	serial_out(baud_divisor & 0xff, &sp_port->dll);
++	serial_out((baud_divisor >> 8) & 0xff, &sp_port->dlm);
++#else
+ 	serial_out(baud_divisor & 0xff, &com_port->dll);
+ 	serial_out((baud_divisor >> 8) & 0xff, &com_port->dlm);
++#endif
+ 	serial_out(UART_LCRVAL, &com_port->lcr);
+ }
+ #endif /* CONFIG_NS16550_MIN_FUNCTIONS */
+@@ -73,8 +112,12 @@
+ void NS16550_putc (NS16550_t com_port, char c)
+ {
+ 	while ((serial_in(&com_port->lsr) & UART_LSR_THRE) == 0);
++	
+ 	serial_out(c, &com_port->thr);
+-
++#ifdef CONFIG_ARCH_YKEM
++	/* Flush TX fifo */
++	*(volatile unsigned int*)((unsigned int)com_port + 0x118C) = 1;
++#endif
+ 	/*
+ 	 * Call watchdog_reset() upon newline. This is done here in putc
+ 	 * since the environment code uses a single puts() to print the complete
+@@ -88,6 +131,10 @@
+ #ifndef CONFIG_NS16550_MIN_FUNCTIONS
+ char NS16550_getc (NS16550_t com_port)
+ {
++#ifdef CONFIG_ARCH_YKEM
++	char read;
++#endif
++	
+ 	while ((serial_in(&com_port->lsr) & UART_LSR_DR) == 0) {
+ #ifdef CONFIG_USB_TTY
+ 		extern void usbtty_poll(void);
+@@ -95,12 +142,19 @@
+ #endif
+ 		WATCHDOG_RESET();
+ 	}
++#ifdef CONFIG_ARCH_YKEM
++	read = serial_in(&com_port->rbr);
++	/* Flush RX fifo */
++	*(volatile unsigned int*)((unsigned int)com_port + 0x110C) = 1;
++
++	return read;
++#else
+ 	return serial_in(&com_port->rbr);
++#endif
+ }
+ 
+ int NS16550_tstc (NS16550_t com_port)
+ {
+ 	return ((serial_in(&com_port->lsr) & UART_LSR_DR) != 0);
+ }
+-
+ #endif /* CONFIG_NS16550_MIN_FUNCTIONS */
+Index: u-boot-2011.03/include/configs/ykem.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ u-boot-2011.03/include/configs/ykem.h	2013-04-03 11:21:27.626211627 +0200
+@@ -0,0 +1,172 @@
++/*
++ * include/configs/ykem.h - YKEM board configuration
++ *
++ * Copyright (C) Sierra Wireless, Inc. 2013.
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ *
++ */
++
++#ifndef __CONFIG_H
++#define __CONFIG_H
++
++/*#define DEBUG*/
++/*
++ * High Level Configuration Options
++ * (easy to change)
++ */
++#define CONFIG_ARM926EJS	1	/* This is an arm926ejs CPU core  */
++#define CONFIG_YKEM		1	/* in Versatile Platform Board	*/
++#define CONFIG_INTEGRATOR	1	/* Specific ASIC interrupt and timer */
++
++#define CONFIG_SYS_MEMTEST_START       0x20000000
++#define CONFIG_SYS_MEMTEST_END         0x23DFFFFF
++#define CONFIG_SYS_HZ					1000
++#define CONFIG_SYS_HZ_CLOCK            (26000000)       /* Timer 1 is clocked at 26Mhz */
++#define CONFIG_SYS_TIMERBASE           0x90030020	/* GTB1 base */
++
++/*#define CONFIG_SHOW_BOOT_PROGRESS	1 */
++#define CONFIG_CMDLINE_TAG		1	/* enable passing of ATAGs  */
++
++/*
++ * Size of malloc() pool
++ */
++#define CONFIG_SYS_MALLOC_LEN	(CONFIG_ENV_SIZE + 128*1024)
++
++/*
++ * Hardware drivers
++ */
++
++/*
++ * NS16550 Configuration
++ */
++#define CONFIG_SYS_NS16550
++#define CONFIG_SYS_NS16550_SERIAL
++#define CONFIG_SYS_NS16550_REG_SIZE	-4
++#define CONFIG_SYS_NS16550_CLK	14745600
++#define CONFIG_CONS_INDEX		1
++#define CONFIG_SYS_NS16550_COM1	0x68170100		/* UART3 as ttyS0 */
++#define CONFIG_SERIAL1			1
++
++#define CONFIG_BAUDRATE         115200
++#define CONFIG_SYS_BAUDRATE_TABLE      { 9600, 19200, 38400, 57600, 115200 }
++
++
++#include <config_cmd_default.h>
++
++#define CONFIG_CMD_BDI
++#define CONFIG_CMD_IMI
++#undef	CONFIG_CMD_IMLS
++#define CONFIG_CMD_MEMORY
++#define CONFIG_CMD_LOADY
++#define CONFIG_CMD_LOADB
++#define CONFIG_CMD_FLASH
++#define CONFIG_CMD_ENV
++#define CONFIG_CMD_PING
++#define CONFIG_CMD_NET
++#define CONFIG_CMD_MISC
++
++#define CONFIG_BOOTP_MASK	CONFIG_BOOTP_DEFAULT
++
++#define CONFIG_BOOTDELAY	100
++#define CONFIG_BOOTARGS "mem=64M earlyprintk=serial,ttyS0 console=ttyS0 debug"
++#define CONFIG_BOOTCOMMAND ""
++
++/*
++ * Static configuration when assigning fixed address
++ */
++#define CONFIG_BOOTFILE	    "/tftpboot/uImage" /* file to load */
++
++#define CONFIG_ETHADDR          08:00:3e:26:0a:5b 
++#define CONFIG_NETMASK          255.255.255.0
++#define CONFIG_IPADDR           192.168.1.10
++#define CONFIG_SERVERIP         192.168.1.1
++#define CONFIG_GATEWAYIP        192.168.1.1
++
++#define CONFIG_EXTRA_ENV_SETTINGS \
++"mtdparts=" MTDPARTS_DEFAULT "\0"
++
++/*
++ * Miscellaneous configurable options
++ */
++#define CONFIG_SYS_LONGHELP	/* undef to save memory     */
++#define CONFIG_SYS_PROMPT	"Ykem # "	/* Monitor Command Prompt   */
++#define CONFIG_SYS_CBSIZE	256		/* Console I/O Buffer Size  */
++/* Print Buffer Size */
++#define CONFIG_SYS_PBSIZE	(CONFIG_SYS_CBSIZE+sizeof(CONFIG_SYS_PROMPT)+16)
++#define CONFIG_SYS_MAXARGS		16	/* max number of command args */
++#define CONFIG_SYS_BARGSIZE	CONFIG_SYS_CBSIZE	/* Boot Argument Buffer Size    */
++
++#undef	CONFIG_CLKS_IN_HZ		/* everything, incl board info, in Hz */
++#define CONFIG_SYS_LOAD_ADDR	0x41800000	/* default load address */
++
++/*-----------------------------------------------------------------------
++ * Stack sizes
++ *
++ * The stack sizes are set up in start.S using the settings below
++ */
++#define CONFIG_STACKSIZE	(128*1024)	/* regular stack */
++
++/*-----------------------------------------------------------------------
++ * Physical Memory Map
++ */
++#define CONFIG_NR_DRAM_BANKS    1	/* we have 1 bank of DRAM */
++#define PHYS_SDRAM_1            0x20000000	/* SDRAM Bank #1 */
++#define PHYS_SDRAM_1_SIZE       0x04000000	/* 64 MB */
++
++#define CONFIG_SYS_SDRAM_BASE	PHYS_SDRAM_1
++#define CONFIG_SYS_SDRAM_SIZE	PHYS_SDRAM_1_SIZE
++#define CONFIG_SYS_INIT_RAM_SIZE	0x1000
++#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_SDRAM_BASE + \
++					 CONFIG_SYS_INIT_RAM_SIZE - \
++					 GENERATED_GBL_DATA_SIZE)
++/*-----------------------------------------------------------------------
++ * FLASH and environment organization
++ */
++#define CONFIG_SYS_FLASH_CFI		1	/* Flash memory is CFI compliant */
++#define CONFIG_FLASH_CFI_MTD
++#define CONFIG_FLASH_CFI_DRIVER	1	/* Use drivers/mtd/cfi_flash.c */
++#define CONFIG_SYS_FLASH_PROTECTION
++#define CONFIG_SYS_FLASH_USE_BUFFER_WRITE
++#define CONFIG_SYS_FLASH_BASE       0x40000000
++#define CONFIG_SYS_FLASH_SIZE		0x02000000	/* 16MB */
++#define CONFIG_SYS_MAX_FLASH_BANKS	1		/* max number of memory banks */
++#define CONFIG_SYS_MAX_FLASH_SECT	(259)
++
++#define CONFIG_ENV_OVERWRITE	1
++#define CONFIG_ENV_IS_IN_FLASH     1               /* env in flash instead of CONFIG_ENV_IS_NOWHERE */
++#define CONFIG_ENV_SECT_SIZE       0x00020000      /* 256 KB sectors (x2) */
++#define CONFIG_ENV_SIZE            0x00020000      /* Total Size of Environment Sector */
++#define CONFIG_ENV_OFFSET          0x01FE0000      /* environment starts here  */
++#define CONFIG_ENV_ADDR            (CONFIG_SYS_FLASH_BASE + CONFIG_ENV_OFFSET)
++
++#define CONFIG_CMD_MTDPARTS
++#define CONFIG_MTD_DEVICE					/* needed for mtdparts commands */
++#define MTDIDS_DEFAULT		"nor0=ykem-nor0"
++#define MTDPARTS_DEFAULT	"mtdparts=ykem-nor0:0x800000@0x1000000(jffs),0x600000@0x1800000(linux),0x100000@0x1E00000(u-boot)"
++
++/*-----------------------------------------------------------------------
++ * ASIX AX88796C over PARIF organization and configuration
++ */
++#define CONFIG_MII		1
++#define CONFIG_DRIVER_AX88796C        1
++#define CONFIG_16BIT_MODE             1 /* 16 bit :1 , 8 bit :0 */
++#define CONFIG_PARIF_MUXED            0 /* muxed :1 , NON-muxed :0 */
++#define CONFIG_AX88796B_PIN_COMPATIBLE        0
++#define CONFIG_NET_MULTI                      1
++
++#define AX88796C_BASE    0x60000000
++
++#endif							/* __CONFIG_H */
+Index: u-boot-2011.03/include/serial.h
+===================================================================
+--- u-boot-2011.03.orig/include/serial.h	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/include/serial.h	2013-04-03 11:21:27.626211627 +0200
+@@ -28,7 +28,7 @@
+     defined(CONFIG_MB86R0x) || defined(CONFIG_MPC5xxx) || \
+     defined(CONFIG_MPC83xx) || defined(CONFIG_MPC85xx) || \
+     defined(CONFIG_MPC86xx) || defined(CONFIG_SYS_SC520) || \
+-    defined(CONFIG_TEGRA2)
++    defined(CONFIG_TEGRA2)  || defined(CONFIG_YKEM)
+ extern struct serial_device serial0_device;
+ extern struct serial_device serial1_device;
+ #if defined(CONFIG_SYS_NS16550_SERIAL)
+Index: u-boot-2011.03/drivers/mtd/cfi_flash.c
+===================================================================
+--- u-boot-2011.03.orig/drivers/mtd/cfi_flash.c	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/drivers/mtd/cfi_flash.c	2013-04-03 11:21:27.626211627 +0200
+@@ -571,9 +571,10 @@
+ 	else
+ 		tout = DIV_ROUND_UP(tout * (ulong)CONFIG_SYS_HZ, 1000);
+ #endif
+-
+ 	/* Wait for command completion */
++#ifdef CONFIG_SYS_LOW_RES_TIMER
+ 	reset_timer();
++#endif
+ 	start = get_timer (0);
+ 	while (flash_is_busy (info, sector)) {
+ 		if (get_timer (start) > tout) {
+@@ -581,6 +582,7 @@
+ 				prompt, info->start[sector],
+ 				flash_read_long (info, sector, 0));
+ 			flash_write_cmd (info, sector, 0, info->cmd_reset);
++			udelay(1);
+ 			return ERR_TIMOUT;
+ 		}
+ 		udelay (1);		/* also triggers watchdog */
+@@ -628,6 +630,7 @@
+ 				puts ("Vpp Low Error.\n");
+ 		}
+ 		flash_write_cmd (info, sector, 0, info->cmd_reset);
++		udelay(1);
+ 		break;
+ 	default:
+ 		break;
+@@ -660,7 +663,9 @@
+ #endif
+ 
+ 	/* Wait for command completion */
++#ifdef CONFIG_SYS_LOW_RES_TIMER
+ 	reset_timer();
++#endif
+ 	start = get_timer(0);
+ 	while (1) {
+ 		switch (info->portwidth) {
+@@ -864,7 +869,7 @@
+ 	void *src = cp;
+ 	void *dst = (void *)dest;
+ 	void *dst2 = dst;
+-	int flag = 0;
++	int flag = 1;
+ 	uint offset = 0;
+ 	unsigned int shift;
+ 	uchar write_cmd;
+@@ -889,7 +894,7 @@
+ 
+ 	cnt = len >> shift;
+ 
+-	while ((cnt-- > 0) && (flag == 0)) {
++	while ((cnt-- > 0) && (flag == 1)) {
+ 		switch (info->portwidth) {
+ 		case FLASH_CFI_8BIT:
+ 			flag = ((flash_read8(dst2) & flash_read8(src)) ==
+@@ -1202,8 +1207,9 @@
+ 		info->manufacturer_id);
+ 	printf (info->chipwidth == FLASH_CFI_16BIT ? "%04X" : "%02X",
+ 		info->device_id);
+-	if (info->device_id == 0x7E) {
+-		printf("%04X", info->device_id2);
++	if ((info->device_id & 0xff) == 0x7E) {
++		printf(info->chipwidth == FLASH_CFI_16BIT ? "%04X" : "%02X",
++		info->device_id2);
+ 	}
+ 	printf ("\n  Erase timeout: %ld ms, write timeout: %ld ms\n",
+ 		info->erase_blk_tout,
+@@ -1490,6 +1496,7 @@
+ 	flash_write_cmd (info, 0, 0, FLASH_CMD_READ_ID);
+ 	memcpy (dst, src + offset, len);
+ 	flash_write_cmd (info, 0, 0, info->cmd_reset);
++	udelay(1);
+ 	flash_unmap(info, 0, FLASH_OFFSET_USER_PROTECTION, src);
+ }
+ 
+@@ -1505,6 +1512,7 @@
+ 	flash_write_cmd (info, 0, 0, FLASH_CMD_READ_ID);
+ 	memcpy (buffer, src + offset, len);
+ 	flash_write_cmd (info, 0, 0, info->cmd_reset);
++	udelay(1);
+ 	flash_unmap(info, 0, FLASH_OFFSET_INTEL_PROTECTION, src);
+ }
+ 
+@@ -1536,6 +1544,7 @@
+ static void cmdset_intel_read_jedec_ids(flash_info_t *info)
+ {
+ 	flash_write_cmd(info, 0, 0, FLASH_CMD_RESET);
++	udelay(1);
+ 	flash_write_cmd(info, 0, 0, FLASH_CMD_READ_ID);
+ 	udelay(1000); /* some flash are slow to respond */
+ 	info->manufacturer_id = flash_read_uchar (info,
+@@ -1599,11 +1608,20 @@
+ 	case FLASH_CFI_16BIT:
+ 		info->device_id = flash_read_word (info,
+ 						FLASH_OFFSET_DEVICE_ID);
++		if ((info->device_id & 0xff) == 0x7E) {
++			/* AMD 3-byte (expanded) device ids */
++			info->device_id2 = flash_read_uchar (info,
++						FLASH_OFFSET_DEVICE_ID2);
++			info->device_id2 <<= 8;
++			info->device_id2 |= flash_read_uchar (info,
++						FLASH_OFFSET_DEVICE_ID3);
++		}
+ 		break;
+ 	default:
+ 		break;
+ 	}
+ 	flash_write_cmd(info, 0, 0, AMD_CMD_RESET);
++	udelay(1);
+ }
+ 
+ static int cmdset_amd_init(flash_info_t *info, struct cfi_qry *qry)
+@@ -1730,6 +1748,7 @@
+ 	 * that AMD flash roms ignore the Intel command.
+ 	 */
+ 	flash_write_cmd(info, 0, 0, AMD_CMD_RESET);
++	udelay(1);
+ 	flash_write_cmd(info, 0, 0, FLASH_CMD_RESET);
+ }
+ void flash_cmd_reset(flash_info_t *info)
+@@ -1852,11 +1871,16 @@
+ 	if (qry->num_erase_regions > 1) {
+ 		/* reverse geometry if top boot part */
+ 		if (info->cfi_version < 0x3131) {
+-			/* CFI < 1.1, guess by device id (M29W320{DT,ET} only) */
+-			if (info->device_id == 0x22CA ||
+-			    info->device_id == 0x2256) {
++			/* CFI < 1.1, guess by device id */
++			if (info->device_id == 0x22CA || /* M29W320DT */
++			    info->device_id == 0x2256 || /* M29W320ET */
++			    info->device_id == 0x22D7) { /* M29W800DT */
+ 				cfi_reverse_geometry(qry);
+ 			}
++		} else if (flash_read_uchar(info, info->ext_addr + 0xf) == 3) {
++			/* CFI >= 1.1, deduct from top/bottom flag */
++			/* note: ext_addr is valid since cfi_version > 0 */
++			cfi_reverse_geometry(qry);
+ 		}
+ 	}
+ }
+@@ -1929,7 +1953,8 @@
+ 
+ 		/* Do manufacturer-specific fixups */
+ 		switch (info->manufacturer_id) {
+-		case 0x0001:
++		case 0x0001: /* AMD */
++		case 0x0037: /* AMIC */
+ 			flash_fixup_amd(info, &qry);
+ 			break;
+ 		case 0x001f:
+Index: u-boot-2011.03/include/ns16550.h
+===================================================================
+--- u-boot-2011.03.orig/include/ns16550.h	2011-03-31 23:45:36.000000000 +0200
++++ u-boot-2011.03/include/ns16550.h	2013-04-03 11:21:27.626211627 +0200
+@@ -87,7 +87,7 @@
+ #define UART_MCR_OUT1	0x04		/* Out 1 */
+ #define UART_MCR_OUT2	0x08		/* Out 2 */
+ #define UART_MCR_LOOP	0x10		/* Enable loopback test mode */
+-
++#define UART_MCR_AUTO_RTS_CTS 0x20	/* Auto RTS/CTS enable */
+ #define UART_MCR_DMA_EN	0x04
+ #define UART_MCR_TX_DFR	0x08
+ 
