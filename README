@@ -1,0 +1,7 @@
+meta-swi
+==========
+
+This is the location for BSPs of SierraWireless Inc.
+
+Please see the README files contained in the individual BSP layers for
+BSP-specific information.
