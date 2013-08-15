@@ -1,0 +1,291 @@
+Sierra Wireless MDM9X15 platform Board Support Package
+
+
+Table of Contents
+=================
+
+1. Introductions
+2. Supported Boards
+3. Dependencies
+4. Patches
+5. BSP Features
+6. BSP Usage Notes
+
+
+1. Introductions
+================
+
+SWI MDM9x15 SOC is used by couples of Sierra Wireless AirPrime
+Embedded Wireless Modules, this bsp targets on supporting MDM9x15
+embedded AirPrime Modules and aims to provide a robust OS environment
+for further development.
+
+
+2. Supported Boards
+===================
+
+This BSP is developed under following hardware environment:
+
+  + SierraWireless WP7102 socket board + Dev Kit mother board
+  + SierraWireless AR7XXX socket board + Dev Kit mother board
+
+Adjustment may be needed if run the bsp on other variants of MDM9x15
+related boards.
+
+
+3. Dependencies
+===============
+
+This layer depends on:
+
+URI: git://git.yoctoproject.org/poky.git
+branch: dylan (1.4.1)
+
+URI: git://git.openembedded.org/meta-openembedded
+branch: dylan
+
+4. Patches
+=======
+
+Please submit any patches against this BSP to the Yocto mailing list
+(yocto@yoctoproject.org) and cc: the maintainer:
+
+Maintainer:
+	Pengyu Ma <pengyu.ma@windriver.com>
+	Weiwei Wang <weiwei.wang@windriver.com>
+
+5. BSP Features
+===============
+
+5.1 Supported Features
+----------------------
+
+The following BSP features are validated and supported on boards where
+the corresponding h/w features exist.
+
+  o General Serial Bus Interface
+	+ UART
+	+ I2C Master
+	+ SPI Master
+
+  o USB Controller
+	+ High Speed USB Host Controller
+	+ High Speed USB Device Controller
+	+ High Speed OTG Host Controller
+	+ HSIC USB Host Controller
+
+  o USB Devices(USB Host Controller functions)
+	+ USB Audio
+	+ USB ACM
+	+ USB Ethernet
+	+ USB hub
+	+ USB Storage
+
+  o USB Gadget(USB Device Controller functions)
+	+ CDC-ACM
+	+ CDC-ECM
+	+ Storage
+	+ Built-in Qualcomm 3G modem(Proprietary code are needed)
+
+  o Network
+	+ SMSC95XX HSIC Ethernet Controller
+
+  o Storage
+	+ NAND Flash: flexible static memory controller, FSMC
+		+ NAND Flash: Micron NAND Flash MT29F2G08, 2Gb
+	+ SD/MMC: On-Chip SDCC core
+
+  o Misc Devices
+	+ GPIO: On-Chip general purpose I/O peripheral
+
+  o Debug Features
+	+ gdbserver
+	+ lttng
+	+ strace
+	+ kgdboc
+	+ valgrind
+
+  o Kernel Features
+	+ preempt-rt
+
+5.2 Unvalidated Features
+------------------------
+
+The following features are not validated:
+
+	x SOC Audio: (Proprietary code are needed)
+
+
+6. BSP Usage Notes
+==================
+
+6.1 Build instructions
+----------------------
+
+The BSP follows standard yocto build instructions, refer to
+yocto documents if you get any trouble:
+https://www.yoctoproject.org/documentation
+
+To facilitate your job, a build script(build.sh) is also provided,
+please read README.install for more information.
+
+
+6.2 Boot methods
+----------------
+
+The module uses LK as boot loader, which heavily relies on Android
+tools fastboot and adb, so before you do development, make sure these
+tools are correctly installed on your host(Please contact Sierra
+Wireless if you got trouble). Suppose you receive a new WP7102 module,
+power it on first and then connect it to your host through usb cable.
+Several ttyUSB devices(assume your host is linux) can be found, next
+following steps are needed to deploy your own kernel/rootfs:
+
+a. use minicom to open ttyUSB1 and issue following AT command to
+turn on adb:
+At!unlock="A710"
+At!custom="ADBENABLE",1
+
+If everything goes well, two "OK" will be returned on the screen.
+
+b. Restart the module, run "adb shell" on host to enter into module linux
+console:
+
+$ adb devices
+List of devices attached
+0123456789ABCDEF        device
+
+$ adb shell
+/ #
+
+c. Connect the module uart port(mounted on dev kit mother board, and
+it will be used as linux console) with the uart port on your host;
+Run "sys_reboot bootloader" to restart the module and the module
+will pause on bootloader LK fastboot stage, uart output is like that:
+
+Android Bootloader - UART_DM Initialized!!!
+[50] udc_start()
+
+d. Now run fastboot command on your host to erase kernel and rootfs
+in flash:
+$ fastboot erase boot
+$ fastboot erase system
+
+On WP7102, the "boot" partiton contains linux kernel and the "system"
+partition contains linux rootfs
+
+e. Flash your own rootfs to boot/system partition on target, and run your
+own kernel image:
+$ fastboot flash system mdm9x15-image-minimal-swi-mdm9x15.yaffs2
+$ fastboot boot boot-yocto-mdm9x15.img
+
+Then the fastboot will download your kernel from the host to target
+and boot the target up. I suggest keeping boot partition erased during
+development cycle, then the target will always pause at fastboot stage
+after poweron, and we can use fastboot tool to load our customized kernel.
+
+BTW, the default username is root, and no passwd.
+
+Note: When flash rootfs into system partition, if follow error appears:
+...
+sending 'system' (22610 KB)...
+FAILED (remote: data too large)
+finished. total time: 0.010s
+...
+
+It means the system partition is too small, and you need to update partition.mbn
+either using JTAG or FDT tools. For how to modify partition tables, please contact
+Sierra Wireless directly.
+
+
+6.3 Rootfs methods
+------------------
+
+The Nand flash "system" partition, MMC, USB and NFS can be used as rootfs.
+
+6.3.1 Nand flash "system"
+-------------------------
+
+The kernel uses nand flash "system" partion as rootfs by default:
+
+$ cat <meta-swi-mdm9x15_dir>/conf/machine/swi-mdm9x15.conf |grep KERNEL_BOOT_OPTIONS
+KERNEL_BOOT_OPTIONS ?= "root=/dev/mtdblock14 rw rootfstype=yaffs2 rootflags=tags-ecc-off console=ttyHSL0,115200"
+
+See, mtdblock14(system) is used as a rootfs, so be sure the rootfs has
+been burnt into flash before boot the kernel(step e in 5.1.1).
+
+Note: the "system" partition size is very small, if your rootfs is
+too large, this method will not work.
+
+
+6.3.2 MMC
+---------
+
+Use MMC as rootfs with following kernel parameters:
+
+KERNEL_BOOT_OPTIONS = "root=/dev/mmcblk0p1 rw rootwait console=ttyHSL0,115200"
+
+As the example shown above, the first MMC card detected by linux is
+used as the device having rootfs, and the first partition inside it is used
+as rootfs.
+
+Rebuild the bsp, and unzip your rootfs into a mmc card on the host:
+$ sudo tar -xjvf <build_dir>/tmp/deploy/images/mdm9x15-image-dev-swi-mdm9x15.tar.bz2 -C /media/mmc
+(assume the mmc card is mounted at /media/mmc on your host)
+$ sudo umount /media/mmc
+
+Unplug the mmc from host, insert it into the target and boot target up.
+In this case MMC will be used as rootfs.
+
+
+6.3.3 USB storage device
+-------------------------
+
+Use USB storage device as  rootfs with following kernel parameters:
+
+KERNEL_BOOT_OPTIONS = "root=/dev/sda1 rw rootwait console=ttyHSL0,115200"
+
+And other steps are similar to MMC.
+
+6.3.4 NFS
+---------
+
+Using NFS as rootfs with this kernel parameter:
+
+        root=/dev/nfs rw nfsroot=<nfs_server_ip>:<path_to_rootfs> ip=dhcp
+
+For example:
+
+KERNEL_BOOT_OPTIONS = "root=/dev/nfs rw nfsroot=192.168.0.1:/export/pxeboot/boards/rootfs ip=dhcp console=ttyHSL0,115200"
+
+As the example shown above, nfs server locates at 192.168.0.1, and the
+exported mount point via nfs locates /export/pxeboot/boards/rootfs.
+
+
+6.4 Features Verification
+-------------------------
+
+For details about features test steps/report, please refer to
+MDM9x15 Yocto BSP Test Reports_Windriver.xls
+
+6.5 Other notes
+---------------
+
+6.5.1 By default the /dev/mtdblock14 is used as rootfs with the type of yaffs2.
+Relevant kernel boot options are set in the KERNEL_BOOT_OPTIONS variable in
+the following file:
+
+        meta-swi-mdm9x15/conf/machine/swi-mdm9x15.conf
+
+You can define your own kernel boot options in this variable.
+
+6.5.2 To support old WP7 module with small nand flash, please set
+NAND_PAGE_4K to 0 in your <build_dir>/conf/local.conf:
+NAND_PAGE_4K = "0"
+And rebuild it accordingly.
+
+6.5.3 The USB HSIC interface on WP7 works in host mode by default. If HSIC is
+required to work in device mode, please add following change in your
+<build_dir>/conf/local.conf:
+require conf/machine/swi-mdm9x15-hsic-device.inc
+And rebuilt it accordingly.
