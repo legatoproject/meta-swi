@@ -3,6 +3,12 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 PR := "${PR}.1"
 
 COMPATIBLE_MACHINE_swi-s6 = "swi-s6"
+KBRANCH_swi-s6  = "standard/swi-s6"
 
-SRCREV_machine_pn-linux-yocto_swi-s6 ?= "${AUTOREV}"
-SRCREV_meta_pn-linux-yocto_swi-s6 ?= "${AUTOREV}"
+KSRC_linux_yocto_3_4 := "${THISDIR}/../../../../linux-yocto-3.4.git"
+SRC_URI = "git://${KSRC_linux_yocto_3_4};protocol=file;branch=${KBRANCH},meta;name=machine,meta"
+
+# uncomment and replace these SRCREVs with the real commit ids once you've had
+# the appropriate changes committed to the upstream linux-yocto repo
+SRCREV_machine_pn-linux-yocto_swi-s6 ?= "fa31a816698512ceb0a7de8e75986358ba3dcefd"
+SRCREV_meta_pn-linux-yocto_swi-s6 ?= "bdc431a82eeae86659687c7d07ccda9be2577561"
