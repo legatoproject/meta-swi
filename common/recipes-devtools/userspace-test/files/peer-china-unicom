@@ -1,0 +1,24 @@
+debug debug debug
+/dev/ttyUSB1
+115200
+logfile /tmp/ppp.log
+connect '/usr/sbin/chat -v -f /etc/ppp/chat/china-unicom'
+nomultilink
+defaultroute
+noipdefault
+ipcp-restart 7
+ipcp-accept-local
+ipcp-accept-remote
+lcp-echo-interval 0
+lcp-echo-failure 999
+modem
+noauth
+nocrtscts
+noipdefault
+noaccomp
+noccp
+novj
+usepeerdns
+persist
+
+
