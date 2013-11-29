@@ -23,7 +23,7 @@ static struct spi_board_info spi_board_info[] __initdata = {
 		.max_speed_hz		= 500000,
 		.bus_num		= 0,
 		.chip_select		= 1,
-		.mode			= SPI_MODE_3 | SPI_LSB_FIRST,
+		.mode			= SPI_MODE_3 /*| SPI_LSB_FIRST*/,
 	}
 };
 
@@ -38,6 +38,7 @@ static int __init spi_dev_init(void)
 {
 	struct spi_master *master = spi_busnum_to_master(bus_num);
 	int dummy;
+
 	if (master == NULL) {
 		printk(" the spi bus %d doesn't exist!!", bus_num);
 		return;

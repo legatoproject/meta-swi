@@ -136,8 +136,9 @@ int main(int argc, char *argv[])
 		pabort("can't open device");
 
 	if (ioctl(fd, I2C_SLAVE, addr) < 0) {
+		printf("Failed to acquire bus access and/or talk to slave.\n");
 		/* ERROR HANDLING; you can check errno to see what went wrong */
-    		exit(1);
+		exit(1);
 	}
 
 	transfer(fd);
