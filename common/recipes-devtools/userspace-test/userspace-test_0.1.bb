@@ -14,6 +14,8 @@ SRC_URI = "file://spidev_test.c \
 	   file://keypad_test.c \
 	   file://hello.c \
 	   file://mem_leak.c \
+	   file://vodafone \
+	   file://vodafone.chat \
 	   file://peer-china-unicom \
 	   file://china-unicom "
 
@@ -35,6 +37,8 @@ do_install () {
         install -m 0755 ${WORKDIR}/keypad_test ${D}/opt/userspace-test
         install -m 0755 ${WORKDIR}/hello ${D}/opt/userspace-test
         install -m 0755 ${WORKDIR}/mem_leak ${D}/opt/userspace-test
+        install -m 0644 ${WORKDIR}/vodafone ${D}/opt/userspace-test
+        install -m 0644 ${WORKDIR}/vodafone.chat ${D}/opt/userspace-test
         install -m 0644 ${WORKDIR}/peer-china-unicom ${D}/opt/userspace-test
         install -m 0644 ${WORKDIR}/china-unicom ${D}/opt/userspace-test
 }

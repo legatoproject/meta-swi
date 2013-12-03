@@ -1,0 +1,22 @@
+hide-password
+noauth
+connect "/usr/sbin/chat -v -f /etc/ppp/peers/vodafone.chat"
+debug
+noccp 
+nobsdcomp
+novj
+/dev/ttyUSB3
+460800
+lock
+crtscts
+modem
+holdoff 5
+persist
+usepeerdns
+defaultroute
+user "internet.vodafone.ro"
+password "vodafone"
+ipcp-accept-local
+ipcp-accept-remote
+noipdefault
+noipv6

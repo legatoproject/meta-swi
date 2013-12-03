@@ -1,0 +1,18 @@
+ABORT BUSY 
+ABORT 'NO CARRIER' 
+ABORT VOICE 
+ABORT 'NO DIALTONE' 
+ABORT 'NO DIAL TONE' 
+ABORT 'NO ANSWER' 
+ABORT DELAYED 
+'' ATZ 
+OK 'AT&FE0V1X1&D2&C1 s0=0' 
+#scoatere pin din minicom 
+#AT+CPIN="xxxx" 
+#AT+CLCK="SC",0,"xxxx" 
+#ptr. pin 
+#OK 'AT+CPIN=1234' 
+OK 'ATE1' 
+OK 'AT+cgdcont=1,"IP","live.vodafone.com"' 
+OK-AT-OK "ATDT*99***1#" 
+CONNECT \d\c
