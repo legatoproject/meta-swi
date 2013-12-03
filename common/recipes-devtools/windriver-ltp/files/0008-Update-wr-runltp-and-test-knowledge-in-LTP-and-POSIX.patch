@@ -1,0 +1,1288 @@
+From fd638bee077322bdb4f5ee62cb4f994f17d06939 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Fri, 3 Aug 2012 10:52:15 +0800
+Subject: [PATCH] Update wr-runltp and test knowledge in LTP and POSIX
+
+This check-in fix the following issue:
+
+1. Update test knowledge base in LTP and POSIX according to the regression test
+result.
+
+2. Update wr-runltp to run single test case more effectively and optimize test
+result summary and analysis output on console.
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ .../wrLinux_posix/failtest/common                  |  26 +-
+ .../open_posix_testsuite/wrLinux_posix/wr-runposix | 198 +++++++------
+ wrLinux_ltp/failtest/arm                           |  17 +-
+ wrLinux_ltp/failtest/common                        | 101 ++++---
+ wrLinux_ltp/failtest/mips                          |  35 +--
+ wrLinux_ltp/failtest/ppc                           |  11 +-
+ wrLinux_ltp/skiptest/arm                           |   5 +
+ wrLinux_ltp/skiptest/mips                          |   5 +
+ wrLinux_ltp/skiptest/ppc                           |   6 +-
+ wrLinux_ltp/skiptest/x86                           |   5 +
+ wrLinux_ltp/wr-runltp                              | 314 ++++++++++++---------
+ 11 files changed, 411 insertions(+), 312 deletions(-)
+
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/failtest/common b/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
+index c3bdfb7..f11a48a 100644
+--- a/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
++++ b/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
+@@ -14,7 +14,7 @@ But it does not say what should happen if the value is not one of the above. egl
+ doesn't validate the parameter aio_lio_opcode when in function __aio_enqueue_request
+ called by lio_listio().
+ 
+-#std conformance/interfaces/aio_error 3-1.run-test | Not a bug and test result depends on system implement
++#std conformance/interfaces/aio_error 3-1.run-test | Not a bug. Test result depends on system implement
+ This test tries to call aio_error with argument aiocbp which does not point at
+ a control block for an asynchronous I/O request, and expect error EINVAL.
+ 
+@@ -27,36 +27,34 @@ The aio_error( ) function may fail if:
+ 
+ It just say "may" and not a compelling contraint, so this is implement dependent and not a bug.
+ 
+-#std conformance/interfaces/aio_read 9-1.run-test | Test case bug and has been fixed upstream in LTP
++#std conformance/interfaces/aio_read 9-1.run-test | Test case issue. Bug has been fixed upstream in LTP
+ The test case has been fixed upstream in LTP.
+ Please see LTP commit 91d8c0c85c97366a7ec4ee08ef3b3e7a38661ac8.
+ 
+-#std conformance/interfaces/aio_return 2-1.run-test | Not a bug and test result depends on system implement
++#std conformance/interfaces/aio_return 2-1.run-test | Not a bug. Test result depends on system implement
+ In specification, second call to aio_return() return -1 is a kind of possibility
+ depending on implementation. In eglibc the return value is same as first return.
+ 
+-#std conformance/interfaces/aio_return 3-2.run-test | Not a bug and test result depends on system implement
++#std conformance/interfaces/aio_return 3-2.run-test | Not a bug. Test result depends on system implement
+ Same with test aio_return/2-1.run-test.
+ 
+-#std conformance/interfaces/aio_return 4-1.run-test | Not a bug and test result depends on system implement
++#std conformance/interfaces/aio_return 4-1.run-test | Not a bug. Test result depends on system implement
+ The case tries to call aio_return with argument aiocbp which does not point
+ at a control block for an asynchronous I/O request, and expect error EINVAL. But
+ this is optional and depends on system implementation.
+ 
+-#std conformance/interfaces/aio_write 7-1.run-test | Test case bug and has been fixed upstream in LTP
++#std conformance/interfaces/aio_write 7-1.run-test | Test case issue. Bug has been fixed upstream in LTP
+ This case  has been fixed in LTP.
+ Please see LTP commit b56638a7a8ae9cd37e5698de3186dc3cb1434cd8.
+ 
+ 
+-
+ Test Suit -- conformance/interfaces TMR
+ ---------------------------------------
+ 
+ #std conformance/interfaces/timer_settime 5-3.run-test | Not a bug. Test pass when executed manually
+ It take a little longer for test to run. So POSIX take the result as HUNG.
+ 
+-#std conformance/interfaces/clock_getcpuclockid 5-1.run-test | Test case bug and the result depends on system implementation
+-
++#std conformance/interfaces/clock_getcpuclockid 5-1.run-test | Not a bug. Test result depends on system implementation
+ When call clock_getcpuclockid() as a unpriviledge user to get process 'init' cpu
+ time, it succeeds but expect fails with EPERM.
+ 
+@@ -109,11 +107,11 @@ it returns -ENOMEM. TASK_SIZE value differs on different platforms.
+ Test Suit -- conformance/interfaces THR
+ ---------------------------------------
+ 
+-#std conformance/interfaces/pthread_key_create/speculative 5-1.run-test | Test case bug and will be fixed upstream
++#std conformance/interfaces/pthread_key_create/speculative 5-1.run-test | Test case issue. Bug will be fixed upstream
+ The  pthread_key_delete()  function  shall delete a thread-specific data key
+ previously returned by pthread_key_create
+ 
+-#std conformance/interfaces/pthread_mutexattr_gettype/speculative 3-1.run-test | Not a bug and test result depends on system implement
++#std conformance/interfaces/pthread_mutexattr_gettype/speculative 3-1.run-test | Not a bug. Test result depends on system implement
+ Test case try to initialize a pthread_mutexattr_t object with
+ pthread_mutexattr_init() and call pthread_mutexattr_gettype() with an invalid 'attr'.
+ 
+@@ -127,7 +125,7 @@ priority write lock is waiting, but read lock doesn't block.
+ #std conformance/interfaces/pthread_rwlock_rdlock 2-2.run-test | Not a bug. This case is NOT supported by eglibc
+ Same with pthread_rwlock_rdlock/2-1.run-test
+ 
+-#std conformance/interfaces/pthread_rwlock_rdlock 3-1.run-test | Not a bug. This case is NOT supported by eglibc
++#std conformance/interfaces/pthread_rwlock_unlock 3-1.run-test | Not a bug. This case is NOT supported by eglibc
+ Same with pthread_rwlock_rdlock/2-1.run-test
+ 
+ #std conformance/interfaces/pthread_cond_broadcast 1-2.run-test | Not a bug. Lack of memory
+@@ -151,11 +149,9 @@ Same with test case sched_getparam/6-1.run-test
+ Test Suit -- conformance/interfaces SIG
+ ---------------------------------------
+ 
+-#std sigaction/16-1 | Not a bug. The test case will be updated upstream in POSIX
++#std conformance/interfaces/sigaction 16-1.run-test | Not a bug. The test case will be updated upstream in POSIX
+ The case tries to check that if SA_RESTART is set in sa_flags, interruptible
+ function interrupted by signal shall restart silently. The global varialbe
+ "ready" which is used to synced up between threads is incorrectly set to static.
+ Remove the "static" and the test passed as expected.
+ 
+-
+-
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+index 46192d0..004e33d 100755
+--- a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
++++ b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+@@ -32,7 +32,7 @@ RUNTIME_SKIPFILE="$RUNTIME_PATH/runtime.skip"
+ RUNTIME_LOGFILE="$RUNTIME_PATH/runtime.log"
+ RESUME_LOGFILE="$RUNTIME_PATH/resume.log"
+ SKIPTEST="$RUNTIME_PATH/skiptest"
+-tmpfile="$RUNTIME_TMP_PATH/ltp_tmp"
++tmpfile="$RUNTIME_TMP_PATH/posix_tmp"
+ RUNTIME_TESTFILE="$RUNTIME_PATH/testfile"
+ 
+ SCENARIO_GROUP_LIST="AIO,MEM,MSG,SEM,SIG,THR,TMR,TPS"
+@@ -65,17 +65,21 @@ EOF
+ # Check the input parameter
+ check()
+ {
+-    WRONG_SUITE=0
+     if [ "$RUN_SELECTED_SUITE" -eq 1 ];then
+         for suite in `echo $TESTSUITE_LIST |  tr ',' ' '`; do
+-            ls $BASEDIR/$suite | grep -q "run.sh" || WRONG_SUITE=1;break
++            ls $BASEDIR/$suite 2>/dev/null | grep "run.sh" >/dev/null 2>&1 || {
++                echo "FATAL: unknown test suite name $suite"
++                exit 1
++            }
+         done
+     fi
+-    if [ "$WRONG_SUITE" -eq 1 ]; then
+-        echo "FATAL: unknown test suite name"
+-        usage
+-        exit 1
++
++    if [ "$RUN_SELECTED_SUITE" -eq 0 -a "$RUN_SELECTED_CASE" -eq 1 ];then
++            echo "FATAL: test suite name must be set before test case name"
++            usage
++            exit 1
+     fi
++
+     if [ "$RUN_SELECTED_SUITE" -eq 1 -a "$RUN_SELECTED_CASE" -eq 1 ];then
+         if echo $TESTSUITE_LIST | grep -q "," ; then
+             echo "FATAL: can only run selected test case under one test suite"
+@@ -147,6 +151,7 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+                 TESTSUITE_LIST="$TESTSUITE_LIST $BASEDIR/shm_*"
+ 	        ;;
+             *)
++                echo "FATAL: unknown scenario group name $group"
+                 usage
+                 exit 1
+                 ;;
+@@ -177,30 +182,30 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+             echo "$TESTSUITE_LIST $testcase" >> $RUNTIME_TESTFILE
+         done
+     fi
++    TESTSUITE_LIST=$(echo $TESTSUITE_LIST | sed "s/\/opt\/open_posix_testsuite\///")
++    # Create POSIX test plan when run selected test suite
++    echo "<<wr-runposix Test Plan>>"
++    if [ "$RUN_SELECTED_SUITE" -eq 0 ]; then
++        echo "POSIX scenario group list: $SCENARIO_GROUP_LIST"
++    else
++        echo "POSIX test suite list: $TESTSUITE_LIST"
++	[ "$RUN_SELECTED_CASE" -eq 1 ] && echo "POSIX test case list: $TESTCASE_LIST"
++    fi
+ 
+-    # Create POSIX runtime skipping test file
+-    echo "POSIX Test Start Time: $START_TIME" > $SKIPTEST
+-    echo "-------------------------------------------" >> $SKIPTEST
+-    printf "%-60s %-21s %s \n" Testcase Type "Skip Reason" >> $SKIPTEST
+-    printf "%-60s %-21s %s \n" -------- ----  -----------  >> $SKIPTEST
+-
++    # Create POSIX runtime skipped test file.
+     if [ -d $SKIP_PATH ];then
+-
+-        cat $RUNTIME_TESTFILE | while read line
++        while read line
+         do
+-            skip_suite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $3}')
+-            skip_subsuite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $4}')
+-            [ -n "$skip_subsuite" ] && skip_suite="$skip_suite/$skip_subsuite"
+-            skip_test=$(echo "$line" | awk '{print $2}')
+-            skip_reason=$(cat $SKIP_PATH/common | grep "^#std .*$skip_suite $skip_test" | cut -d "|" -f 2)
+-            [ -z "$skip_reason" -a -n "$KERNEL_ARCH" ] && \
+-            skip_reason=$(cat $SKIP_PATH/common | grep "^#$KERNEL_ARCH .*$skip_suite $skip_test" | cut -d "|" -f 2)
+-
+-            if [ -n "$skip_reason" ]; then
+-                printf "%-60s %-20s %s \n" "$skip_suite $skip_test" SKIP "$skip_reason" >> $SKIPTEST
+-                echo "$skip_suite $skip_test" >> $RUNTIME_SKIPFILE
++            if echo $line | grep -E -q "^#std"; then
++                skip_suite=$(echo $line | awk '{print $2}')
++                skip_test=$(echo $line | awk '{print $3}')
++                skip_reason=$(echo $line | cut -d "|" -f 2)
++                if grep -q "^$skip_suite $skip_test" $RUNTIME_TESTFILE; then
++                    printf "%-60s %-20s %s \n" "$skip_suite $skip_test" SKIP "$skip_reason" >> $SKIPTEST
++                    echo "$skip_suite $skip_test" >> $RUNTIME_SKIPFILE
++                fi
+             fi
+-        done
++        done < $SKIP_PATH/common
+     fi
+ else
+     # When it is NOT a fresh POSIX execution, use the existing runtime file
+@@ -241,19 +246,19 @@ else
+     panic_test=$(echo "$line" | awk '{print $2}')
+     [ -n "$panic_subsuite" ] && panic_suite="$panic_suite/$panic_subsuite"   
+ 
+-    # Add finished test case to runtime skipping test file
++    # Add finished test case to runtime skipped test file
+     testcase=$(echo "$panic_suite $panic_test" | sed 's#\/#\\\/#g')
+     cat $RUNTIME_TESTFILE | sed -n "1,/$testcase/p" >>  $RUNTIME_SKIPFILE
+ 
+-    # Add panic test case to test skipping report
+-    printf "%-60s %-11s %s \n" "$panic_suite $panic_test" SKIP "system panic" >> $SKIPTEST
++    # Add panic test case to test skipped report
++    printf "%-60s %-20s %s \n" "$panic_suite $panic_test" SKIP "system panic" >> $SKIPTEST
+ 
+     # Back up the last rutime log as resume file
+     mv $RUNTIME_LOGFILE $RESUME_LOGFILE 
+ 
+ fi
+ 
+-    # Fliter out the skipping test case to create runtime test execution file
++    # Fliter out the skipped test case to create runtime test execution file
+     [ -f $RUNTIME_SKIPFILE ] && {
+         grep -v -f $RUNTIME_SKIPFILE $RUNTIME_TESTFILE > $tmpfile 2>/dev/null
+         mv $tmpfile $RUNTIME_TESTFILE
+@@ -262,6 +267,7 @@ fi
+ 
+ report()
+ {
++
+     [ -f $RUNTIME_LOGFILE ] || exit 1
+ 
+     if [ "$RUN_RESUME_TEST" -eq 1  ]; then
+@@ -269,71 +275,105 @@ report()
+ 	cp $RESUME_LOGFILE $RUNTIME_LOGFILE
+     fi
+ 
+-    # Create the final POSIX test report
++    # Summarize POSIX test result
+ 
++    echo "<<wr-runposix Test Result>>"
+     pass_num=$(grep -c "execution: PASS" $RUNTIME_LOGFILE)
+     fail_num=$(grep -c "execution: FAILED" $RUNTIME_LOGFILE)
+     untested_num=$(grep -c "execution: UNTESTED" $RUNTIME_LOGFILE)
+     unresolved_num=$(grep -c "execution: UNRESOLVED" $RUNTIME_LOGFILE)
+     unsupported_num=$(grep -c "execution: UNSUPPORTED" $RUNTIME_LOGFILE)
+     hung_num=$(grep -c "execution: HUNG" $RUNTIME_LOGFILE)
++    skip_num=0
++    [ -e "$SKIPTEST" ] && skip_num=$(grep -c "SKIP" $SKIPTEST)
+ 
+-    total_number=$(expr $pass_num + $fail_num + $untested_num + $unresolved_num + $unsupported_num + $hung_num)
++    total_number=$(expr $pass_num + $fail_num + $untested_num + $unresolved_num + $unsupported_num + $hung_num + $skip_num)
+     hostname=$(hostname)
+     cpu_arch=$(uname -m)
+     kernel_version=$(uname -r)
+ 
+-    cat $RUNTIME_LOGFILE > $POSIX_LOGFILE
+-    echo "Total Pass: $pass_num"                  >> $POSIX_LOGFILE
+-    echo "Total Fail: $fail_num"                  >> $POSIX_LOGFILE
+-    echo "Total Untested: $untested_num"          >> $POSIX_LOGFILE
+-    echo "Total Unresolved: $unresolved_num"      >> $POSIX_LOGFILE
+-    echo "Total Unsupported: $unsupported_num"    >> $POSIX_LOGFILE
+-    echo "Total Hung: $hung_num"                  >> $POSIX_LOGFILE
+-    echo "Total Tests: $total_number"             >> $POSIX_LOGFILE
+-    echo "Kernel Version: $kernel_version"        >> $POSIX_LOGFILE
+-    echo "Machine Architecture: $cpu_arch"        >> $POSIX_LOGFILE
+-    echo "Hostname: $hostname"                    >> $POSIX_LOGFILE
+-
+-    # Create the failed test report based on data base fail reason
+-    cat $RUNTIME_LOGFILE | sed -n '1,2p' > $FAIL_REPORT
+-    printf "%-60s %-21s %s \n" Testcase Type "Fail Reason" >> $FAIL_REPORT
+-    printf "%-60s %-21s %s \n" -------- ----  -----------  >> $FAIL_REPORT
++    echo "Total Tests: $total_number"             >> $RUNTIME_LOGFILE
++    echo "Total Pass: $pass_num"                  >> $RUNTIME_LOGFILE
++    echo "Total Fail: $fail_num"                  >> $RUNTIME_LOGFILE
++    echo "Total Untested: $untested_num"          >> $RUNTIME_LOGFILE
++    echo "Total Unresolved: $unresolved_num"      >> $RUNTIME_LOGFILE
++    echo "Total Unsupported: $unsupported_num"    >> $RUNTIME_LOGFILE
++    echo "Total Hung: $hung_num"                  >> $RUNTIME_LOGFILE
++    echo "Total Skip: $skip_num"                  >> $RUNTIME_LOGFILE
++    echo "Kernel Version: $kernel_version"        >> $RUNTIME_LOGFILE
++    echo "Machine Architecture: $cpu_arch"        >> $RUNTIME_LOGFILE
++    echo "Hostname: $hostname"                    >> $RUNTIME_LOGFILE
++
++    if [ "$total_number" -eq 0 ]; then
++        echo "There is no POSIX test result"
++        echo "Please check the name of test suite and test case"
++    else
++        sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
++    fi
+ 
+-    while read line
+-    do
+-        if echo $line | grep -E -q 'execution: FAILED|execution: UNRESOLVED|execution: HUNG'; then
+-            fail_suite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $3}')
+-            fail_subsuite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $4}')
+-            fail_test=$(echo "$line" | awk '{print $1}' | awk -F"/" '{printf $5}')
+-        
+-            if [ -n "$fail_test" ]; then
+-                fail_suite="$fail_suite/$fail_subsuite"
+-            else
+-                fail_test="$fail_subsuite"
+-            fi
+-            fail_test=$(echo $fail_test | tr -d ":")
+-            fail_type=$(echo "$line" | awk '{print $3}'| tr -d ":")
+-
+-            fail_reason=$(cat $FAIL_PATH/common | grep "^#std .*$fail_suite $fail_test" | cut -d "|" -f 2)
+-            [ -z "$fail_reason" -a -n "$KERNEL_ARCH" ] && \
+-            fail_reason=$(cat $FAIL_PATH/common | grep "^#$KERNEL_ARCH .*$fail_suite $fail_test" | cut -d "|" -f 2)
+-	    [ -z "$fail_reason" ] && UNKNOWN_FAILURE=1
+-	    printf "%-60s %-20s %s \n" "$fail_suite/$fail_test" "$fail_type" "$fail_reason" >> $FAIL_REPORT
+-        fi
+-    done < $RUNTIME_LOGFILE
++    # Create formatted test report when execute plenty of cases
++    [ "$RUN_SELECTED_CASE" -eq 0 ] && {
++        cp $RUNTIME_LOGFILE $POSIX_LOGFILE
++        echo "POSIX Formatted Test report : $POSIX_LOGFILE"
++    }
+ 
+-[ "$UNKNOWN_FAILURE" -eq 1 ] && echo "Warning: POSIX test has unknown failure"
+-    # Create the skipping test report
+-    cp $SKIPTEST  $SKIP_REPORT
++    # Create formatted failed test report and detailed failure analysis
+ 
+-    cat <<-EOF >&2
++if [ "$total_number" -gt 0 ]; then
++    echo "<<wr-runposix Test Analysis>>"
++    if [ "$fail_num" -gt 0 -o "$unresolved_num" -gt 0 -o "$hung_num" -gt 0 ]; then
+ 
+-POSIX Test Finished
+-POSIX Test Log Path: $LOGPATH
+-POSIX Test Knowledge Base Path: $FAIL_PATH
++        cat $RUNTIME_LOGFILE | sed -n '1,2p' > $FAIL_REPORT
++        printf "%-60s %-21s %s \n" Testcase Type "Fail Reason" >> $FAIL_REPORT
++        printf "%-60s %-21s %s \n" -------- ----  -----------  >> $FAIL_REPORT
+ 
+-	EOF
++        while read line
++        do
++            if echo $line | grep -E -q 'execution: FAILED|execution: UNRESOLVED|execution: HUNG'; then
++                fail_suite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $3}')
++                fail_subsuite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $4}')
++                fail_test=$(echo "$line" | awk '{print $1}' | awk -F"/" '{printf $5}')
++        
++                if [ -n "$fail_test" ]; then
++                    fail_suite="$fail_suite/$fail_subsuite"
++                else
++                    fail_test="$fail_subsuite"
++                fi
++                fail_test=$(echo $fail_test | tr -d ":")
++                fail_type=$(echo "$line" | awk '{print $3}'| tr -d ":")
++
++                fail_reason=$(cat $FAIL_PATH/common | grep "^#std .*$fail_suite $fail_test" | cut -d "|" -f 2)
++                [ -z "$fail_reason" -a -n "$KERNEL_ARCH" ] && \
++                fail_reason=$(cat $FAIL_PATH/common | grep "^#$KERNEL_ARCH .*$fail_suite $fail_test" | cut -d "|" -f 2)
++	        [ -z "$fail_reason" ] && UNKNOWN_FAILURE=1
++	        printf "%-60s %-20s %s \n" "$fail_suite/$fail_test" "$fail_type" "$fail_reason" >> $FAIL_REPORT
++            fi
++        done < $RUNTIME_LOGFILE
++
++	if [ "$UNKNOWN_FAILURE" -eq 0 ]; then
++            echo "POSIX test passed with known failure"
++        else
++            echo "Warning: POSIX test has unknown failure"
++        fi
++	echo "[Log Path] Formated failed test result: $FAIL_REPORT"
++        echo "[Test Knowledge Base] Detailed result analysis about known failure: $FAIL_PATH"
++    else
++        echo "POSIX test passed"
++    fi
++
++    # Create the skipped test report
++    if grep "SKIP" $SKIPTEST > /dev/null 2>&1 ; then
++        echo "POSIX Test Start Time: $START_TIME" > $SKIP_REPORT
++        echo "-------------------------------------------" >> $SKIP_REPORT
++        printf "%-60s %-21s %s \n" Testcase Type "Skip Reason" >> $SKIP_REPORT
++        printf "%-60s %-21s %s \n" -------- ----  -----------  >> $SKIP_REPORT
++        cat $SKIPTEST >> $SKIP_REPORT
++        echo "POSIX test has the following skipped case:"
++	cat $SKIPTEST | awk '{print $1 $2}'
++	echo "[Log Path] Formated skipped test result: $SKIP_REPORT"
++        echo "[Test Knowledge Base] Detailed skip reason: $SKIP_PATH"
++    fi
++fi
+ }
+ 
+ main()
+diff --git a/wrLinux_ltp/failtest/arm b/wrLinux_ltp/failtest/arm
+index 8102409..2f7017e 100644
+--- a/wrLinux_ltp/failtest/arm
++++ b/wrLinux_ltp/failtest/arm
+@@ -1,5 +1,20 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++
+ Test Suit -- syscall
+ ---------------------------------------
+ 
+-#std getcontext01 | Test case is NOT supported on arm arch
++#std getcontext01 | Not a bug. Test case is NOT supported on arm arch
+ eglibc doesn't implement getcontext for arm, so this result is expected.
++
++Test Suit -- hyperthreading                                                                                                                                          
++---------------------------------------
++
++#std smt_smp_enabled | Not a bug. Test case is NOT supported on arm arch
++
++#std smt_smp_affinity | Not a bug. Test case is NOT supported on arm arch
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index 43b29ff..a88e7ae 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -36,7 +36,7 @@ the warning when the kernel version >2.6.32
+ #std set_robust_list01 | Not a bug. Pass after disable GRSecurity and PAX kernel option
+ Pass after disable GRSecurity and PAX kernel option
+ 
+-#std cacheflush01 | Not a bug. meanlingless test
++#std cacheflush01 | Test case issue. meanlingless test
+ cache argument is ignored in kernel and testing this argument is meaningless
+ 
+ #cgl mq_timedsend01 | Not a bug. CFLAGS fstack protector issue
+@@ -103,11 +103,11 @@ futext list, else not.
+ The test tries to make sure that the current working directory location is under
+ /tmp. But on NFS, the /tmp link to /var/volatile/tmp, and the fail is expected.
+ 
+-#std mount02 | Test case bug and will be fixed upstream
++#std mount02 | Test case issue and will be fixed upstream
+ This test tries to get the right "error" number of mount syscall. Currently, the
+ number of test case have rised to 13, but the number of error array is still 8
+ 
+-#std mount03 | Test case bug and will be fixed upstream
++#std mount03 | Not a bug. Test tries to "stat" a nonexistent file
+ 
+ #std getrusage03 | Not a bug. Test fails on embedded system with small memory
+ To use this test also in embedded systems it needs to reduce the memory
+@@ -118,12 +118,12 @@ swapped memory. Passing [num] parameter at command line the test is executed
+ using the input parameter as multiply factor instead of 10, that is the default
+ value when no argument is passed.
+ 
+-#std getrusage04 | Test case bug and will be fixed upstream
++#std getrusage04 | Test case issue and will be fixed upstream
+ 
+ Test Suit -- commands
+ ---------------------------------------
+ 
+-#std file | Not a bug. wrLinux don't support gcc
++#std file | Not a bug. gcc is not supported on runtime target
+ Test 6 use gcc to build C file, but wrLinux don't support gcc.
+ 
+ Test Suit -- fs
+@@ -132,46 +132,46 @@ Test Suit -- fs
+ #std quota_remount_test01 | Not a bug. Lack of quota_check command in rootfs
+ Lack of quota_check command in rootfs
+ 
+-#std iogen01 | NFS rootfs read or write speed limitation
++#std iogen01 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std rwtest01 | NFS rootfs read or write speed limitation
++#std rwtest01 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std rwtest02 | NFS rootfs read or write speed limitation
++#std rwtest02 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std rwtest03 | NFS rootfs read or write speed limitation
++#std rwtest03 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std gf02 | NFS rootfs read or write speed limitation
++#std gf02 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std gf05 | NFS rootfs read or write speed limitation
++#std gf05 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std gf09 | NFS rootfs read or write speed limitation
++#std gf09 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std gf10 | NFS rootfs read or write speed limitation
++#std gf10 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std gf11 | NFS rootfs read or write speed limitation
++#std gf11 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std gf12 | NFS rootfs read or write speed limitation
++#std gf12 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std gf15 | NFS rootfs read or write speed limitation
++#std gf15 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std gf18 | NFS rootfs read or write speed limitation
++#std gf18 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std gf19 | NFS rootfs read or write speed limitation
++#std gf19 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#cgl proc01 | CGL Kernel option CONFIG_GRKERNSEC option
++#cgl proc01 | Not a bug. Test fails when the CONFIG_GRKERNSEC option is enabled
+ The CGL kernel option CONFIG_GRKERNSEC, which will pretent the reading from
+ /proc/kpageflags and /proc/kpagecount, is set and cause "read failed and Bad
+ address" error
+@@ -182,31 +182,32 @@ The test case tries to read /proc/acpi/event but failed when acpi daemon stopped
+ Test Suit -- mm
+ ---------------------------------------
+ 
+-#std mtest01 | Memory used by case is over 80% in total
++#std mtest01 | Not a bug. Test fails due to the lack of memory
+ The fail is caused by the parameter. Memory used by case as parameter is over
+ 80% in total.
+ 
+-#std mtest01w | Memory used by case is over 80% in total
++#std mtest01w | Not a bug. Test fails due to the lack of memory
+ The fail is caused by the parameter. Memory used by case as parameter is over
+ 80% in total.
+ 
+-#std mem02 | The memory is less than 64M or calloc issue on ppc64 target
+-1. For the target with memory less than 64M such as fsl_mpc8323e, the case
+-requires a space larger than 64M.
+-2. For the ppc64 target such as fsl_p50x0, calloc don't guaranty the pointer
+-created at the second time is equal to the one just freed.
++#std mtest06 | Test case issue. Lack of msync before reading
++The test mtest06 is aimed at stressing the memory manager by simultanious
++map/unmap/read by light weight processes. "msync" should be used to make sure
++the data is written back to the file before the other light weight processes
++read it such as:
+ 
+-#std mtest06 | Not a bug. test pass when executed seperately
+-On target with small memory such as 256M, the test will pass when executed seperately
++   memset(map_address, 'a', mwuargs[1]);
+++  msync (map_address, (size_t)mwuargs[1], MS_SYNC);
+ 
+-#std mtest06_2 | Test will fail when the memory is less than 1GB
++
++#std mtest06_2 | Not a bug. Test will fail when the memory is less than 1GB
+ 
+ #std overcommit_memory | On target with 0 swap, this test is expected to fail
+ In some target with 0 swap, the value of CommitLimit (Swap+RAM*overcommit_ratio)
+ is 0 when overcommit_ratio is set to 0. This will break the test because the
+ test want to make sure that CommitLimit > Committed_AS.
+ 
+-#std vma01 | This test assume the wrong value of child vma pointer
++#std vma01 | Test case issue. This test assume the wrong value of child vma pointer
+ The test case assumes child vma pointer < parent vma pointer. It is true on
+ x86 arch, but false on ppc and arm. So, on ppc and arm, the test case will
+ search vma out of the bound to cause the issue.
+@@ -240,24 +241,25 @@ When the kernel feature CONFIG_HUGETLBFS is not enabled, this test case will fai
+ thp02       1  TBROK  :  cannot find "Hugepagesize:" in /proc/meminfo
+ thp02       2  TBROK  :  Remaining cases broken
+ 
++#std ksm01 | Test case issue. Test pass when being executed separately
++
++#std ksm03 | Test case issue. Test pass when being executed separately
++
++#std oom01 | Test case issue. Test pass when being executed separately
++
+ #std ksm05 | Not a bug. The test fails when CONFIG_KSM is disabled
+ 
+ 
+ Test Suit -- math
+ ---------------------------------------
+ 
+-#std float_exp_log | Out of memory
+-Out of memory
++#std float_exp_log | Not a bug. Test fails due to the lack of memory
+ 
+-#std float_bessel | Out of memory
+-Out of memory
++#std float_bessel | Not a bug. Test fails due to the lack of memory
+ 
+-#std float_trigo | Out of memory
+-Out of memory
+-
+-#std float_power | Out of memory
+-Out of memory
++#std float_trigo | Not a bug. Test fails due to the lack of memory
+ 
++#std float_power | Not a bug. Test fails due to the lack of memory
+ 
+ Test Suit -- admin_tools
+ ---------------------------------------
+@@ -281,30 +283,27 @@ use crontab if there's no /etc/cron.deny and /etc/cron.allow. cronie however
+ enforces the reverse, that only superuser is allowed under that condition. LTP
+ test case needs to be enhanced to explicitly set cron.allow before the test. 
+ 
+-#std cron_dirs_checks01 | Not a bug. Lack of write permission to /var/spool/cron
++#std cron_dirs_checks01 | Not a bug. Lack of write permission to cron
+ This case tries to get write permission for other users, however the write
+ permission of /var/spool/cron is owned only by user root and group crontab.
+ The write permission for /var/spool/cron is kept to make crontab working correctly.
+ They are controlled by final policy deployed on the product.
+ 
+-#std su01 | Not a bug. Lack of /usr/bin/expect
+-su01_s1 uses '/usr/bin/expect' as the interpreter, which has not been added into
+-yocto. Therefore, the failure is expected.
+-
++#std su01 | Test case issue. The invalid option of su
++The case use invalid option "-e" as follows:
++/bin/su -l root -c passwd -e su_usr2
+ 
+ Test Suit -- commands
+ ---------------------------------------
+ 
+-#std ld | gcc is not supported
++#std ld | Not a bug. gcc is not supported on runtime target
+ 
+-#std ldd | gcc is not supported
++#std ldd | Not a bug. gcc is not supported on runtime target
+ 
+-#std nm | gcc is not supported
++#std nm | Not a bug. gcc is not supported on runtime target
+ 
+-Test Suit -- hyperthreading
++Test Suit -- io
+ ---------------------------------------
+ 
+-#std smt_smp_enabled | Not a bug. Test case NOT supported on arm arch
+-
+-#std smt_smp_affinity | Not a bug. Test case NOT supported on arm arch
++#std aio02 | Test case issue. Test invoke io_fsync write with invalid argument
+ 
+diff --git a/wrLinux_ltp/failtest/mips b/wrLinux_ltp/failtest/mips
+index 10747cd..870982e 100644
+--- a/wrLinux_ltp/failtest/mips
++++ b/wrLinux_ltp/failtest/mips
+@@ -5,43 +5,10 @@
+ # of this software may be licensed only pursuant to the terms
+ # of an applicable Wind River license agreement.
+ 
+-Test Suit -- syscalls
+----------------------------------------
+-
+-#std io_cancel01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-
+-#std io_destroy01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-
+-#std io_getevents01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-
+-#std io_setup01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-
+-#std io_submit01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-
+-#std readv02 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-
+-#std writev01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-
+-#std writev01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-
+-
+-Test Suit -- io
+----------------------------------------
+-
+-#std aio01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
+-
+ Test Suit -- commands
+ ---------------------------------------
+ 
+ #std file | LSB and MSB issue on mips or mips64 architecture on TEST 6
+ Test 6 of case "file" assume that the target of mipcs arch is MSB. But mips and mips64 arch
+ support both LSB and MSB. This test will fail when it's LSB on mips or mips64 arch
++
+diff --git a/wrLinux_ltp/failtest/ppc b/wrLinux_ltp/failtest/ppc
+index c8b969d..31b6836 100644
+--- a/wrLinux_ltp/failtest/ppc
++++ b/wrLinux_ltp/failtest/ppc
+@@ -5,11 +5,12 @@
+ # of this software may be licensed only pursuant to the terms
+ # of an applicable Wind River license agreement.
+ 
+-Test Suit -- math
++Test Suit -- mm
+ ---------------------------------------
+ 
+-#std fptest01 | float point issue in e500v1 boards
+-Some float point functions broken on e500v1(wrs_sbc85x0) boards,CQ:WIND00232377
++#std mem02 | Not a bug. The memory is less than 64M or calloc issue on ppc64 target
++1. For the target with memory less than 64M such as fsl_mpc8323e, the case
++requires a space larger than 64M.
++2. For the ppc64 target such as fsl_p50x0, calloc don't guaranty the pointer
++created at the second time is equal to the one just freed.
+ 
+-#std fptest02 | float point issue in e500v1 boards
+-Some float point functions broken on e500v1(wrs_sbc85x0) boards,CQ:WIND00232377
+diff --git a/wrLinux_ltp/skiptest/arm b/wrLinux_ltp/skiptest/arm
+index c8044e5..6f1921e 100644
+--- a/wrLinux_ltp/skiptest/arm
++++ b/wrLinux_ltp/skiptest/arm
+@@ -12,3 +12,8 @@ Test Suit -- fs_bind
+ Test case bug, the test bind/test03: did not properly clean up its proc mounts,
+ and cause system hung.
+ 
++#std min_free_kbytes | Not a bug. Test invoke OOM frequently and make system hung
++This case is designed to test min_free_kbytes tunable. When the overcommit_memory
++is set to 2 and overcommit_ratio is 50, the test tries to set min_free_kbytes to
++the half of free memory and mmap untill hit MAP_FAILED. At this situation, it will
++invoke the OOM frequently and make system hung.
+diff --git a/wrLinux_ltp/skiptest/mips b/wrLinux_ltp/skiptest/mips
+index c8044e5..6f1921e 100644
+--- a/wrLinux_ltp/skiptest/mips
++++ b/wrLinux_ltp/skiptest/mips
+@@ -12,3 +12,8 @@ Test Suit -- fs_bind
+ Test case bug, the test bind/test03: did not properly clean up its proc mounts,
+ and cause system hung.
+ 
++#std min_free_kbytes | Not a bug. Test invoke OOM frequently and make system hung
++This case is designed to test min_free_kbytes tunable. When the overcommit_memory
++is set to 2 and overcommit_ratio is 50, the test tries to set min_free_kbytes to
++the half of free memory and mmap untill hit MAP_FAILED. At this situation, it will
++invoke the OOM frequently and make system hung.
+diff --git a/wrLinux_ltp/skiptest/ppc b/wrLinux_ltp/skiptest/ppc
+index d52ad5e..6f1921e 100644
+--- a/wrLinux_ltp/skiptest/ppc
++++ b/wrLinux_ltp/skiptest/ppc
+@@ -12,4 +12,8 @@ Test Suit -- fs_bind
+ Test case bug, the test bind/test03: did not properly clean up its proc mounts,
+ and cause system hung.
+ 
+-#std min_free_kbytes | cause system hung
++#std min_free_kbytes | Not a bug. Test invoke OOM frequently and make system hung
++This case is designed to test min_free_kbytes tunable. When the overcommit_memory
++is set to 2 and overcommit_ratio is 50, the test tries to set min_free_kbytes to
++the half of free memory and mmap untill hit MAP_FAILED. At this situation, it will
++invoke the OOM frequently and make system hung.
+diff --git a/wrLinux_ltp/skiptest/x86 b/wrLinux_ltp/skiptest/x86
+index c8044e5..6f1921e 100644
+--- a/wrLinux_ltp/skiptest/x86
++++ b/wrLinux_ltp/skiptest/x86
+@@ -12,3 +12,8 @@ Test Suit -- fs_bind
+ Test case bug, the test bind/test03: did not properly clean up its proc mounts,
+ and cause system hung.
+ 
++#std min_free_kbytes | Not a bug. Test invoke OOM frequently and make system hung
++This case is designed to test min_free_kbytes tunable. When the overcommit_memory
++is set to 2 and overcommit_ratio is 50, the test tries to set min_free_kbytes to
++the half of free memory and mmap untill hit MAP_FAILED. At this situation, it will
++invoke the OOM frequently and make system hung.
+diff --git a/wrLinux_ltp/wr-runltp b/wrLinux_ltp/wr-runltp
+index a0b1a06..7168f39 100755
+--- a/wrLinux_ltp/wr-runltp
++++ b/wrLinux_ltp/wr-runltp
+@@ -16,6 +16,7 @@ cd `dirname $0` || \
+ 
+ export WRLTPROOT=${PWD}
+ export LTPROOT=$(dirname $WRLTPROOT)
++
+ external_parameter="$*"
+ internal_parameter=""
+ EXECUTION_TIME=`date +"%Y_%b_%d-%Hh_%Mm_%Ss"`
+@@ -23,44 +24,49 @@ START_TIME=`date`
+ TEST_RETVAL_FAIL=1
+ KERNEL_VERSION=`uname -a| cut -d ' ' -f 3`
+ 
+-LOOP_DEVICE_FS=""
+-LOOP_DEVICE_SWAP=""
+-LOOP_DEVICE_BLOCK=""
++TMP_MOUNT_FILE=$WRLTPROOT/tmp_mount_file
++LOOP_DEVICE_TMP=""
+ 
+ SWAP_MOUNT_POINT=/mnt/swap
+ SWAP_FILE=$SWAP_MOUNT_POINT/swapfile
+ SWAP_FILE_REPOSITORY=/swap_$$
+-LOOPFILE=$LTPROOT/ltp-sectors.bin
++LOOP_DEVICE_SWAP=""
++SWAPON=0
++
++BLOCK_DEVICE_FILE=$WRLTPROOT/block_device_file
+ BLOCK_DEVICE_FSTYPE=ext4
++LOOP_DEVICE_BLOCK=""
+ 
+ SKIP_PATH="$WRLTPROOT/skiptest"
+ FAIL_PATH="$WRLTPROOT/failtest"
+-KFEATURE_FILE="$WRLTPROOT/kfeature/test_cases.wr.matrix"
+ LOGPATH="$WRLTPROOT/results"
+ LOGFILE="$LOGPATH/LTP_RUN_ON-$EXECUTION_TIME.log"
+ FAIL_REPORT="$LOGPATH/failtest-$EXECUTION_TIME.report"
+ SKIP_REPORT="$LOGPATH/skiptest-$EXECUTION_TIME.report"
+-SCENARIO_GROUP_LIST="syscalls,fs,fsx,dio,io,mm,ipc,sched,math,nptl,pty,\
+-containers,fs_bind,fcntl-locktests,admin_tools,timers,commands,\
++SCENARIO_GROUP_LIST="syscalls,fs,fs_perms_simple,fsx,dio,io,mm,ipc,sched,math,nptl,pty,\
++containers,fs_bind,filecaps,cap_bounds,connectors,fcntl-locktests,admin_tools,timers,commands,\
+ hyperthreading"
+ 
+ RUN_RESUME_TEST=0
+ RUN_SELECTED_GROUP=0
++RUN_SELECTED_CASE=0
++SELECTED_CASE=""
+ RUNTIME_PATH="$WRLTPROOT/runtime"
+ TEST_SKIPFILE="$RUNTIME_PATH/skipfile"
+ RUNTIME_SKIPFILE="$RUNTIME_PATH/runtime.skip"
+ RUNTIME_TESTFILE="$RUNTIME_PATH/testfile"
+ RUNTIME_LOGFILE="$RUNTIME_PATH/runtime.log"
+ RESUME_LOGFILE="$RUNTIME_PATH/resume.log"
+-SCREEN_LOGFILE=$RUNTIME_PATH/LTP_RUN_ON-${EXECUTION_TIME}-output.txt
+-RUNTIME_TMP_PATH=/tmp
+-tmpfile=$RUNTIME_TMP_PATH/ltp_tmp
++SCREEN_LOGFILE=$RUNTIME_PATH/Ltp_console_output.log
+ 
+ CPU_ARCH=""
+-KERNEL_ARCH=""
++KERNEL_ARCH="std"
+ SCENARIO_GROUP_FILE="$WRLTPROOT/runtime/scenario_group"
+-UNKNOWN_FAILURE=0
+ RUN_HUGETLB_TEST=0
++UNKNOWN_FAILURE=0
++LTP_passnum=0
++LTP_failnum=0
++LTP_skipnum=0
+ 
+ usage() 
+ {
+@@ -210,16 +216,6 @@ setup()
+     [ -r /proc/config.gz ] && cp /proc/config.gz $RUNTIME_PATH && gunzip -f $RUNTIME_PATH/config.gz
+     [ -r /boot/config-$KERNEL_VERSION ] && cp /boot/config-$KERNEL_VERSION $RUNTIME_PATH/config
+ 
+-# change test case execution parameter in runtest
+-
+-    mem02flag=`file /bin/ls | awk '/64-bit/&&/x86-64/ {print "true"}'`
+-    if [ "$mem02flag" == "true" ]; then
+-        sed  's/mem02 mem02 -m 4/mem02 mem02 -m 32/' $LTPROOT/runtest/mm > \
+-        $LTPROOT/runtest/mm.temp
+-        rm -f $LTPROOT/runtest/mm
+-        cp $LTPROOT/runtest/mm.temp $LTPROOT/runtest/mm
+-    fi
+-
+ # Create a swap partition when the total memory is less than 64M.
+ 
+     MemTotal=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
+@@ -232,9 +228,11 @@ setup()
+             echo "Add swap partition failed, we'll run ltp without swap partion..."
+         else
+             echo "Create swap partition complete!"
++	    SWAPON=1
+         fi
+     }
+ 
++# Get runtime cpu and kernel version
+ 
+     uname -m | grep -q -E "i686|x86_64" && CPU_ARCH=x86
+     uname -m | grep -q -E "ppc|ppc64" && CPU_ARCH=ppc
+@@ -298,8 +296,8 @@ setup()
+ 		}
+             }
+         fi
++        [ "$RUN_SELECTED_CASE" -eq 0 ] && echo "$SCENARIO_GROUP_LIST" > $SCENARIO_GROUP_FILE
+ 
+-        echo "$SCENARIO_GROUP_LIST" > $SCENARIO_GROUP_FILE
+     else
+         if [ ! -f "$SCENARIO_GROUP_FILE" ]; then
+ 	    echo "FATAL: There is NO runtime scenario group file"
+@@ -308,9 +306,26 @@ setup()
+         SCENARIO_GROUP_LIST=$(cat $SCENARIO_GROUP_FILE)
+     fi
+ 
+-    # Print out the scenario group list if there is no selected test case
+-    echo "$external_parameter" |  grep -q -e "-s" || \
+-    echo "LTP scenario group list : $SCENARIO_GROUP_LIST"
++    # Print out the LTP test plan: scenario group list or selected case
++    echo "<<wr-runltp Test Plan>>"
++    if [ "$RUN_SELECTED_CASE" -eq 0 ]; then
++        echo "LTP scenario group list : $SCENARIO_GROUP_LIST"
++    else
++        [ -z "$SELECTED_CASE" ] && {
++           echo "There is NO selected case name"
++           exit $TEST_RETVAL_FAIL
++        }
++        echo "LTP test case : $SELECTED_CASE"
++    fi
++
++    # Check the scenario group name
++    availabel_group=$(ls $LTPROOT/runtest)
++    for group in `echo "$SCENARIO_GROUP_LIST" | tr ',' ' '`; do
++        echo "$availabel_group" | grep "^$group$"  >/dev/null 2>&1 || {
++            echo "FATAL: there is no group file $group under $LTPROOT/runtest/"
++            exit $TEST_RETVAL_FAIL
++	}
++    done
+ 
+     if [ "$RUN_HUGETLB_TEST" -eq 1 ]; then
+         hugefspath=/mnt/huge
+@@ -318,40 +333,43 @@ setup()
+         hugetlb_setup
+     fi
+ 
+-# Create runtime skipping test file
++# Create runtime skipped test file
+ 
+-# When it is a fresh LTP execution, create skipping test file based on
+-# skipping test data base and runtime test file
++# Senario one 
++# When it is a fresh LTP execution, create skipped test file based on
++# skipped test data base and runtime test file
+ 
+-# When it is NOT a fresh LTP execution, create skipping tets file based on
++# Senario two
++# When it is NOT a fresh LTP execution, create skipped tets file based on
+ # the existing one and runtime test log
+ 
+ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+ 
+-    # Create runtime command file based on scenario group list
+-    for scenfile in `echo "$SCENARIO_GROUP_LIST" | tr ',' ' '`; do
+-        scenfile="$LTPROOT/runtest/$scenfile"
+-        cat "$scenfile" | grep -v -E "^#|^$"  >> $RUNTIME_TESTFILE
+-    done
++    # Create runtime command file based on scenario group list or selected case
++    
++    if [ "$RUN_SELECTED_CASE" -eq 0 ]; then
++        for cmdfile in `echo "$SCENARIO_GROUP_LIST" | tr ',' ' '`; do
++            cmdfile="$LTPROOT/runtest/$cmdfile"
++            cat "$cmdfile" | grep -v -E "^#|^$"  >> $RUNTIME_TESTFILE
++        done
++    else
++        echo "$SELECTED_CASE " > $RUNTIME_TESTFILE
++    fi
+ 
+-    echo "LTP Test Start Time: $START_TIME" > $TEST_SKIPFILE
+-    echo "-------------------------------------------" >> $TEST_SKIPFILE
+-    printf "%-50s %-21s %s \n" Testcase Type "Skip Reason" >> $TEST_SKIPFILE
+-    printf "%-50s %-21s %s \n" -------- ----  -----------  >> $TEST_SKIPFILE
++
++    # Create LTP skipped case list
+ 
+     while read line
+     do
+-        testcase=$(echo $line | awk '{print $1}')
+-        [ -e "$SKIP_PATH/$CPU_ARCH" ] && \
+-        skip_reason=$(grep "^#std[[:space:]]$testcase[[:space:]]" $SKIP_PATH/$CPU_ARCH | cut -d "|" -f 2)
+-        [ -e "$SKIP_PATH/$CPU_ARCH" -a -z "$skip_reason" -a -n "$KERNEL_ARCH" ] && \
+-        skip_reason=$(grep "^#$KERNEL_ARCH[[:space:]]$testcase[[:space:]]" $SKIP_PATH/$CPU_ARCH | cut -d "|" -f 2)
+-
+-        if [ -n "$skip_reason" ]; then
+-            printf "%-50s %-20s %s \n" "$testcase" SKIP "$skip_reason" >> $TEST_SKIPFILE
+-            echo "$testcase" >> $RUNTIME_SKIPFILE
++        if echo $line | grep -E -q "^#std|^#$KERNEL_ARCH"; then
++            testcase=$(echo $line | awk '{print $2}')
++            skip_reason=$(echo $line | cut -d "|" -f 2)
++            if grep -q "^$testcase[[:space:]]" $RUNTIME_TESTFILE; then
++                printf "%-50s %-20s %s \n" "$testcase" SKIP "$skip_reason" >> $TEST_SKIPFILE
++                echo "$testcase" >> $RUNTIME_SKIPFILE
++            fi
+         fi
+-    done < $RUNTIME_TESTFILE
++    done < $SKIP_PATH/$CPU_ARCH
+ 
+ else
+ 
+@@ -401,12 +419,11 @@ else
+     fi
+     printf "%-50s %-21s %s \n" "$panic_test" "SKIP" "system panic" >> $TEST_SKIPFILE
+ 
+-    # Create runtime skipping file for this execution
++    # Create runtime skipped file for this execution
+     [ -f $RUNTIME_SKIPFILE ] && rm $RUNTIME_SKIPFILE
+-    [ -f $TEST_SKIPFILE ] && sed '1,4d' $TEST_SKIPFILE | \
+-    awk '{print $1}' > $RUNTIME_SKIPFILE
++    [ -f $TEST_SKIPFILE ] && awk '{print $1}' > $RUNTIME_SKIPFILE
+ 
+-    # Add the finished test case to runtime skipping test file
++    # Add the finished test case to runtime skipped test file
+     sed '1,4d' $RESUME_LOGFILE | awk '{print $1}' >> $RUNTIME_SKIPFILE
+ 
+     # Delete any runtime log before run LTP Test
+@@ -424,58 +441,59 @@ create_block_device()
+     LOOP_DEVICE_BLOCK=$(losetup -f)
+     [[ ${LOOP_DEVICE_BLOCK} ]] || {
+         echo No free loop device
+-        exit $TEST_RETVAL_FAIL
++        return 1
+     }
+ 
+-    dd if=/dev/zero of=${LOOPFILE} bs=1M count=256 > /dev/null 2>&1 || {
+-        echo "Failed to create file $LOOPFILE"
+-        exit $TEST_RETVAL_FAIL
++    dd if=/dev/zero of=${BLOCK_DEVICE_FILE} bs=1M count=256 > /dev/null 2>&1 || {
++        echo "Failed to create file $BLOCK_DEVICE_FILE"
++        return 1
+     }
+ 
+-    losetup $LOOP_DEVICE_BLOCK $LOOPFILE > /dev/null 2>&1 || {
++    losetup $LOOP_DEVICE_BLOCK $BLOCK_DEVICE_FILE > /dev/null 2>&1 || {
+         echo "Fail to setup loop device $LOOP_DEVICE_BLOCK"
+-        exit $TEST_RETVAL_FAIL
++        return 1
+     }
+ 
+     mkfs.${BLOCK_DEVICE_FSTYPE} ${LOOP_DEVICE_BLOCK} > /dev/null 2>&1 || {
+         echo Failed to format ${LOOP_DEVICE_BLOCK} into ${BLOCK_DEVICE_FSTYPE}
+-        exit $TEST_RETVAL_FAIL
++        return 1
+     }
++    return 0
+ }
+ 
+ # mount ext4 file system on /tmp over loop device on NFS
+ mount_tmp()
+ {
+-    echo "mounting ext4 file system on /tmp over loop device for LTP test..."
+ 
+-    LOOP_DEVICE_FS=$(losetup -f)
++    LOOP_DEVICE_TMP=$(losetup -f)
+ 
+-    if [ -z $LOOP_DEVICE_FS ]; then
++    if [ -z $LOOP_DEVICE_TMP ]; then
+         echo "No loop device available!"
+         exit $TEST_RETVAL_FAIL
+     fi
+ 
+     # Check if /tmp has been mounted with ext3/4 file system
+ 
+-    [[ $(df -P -T /tmp | tail -1 | awk '{print $2}' ) =~ "^ext(3|4)$" ]] || {
++    [[ $(df -P -T /tmp | tail -1 | awk '{print $2}' ) =~ ext(3|4) ]] || {
+ 
+-        dd if=/dev/zero of=tmp_image bs=1M count=1024 > /dev/null 2>&1 || {
+-            echo "Failed to create file tmp_image"
++        echo "mounting ext4 file system on /tmp over loop device for LTP test..."
++        dd if=/dev/zero of=$TMP_MOUNT_FILE bs=1M count=1024 > /dev/null 2>&1 || {
++            echo "Failed to create file $TMP_MOUNT_FILE"
+             exit $TEST_RETVAL_FAIL
+         }
+ 
+-        losetup $LOOP_DEVICE_FS tmp_image >/dev/null 2>&1 || {
+-            echo "Fail to setup loop device $LOOP_DEVICE_FS"
++        losetup $LOOP_DEVICE_TMP $TMP_MOUNT_FILE >/dev/null 2>&1 || {
++            echo "Fail to setup loop device $LOOP_DEVICE_TMP"
+             exit $TEST_RETVAL_FAIL
+         }
+ 
+-        mkfs.${BLOCK_DEVICE_FSTYPE} -m 0 $LOOP_DEVICE_FS >/dev/null 2>&1 || {
+-            echo Failed to format $LOOP_DEVICE_FS into $BLOCK_DEVICE_FSTYPE
++        mkfs.${BLOCK_DEVICE_FSTYPE} -m 0 $LOOP_DEVICE_TMP >/dev/null 2>&1 || {
++            echo Failed to format $LOOP_DEVICE_TMP into $BLOCK_DEVICE_FSTYPE
+             exit $TEST_RETVAL_FAIL
+         }
+ 
+-        mount -t $BLOCK_DEVICE_FSTYPE -o mand $LOOP_DEVICE_FS /tmp >/dev/null 2>&1 || {
+-            echo "Failed to mount $LOOP_DEVICE_FS to /tmp"
++        mount -t $BLOCK_DEVICE_FSTYPE -o mand $LOOP_DEVICE_TMP /tmp >/dev/null 2>&1 || {
++            echo "Failed to mount $LOOP_DEVICE_TMP to /tmp"
+             exit $TEST_RETVAL_FAIL
+         }
+     }
+@@ -497,72 +515,112 @@ main()
+     $LTPROOT/runltp -l $RUNTIME_LOGFILE -f $SCENARIO_GROUP_LIST \
+     $external_parameter $internal_parameter -p | tee $SCREEN_LOGFILE
+ 
++    # In resumed LTP test, join runtime log and resume log together
++    if [ "$RUN_RESUME_TEST" -eq 1 ]; then
++        sed '1,4d' $RUNTIME_LOGFILE >> $RESUME_LOGFILE
++        cp $RESUME_LOGFILE $RUNTIME_LOGFILE
++    fi
+ }
+ 
+ report()
+ {
+ 
+-# In resumed LTP test, join runtime log and resume log together
++# Summarize LTP test result
+ 
+-    if [ "$RUN_RESUME_TEST" -eq 1 ]; then
+-        sed '1,4d' $RUNTIME_LOGFILE >> $RESUME_LOGFILE
+-        pass_num=$(grep -c PASS $RESUME_LOGFILE)
+-        fail_num=$(grep -c FAIL $RESUME_LOGFILE)
+-        test_num=$(expr $pass_num + $fail_num)
+-        cat $RESUME_LOGFILE | sed -e "s/^Total Tests.*/Total Tests: $test_num/" \
+-        -e "s/^Total Failures.*/Total Failures: $fail_num/" > $RUNTIME_LOGFILE
++    echo "<<wr-runltp Test Result>>"
++
++    if grep -q "Total Tests" $RUNTIME_LOGFILE; then
++        grep "PASS" $RUNTIME_LOGFILE >/dev/null 2>&1 && \
++        LTP_passnum=$(grep -c PASS $RUNTIME_LOGFILE)
++        sed -i "/Total Tests/a\Total Passes: $LTP_passnum" $RUNTIME_LOGFILE
++
++        grep "SKIP" $TEST_SKIPFILE >/dev/null 2>&1 && \
++        LTP_skipnum=$(grep -c SKIP $TEST_SKIPFILE)
++        sed -i "/Total Passes/a\Total Skips: $LTP_skipnum" $RUNTIME_LOGFILE
++
++        grep "FAIL" $RUNTIME_LOGFILE >/dev/null 2>&1 && \
++        LTP_failnum=$(grep -c FAIL $RUNTIME_LOGFILE)
++
++        LTP_testnum=$(expr $LTP_passnum + $LTP_skipnum + $LTP_failnum)
++        sed -i "s/^Total Tests.*/Total Tests: $LTP_testnum/" $RUNTIME_LOGFILE
++        sed -i "s/^Total Failures.*/Total Failures: $LTP_failnum/" $RUNTIME_LOGFILE
++
++        sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
++
++        [ "$RUN_SELECTED_CASE" -eq 0 ] && {
++            cp $RUNTIME_LOGFILE $LOGFILE
++            echo "LTP Formatted Test report : $LOGFILE"
++        }
++    else
++        echo "There is no LTP test result"
+     fi
+-    cp $RUNTIME_LOGFILE $LOGFILE
++    echo "[Log Path] LTP test console output log: $SCREEN_LOGFILE"
+ 
+-# Create the failed test report
+ 
+-    [ -f "$LOGFILE" ] || exit $TEST_RETVAL_FAIL
++# Create formatted failed test report and detailed failure analysis
+ 
+-    sed -n '1,4p' $LOGFILE | sed -e '/Testcase/ s/$/\tFail Reason/' \
+-                                 -e '4 s/$/\t----------/' > $FAIL_REPORT
+-    failtest=$(grep "FAIL" $LOGFILE | awk '{print $1}')
++    echo "<<wr-runltp Test Analysis>>"
+ 
+-    for test in $failtest; do
+-        failreason=$(grep "^#std[[:space:]]$test[[:space:]]" $FAIL_PATH/common | cut -d "|" -f 2)
+-        [ -z "$failreason" -a -n "$KERNEL_ARCH" ] && \
+-        failreason=$(grep "^#$KERNEL_ARCH[[:space:]]$test[[:space:]]" $FAIL_PATH/common | cut -d "|" -f 2)
+-        [ -z "$failreason" -a -e "$FAIL_PATH/$CPU_ARCH" ] && \
+-        failreason=$(grep "^#std[[:space:]]$test[[:space:]]" $FAIL_PATH/$CPU_ARCH | cut -d "|" -f 2)
+-        [ -z "$failreason" -a -e "$FAIL_PATH/$CPU_ARCH" -a -n "$KERNEL_ARCH" ] && \
+-        failreason=$(grep "^#$KERNEL_ARCH[[:space:]]$test[[:space:]]" $FAIL_PATH/$CPU_ARCH | cut -d "|" -f 2)
+-        [ -z "$failreason" ] && UNKNOWN_FAILURE=1
+-        grep "FAIL" $LOGFILE | sed -n "/^$test / s/$/\t\t$failreason/p" >> $FAIL_REPORT
+-     done
++    if [[ $LTP_testnum -gt 0 && $LTP_failnum -gt 0 ]]; then
++        sed -n '1,4p' $RUNTIME_LOGFILE | sed -e '/Testcase/ s/$/\tFail Reason/' \
++                                         -e '4 s/$/\t----------/' > $FAIL_REPORT
++        failtest=$(grep "FAIL" $RUNTIME_LOGFILE | awk '{print $1}')
+ 
+-    [ "$UNKNOWN_FAILURE" -eq 1  ] && echo "Warning: LTP test has unknown failure"
++        for test in $failtest; do
++            failreason=$(grep "^#std[[:space:]]$test[[:space:]]" $FAIL_PATH/common | cut -d "|" -f 2)
++            [ -z "$failreason" -a "$KERNEL_ARCH" != "std" ] && \
++            failreason=$(grep "^#$KERNEL_ARCH[[:space:]]$test[[:space:]]" $FAIL_PATH/common | cut -d "|" -f 2)
++            [ -z "$failreason" -a -e "$FAIL_PATH/$CPU_ARCH" ] && \
++            failreason=$(grep "^#std[[:space:]]$test[[:space:]]" $FAIL_PATH/$CPU_ARCH | cut -d "|" -f 2)
++            [ -z "$failreason" -a -e "$FAIL_PATH/$CPU_ARCH" -a "$KERNEL_ARCH" != "std" ] && \
++            failreason=$(grep "^#$KERNEL_ARCH[[:space:]]$test[[:space:]]" $FAIL_PATH/$CPU_ARCH | cut -d "|" -f 2)
++            [ -z "$failreason" ] && UNKNOWN_FAILURE=1
++            grep "FAIL" $RUNTIME_LOGFILE | sed -n "/^$test / s/$/\t\t$failreason/p" >> $FAIL_REPORT
++         done
+ 
+-# Creat skipping test report
+-    [ -f $TEST_SKIPFILE ] && cp $TEST_SKIPFILE $SKIP_REPORT
++        # Tm-Fast use this console output to decide whether LTP test passes
++        if [ "$UNKNOWN_FAILURE" -eq 0 ]; then
++            echo "LTP test passed with known failure"
++        else
++            echo "Warning : LTP test has unknown failure"
++        fi
++	echo "[Log Path] Formated failed test result: $FAIL_REPORT"
++        echo "[Test Knowledge Base] Detailed result analysis about known failure: $FAIL_PATH"
++    elif [[ $LTP_testnum -gt 0 ]]; then
++        echo "LTP test passed"
++    fi
++
++# Creat skipped test report and detailed skip reason
++    if grep "SKIP" $TEST_SKIPFILE > /dev/null 2>&1 ; then
++        echo "LTP Test Start Time: $START_TIME" > $SKIP_REPORT
++        echo "-------------------------------------------" >> $SKIP_REPORT
++        printf "%-50s %-21s %s \n" Testcase Type "Skip Reason" >> $SKIP_REPORT
++        printf "%-50s %-21s %s \n" -------- ----  -----------  >> $SKIP_REPORT
++        cat $TEST_SKIPFILE >> $SKIP_REPORT
++        echo "LTP test has the following skipped case:"
++	cat $RUNTIME_SKIPFILE
++	echo "[Log Path] Formated skipped test result: $SKIP_REPORT"
++        echo "[Test Knowledge Base] Detailed skip reason: $SKIP_PATH"
++    fi
+ 
+-    echo "LTP Test Log Path : $LOGPATH"
+-    echo "LTP Test Knowledge Base Path : $FAIL_PATH"
+ }
+ 
+ cleanup()
+ {
+     # clean up hugetlb test environment
+-    if [ "$RUN_HUGETLB_TEST" -eq 1 ]; then
++    [ "$RUN_HUGETLB_TEST" -eq 1 ] && {
+         umount ${hugefspath}
+         rm -fr ${hugefspath}
+-    fi
++    }
+ 
+-    swapoff $SWAP_FILE >/dev/null 2>&1
+-    umount $SWAP_MOUNT_POINT >/dev/null 2>&1
+-    rm -fr $SWAP_MOUNT_POINT >/dev/null 2>&1
+-    rm $SWAP_FILE_REPOSITORY >/dev/null 2>&1
+-    losetup -d $LOOP_DEVICE_SWAP >/dev/null 2>&1
+-    losetup -d $LOOP_DEVICE_FS >/dev/null 2>&1
+-
+-    [[ ${LOOP_DEVICE_BLOCK} =~ /dev/loop ]] && {
+-        umount /tmp
+-        losetup -d ${LOOP_DEVICE_BLOCK}
+-        rm -f ${LOOPFILE}
++    [ "$SWAPON" -eq 1 ] && {
++        swapoff $SWAP_FILE >/dev/null 2>&1
++        umount $SWAP_MOUNT_POINT >/dev/null 2>&1
++        rm -fr $SWAP_MOUNT_POINT >/dev/null 2>&1
++        rm $SWAP_FILE_REPOSITORY >/dev/null 2>&1
++        losetup -d $LOOP_DEVICE_SWAP >/dev/null 2>&1
+     }
++
+ }
+ 
+ while getopts hRa:c:C:d:D:f:F:ehi:K:g:l:m:M:Nno:pqr:s:S:t:T:w:x:b:B: arg
+@@ -574,6 +632,8 @@ while getopts hRa:c:C:d:D:f:F:ehi:K:g:l:m:M:Nno:pqr:s:S:t:T:w:x:b:B: arg
+ 
+         R)  RUN_RESUME_TEST=1
+             external_parameter=$(echo $external_parameter | sed "s/-R//g");;
++        s)  RUN_SELECTED_CASE=1
++            SELECTED_CASE=$OPTARG;;
+ 
+ b|B|S|l|p)  echo "The runltp option $arg has been used internally by wr-runltp"
+             exit $TEST_RETVAL_FAIL;;
+@@ -581,23 +641,25 @@ b|B|S|l|p)  echo "The runltp option $arg has been used internally by wr-runltp"
+     done
+ 
+ env_check
+-
++mount_tmp
+ setup
+ 
+-echo "$SCENARIO_GROUP_LIST" | grep -q "syscalls" && {
+-
+-    create_block_device
++# Create unmounted block device
++if losetup -a | grep -q "$BLOCK_DEVICE_FILE"; then
++    LOOP_DEVICE_BLOCK=$(losetup -a | grep "$BLOCK_DEVICE_FILE" | cut -d " " -f 1 | tr -d ":")
+     internal_parameter="$internal_parameter -b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE"
+-}
++else
++    if create_block_device; then
++        internal_parameter="$internal_parameter -b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE"
++    else
++        echo "Warning: Execute LTP without unmounted block device"
++    fi
++fi
+ 
+-mount_tmp
+ 
+ main
+-
+-# Check the LTP runtime log before creating report
+-grep -q "Total Tests" $RUNTIME_LOGFILE && report
+-
+-cleanup
++report
++[ "$RUN_SELECTED_CASE" -eq 0 ] && cleanup
+ [ "$UNKNOWN_FAILURE" -eq 1  ] && exit $TEST_RETVAL_FAIL
+ exit 0
+ 
+-- 
+1.7.11
+

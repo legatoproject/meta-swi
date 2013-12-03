@@ -1,0 +1,30 @@
+From 63baced0c2dc1bbec035c44d192bb46b9d89fd9a Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Tue, 15 Jan 2013 17:45:47 +0800
+Subject: [PATCH] Fix the case match string in wr-runltp
+
+The LTP runltp use grep to match the test case name in runtest/test_suite.
+In order to match the single test case precisely, fix the case match string in
+wr-runltp.
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/wr-runltp |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/wrLinux_ltp/wr-runltp b/wrLinux_ltp/wr-runltp
+index e4e9c7a..4996db6 100755
+--- a/wrLinux_ltp/wr-runltp
++++ b/wrLinux_ltp/wr-runltp
+@@ -547,7 +547,7 @@ main()
+         $external_parameter $cmdline_skip -p | tee $SCREEN_LOGFILE
+     else
+         $LTPROOT/runltp -l $RUNTIME_LOGFILE -f $SCENARIO_GROUP_LIST \
+-        -b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE -s "^$SELECTED_CASE " \
++        -b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE -s "\<$SELECTED_CASE\>" \
+         $external_parameter $cmdline_skip -p | tee $SCREEN_LOGFILE
+     fi
+ 
+-- 
+1.7.1
+

@@ -1,0 +1,30 @@
+From eb2bd6f35f8c04864ad3ac363ff32969ec515a43 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Mon, 25 Feb 2013 13:03:53 +0800
+Subject: [PATCH] Add failure reason for LTP case migrate_pages02
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/common |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index 24b6722..7d0a75b 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -165,6 +165,12 @@ The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
+ Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
+ The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
+ 
++#cgl migrate_pages02 | Not a bug. Kernel option CONFIG_GRKERNSEC_PROC_MEMMAP is enabled in cgl platform
++When the kernel option CONFIG_GRKERNSEC_PROC_MEMMAP is enabled, the migrate_pages
++defined in the mm/mempolicy.c will check whether the task's memory management structure
++is the same as the current process's as well as that the latter structure have
++MF_PAX_RANDMMAP or MF_PAX_SEGMEXEC flags set. If it is yes, the syscall
++migrate_pages will return with EPERM (Permission Denied)
+ 
+ Test Suit -- commands
+ ---------------------------------------
+-- 
+1.7.1
+

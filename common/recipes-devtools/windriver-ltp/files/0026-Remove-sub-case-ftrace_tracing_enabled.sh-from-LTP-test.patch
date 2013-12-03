@@ -1,0 +1,48 @@
+From 384f5986f3c5b5608059f56e216fabd07763b529 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Tue, 5 Feb 2013 15:00:20 +0800
+Subject: [PATCH 1/2] Remove sub case ftrace_tracing_enabled.sh from LTP test
+
+The sub case ftrace_tracing_enabled.sh use a deprecated API
+that will be removed in the future
+---
+ .../ftrace_stress_test/ftrace_stress_test.sh       |    9 +++++----
+ 1 files changed, 5 insertions(+), 4 deletions(-)
+
+diff --git a/testcases/kernel/tracing/ftrace_stress_test/ftrace_stress_test.sh b/testcases/kernel/tracing/ftrace_stress_test/ftrace_stress_test.sh
+index b4b115a..78a44d9 100755
+--- a/testcases/kernel/tracing/ftrace_stress_test/ftrace_stress_test.sh
++++ b/testcases/kernel/tracing/ftrace_stress_test/ftrace_stress_test.sh
+@@ -108,7 +108,7 @@ clean_up()
+ 	kill -KILL $pid5 || test_success=false
+ 	kill -KILL $pid6 || test_success=false
+ 	kill -KILL $pid7 || test_success=false
+-	kill -KILL $pid8 || test_success=false
++#	kill -KILL $pid8 || test_success=false
+ 	kill -KILL $pid9 || test_success=false
+ 	kill -KILL $pid10 || test_success=false
+ 	kill -KILL $pid11 || test_success=false
+@@ -133,7 +133,8 @@ clean_up_exit()
+ 
+ export_pids()
+ {
+-	export pid1 pid2 pid3 pid4 pid5 pid6 pid7 pid8 pid9 pid10 pid11 pid12 \
++#	export pid1 pid2 pid3 pid4 pid5 pid6 pid7 pid8 pid9 pid10 pid11 pid12 \
++	export pid1 pid2 pid3 pid4 pid5 pid6 pid7 pid9 pid10 pid11 pid12 \
+ 		pid13 pid14 pid15 pid16
+ 
+ 	export NR_PIDS=16
+@@ -207,8 +208,8 @@ $SPATH/ftrace_stack_max_size.sh &
+ pid6=$!
+ $SPATH/ftrace_tracing_on.sh &
+ pid7=$!
+-$SPATH/ftrace_tracing_enabled.sh &
+-pid8=$!
++#$SPATH/ftrace_tracing_enabled.sh &
++#pid8=$!
+ $SPATH/ftrace_set_event.sh &
+ pid9=$!
+ $SPATH/ftrace_buffer_size.sh &
+-- 
+1.7.1
+

@@ -1,0 +1,28 @@
+From 6dab2ae69547481eaffe6cb80aa98ee33dc04cf6 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Tue, 20 Nov 2012 14:40:16 +0800
+Subject: [PATCH] LTP: add fail reason for test cpuhotplug05 and cpuhotplug07
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/common |    7 +++++++
+ 1 files changed, 7 insertions(+), 0 deletions(-)
+
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index b06e2a1..d4e1e1a 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -250,3 +250,10 @@ Test Suit -- io
+ 
+ #std aio02 | Test case issue. Test invoke io_fsync write with invalid argument
+ 
++Test Suit -- cpuhotplug
++---------------------------------------
++
++#std cpuhotplug05 | Not a bug. sar is not installed in rootfs
++
++#std cpuhotplug07 | Not a bug. wrLinux do not support to compile kernel on target 
++
+-- 
+1.7.1
+

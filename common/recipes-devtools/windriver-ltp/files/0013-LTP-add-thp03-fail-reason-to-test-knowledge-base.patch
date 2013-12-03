@@ -1,0 +1,30 @@
+From a050dae2ad1c93d4fb0e971136aac0249c5c90ee Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Mon, 10 Dec 2012 17:51:47 +0800
+Subject: [PATCH] LTP: add thp03 fail reason to test knowledge base
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/common |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index b06e2a1..b53cb4d 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -184,6 +184,12 @@ When the kernel feature CONFIG_HUGETLBFS is not enabled, this test case will fai
+ thp02       1  TBROK  :  cannot find "Hugepagesize:" in /proc/meminfo
+ thp02       2  TBROK  :  Remaining cases broken
+ 
++#std thp03 | Not a bug. Test break when CONFIG_HUGETLBFS is not enabled
++When the kernel feature CONFIG_HUGETLBFS is not enabled, this test case will fail with:
++
++thp03       1  TBROK  :  cannot find "Hugepagesize:" in /proc/meminfo
++thp03       2  TBROK  :  Remaining cases broken 
++
+ #std ksm01 | Test case issue. Test pass when being executed separately
+ 
+ #std ksm03 | Test case issue. Test pass when being executed separately
+-- 
+1.7.1
+

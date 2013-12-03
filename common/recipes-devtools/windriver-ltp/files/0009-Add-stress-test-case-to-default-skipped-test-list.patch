@@ -1,0 +1,374 @@
+From 01c3f27f558ee24490e2004f5904f10cb19a4fc1 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Thu, 30 Aug 2012 09:46:47 +0800
+Subject: [PATCH] [LTP] To skip filesystem and memory stress test in the
+ default scenario group
+
+The file system and memory stress test cases are listed in the test knowledge
+base skiptest/stress.
+
+The memory stress test are not suitable for the embedded targets, which have
+less than 256M memory, and the filesystem stress test are not suitable for NFS
+deploy environment of automation test.
+
+The execution of skipped LTP stress test will be added in kernel stress test
+plan, which will set the test environment more properly.
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/arm    | 13 ++++++++-
+ wrLinux_ltp/failtest/common | 51 ---------------------------------
+ wrLinux_ltp/skiptest/stress | 70 +++++++++++++++++++++++++++++++++++++++++++++
+ wrLinux_ltp/wr-runltp       | 68 +++++++++++++++++++++++++++----------------
+ 4 files changed, 125 insertions(+), 77 deletions(-)
+ create mode 100644 wrLinux_ltp/skiptest/stress
+
+diff --git a/wrLinux_ltp/failtest/arm b/wrLinux_ltp/failtest/arm
+index 2f7017e..5cd08cb 100644
+--- a/wrLinux_ltp/failtest/arm
++++ b/wrLinux_ltp/failtest/arm
+@@ -12,9 +12,20 @@ Test Suit -- syscall
+ #std getcontext01 | Not a bug. Test case is NOT supported on arm arch
+ eglibc doesn't implement getcontext for arm, so this result is expected.
+ 
+-Test Suit -- hyperthreading                                                                                                                                          
++Test Suit -- hyperthreading
+ ---------------------------------------
+ 
+ #std smt_smp_enabled | Not a bug. Test case is NOT supported on arm arch
+ 
+ #std smt_smp_affinity | Not a bug. Test case is NOT supported on arm arch
++
++Test Suit -- mm
++---------------------------------------
++
++#std shmat01 | Not a bug. Test case issue. Test case is NOT supported on arm arch
++On arm arch, test case shmat01 fails on
++"addr = shmat(*(tc.shmid), base_addr + tc.offset,tc.flags);" with a EINVAL error.
++
++The test case probes an available address and align the address to SHMLBA. After
++the alignment on arm arch, the new address is no guarantee to be available any more.
++
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index a88e7ae..6124cff 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -56,18 +56,6 @@ target with more than 4G memory and use default maximum pid value 32768.
+ Because in this case, the maxnkids is always 0 which will cause fail
+ and exit: maxnkids = ((free_pids / 4) / MSGMNI);
+ 
+-#std fallocate01 | Not a bug. Test fallocate is NOT supported on NFS filesystem
+-Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
+-case fails when it's executed with nfs rootfs.
+-
+-#std fallocate02 | Not a bug. Test fallocate is NOT supported on NFS filesystem
+-Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
+-case fails when it's executed with nfs rootfs.
+-
+-#std fallocate03 | Not a bug. Test fallocate is NOT supported on NFS filesystem
+-Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
+-case fails when it's executed with nfs rootfs.
+-
+ #std pselect01 | Not a bug. May fail because user application latency
+ This test case is very sensitive to timestamp. It may fail because of
+ user application latency associated with workload.
+@@ -135,42 +123,6 @@ Lack of quota_check command in rootfs
+ #std iogen01 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+-#std rwtest01 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std rwtest02 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std rwtest03 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std gf02 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std gf05 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std gf09 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std gf10 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std gf11 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std gf12 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std gf15 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std gf18 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+-#std gf19 | Not a bug. NFS rootfs read or write speed limitation
+-fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+-
+ #cgl proc01 | Not a bug. Test fails when the CONFIG_GRKERNSEC option is enabled
+ The CGL kernel option CONFIG_GRKERNSEC, which will pretent the reading from
+ /proc/kpageflags and /proc/kpagecount, is set and cause "read failed and Bad
+@@ -199,9 +151,6 @@ read it such as:
+    memset(map_address, 'a', mwuargs[1]);
+ +  msync (map_address, (size_t)mwuargs[1], MS_SYNC);
+ 
+-
+-#std mtest06_2 | Not a bug. Test will fail when the memory is less than 1GB
+-
+ #std overcommit_memory | On target with 0 swap, this test is expected to fail
+ In some target with 0 swap, the value of CommitLimit (Swap+RAM*overcommit_ratio)
+ is 0 when overcommit_ratio is set to 0. This will break the test because the
+diff --git a/wrLinux_ltp/skiptest/stress b/wrLinux_ltp/skiptest/stress
+new file mode 100644
+index 0000000..5e291af
+--- /dev/null
++++ b/wrLinux_ltp/skiptest/stress
+@@ -0,0 +1,70 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++Test Suit -- mm
++---------------------------------------
++
++#std mmapstress01 | stress test
++#std mmapstress02 | stress test
++#std mmapstress03 | stress test
++#std mmapstress04 | stress test
++#std mmapstress05 | stress test
++#std mmapstress06 | stress test
++#std mmapstress07 | stress test
++#std mmapstress08 | stress test
++#std mmapstress09 | stress test
++#std mmapstress10 | stress test
++#std mtest05 | stress test
++#std mtest06 | stress test
++#std mtest06_2 | stress test
++#std mtest06_3 | stress test
++#std mallocstress01 | stress test
++
++Test Suit -- fs
++---------------------------------------
++
++#std gf01 | stress test
++#std gf02 | stress test
++#std gf03 | stress test
++#std gf04 | stress test
++#std gf05 | stress test
++#std gf06 | stress test
++#std gf07 | stress test
++#std gf08 | stress test
++#std gf09 | stress test
++#std gf10 | stress test
++#std gf11 | stress test
++#std gf12 | stress test
++#std gf13 | stress test
++#std gf14 | stress test
++#std gf15 | stress test
++#std gf16 | stress test
++#std gf17 | stress test
++#std gf18 | stress test
++#std gf19 | stress test
++#std gf20 | stress test
++#std gf21 | stress test
++#std gf22 | stress test
++#std gf23 | stress test
++#std gf24 | stress test
++#std gf25 | stress test
++#std gf26 | stress test
++#std gf27 | stress test
++#std gf28 | stress test
++#std gf29 | stress test
++#std gf30 | stress test
++#std rwtest01 | stress test
++#std rwtest02 | stress test
++#std rwtest03 | stress test
++#std rwtest04 | stress test
++#std rwtest05 | stress test
++
++Test Suit -- fsx
++---------------------------------------
++
++#std fsx-linux | stress test
++
+diff --git a/wrLinux_ltp/wr-runltp b/wrLinux_ltp/wr-runltp
+index 7168f39..713daea 100755
+--- a/wrLinux_ltp/wr-runltp
++++ b/wrLinux_ltp/wr-runltp
+@@ -38,6 +38,7 @@ BLOCK_DEVICE_FSTYPE=ext4
+ LOOP_DEVICE_BLOCK=""
+ 
+ SKIP_PATH="$WRLTPROOT/skiptest"
++STRESS_CASE="$SKIP_PATH/stress"
+ FAIL_PATH="$WRLTPROOT/failtest"
+ LOGPATH="$WRLTPROOT/results"
+ LOGFILE="$LOGPATH/LTP_RUN_ON-$EXECUTION_TIME.log"
+@@ -50,6 +51,7 @@ hyperthreading"
+ RUN_RESUME_TEST=0
+ RUN_SELECTED_GROUP=0
+ RUN_SELECTED_CASE=0
++RUN_STRESS_CASE=0
+ SELECTED_CASE=""
+ RUNTIME_PATH="$WRLTPROOT/runtime"
+ TEST_SKIPFILE="$RUNTIME_PATH/skipfile"
+@@ -74,11 +76,14 @@ usage()
+ 
+ wr-runltp
+ 
+-    Usage:             $(basename "$0") [-f GROUP] -R -h
++    Usage:                   $(basename "$0") [-f GROUPFILE [-s TESTCASE]] [-R] [-h] [-P]
+ 
+-    -f group1,group2   Execute the selected scenario group.
+-    -h                 Help. Prints all available options.
+-    -R                 Continue the remaining LTP test after rebooting
++    -f groupfile             Execute the selected scenario group command file.
++                             More than one groupfile seperated by comma can be selected.
++    -h                       Help. Prints all available options.
++    -P                       Run stress case in scenarion groupfile.
++    -R                       Continue the remaining LTP test after rebooting.
++    -f groupfile -s testcase Execute the selected test case in scenario groupfile.
+ 
+ 	EOF
+     echo "runltp"
+@@ -92,7 +97,7 @@ exit 0
+ 
+ env_check()
+ {
+-    [ -e ~/config ] && rm ~/config
++    [ -e $RUNTIME_PATH/config ] && rm $RUNTIME_PATH/config
+     [ -r /proc/config.gz -o -r /boot/config-$KERNEL_VERSION ] || {
+         echo "FATAL: missing file /proc/config.gz"
+         exit $TEST_RETVAL_FAIL
+@@ -357,8 +362,7 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+     fi
+ 
+ 
+-    # Create LTP skipped case list
+-
++    # Create LTP skipped case list based on cpu arch
+     while read line
+     do
+         if echo $line | grep -E -q "^#std|^#$KERNEL_ARCH"; then
+@@ -371,6 +375,21 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+         fi
+     done < $SKIP_PATH/$CPU_ARCH
+ 
++    # Create LTP skipped case list of stress test
++    if [ "$RUN_STRESS_CASE" -eq 0 ]; then
++        while read line
++        do
++            if echo $line | grep -E -q "^#std" ; then
++                testcase=$(echo $line | awk '{print $2}')
++                skip_reason=$(echo $line | cut -d "|" -f 2)
++                if grep -q "^$testcase[[:space:]]" $RUNTIME_TESTFILE; then
++                    printf "%-50s %-20s %s \n" "$testcase" SKIP "$skip_reason" >> $TEST_SKIPFILE
++                    echo "$testcase" >> $RUNTIME_SKIPFILE
++                fi
++            fi
++        done < $STRESS_CASE
++    fi
++
+ else
+ 
+     if [ ! -f "$RUNTIME_TESTFILE" -o ! -f "$RUNTIME_LOGFILE" ]; then
+@@ -383,14 +402,6 @@ else
+         exit $TEST_RETVAL_FAIL
+     fi
+ 
+-    # Record the finished LTP runtime log
+-    if [ -f "$RESUME_LOGFILE" ]; then
+-        sed '1,4d' $RUNTIME_LOGFILE >> $RESUME_LOGFILE
+-    else
+-        cp $RUNTIME_LOGFILE $RESUME_LOGFILE
+-    fi
+-
+-
+     # Find out the test case which make system panic
+ 
+     last_test=$(sed '1,4d' $RUNTIME_LOGFILE | tail -n 1 | awk '{print $1}')
+@@ -421,13 +432,21 @@ else
+ 
+     # Create runtime skipped file for this execution
+     [ -f $RUNTIME_SKIPFILE ] && rm $RUNTIME_SKIPFILE
+-    [ -f $TEST_SKIPFILE ] && awk '{print $1}' > $RUNTIME_SKIPFILE
++    [ -f $TEST_SKIPFILE ] && cat $TEST_SKIPFILE | awk '{print $1}' > $RUNTIME_SKIPFILE
+ 
+-    # Add the finished test case to runtime skipped test file
+-    sed '1,4d' $RESUME_LOGFILE | awk '{print $1}' >> $RUNTIME_SKIPFILE
++    # Record the finished LTP runtime log
++    if [ -f "$RESUME_LOGFILE" ]; then
++        sed '1,4d' $RUNTIME_LOGFILE >> $RESUME_LOGFILE
++    else
++        cp $RUNTIME_LOGFILE $RESUME_LOGFILE
++    fi
+ 
+     # Delete any runtime log before run LTP Test
+     rm $RUNTIME_LOGFILE || exit $TEST_RETVAL_FAIL
++
++    # Add the finished test case to runtime skipped test file
++    sed '1,4d' $RESUME_LOGFILE | awk '{print $1}' >> $RUNTIME_SKIPFILE
++
+ fi
+ 
+ [ -f $RUNTIME_SKIPFILE ] && internal_parameter="$internal_parameter -S $RUNTIME_SKIPFILE"
+@@ -549,7 +568,7 @@ report()
+ 
+         [ "$RUN_SELECTED_CASE" -eq 0 ] && {
+             cp $RUNTIME_LOGFILE $LOGFILE
+-            echo "LTP Formatted Test report : $LOGFILE"
++            echo "[Log Path] LTP formatted test report : $LOGFILE"
+         }
+     else
+         echo "There is no LTP test result"
+@@ -597,10 +616,8 @@ report()
+         printf "%-50s %-21s %s \n" Testcase Type "Skip Reason" >> $SKIP_REPORT
+         printf "%-50s %-21s %s \n" -------- ----  -----------  >> $SKIP_REPORT
+         cat $TEST_SKIPFILE >> $SKIP_REPORT
+-        echo "LTP test has the following skipped case:"
+-	cat $RUNTIME_SKIPFILE
+-	echo "[Log Path] Formated skipped test result: $SKIP_REPORT"
+-        echo "[Test Knowledge Base] Detailed skip reason: $SKIP_PATH"
++        echo "[Log Path] Formated skipped test result: $SKIP_REPORT"
++        echo "[Test Knowledge Base] Detailed skipped reason: $SKIP_PATH"
+     fi
+ 
+ }
+@@ -623,7 +640,7 @@ cleanup()
+ 
+ }
+ 
+-while getopts hRa:c:C:d:D:f:F:ehi:K:g:l:m:M:Nno:pqr:s:S:t:T:w:x:b:B: arg
++while getopts hRPa:c:C:d:D:f:F:ehi:K:g:l:m:M:Nno:pqr:s:S:t:T:w:x:b:B: arg
+     do  case $arg in
+         f)  RUN_SELECTED_GROUP=1
+             SCENARIO_GROUP_LIST=$OPTARG
+@@ -634,6 +651,8 @@ while getopts hRa:c:C:d:D:f:F:ehi:K:g:l:m:M:Nno:pqr:s:S:t:T:w:x:b:B: arg
+             external_parameter=$(echo $external_parameter | sed "s/-R//g");;
+         s)  RUN_SELECTED_CASE=1
+             SELECTED_CASE=$OPTARG;;
++        P)  RUN_STRESS_CASE=1
++            external_parameter=$(echo $external_parameter | sed "s/-P//g");;
+ 
+ b|B|S|l|p)  echo "The runltp option $arg has been used internally by wr-runltp"
+             exit $TEST_RETVAL_FAIL;;
+@@ -656,7 +675,6 @@ else
+     fi
+ fi
+ 
+-
+ main
+ report
+ [ "$RUN_SELECTED_CASE" -eq 0 ] && cleanup
+-- 
+1.7.11
+

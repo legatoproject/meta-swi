@@ -1,0 +1,23 @@
+From 373a13923267eb7ba9be541d7540131216ab5cfa Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Thu, 20 Dec 2012 18:06:27 +0800
+Subject: [PATCH] Add profil01 to LTP test skip knowledge base
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/skiptest/x86 |    2 ++
+ 1 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/wrLinux_ltp/skiptest/x86 b/wrLinux_ltp/skiptest/x86
+index 6f1921e..b1167e1 100644
+--- a/wrLinux_ltp/skiptest/x86
++++ b/wrLinux_ltp/skiptest/x86
+@@ -17,3 +17,5 @@ This case is designed to test min_free_kbytes tunable. When the overcommit_memor
+ is set to 2 and overcommit_ratio is 50, the test tries to set min_free_kbytes to
+ the half of free memory and mmap untill hit MAP_FAILED. At this situation, it will
+ invoke the OOM frequently and make system hung.
++
++#std profil01 | System hang in x86_64 arch
+-- 
+1.7.1
+

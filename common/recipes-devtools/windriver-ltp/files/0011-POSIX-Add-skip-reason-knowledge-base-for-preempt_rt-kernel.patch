@@ -1,0 +1,103 @@
+From f3abdf49663432b4f308f4d5eff5b5773b1e44fb Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Thu, 15 Nov 2012 13:16:22 +0800
+Subject: [PATCH] POSIX: Add skipped test case knowledge base for preempt_rt kernel
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ .../wrLinux_posix/skiptest/common                  |   45 ++++++++++++++++++++
+ .../open_posix_testsuite/wrLinux_posix/wr-runposix |    8 ++--
+ 2 files changed, 49 insertions(+), 4 deletions(-)
+ create mode 100644 testcases/open_posix_testsuite/wrLinux_posix/skiptest/common
+
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/skiptest/common b/testcases/open_posix_testsuite/wrLinux_posix/skiptest/common
+new file mode 100644
+index 0000000..7dbc0fb
+--- /dev/null
++++ b/testcases/open_posix_testsuite/wrLinux_posix/skiptest/common
+@@ -0,0 +1,45 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++Test Suit -- conformance/interfaces TPS
++---------------------------------------
++#preempt-rt conformance/interfaces/sched_setparam 9-1.run-test | Not a bug. Test case is NOT compatible to the preempt-rt kernel
++The implementation of test case is NOT compatible to the preempt-rt kernel and system will hang during test execution.
++
++#cgl conformance/interfaces/sched_setparam 9-1.run-test | Not a bug. Test case is NOT compatible to the cgl kernel
++The implementation of test case is NOT compatible to the cgl kernel and system will hang during test execution.
++
++#preempt-rt conformance/interfaces/sched_yield 1-1.run-test | Not a bug. Test case is NOT compatible to the preempt-rt kernel
++The implementation of test case is NOT compatible to the preempt-rt kernel and system will hang during test execution.
++
++#cgl conformance/interfaces/sched_yield 1-1.run-test | Not a bug. Test case is NOT compatible to the cgl kernel
++The implementation of test case is NOT compatible to the cgl kernel and system will hang during test execution.
++
++#preempt-rt conformance/interfaces/sched_setparam 10-1.run-test | Not a bug. Test case is NOT compatible to the preempt-rt kernel
++The implementation of test case is NOT compatible to the preempt-rt kernel and system will hang during test execution.
++
++#cgl conformance/interfaces/sched_setparam 10-1.run-test | Not a bug. Test case is NOT compatible to the cgl kernel
++The implementation of test case is NOT compatible to the cgl kernel and system will hang during test execution.
++
++
++Test Suit -- conformance/interfaces THR
++---------------------------------------
++#preempt-rt conformance/interfaces/pthread_create 1-6.run-test | Not a bug. Test case is NOT compatible to the preempt-rt kernel
++The implementation of test case is NOT compatible to the preempt-rt kernel and system will hang during test execution.
++
++#cgl conformance/interfaces/pthread_create 1-6.run-test | Not a bug. Test case is NOT compatible to the cgl kernel
++The implementation of test case is NOT compatible to the cgl kernel and system will hang during test execution.
++
++
++Test Suit -- conformance/interfaces MSG
++---------------------------------------
++#preempt-rt conformance/interfaces/mq_timedreceive 5-2.run-test | Not a bug. Test case is NOT supported in preempt-rt kernel
++The time() can not specifies an abs_timeout to mq_timedreceiver () for preempt-rt kernel
++
++#preempt-rt conformance/interfaces/mq_timedreceive 10-2.run-test | Not a bug. Test case is NOT supported in preempt-rt kernel
++The time() can not specifies an abs_timeout to mq_timedreceiver () for preempt-rt kernel
++
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+index af71b33..2d6743a 100755
+--- a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
++++ b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+@@ -1,4 +1,4 @@
+-#! /bin/sh
++#! /bin/bash
+ 
+ # Copyright (c) 2012 Wind River Systems, Inc.
+ #
+@@ -38,7 +38,7 @@ RUNTIME_TESTFILE="$RUNTIME_PATH/testfile"
+ 
+ SCENARIO_GROUP_LIST="AIO,MEM,MSG,SEM,SIG,THR,TMR,TPS"
+ TESTSUITE_LIST=""
+-KERNEL_ARCH=""
++KERNEL_ARCH="std"
+ 
+ RUN_SELECTED_SUITE=0
+ RUN_SELECTED_CASE=0
+@@ -209,7 +209,7 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+     if [ -d $SKIP_PATH ];then
+         while read line
+         do
+-            if echo $line | grep -E -q "^#std"; then
++            if echo $line | grep -E -q "^#std|^#$KERNEL_ARCH"; then
+                 skip_suite=$(echo $line | awk '{print $2}')
+                 skip_test=$(echo $line | awk '{print $3}')
+                 skip_reason=$(echo $line | cut -d "|" -f 2)
+@@ -376,7 +376,7 @@ if [ "$total_number" -gt 0 ]; then
+         printf "%-60s %-21s %s \n" -------- ----  -----------  >> $SKIP_REPORT
+         cat $SKIPTEST >> $SKIP_REPORT
+         echo "POSIX test has the following skipped case:"
+-	cat $SKIPTEST | awk '{print $1 $2}'
++	cat $SKIPTEST | awk '{print $1,$2}'
+ 	echo "[Log Path] POSIX skipped test case report: $SKIP_REPORT"
+         echo "[Test Knowledge Base] POSIX test case skip reason: $SKIP_PATH"
+     fi
+-- 
+1.7.1
+

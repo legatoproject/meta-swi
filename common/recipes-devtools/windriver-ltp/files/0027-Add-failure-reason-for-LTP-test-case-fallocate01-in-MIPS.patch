@@ -1,0 +1,27 @@
+From 3f49467c728323f5e59c63a9dde903f566e9bdbf Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Mon, 4 Feb 2013 17:17:36 +0800
+Subject: [PATCH] Add failure reason for LTP test case fallocate01 in MIPS arch
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/mips |    6 ++++++
+ 1 files changed, 6 insertions(+), 0 deletions(-)
+
+diff --git a/wrLinux_ltp/failtest/mips b/wrLinux_ltp/failtest/mips
+index fa0655e..c877315 100644
+--- a/wrLinux_ltp/failtest/mips
++++ b/wrLinux_ltp/failtest/mips
+@@ -21,3 +21,9 @@ The proc interface /proc/pid/io is NOT implemented in mips arch.
+ #std signalfd01 | Not a bug. The MIPS architecture use different syscall implement
+ SYSC_signalfd4() is used in sys_signalfd4 instead of compat_sys_signalfd4() in MIPS kernel.
+ 
++#std fallocate01 | Test case issue. Test caes use a faulty system call strategy based on WORDSIZE for MIPS arch
++This case passed on n64 rootfs, but fails on n32 rootfs in MIPS arch.
++The __WORDSIZE for n32 builds is 32, because integers and addresses are 32 bits
++in length. However, in n32, registers are 64 bits long, and system calls expect 64-bit
++parameters to be passed in a single 64-bit register, not split into two registers,
++as is done in the 'fallocate' function in fallocate01.c when __WORDSIZE==32.
+-- 
+1.7.1
+

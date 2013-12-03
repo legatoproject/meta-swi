@@ -1,0 +1,140 @@
+From 4b58018bb592c7daea30b4f83dcdca3c892bb1ee Mon Sep 17 00:00:00 2001
+From: Lans Zhang <jia.zhang@windriver.com>
+Date: Wed, 20 Feb 2013 12:17:45 +0800
+Subject: [PATCH] Fix short of nodemask array.
+
+In kernel, when the user specified more nodes, e.g, 512 nodes, than
+supported, e.g, 4 nodes, just check if the non supported part is all
+zero. If user space just specified the nodemask array with only one
+element, which makes the check in kernel actually become invalid.
+In addition, current implement in ltp doesn't consider if a node number
+is greater than sizeof(unsigned long) * 8 - 1.
+
+Signed-off-by: Lans Zhang <jia.zhang@windriver.com>
+---
+ testcases/kernel/mem/cpuset/cpuset01.c |    9 +++++----
+ testcases/kernel/mem/ksm/ksm02.c       |    6 +++---
+ testcases/kernel/mem/ksm/ksm04.c       |    6 +++---
+ testcases/kernel/mem/lib/mem.c         |    6 +++---
+ 4 files changed, 14 insertions(+), 13 deletions(-)
+
+diff --git a/testcases/kernel/mem/cpuset/cpuset01.c b/testcases/kernel/mem/cpuset/cpuset01.c
+index 2be6953..f9f1810 100644
+--- a/testcases/kernel/mem/cpuset/cpuset01.c
++++ b/testcases/kernel/mem/cpuset/cpuset01.c
+@@ -93,7 +93,7 @@ static void testcpuset(void)
+ {
+ 	int lc;
+ 	int child, i, status;
+-	unsigned long nmask = 0;
++	unsigned long nmask[MAXNODES / (8*sizeof(unsigned long))] = { 0, };
+ 	char mems[BUFSIZ], buf[BUFSIZ];
+ 
+ 	read_cpuset_files(CPATH, "cpus", buf);
+@@ -107,9 +107,10 @@ static void testcpuset(void)
+ 	case -1:
+ 		tst_brkm(TBROK|TERRNO, cleanup, "fork");
+ 	case 0:
+-		for (i = 0; i < nnodes; i++)
+-			nmask += 1 << nodes[i];
+-		if (set_mempolicy(MPOL_BIND, &nmask, MAXNODES) == -1)
++		for (i = 0; i < nnodes; i++) {
++			nmask[i / (8*sizeof(unsigned long))] |= 1 << (i % (8*sizeof(unsigned long)));
++		}
++		if (set_mempolicy(MPOL_BIND, nmask, MAXNODES) == -1)
+ 			tst_brkm(TBROK|TERRNO, cleanup, "set_mempolicy");
+ 		exit(mem_hog_cpuset(ncpus > 1 ? ncpus : 1));
+ 	}
+diff --git a/testcases/kernel/mem/ksm/ksm02.c b/testcases/kernel/mem/ksm/ksm02.c
+index 5546309..b2cdf41 100644
+--- a/testcases/kernel/mem/ksm/ksm02.c
++++ b/testcases/kernel/mem/ksm/ksm02.c
+@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
+ 	int lc;
+ 	char *msg;
+ 	int size = 128, num = 3, unit = 1;
+-	unsigned long nmask = 0;
++	unsigned long nmask[MAXNODES / (8*sizeof(unsigned long))] = { 0, };
+ 	unsigned int node;
+ 
+ 	msg = parse_opts(argc, argv, ksm_options, ksm_usage);
+@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
+ 		tst_brkm(TBROK, NULL, "OPTION PARSING ERROR - %s", msg);
+ 
+ 	node  = get_a_numa_node(tst_exit);
+-	nmask = 1 << node;
++	nmask[node / (8*sizeof(unsigned long))] = 1 << (node % (8*sizeof(unsigned long)));
+ 
+ 	setup();
+ 
+@@ -103,7 +103,7 @@ int main(int argc, char *argv[])
+ 		Tst_count = 0;
+ 		check_ksm_options(&size, &num, &unit);
+ 
+-		if (set_mempolicy(MPOL_BIND, &nmask, MAXNODES) == -1) {
++		if (set_mempolicy(MPOL_BIND, nmask, MAXNODES) == -1) {
+ 			if (errno != ENOSYS)
+ 				tst_brkm(TBROK|TERRNO, cleanup,
+ 					    "set_mempolicy");
+diff --git a/testcases/kernel/mem/ksm/ksm04.c b/testcases/kernel/mem/ksm/ksm04.c
+index 6ecf3d0..55c6f10 100644
+--- a/testcases/kernel/mem/ksm/ksm04.c
++++ b/testcases/kernel/mem/ksm/ksm04.c
+@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
+ 	int lc;
+ 	char *msg;
+ 	int size = 128, num = 3, unit = 1;
+-	unsigned long nmask = 0;
++	unsigned long nmask[MAXNODES / (8*sizeof(unsigned long))] = { 0, };
+ 	unsigned int node;
+ 
+ 	msg = parse_opts(argc, argv, ksm_options, ksm_usage);
+@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
+ 		tst_brkm(TBROK, NULL, "OPTION PARSING ERROR - %s", msg);
+ 
+ 	node  = get_a_numa_node(tst_exit);
+-	nmask = 1 << node;
++	nmask[node / (8*sizeof(unsigned long))] = 1 << (node % (8*sizeof(unsigned long)));
+ 
+ 	setup();
+ 
+@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
+ 
+ 		write_memcg();
+ 
+-		if (set_mempolicy(MPOL_BIND, &nmask, MAXNODES) == -1) {
++		if (set_mempolicy(MPOL_BIND, nmask, MAXNODES) == -1) {
+ 			if (errno != ENOSYS)
+ 				tst_brkm(TBROK|TERRNO, cleanup,
+ 					    "set_mempolicy");
+diff --git a/testcases/kernel/mem/lib/mem.c b/testcases/kernel/mem/lib/mem.c
+index 2077003..e995bc9 100644
+--- a/testcases/kernel/mem/lib/mem.c
++++ b/testcases/kernel/mem/lib/mem.c
+@@ -67,12 +67,12 @@ void oom(int testcase, int mempolicy, int lite)
+ 	int status;
+ #if HAVE_NUMA_H && HAVE_LINUX_MEMPOLICY_H && HAVE_NUMAIF_H \
+ 	&& HAVE_MPOL_CONSTANTS
+-	unsigned long nmask = 0;
++	unsigned long nmask[MAXNODES / (8*sizeof(unsigned long))] = { 0, };
+ 	unsigned int node;
+ 
+ 	if (mempolicy)
+ 		node = get_a_numa_node(cleanup);
+-	nmask += 1 << node;
++	nmask[node / (8*sizeof(unsigned long))] = 1 << (node % (8*sizeof(unsigned long)));
+ #endif
+ 
+ 	switch (pid = fork()) {
+@@ -82,7 +82,7 @@ void oom(int testcase, int mempolicy, int lite)
+ #if HAVE_NUMA_H && HAVE_LINUX_MEMPOLICY_H && HAVE_NUMAIF_H \
+ 	&& HAVE_MPOL_CONSTANTS
+ 		if (mempolicy)
+-			if (set_mempolicy(MPOL_BIND, &nmask, MAXNODES) == -1)
++			if (set_mempolicy(MPOL_BIND, nmask, MAXNODES) == -1)
+ 				tst_brkm(TBROK|TERRNO, cleanup,
+ 					"set_mempolicy");
+ #endif
+-- 
+1.7.8.110.g4cb5d
+

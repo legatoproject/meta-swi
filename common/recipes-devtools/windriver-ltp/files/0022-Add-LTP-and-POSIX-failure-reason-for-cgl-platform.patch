@@ -1,0 +1,128 @@
+From e97a465a95a9a883f28b7a5d669504175f97d13f Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Mon, 28 Jan 2013 10:07:44 +0800
+Subject: [PATCH 1/2] Add LTP and POSIX failure reason for cgl platform
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ .../wrLinux_posix/failtest/common                  |    9 +++
+ wrLinux_ltp/failtest/common                        |   69 +++++++++++++++++++-
+ 2 files changed, 77 insertions(+), 1 deletions(-)
+
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/failtest/common b/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
+index 5d82cf7..2311880 100644
+--- a/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
++++ b/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
+@@ -103,6 +103,11 @@ Test parameters lenth and offset for mmap() are too large. In function
+ get_unmapped_area(), it checks that len should less than TASK_SIZE, otherwise
+ it returns -ENOMEM. TASK_SIZE value differs on different platforms.
+ 
++#cgl conformance/interfaces/mmap 5-1.run-test | Not a bug. This case is NOT supported cgl platform
++In the cgl platform where the kernel option CONFIG_PAX_MPROTECT is enabled,
++invoking mmap with explicit usage of PROT_WRITE and PROT_EXEC together will be
++denied with "Operation not permitted".
++
+ 
+ Test Suit -- conformance/interfaces THR
+ ---------------------------------------
+@@ -130,6 +135,10 @@ Same with pthread_rwlock_rdlock/2-1.run-test
+ 
+ #std conformance/interfaces/pthread_cond_broadcast 1-2.run-test | Not a bug. Lack of memory
+ 
++#cgl conformance/interfaces/pthread_create 3-2.run-test | Not a bug. Not enough timeout value in cgl platform
++In cgl platform, this case need more time to execute. Test case pass when it is executed as a single case,
++/opt/open_posix_testsuite/conformance/interfaces/pthread_create# ./3-2.run-test.
++
+ Test Suit -- conformance/interfaces TPS
+ ---------------------------------------
+ 
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index 9d4d4d8..24b6722 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -86,7 +86,7 @@ The test tries to make sure that the current working directory location is under
+ This test tries to get the right "error" number of mount syscall. Currently, the
+ number of test case have rised to 13, but the number of error array is still 8
+ 
+-#std mount03 | Not a bug. Test tries to "stat" a nonexistent file
++#std mount03 | Not a bug. Test tries to stat a nonexistent file
+ 
+ #std getrusage03 | Not a bug. Test fails on embedded system with small memory
+ To use this test also in embedded systems it needs to reduce the memory
+@@ -99,6 +99,73 @@ value when no argument is passed.
+ 
+ #std getrusage04 | Test case issue and will be fixed upstream
+ 
++#cgl ioperm01 | Not a bug. Privileged IO is disabled in cgl platform
++Syscall ioperm will return an "Operation not permitted" error when Grsecurity
++kernel options are enabled in cgl platform.
++
++#cgl iopl01 | Not a bug. Privileged IO is disabled in cgl platform
++Syscall iopl will return an "Operation not permitted" error when Grsecurity
++kernel options are enabled in cgl platform.
++
++#cgl mincore01 | Not a bug. Invoking mmap with PROT_WRITE and PROT_EXEC will be denied in cgl platform
++When the kernel option CONFIG_PAX_MPROTECT is enabled, mmap() with
++explicit usage of PROT_WRITE and PROT_EXEC together will be denied with
++"Operation not permitted" in cgl platform
++
++#cgl mincore02 | Not a bug. Invoking mmap with PROT_WRITE and PROT_EXEC will be denied in cgl platform
++When the kernel option CONFIG_PAX_MPROTECT is enabled, mmap() with
++explicit usage of PROT_WRITE and PROT_EXEC together will be denied with
++"Operation not permitted" in cgl platform
++
++#cgl syslog01 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog02 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog03 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog04 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog05 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog06 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog07 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog08 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog09 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog10 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog11 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++#cgl syslog12 | Not a bug. The cgl platform uses syslog-ng as Linux system logging utilities
++Instead of syslogd, cgl platform uses syslog-ng as Linux system logging utility.
++The file /etc/syslog-ng/syslog-ng.conf is used as config file for syslog-ng.
++
++
+ Test Suit -- commands
+ ---------------------------------------
+ 
+-- 
+1.7.1
+

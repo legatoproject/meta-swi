@@ -1,0 +1,57 @@
+From b4c68818cd266e1e6f69ff2055f54429a36742ac Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Fri, 14 Dec 2012 14:14:49 +0800
+Subject: [PATCH 2/2] LTP: add fail reason for readahead02
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/arm  |    3 +++
+ wrLinux_ltp/failtest/mips |    6 ++++++
+ wrLinux_ltp/failtest/ppc  |    6 ++++++
+ 3 files changed, 15 insertions(+), 0 deletions(-)
+
+diff --git a/wrLinux_ltp/failtest/arm b/wrLinux_ltp/failtest/arm
+index 5cd08cb..f86cc5b 100644
+--- a/wrLinux_ltp/failtest/arm
++++ b/wrLinux_ltp/failtest/arm
+@@ -12,6 +12,9 @@ Test Suit -- syscall
+ #std getcontext01 | Not a bug. Test case is NOT supported on arm arch
+ eglibc doesn't implement getcontext for arm, so this result is expected.
+ 
++#std readahead02 | Not a bug. Test case is NOT supported on arm arch
++The proc interface /proc/pid/io is NOT implemented in arm arch.
++
+ Test Suit -- hyperthreading
+ ---------------------------------------
+ 
+diff --git a/wrLinux_ltp/failtest/mips b/wrLinux_ltp/failtest/mips
+index 870982e..bb09a06 100644
+--- a/wrLinux_ltp/failtest/mips
++++ b/wrLinux_ltp/failtest/mips
+@@ -12,3 +12,9 @@ Test Suit -- commands
+ Test 6 of case "file" assume that the target of mipcs arch is MSB. But mips and mips64 arch
+ support both LSB and MSB. This test will fail when it's LSB on mips or mips64 arch
+ 
++Test Suit -- syscall
++---------------------------------------
++
++#std readahead02 | Not a bug. Test case is NOT supported on mips arch
++The proc interface /proc/pid/io is NOT implemented in mips arch.
++
+diff --git a/wrLinux_ltp/failtest/ppc b/wrLinux_ltp/failtest/ppc
+index 31b6836..3b9ab40 100644
+--- a/wrLinux_ltp/failtest/ppc
++++ b/wrLinux_ltp/failtest/ppc
+@@ -14,3 +14,9 @@ requires a space larger than 64M.
+ 2. For the ppc64 target such as fsl_p50x0, calloc don't guaranty the pointer
+ created at the second time is equal to the one just freed.
+ 
++Test Suit -- syscall
++---------------------------------------
++
++#std readahead02 | Not a bug. Test case is NOT supported on ppc arch
++The proc interface /proc/pid/io is NOT implemented in ppc arch.
++
+-- 
+1.7.1
+

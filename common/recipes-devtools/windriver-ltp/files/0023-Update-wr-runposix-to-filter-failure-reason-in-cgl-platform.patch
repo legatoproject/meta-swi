@@ -1,0 +1,56 @@
+From ec733a62ee81dcfec3429d0c36362bb78f7f45f9 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Mon, 28 Jan 2013 10:09:53 +0800
+Subject: [PATCH 2/2] Update wr-runposix to filter failure reason in cgl platform
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ .../open_posix_testsuite/wrLinux_posix/wr-runposix |   12 ++++++------
+ 1 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+index 3bf19dd..42007f7 100755
+--- a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
++++ b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+@@ -102,8 +102,8 @@ setup()
+     [ -d "$RUNTIME_PATH" ] || mkdir $RUNTIME_PATH
+     [ -d "$LOGPATH" ] || mkdir $LOGPATH
+ 
+-    uname -a|grep -q "preempt-rt" && KERNEL_ARCH=preempt-rt
+-    uname -a|grep -q "cgl$" && KERNEL_ARCH=cgl
++    uname -r | grep -q "preempt-rt$" && KERNEL_ARCH=preempt-rt
++    uname -r | grep -q "cgl$" && KERNEL_ARCH=cgl
+ 
+     # Create runtime test suite list based on scenario group list
+ 
+@@ -351,7 +351,7 @@ if [ "$total_number" -gt 0 ]; then
+                 fail_type=$(echo "$line" | awk '{print $3}'| tr -d ":")
+ 
+                 fail_reason=$(cat $FAIL_PATH/common | grep "^#std .*$fail_suite $fail_test" | cut -d "|" -f 2)
+-                [ -z "$fail_reason" -a -n "$KERNEL_ARCH" ] && \
++                [ -z "$fail_reason" ] && \
+                 fail_reason=$(cat $FAIL_PATH/common | grep "^#$KERNEL_ARCH .*$fail_suite $fail_test" | cut -d "|" -f 2)
+                 [ -z "$fail_reason" ] && UNKNOWN_FAILURE=$(expr $UNKNOWN_FAILURE + 1)
+ 	        printf "%-60s %-20s %s \n" "$fail_suite/$fail_test" "$fail_type" "$fail_reason" >> $FAIL_REPORT
+@@ -391,15 +391,15 @@ else
+     exit 1
+ fi
+ 
+-    # Print out POSIX test result
+-    sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
+-
+     # Save test log to result folder
+     echo "[Log Path] POSIX test log: $POSIX_LOGFILE" >> $RUNTIME_LOGFILE
+     cp $RUNTIME_LOGFILE $POSIX_LOGFILE
+     [ -e "$TESTLOG" ] && rm $TESTLOG
+     ln -s $POSIX_LOGFILE $TESTLOG
+ 
++    # Print out POSIX test result
++    sed -n '/Total Tests/,$'p $TESTLOG
++
+     [ -e "$FAIL_REPORT" -a -e "$TESTLOG" ] && {
+ 
+         echo "[POSIX Test Failed Case]" >> $TESTLOG
+-- 
+1.7.1
+

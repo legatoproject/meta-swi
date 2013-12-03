@@ -1,0 +1,259 @@
+From 3f908022c45b72e64e86b80220ab5ace67ad5c55 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Mon, 17 Dec 2012 20:48:27 +0800
+Subject: [PATCH] LTP: update wr-runltp and wr-posix
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ .../open_posix_testsuite/wrLinux_posix/wr-runposix |   57 +++++++++++------
+ wrLinux_ltp/wr-runltp                              |   68 ++++++++++++-------
+ 2 files changed, 81 insertions(+), 44 deletions(-)
+
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+index f08cdc8..3bf19dd 100755
+--- a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
++++ b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+@@ -27,12 +27,14 @@ RUNTIME_PATH="$WRPOSIXROOT/runtime"
+ RUNTIME_TMP_PATH=/tmp
+ 
+ POSIX_LOGFILE="$LOGPATH/POSIX_RUN_ON-$EXECUTION_TIME.log"
+-FAIL_REPORT="$LOGPATH/failtest-$EXECUTION_TIME.report"
+-SKIP_REPORT="$LOGPATH/skiptest-$EXECUTION_TIME.report"
++TESTLOG="$LOGPATH/POSIX.log"
+ RUNTIME_SKIPFILE="$RUNTIME_PATH/runtime.skip"
+ RUNTIME_LOGFILE="$RUNTIME_PATH/runtime.log"
+ RESUME_LOGFILE="$RUNTIME_PATH/resume.log"
+ SKIPTEST="$RUNTIME_PATH/skiptest"
++FAIL_REPORT="$RUNTIME_PATH/failtest.report"
++SKIP_REPORT="$RUNTIME_PATH/skiptest.report"
++
+ tmpfile="$RUNTIME_TMP_PATH/posix_tmp"
+ RUNTIME_TESTFILE="$RUNTIME_PATH/testfile"
+ 
+@@ -111,8 +113,12 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+     [ -f "$RUNTIME_LOGFILE" ] && rm $RUNTIME_LOGFILE
+     [ -f "$RESUME_LOGFILE" ] && rm $RESUME_LOGFILE
+     [ -f "$RUNTIME_SKIPFILE" ] && rm $RUNTIME_SKIPFILE
+-    [ -f "$RUNTIME_TESTFILE" ] && rm $RUNTIME_TESTFILE
++    [ -f "$RUNTIME_TESTFILE" ] && {
++        rm $RUNTIME_TESTFILE || echo "Fail to delete obsolete testfile"
++    }
+     [ -f "$SKIPTEST" ] && rm $SKIPTEST
++    [ -f "$SKIP_REPORT" ] && rm $SKIP_REPORT
++    [ -f "$FAIL_REPORT" ] && rm $FAIL_REPORT
+ 
+     if [ "$RUN_SELECTED_SUITE" -eq 0 ]; then
+ 
+@@ -358,14 +364,14 @@ if [ "$total_number" -gt 0 ]; then
+         sed -i "/Known Failures/a\Total Unknown Failures(Fail, Unresolved and Hung): $UNKNOWN_FAILURE" $RUNTIME_LOGFILE
+ 
+ 	if [ "$UNKNOWN_FAILURE" -eq 0 ]; then
+-            echo "[$binary_name] POSIX test passed with known failure"
++            echo "[$binary_name] POSIX test passed with known failure" >> $RUNTIME_LOGFILE
+         else
+-            echo "[$binary_name] Warning: POSIX test has unknown failure"
++            echo "[$binary_name] POSIX test failed with unknown failure" >> $RUNTIME_LOGFILE
+         fi
+-	echo "[Log Path] POSIX failed test report: $FAIL_REPORT"
+-        echo "[Test Knowledge Base] POSIX test case known failure: $FAIL_PATH"
++	echo "[Log Path] POSIX failed test report: $FAIL_REPORT" >> $RUNTIME_LOGFILE
++        echo "[Test Knowledge Base] POSIX test case known failure: $FAIL_PATH" 	>> $RUNTIME_LOGFILE
+     else
+-        echo "[$binary_name] POSIX test passed"
++        echo "[$binary_name] POSIX test passed" >> $RUNTIME_LOGFILE
+     fi
+ 
+     # Create the skipped test report
+@@ -375,24 +381,37 @@ if [ "$total_number" -gt 0 ]; then
+         printf "%-60s %-21s %s \n" Testcase Type "Skip Reason" >> $SKIP_REPORT
+         printf "%-60s %-21s %s \n" -------- ----  -----------  >> $SKIP_REPORT
+         cat $SKIPTEST >> $SKIP_REPORT
+-        echo "POSIX test has the following skipped case:"
+-	cat $SKIPTEST | awk '{print $1,$2}'
+-	echo "[Log Path] POSIX skipped test case report: $SKIP_REPORT"
+-        echo "[Test Knowledge Base] POSIX test case skip reason: $SKIP_PATH"
++	echo "[Log Path] POSIX skipped test case report: $SKIP_REPORT" >> $RUNTIME_LOGFILE
++        echo "[Test Knowledge Base] POSIX test case skip reason: $SKIP_PATH" >> $RUNTIME_LOGFILE
+     fi
+ 
+-    # Print out POSIX test result
+-    sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
+-
+ else
+     echo "[$binary_name] There is no POSIX test result"
+     echo "[$binary_name] Please check the name of test suite and test case"
++    exit 1
+ fi
+ 
+-    # Create formatted test report when execute plenty of cases
+-    [ "$RUN_SELECTED_CASE" -eq 0 ] && {
+-        cp $RUNTIME_LOGFILE $POSIX_LOGFILE
+-        echo "[Log Path] POSIX test log: $POSIX_LOGFILE"
++    # Print out POSIX test result
++    sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
++
++    # Save test log to result folder
++    echo "[Log Path] POSIX test log: $POSIX_LOGFILE" >> $RUNTIME_LOGFILE
++    cp $RUNTIME_LOGFILE $POSIX_LOGFILE
++    [ -e "$TESTLOG" ] && rm $TESTLOG
++    ln -s $POSIX_LOGFILE $TESTLOG
++
++    [ -e "$FAIL_REPORT" -a -e "$TESTLOG" ] && {
++
++        echo "[POSIX Test Failed Case]" >> $TESTLOG
++        echo "------------------------" >> $TESTLOG
++        cat $FAIL_REPORT >> $TESTLOG
++    }
++
++    [ -e "$SKIP_REPORT" -a -e "$TESTLOG" ] && {
++
++        echo "[POSIX Test Skipped Case]" >> $TESTLOG
++        echo "-------------------------" >> $TESTLOG
++        cat $SKIP_REPORT >> $TESTLOG
+     }
+ 
+ }
+diff --git a/wrLinux_ltp/wr-runltp b/wrLinux_ltp/wr-runltp
+index 8f7ad8b..e4e9c7a 100755
+--- a/wrLinux_ltp/wr-runltp
++++ b/wrLinux_ltp/wr-runltp
+@@ -44,8 +44,7 @@ STRESS_CASE="$SKIP_PATH/stress"
+ FAIL_PATH="$WRLTPROOT/failtest"
+ LOGPATH="$WRLTPROOT/results"
+ LOGFILE="$LOGPATH/LTP_RUN_ON-$EXECUTION_TIME.log"
+-FAIL_REPORT="$LOGPATH/failtest-$EXECUTION_TIME.report"
+-SKIP_REPORT="$LOGPATH/skiptest-$EXECUTION_TIME.report"
++LTPLOG=$LOGPATH/LTP.log
+ SCENARIO_GROUP_LIST="syscalls,fs,fs_perms_simple,fsx,dio,io,mm,ipc,sched,math,nptl,pty,\
+ containers,fs_bind,filecaps,cap_bounds,connectors,fcntl-locktests,admin_tools,timers,commands,\
+ hyperthreading"
+@@ -59,6 +58,8 @@ RUNTIME_PATH="$WRLTPROOT/runtime"
+ TEST_SKIPFILE="$RUNTIME_PATH/skipfile"
+ RUNTIME_SKIPFILE=""
+ RUNTIME_TESTFILE="$RUNTIME_PATH/testfile"
++FAIL_REPORT="$RUNTIME_PATH/failtest.report"
++SKIP_REPORT="$RUNTIME_PATH/skiptest.report"
+ RUNTIME_LOGFILE=""
+ RESUME_LOGFILE="$RUNTIME_PATH/resume.log"
+ SCREEN_LOGFILE=$RUNTIME_PATH/Ltp_console_output.log
+@@ -100,7 +101,7 @@ exit 0
+ 
+ env_check()
+ {
+-    [ -e $RUNTIME_PATH/config ] && rm $RUNTIME_PATH/config
++    [ -e "$RUNTIME_PATH/config" ] && rm $RUNTIME_PATH/config
+     [ -r /proc/config.gz -o -r /boot/config-$KERNEL_VERSION ] || {
+         echo "FATAL: missing file /proc/config.gz"
+         exit $TEST_RETVAL_FAIL
+@@ -302,6 +303,8 @@ fi
+         [ -f "$SCENARIO_GROUP_FILE" ] && rm $SCENARIO_GROUP_FILE
+         [ -f "$TEST_SKIPFILE" ] && rm $TEST_SKIPFILE
+         [ -f "$RESUME_LOGFILE" ] && rm $RESUME_LOGFILE
++        [ -f "$FAIL_REPORT" ] && rm $FAIL_REPORT
++        [ -f "$SKIP_REPORT" ] && rm $SKIP_REPORT
+ 
+         # Check kernel option before execute some scenario group
+             echo $SCENARIO_GROUP_LIST | grep -q "numa" && {
+@@ -465,8 +468,9 @@ else
+     printf "%-50s %-21s %s \n" "$panic_test" "SKIP" "system panic" >> $TEST_SKIPFILE
+ 
+     # Create runtime skipped file for this execution
+-    [ -f $RUNTIME_SKIPFILE ] && rm $RUNTIME_SKIPFILE
+-    [ -f $TEST_SKIPFILE ] && cat $TEST_SKIPFILE | awk '{print $1}' > $RUNTIME_SKIPFILE
++    RUNTIME_SKIPFILE="$RUNTIME_PATH/runtime.skip"
++    [ -e "$RUNTIME_SKIPFILE" ] && rm $RUNTIME_SKIPFILE
++    [ -e "$TEST_SKIPFILE" ] && cat $TEST_SKIPFILE | awk '{print $1}' > $RUNTIME_SKIPFILE
+ 
+     # Record the finished LTP runtime log
+     if [ -f "$RESUME_LOGFILE" ]; then
+@@ -483,7 +487,7 @@ else
+ 
+ fi
+ 
+-[ -f $RUNTIME_SKIPFILE ] && cmdline_skip="-S $RUNTIME_SKIPFILE"
++    [ -e "$RUNTIME_SKIPFILE" ] && cmdline_skip="-S $RUNTIME_SKIPFILE"
+ 
+ }
+ 
+@@ -578,6 +582,7 @@ report()
+         sed -i "s/^Total Failures.*/Total Failures: $LTP_failnum/" $RUNTIME_LOGFILE
+     else
+         echo "There is no LTP test result"
++	exit $TEST_RETVAL_FAIL
+     fi
+ 
+ 
+@@ -606,38 +611,51 @@ report()
+ 
+         # Tm-Fast use this console output to decide whether LTP test passes
+         if [ "$UNKNOWN_FAILURE" -eq 0 ]; then
+-            echo "LTP test passed with known failure"
++	    echo "[Test Result] LTP test passed with known failure" >> $RUNTIME_LOGFILE
+         else
+-            echo "Warning : LTP test failed with unknown failure"
++	    echo "[Test Result] Warning : LTP test failed with unknown failure" >> $RUNTIME_LOGFILE
+         fi
+-	echo "[Log Path] LTP failed test report: $FAIL_REPORT"
+-        echo "[Test Knowledge Base] LTP test case known failure : $FAIL_PATH"
++        echo "[Test Knowledge Base] LTP test case known failure : $FAIL_PATH" >> $RUNTIME_LOGFILE
+     elif [[ $LTP_testnum -gt 0 ]]; then
+-        echo "LTP test passed"
++        echo "[Test Result] LTP test passed" >> $RUNTIME_LOGFILE
+     fi
+ 
+-    if grep -q "Total Tests" $RUNTIME_LOGFILE; then
+-        [ "$RUN_SELECTED_CASE" -eq 0 ] && {
+-            cp $RUNTIME_LOGFILE $LOGFILE
+-            echo "[Log Path] LTP test result : $LOGFILE"
+-        }
+-        echo "[Log Path] LTP test console output log: $SCREEN_LOGFILE"
+-
+-        # Print test result on console
+-        sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
+-    fi
+-
+-# Creat skipped test report and detailed skip reason
++    # Creat skipped test report and detailed skip reason
+     if grep "SKIP" $TEST_SKIPFILE > /dev/null 2>&1 ; then
+         echo "LTP Test Start Time: $START_TIME" > $SKIP_REPORT
+         echo "-------------------------------------------" >> $SKIP_REPORT
+         printf "%-50s %-21s %s \n" Testcase Type "Skip Reason" >> $SKIP_REPORT
+         printf "%-50s %-21s %s \n" -------- ----  -----------  >> $SKIP_REPORT
+         cat $TEST_SKIPFILE >> $SKIP_REPORT
+-        echo "[Log Path] LTP skipped test case report: $SKIP_REPORT"
+-        echo "[Test Knowledge Base] LTP test case skip reason: $SKIP_PATH"
++        echo "[Test Knowledge Base] LTP test case skip reason: $SKIP_PATH" >> $RUNTIME_LOGFILE
++    fi
++
++    # Output test result
++    if grep -q "Total Tests" $RUNTIME_LOGFILE; then
++        echo "[Log Path] LTP test console output log: $SCREEN_LOGFILE" >> $RUNTIME_LOGFILE
++        echo "[Log Path] LTP test log : $LTPLOG" >> $RUNTIME_LOGFILE
++        sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
++
++        cp $RUNTIME_LOGFILE $LOGFILE
++        [ -e "$LTPLOG" ] && rm $LTPLOG
++        ln -s $LOGFILE $LTPLOG
+     fi
+ 
++    [ -e "$FAIL_REPORT" -a -e "$LOGFILE" ] && {
++
++        echo "[LTP Test Failed Case]" >> $LOGFILE
++        echo "----------------------" >> $LOGFILE
++        cat $FAIL_REPORT >> $LOGFILE
++    }
++
++    [ -e "$SKIP_REPORT" -a -e "$LOGFILE" ] && {
++
++        echo "[LTP Test Skipped Case]" >> $LOGFILE
++        echo "-----------------------" >> $LOGFILE
++        cat $SKIP_REPORT >> $LOGFILE
++    }
++
++    echo "<<wr-runltp Test Result>>"
+ }
+ 
+ cleanup()
+-- 
+1.7.1
+

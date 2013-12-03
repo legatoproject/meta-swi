@@ -1,0 +1,24 @@
+From 553909c630aac6abe20b8f08d7e420949b0f6c57 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Mon, 28 Jan 2013 15:28:41 +0800
+Subject: [PATCH] Add LTP case signalfd01 failure reason for MIPS
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/mips |    3 +++
+ 1 files changed, 3 insertions(+), 0 deletions(-)
+
+diff --git a/wrLinux_ltp/failtest/mips b/wrLinux_ltp/failtest/mips
+index bb09a06..fa0655e 100644
+--- a/wrLinux_ltp/failtest/mips
++++ b/wrLinux_ltp/failtest/mips
+@@ -18,3 +18,6 @@ Test Suit -- syscall
+ #std readahead02 | Not a bug. Test case is NOT supported on mips arch
+ The proc interface /proc/pid/io is NOT implemented in mips arch.
+ 
++#std signalfd01 | Not a bug. The MIPS architecture use different syscall implement
++SYSC_signalfd4() is used in sys_signalfd4 instead of compat_sys_signalfd4() in MIPS kernel.
++
+-- 
+1.7.1
+

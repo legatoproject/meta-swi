@@ -1,0 +1,316 @@
+From 39ee3f134dbb798fa8a059fc114d4d4e249234c7 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Thu, 12 Jul 2012 08:59:26 +0800
+Subject: [PATCH] LTP: update skiptest file and wr-runltp
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/common |  8 ++++
+ wrLinux_ltp/skiptest/arm    | 10 ++---
+ wrLinux_ltp/skiptest/common | 89 ---------------------------------------------
+ wrLinux_ltp/skiptest/mips   |  7 +++-
+ wrLinux_ltp/skiptest/ppc    | 15 ++++++++
+ wrLinux_ltp/skiptest/x86    | 14 +++++++
+ wrLinux_ltp/wr-runltp       | 39 +++++++-------------
+ 7 files changed, 61 insertions(+), 121 deletions(-)
+ delete mode 100644 wrLinux_ltp/skiptest/common
+ create mode 100644 wrLinux_ltp/skiptest/ppc
+ create mode 100644 wrLinux_ltp/skiptest/x86
+
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index 74d138c..151c0a4 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -210,4 +210,12 @@ of /var/spool/cron will not cause crond to update its db.
+ If the target date is older than the date on the installer,changing the contents
+ of /var/spool/cron will not cause crond to update its db.
+ 
++Test Suit -- commands
++---------------------------------------
++
++#std ld | gcc is not supported
++
++#std ldd | gcc is not supported
++
++#std nm | gcc is not supported
+ 
+diff --git a/wrLinux_ltp/skiptest/arm b/wrLinux_ltp/skiptest/arm
+index 2295b87..c8044e5 100644
+--- a/wrLinux_ltp/skiptest/arm
++++ b/wrLinux_ltp/skiptest/arm
+@@ -5,10 +5,10 @@
+ # of this software may be licensed only pursuant to the terms
+ # of an applicable Wind River license agreement.
+ 
+-Test Suit -- syscall
++Test Suit -- fs_bind
+ ---------------------------------------
+ 
+-#fallocate01 | To be added
+-#fallocate02 | To be added
+-#fallocate03 | To be added
+-#getcontext01 | To be added
++#std BindMounts | subtest bind/test21 cause system hung
++Test case bug, the test bind/test03: did not properly clean up its proc mounts,
++and cause system hung.
++
+diff --git a/wrLinux_ltp/skiptest/common b/wrLinux_ltp/skiptest/common
+deleted file mode 100644
+index b12545f..0000000
+--- a/wrLinux_ltp/skiptest/common
++++ /dev/null
+@@ -1,89 +0,0 @@
+-
+-# Copyright (c) 2012 Wind River Systems, Inc.
+-#
+-# The right to copy, distribute, modify, or otherwise make use
+-# of this software may be licensed only pursuant to the terms
+-# of an applicable Wind River license agreement.
+-
+-
+-Test Suit -- syscall
+----------------------------------------
+-
+-#std add_key01 | No implemented syscall
+-WRLinux kernel hasn't implemented the syscall yet. No any requirment for this one. Once mentioned in CQ WIND00172780.
+-
+-#std add_key02 | No implemented syscall
+-WRLinux kernel hasn't implemented the syscall yet. No any requirment for this one. Once mentioned in CQ WIND00172780.
+-
+-#std get_mempolicy01 | No implemented syscall
+-WRLinux kernel hasn't implemented the syscall yet. No any requirment for this one. Once mentioned in CQ WIND00172780.
+-
+-#std keyctl01 | No implemented syscall
+-WRLinux kernel hasn't implemented the syscall yet. No any requirment for this one. Once mentioned in CQ WIND00172780.
+-
+-#std splice01 | NFS rootfs limitation
+-Doesn't work with NFS-mounted root fs, Pass with ext3 rootfs on hard disk.
+-
+-#std setfsgid03 | To be added
+-
+-#cgl access02 | To be added
+-
+-#cgl execve03  | To be added
+-
+-#cgl utimensat01 | To be added
+-
+-#cgl ioperm01 | To be added
+-
+-#cgl iopl01 | To be added
+-
+-Test Suit -- fs
+----------------------------------------
+-
+-#std quota_remount_test01 | To be added
+-
+-Test Suit -- dio
+----------------------------------------
+-
+-#std dio04 | NFS rootfs limitation
+-Doesn't work with NFS-mounted root fs, Pass with ext3 rootfs on hard disk.
+-#std dio10 | NFS rootfs limitation
+-Doesn't work with NFS-mounted root fs, Pass with ext3 rootfs on hard disk.
+-
+-Test Suit -- mm
+----------------------------------------
+-
+-#std min_free_kbytes | To be added
+-
+-Test Suit -- ipc
+----------------------------------------
+-
+-#std pipeio_1 | To be added
+-
+-Test Suit -- fs_bind
+----------------------------------------
+-
+-#std test_fs_bind.sh | subtest bind/test03 cause system hung
+-Test case bug, the test bind/test03: did not properly clean up its proc mounts,
+-and cause system hung.
+-
+-Test Suit -- admin_tools
+----------------------------------------
+-
+-#cgl at_deny01 | To be added
+-#cgl at_allow01 | To be added
+-#cgl cron02 | To be added
+-#cgl cron_deny01 | To be added
+-#cgl cron_allow01 | To be added
+-#cgl su01 | To be added
+-
+-Test Suit -- commands
+----------------------------------------
+-
+-#std ar | To be added
+-#std ld | To be added
+-#std ldd | To be added
+-#std objdump | To be added
+-#std mail | To be added
+-#std unzip01 | To be added
+-#std nm | To be added
+-
+diff --git a/wrLinux_ltp/skiptest/mips b/wrLinux_ltp/skiptest/mips
+index 27d5232..c8044e5 100644
+--- a/wrLinux_ltp/skiptest/mips
++++ b/wrLinux_ltp/skiptest/mips
+@@ -5,7 +5,10 @@
+ # of this software may be licensed only pursuant to the terms
+ # of an applicable Wind River license agreement.
+ 
+-Test Suit -- syscall
++Test Suit -- fs_bind
+ ---------------------------------------
+ 
+-#std getcontext01 | To be added
++#std BindMounts | subtest bind/test21 cause system hung
++Test case bug, the test bind/test03: did not properly clean up its proc mounts,
++and cause system hung.
++
+diff --git a/wrLinux_ltp/skiptest/ppc b/wrLinux_ltp/skiptest/ppc
+new file mode 100644
+index 0000000..831c536
+--- /dev/null
++++ b/wrLinux_ltp/skiptest/ppc
+@@ -0,0 +1,15 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++Test Suit -- fs_bind
++---------------------------------------
++
++#std BindMounts | subtest bind/test21 cause system hung
++Test case bug, the test bind/test03: did not properly clean up its proc mounts,
++and cause system hung.
++
++
+diff --git a/wrLinux_ltp/skiptest/x86 b/wrLinux_ltp/skiptest/x86
+new file mode 100644
+index 0000000..c8044e5
+--- /dev/null
++++ b/wrLinux_ltp/skiptest/x86
+@@ -0,0 +1,14 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++Test Suit -- fs_bind
++---------------------------------------
++
++#std BindMounts | subtest bind/test21 cause system hung
++Test case bug, the test bind/test03: did not properly clean up its proc mounts,
++and cause system hung.
++
+diff --git a/wrLinux_ltp/wr-runltp b/wrLinux_ltp/wr-runltp
+index 677f8ec..ebeb456 100755
+--- a/wrLinux_ltp/wr-runltp
++++ b/wrLinux_ltp/wr-runltp
+@@ -305,7 +305,7 @@ setup()
+ 
+     # Print out the scenario group list if there is no selected test case
+     echo "$external_parameter" |  grep -q -e "-s" || \
+-    echo "Ltp scenario group list $SCENARIO_GROUP_LIST"
++    echo "LTP scenario group list $SCENARIO_GROUP_LIST"
+ 
+     if [ "$RUN_HUGETLB_TEST" -eq 1 ]; then
+         hugefspath=/mnt/huge
+@@ -329,7 +329,7 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+         cat "$scenfile" | grep -v -E "^#|^$"  >> $RUNTIME_TESTFILE
+     done
+ 
+-    echo "Ltp Test Start Time: $START_TIME" > $TEST_SKIPFILE
++    echo "LTP Test Start Time: $START_TIME" > $TEST_SKIPFILE
+     echo "-------------------------------------------" >> $TEST_SKIPFILE
+     printf "%-50s %-21s %s \n" Testcase Type "Skip Reason" >> $TEST_SKIPFILE
+     printf "%-50s %-21s %s \n" -------- ----  -----------  >> $TEST_SKIPFILE
+@@ -337,12 +337,9 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+     while read line
+     do
+         testcase=$(echo $line | awk '{print $1}')
+-        skip_reason=$(grep "^#std[[:space:]]$testcase[[:space:]]" $SKIP_PATH/common | cut -d "|" -f 2)
+-        [ -z "$skip_reason" -a -n "$KERNEL_ARCH" ] && \
+-        skip_reason=$(grep "^#$KERNEL_ARCH[[:space:]]$testcase[[:space:]]" $SKIP_PATH/common | cut -d "|" -f 2)
+-        [ -z "$skip_reason" -a -e "$SKIP_PATH/$CPU_ARCH" ] && \
++        [ -e "$SKIP_PATH/$CPU_ARCH" ] && \
+         skip_reason=$(grep "^#std[[:space:]]$testcase[[:space:]]" $SKIP_PATH/$CPU_ARCH | cut -d "|" -f 2)
+-        [ -z "$skip_reason" -a -e "$SKIP_PATH/$CPU_ARCH" -a -n "$KERNEL_ARCH" ] && \
++        [ -e "$SKIP_PATH/$CPU_ARCH" -a -z "$skip_reason" -a -n "$KERNEL_ARCH" ] && \
+         skip_reason=$(grep "^#$KERNEL_ARCH[[:space:]]$testcase[[:space:]]" $SKIP_PATH/$CPU_ARCH | cut -d "|" -f 2)
+ 
+         if [ -n "$skip_reason" ]; then
+@@ -401,7 +398,8 @@ else
+ 
+     # Create runtime skipping file for this execution
+     [ -f $RUNTIME_SKIPFILE ] && rm $RUNTIME_SKIPFILE
+-    sed '1,4d' $TEST_SKIPFILE | awk '{print $1}' > $RUNTIME_SKIPFILE
++    [ -f $TEST_SKIPFILE ] && sed '1,4d' $TEST_SKIPFILE | \
++    awk '{print $1}' > $RUNTIME_SKIPFILE
+ 
+     # Add the finished test case to runtime skipping test file
+     sed '1,4d' $RESUME_LOGFILE | awk '{print $1}' >> $RUNTIME_SKIPFILE
+@@ -410,6 +408,8 @@ else
+     rm $RUNTIME_LOGFILE || exit 1
+ fi
+ 
++[ -f $RUNTIME_SKIPFILE ] && internal_parameter="$internal_parameter -S $RUNTIME_SKIPFILE"
++
+ }
+ 
+ 
+@@ -490,9 +490,9 @@ mount_tmp()
+ 
+ main()
+ {
++    
+     $LTPROOT/runltp -l $RUNTIME_LOGFILE -f $SCENARIO_GROUP_LIST \
+-    -S $RUNTIME_SKIPFILE $external_parameter $internal_parameter \
+-    -p | tee $SCREEN_LOGFILE
++    $external_parameter $internal_parameter -p | tee $SCREEN_LOGFILE
+ 
+ }
+ 
+@@ -531,22 +531,12 @@ report()
+         grep "FAIL" $LOGFILE | sed -n "/^$test / s/$/\t\t$failreason/p" >> $FAIL_REPORT
+      done
+ 
+-    [ "$UNKNOWN_FAILURE" -eq 1  ] && echo "Ltp test has unknown failure"
++    [ "$UNKNOWN_FAILURE" -eq 1  ] && echo "Warning: LTP test has unknown failure"
+ 
+ # Creat skipping test report
++    [ -f $TEST_SKIPFILE ] && cp $TEST_SKIPFILE $SKIP_REPORT
+ 
+-    cp $TEST_SKIPFILE $SKIP_REPORT
+-
+-    cat <<-EOF >&2
+-
+-LTP Test Result:
+-
+-1. The report of LTP test : $LOGFILE
+-2. The list of skipped test case : $SKIP_REPORT
+-3. The list of failed test case : $FAIL_REPORT
+-
+-	EOF
+-
++    echo "LTP Test Log Path : $LOGPATH"
+ }
+ 
+ cleanup()
+@@ -593,8 +583,7 @@ setup
+ echo "$SCENARIO_GROUP_LIST" | grep -q "syscalls" && {
+ 
+     create_block_device
+-    internal_parameter="-b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE"
+-
++    internal_parameter="$internal_parameter -b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE"
+ }
+ 
+ mount_tmp
+-- 
+1.7.11
+

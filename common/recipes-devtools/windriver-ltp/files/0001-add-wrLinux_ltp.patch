@@ -1,0 +1,1100 @@
+From d0bebd29c1e1dbd8874fbba443811c14d3b79811 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Wed, 20 Jun 2012 14:31:46 +0800
+Subject: [PATCH] Add wr-runltp, failtest and skiptest to wrLinux_ltp.
+
+CQID: WIND00325893
+
+wr-runltp is used to create a automated test execution and analysis environment.
+
+The wr-runltp supports most parameters supported by runltp and would pass them
+to runltp when given.
+
+Enhanced function:
+
+    Continue the remaining Ltp test after rebooting
+
+Limitation:
+
+In order to create LTP execution environment automatically, wr-runltp use the
+following parameters offerred by runltp. So these parameters are no longer
+supported by wr-runltp:
+
+-b DEVICE         Some tests require an unmounted block device to run correctly.
+-B DEVICE_FS_TYPE The type of file system the block device has.
+-l LOGFILE        Log results of test in a logfile.
+-S SKIPFILE       Skip tests specified in SKIPFILE.
+
+Data base failtest contain the test result analysis about known failed
+case. Based on this data base, wr-runltp will create failed test report
+automatically and add failure reason to each known failed case.
+
+Date base skiptest contaion the non-supported test case and skipping
+reason. Based on this data base, wr-runltp will skip the non-supported
+test case when running Ltp test.
+
+The common file contains the generic non-supported cases and files named as
+processor arch contains the non-supported cases list for special arch.
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/common | 213 ++++++++++++++++
+ wrLinux_ltp/failtest/mips   |  47 ++++
+ wrLinux_ltp/failtest/ppc    |  15 ++
+ wrLinux_ltp/skiptest/arm    |  14 +
+ wrLinux_ltp/skiptest/common |  89 +++++++
+ wrLinux_ltp/skiptest/mips   |  11 +
+ wrLinux_ltp/wr-runltp       | 610 ++++++++++++++++++++++++++++++++++++++++++++
+ 7 files changed, 999 insertions(+)
+ create mode 100755 wrLinux_ltp/failtest/common
+ create mode 100755 wrLinux_ltp/failtest/mips
+ create mode 100755 wrLinux_ltp/failtest/ppc
+ create mode 100755 wrLinux_ltp/skiptest/arm
+ create mode 100755 wrLinux_ltp/skiptest/common
+ create mode 100755 wrLinux_ltp/skiptest/mips
+ create mode 100755 wrLinux_ltp/wr-runltp
+
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+new file mode 100755
+index 0000000..74d138c
+--- /dev/null
++++ b/wrLinux_ltp/failtest/common
+@@ -0,0 +1,213 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++
++Test Suit -- hugetlb
++---------------------------------------
++
++#std hugeshmat02 | To be added
++If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax, the shmget() will fail with the error EINVAL
++
++#std hugeshmat03 | To be added
++If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax, the shmget() will fail with the error EINVAL
++
++#std hugeshmctl02 | To be added
++If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax, the shmget() will fail with the error EINVAL
++
++#std hugeshmget02 | To be added
++If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax, the shmget() will fail with the error EINVAL
++
++
++Test Suit -- syscall
++---------------------------------------
++
++#std inotify03 | Kernel bug on version 2.6.34
++Kernel bug on version 2.6.34. Kernel couldn't monitor the umount envent. CQ:WIND00211255
++
++#std set_robust_list01 | Pass after disable GRSecurity and PAX kernel option
++Pass after disable GRSecurity and PAX kernel option
++
++#std cacheflush01 | meanlingless test
++cache argument is ignored in kernel and testing this argument is meaningless
++
++#cgl mq_timedsend01 | CFLAGS -fstack-protector issue
++In the cgl-glibc_cgl combs, -fstack-protector is set in the default CFLAGS.
++When there are stack overflow, kernel will print error informations, and stop
++the applications.mq_timedsend01 case has stack overflow in the fouth sub-case
++and cause failure in cgl-glibc_cgl comb. If compile the application with
++-fno-stack-protector, this case will be PASS.
++
++#std msgctl11 | creating child process failed when the target is lack of memory
++The kernel can not create child process when the target is lack of memory
++
++#std fallocate01 | Test fallocate is NOT supported by NFS filesystem
++Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
++case fails because it's carried out with nfs rootfs,CQ:WIND00177771.
++
++#std fallocate02 | Test fallocate is NOT supported by NFS filesystem
++Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
++case fails because it's carried out with nfs rootfs,CQ:WIND00177771.
++
++#std fallocate03 | Test fallocate is NOT supported by NFS filesystem
++Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
++case fails because it's carried out with nfs rootfs,CQ:WIND00177771.
++
++#std syslog07 | Will pass in manually execution
++Will pass in manually execution
++
++#std pselect01 | timestamp sensitive test fail with user application latency
++This test case is very sensitive to timestamp. It could be failed because of
++user application latency associated with workload.
++
++#std pelect01_64 | timestamp sensitive test fail with user application latency
++This test case is very sensitive to timestamp. It could be failed because of
++user application latency associated with workload.
++
++#std mq_timedsend01 | Known ltp test code defect WIND00323712
++When preparing the message to be sent, the number of written bytes should be
++limited to the array's size.
++
++#cgl get_robust_list01 | CGL kernel check uid instead of euid
++In CGL kernel, the futex code (get_robust_list()) uses ptrace_may_access() to
++check the current process' uid against the target process' euid instead of euid.
++
++#std clock_nanosleep01 | non-supported clock type MONOTONIC cause case01 fail
++Test case03 use clock type MONOTONIC to test syscall clock_nanosleep. This kind
++of clock is not supproted in some processor architecture. In this situation,
++clock_nanosleep will returen ENOTSUP as error numer.
++
++
++#std clock_nanosleep2_01 | non-supported clock type MONOTONIC cause test fail
++This test use clock type MONOTONIC to test syscall clock_nanosleep. This kind
++of clock is not supproted in some processor architecture. In this situation,
++clock_nanosleep will returen ENOTSUP as error numer.
++
++
++Test Suit -- commands
++---------------------------------------
++
++#std file | wrLinux don't support gcc on TEST 6
++Test 6 use gcc to build C file, but wrLinux don't support gcc.
++
++Test Suit -- fs
++---------------------------------------
++
++#std quota_remount_test01 | Lack of quota_check command in rootfs
++Lack of quota_check command in rootfs
++
++#std iogen01 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std rwtest01 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std rwtest02 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std rwtest03 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std gf02 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std gf05 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std gf09 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std gf11 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std gf12 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std gf15 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#std gf19 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
++#cgl proc01 | CGL Kernel option CONFIG_GRKERNSEC option
++The CGL kernel option CONFIG_GRKERNSEC, which will pretent the reading from
++/proc/kpageflags and /proc/kpagecount, is set and cause "read failed and Bad
++address" error
++
++
++Test Suit -- mm
++---------------------------------------
++
++#std mtest01 | Memory used by case is over 80% in total.
++The fail is caused by the parameter. Memory used by case as parameter is over
++80% in total.
++
++#std mtest01w | Memory used by case is over 80% in total.
++The fail is caused by the parameter. Memory used by case as parameter is over
++80% in total.
++
++#std mem02 | The memory is less than 64M or calloc issue on ppc64 target
++1. For the target with memory less than 64M such as fsl_mpc8323e, the case
++requires a space larger than 64M.
++2. For the ppc64 target such as fsl_p50x0, calloc don't guaranty the pointer
++created at the second time is equal to the one just freed.
++
++#std mtest06_2 | Failed when fsiz * MB is over 2^32
++When the system memory is so large that fsize*MB exceeds 2^32, fsize is int
++type, it will convert to unsigned long in kernel.
++
++
++Test Suit -- ipc
++---------------------------------------
++
++#std shmem_test_05 | Test case bug CQ:WIND00230639
++Test case bug CQ:WIND00230639
++
++
++Test Suit -- math
++---------------------------------------
++
++#std float_exp_log | Out of memory
++Out of memory
++
++#std float_bessel | Out of memory
++Out of memory
++
++#std float_trigo | Out of memory
++Out of memory
++
++#std float_power | Out of memory
++Out of memory
++
++
++Test Suit -- containers
++---------------------------------------
++
++#std Containers | kernel option CONFIG_VETH is NOT enabled
++The case required the CONFIG_VETH enabled in your kernel and some shell script
++path has a wrong value
++
++
++Test Suit -- admin_tools
++---------------------------------------
++
++#std cron | target date is older than the date of installer
++If the target date is older than the date on the installer,changing the contents
++of /var/spool/cron will not cause crond to update its db.
++
++#std cron02 | target date is older than the date of installer
++If the target date is older than the date on the installer,changing the contents
++of /var/spool/cron will not cause crond to update its db.
++
++#std cron_allow01 | target date is older than the date of installer
++If the target date is older than the date on the installer,changing the contents
++of /var/spool/cron will not cause crond to update its db.
++
++#std cron_deny01 | target date is older than the date of installer
++If the target date is older than the date on the installer,changing the contents
++of /var/spool/cron will not cause crond to update its db.
++
++
+diff --git a/wrLinux_ltp/failtest/mips b/wrLinux_ltp/failtest/mips
+new file mode 100755
+index 0000000..10747cd
+--- /dev/null
++++ b/wrLinux_ltp/failtest/mips
+@@ -0,0 +1,47 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++Test Suit -- syscalls
++---------------------------------------
++
++#std io_cancel01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++
++#std io_destroy01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++
++#std io_getevents01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++
++#std io_setup01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++
++#std io_submit01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++
++#std readv02 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++
++#std writev01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++
++#std writev01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++
++
++Test Suit -- io
++---------------------------------------
++
++#std aio01 | The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++The libaio bug on mipc arch, CQ:WIND00207850 and WIND00230419
++
++Test Suit -- commands
++---------------------------------------
++
++#std file | LSB and MSB issue on mips or mips64 architecture on TEST 6
++Test 6 of case "file" assume that the target of mipcs arch is MSB. But mips and mips64 arch
++support both LSB and MSB. This test will fail when it's LSB on mips or mips64 arch
+diff --git a/wrLinux_ltp/failtest/ppc b/wrLinux_ltp/failtest/ppc
+new file mode 100755
+index 0000000..c8b969d
+--- /dev/null
++++ b/wrLinux_ltp/failtest/ppc
+@@ -0,0 +1,15 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++Test Suit -- math
++---------------------------------------
++
++#std fptest01 | float point issue in e500v1 boards
++Some float point functions broken on e500v1(wrs_sbc85x0) boards,CQ:WIND00232377
++
++#std fptest02 | float point issue in e500v1 boards
++Some float point functions broken on e500v1(wrs_sbc85x0) boards,CQ:WIND00232377
+diff --git a/wrLinux_ltp/skiptest/arm b/wrLinux_ltp/skiptest/arm
+new file mode 100755
+index 0000000..2295b87
+--- /dev/null
++++ b/wrLinux_ltp/skiptest/arm
+@@ -0,0 +1,14 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++Test Suit -- syscall
++---------------------------------------
++
++#fallocate01 | To be added
++#fallocate02 | To be added
++#fallocate03 | To be added
++#getcontext01 | To be added
+diff --git a/wrLinux_ltp/skiptest/common b/wrLinux_ltp/skiptest/common
+new file mode 100755
+index 0000000..b12545f
+--- /dev/null
++++ b/wrLinux_ltp/skiptest/common
+@@ -0,0 +1,89 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++
++Test Suit -- syscall
++---------------------------------------
++
++#std add_key01 | No implemented syscall
++WRLinux kernel hasn't implemented the syscall yet. No any requirment for this one. Once mentioned in CQ WIND00172780.
++
++#std add_key02 | No implemented syscall
++WRLinux kernel hasn't implemented the syscall yet. No any requirment for this one. Once mentioned in CQ WIND00172780.
++
++#std get_mempolicy01 | No implemented syscall
++WRLinux kernel hasn't implemented the syscall yet. No any requirment for this one. Once mentioned in CQ WIND00172780.
++
++#std keyctl01 | No implemented syscall
++WRLinux kernel hasn't implemented the syscall yet. No any requirment for this one. Once mentioned in CQ WIND00172780.
++
++#std splice01 | NFS rootfs limitation
++Doesn't work with NFS-mounted root fs, Pass with ext3 rootfs on hard disk.
++
++#std setfsgid03 | To be added
++
++#cgl access02 | To be added
++
++#cgl execve03  | To be added
++
++#cgl utimensat01 | To be added
++
++#cgl ioperm01 | To be added
++
++#cgl iopl01 | To be added
++
++Test Suit -- fs
++---------------------------------------
++
++#std quota_remount_test01 | To be added
++
++Test Suit -- dio
++---------------------------------------
++
++#std dio04 | NFS rootfs limitation
++Doesn't work with NFS-mounted root fs, Pass with ext3 rootfs on hard disk.
++#std dio10 | NFS rootfs limitation
++Doesn't work with NFS-mounted root fs, Pass with ext3 rootfs on hard disk.
++
++Test Suit -- mm
++---------------------------------------
++
++#std min_free_kbytes | To be added
++
++Test Suit -- ipc
++---------------------------------------
++
++#std pipeio_1 | To be added
++
++Test Suit -- fs_bind
++---------------------------------------
++
++#std test_fs_bind.sh | subtest bind/test03 cause system hung
++Test case bug, the test bind/test03: did not properly clean up its proc mounts,
++and cause system hung.
++
++Test Suit -- admin_tools
++---------------------------------------
++
++#cgl at_deny01 | To be added
++#cgl at_allow01 | To be added
++#cgl cron02 | To be added
++#cgl cron_deny01 | To be added
++#cgl cron_allow01 | To be added
++#cgl su01 | To be added
++
++Test Suit -- commands
++---------------------------------------
++
++#std ar | To be added
++#std ld | To be added
++#std ldd | To be added
++#std objdump | To be added
++#std mail | To be added
++#std unzip01 | To be added
++#std nm | To be added
++
+diff --git a/wrLinux_ltp/skiptest/mips b/wrLinux_ltp/skiptest/mips
+new file mode 100755
+index 0000000..27d5232
+--- /dev/null
++++ b/wrLinux_ltp/skiptest/mips
+@@ -0,0 +1,11 @@
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++Test Suit -- syscall
++---------------------------------------
++
++#std getcontext01 | To be added
+diff --git a/wrLinux_ltp/wr-runltp b/wrLinux_ltp/wr-runltp
+new file mode 100755
+index 0000000..677f8ec
+--- /dev/null
++++ b/wrLinux_ltp/wr-runltp
+@@ -0,0 +1,610 @@
++#!/bin/bash
++
++# Copyright (c) 2012 Wind River Systems, Inc.
++#
++# The right to copy, distribute, modify, or otherwise make use
++# of this software may be licensed only pursuant to the terms
++# of an applicable Wind River license agreement.
++
++# Set up the proper environment for test environment
++
++cd `dirname $0` || \
++{
++    echo "FATAL: unable to change directory to $(dirname $0)"
++    exit 1
++}
++
++export WRLTPROOT=${PWD}
++export LTPROOT=$(dirname $WRLTPROOT)
++external_parameter="$*"
++internal_parameter=""
++EXECUTION_TIME=`date +"%Y_%b_%d-%Hh_%Mm_%Ss"`
++START_TIME=`date`
++
++LOOP_DEVICE_FS=""
++LOOP_DEVICE_SWAP=""
++LOOP_DEVICE_BLOCK=""
++
++SWAP_MOUNT_POINT=/mnt/swap
++SWAP_FILE=$SWAP_MOUNT_POINT/swapfile
++SWAP_FILE_REPOSITORY=/swap_$$
++LOOPFILE=$LTPROOT/ltp-sectors.bin
++BLOCK_DEVICE_FSTYPE=ext4
++
++SKIP_PATH="$WRLTPROOT/skiptest"
++FAIL_PATH="$WRLTPROOT/failtest"
++KFEATURE_FILE="$WRLTPROOT/kfeature/test_cases.wr.matrix"
++LOGPATH="$WRLTPROOT/results"
++LOGFILE="$LOGPATH/LTP_RUN_ON-$EXECUTION_TIME.log"
++FAIL_REPORT="$LOGPATH/failtest-$EXECUTION_TIME.report"
++SKIP_REPORT="$LOGPATH/skiptest-$EXECUTION_TIME.report"
++SCENARIO_GROUP_LIST="syscalls,fs,fsx,dio,io,mm,ipc,sched,math,nptl,pty,\
++containers,fs_bind,fcntl-locktests,admin_tools,timers,commands,\
++hyperthreading"
++
++RUN_RESUME_TEST=0
++RUN_SELECTED_GROUP=0
++RUNTIME_PATH="$WRLTPROOT/runtime"
++TEST_SKIPFILE="$RUNTIME_PATH/skipfile"
++RUNTIME_SKIPFILE="$RUNTIME_PATH/runtime.skip"
++RUNTIME_TESTFILE="$RUNTIME_PATH/testfile"
++RUNTIME_LOGFILE="$RUNTIME_PATH/runtime.log"
++RESUME_LOGFILE="$RUNTIME_PATH/resume.log"
++SCREEN_LOGFILE=$RUNTIME_PATH/LTP_RUN_ON-${EXECUTION_TIME}-output.txt
++RUNTIME_TMP_PATH=/tmp
++tmpfile=$RUNTIME_TMP_PATH/ltp_tmp
++
++CPU_ARCH=""
++KERNEL_ARCH=""
++SCENARIO_GROUP_FILE="$WRLTPROOT/runtime/scenario_group"
++UNKNOWN_FAILURE=0
++RUN_HUGETLB_TEST=0
++
++usage() 
++{
++    cat <<-EOF >&2
++
++wr-runltp
++
++    Usage:             $(basename "$0") [-f GROUP] -R -h
++
++    -f group1,group2   Execute the selected scenario group.
++    -h                 Help. Prints all available options.
++    -R                 Continue the remaining LTP test after rebooting
++
++	EOF
++    echo "runltp"
++    $LTPROOT/runltp -h
++
++exit 0
++}
++
++# LTP runtime environment check
++env_check()
++{
++    [ -r /proc/config.gz ] || {
++        echo "FATAL: missing file /proc/config.gz"
++        exit 1
++    }
++
++    which gunzip >& /dev/null || {
++        echo "FATAL: gunzip not found"
++        exit 1
++    }
++    
++    chmod 777 /tmp || {
++        echo Cannot chmod /tmp to 777
++        exit 1
++    }
++}
++
++
++# Add a file as a swap partition for target with memroy less than 64M
++create_swap()
++{
++    local total_memory=`free -ot | tail -n 1 | awk '{print $2}'`
++    local swap_size=$[total_memory*2]
++    local swap_fs_type=ext3
++    LOOP_DEVICE_SWAP=$(losetup -f)
++
++    if [ -z $LOOP_DEVICE_SWAP ]; then
++        echo "No loop device available in system!"
++        echo "We coun't setup a swap partition"
++        return 1
++    fi
++
++    dd if=/dev/zero of=$SWAP_FILE_REPOSITORY bs=1K count=$[swap_size+10] >/dev/null 2>&1
++    losetup $LOOP_DEVICE_SWAP $SWAP_FILE_REPOSITORY
++    mkfs.$swap_fs_type $LOOP_DEVICE_SWAP >/dev/null 2>&1
++
++    if [ $? -ne 0 ]; then
++        echo "Make $swap_fs_type filesystem failed! We'll try ext2..."
++        swap_fs_type=ext2
++        mkfs.$swap_fs_type $LOOP_DEVICE_SWAP >/dev/null 2>&1
++        if [ $? -ne 0 ]; then
++            echo "Make $swap_fs_type failed!"
++            return 1
++        fi
++    fi
++
++    mkdir -p $SWAP_MOUNT_POINT
++    if [ $? -ne 0 ]; then
++        echo "Create swap partition mount point failed!"
++        return 1
++    fi
++
++    mount -t $swap_fs_type $LOOP_DEVICE_SWAP $SWAP_MOUNT_POINT
++    if [ $? -ne 0 ]; then
++        echo "Mount $LOOP_DEVICE_SWAP to $SWAP_MOUNT_POINT failed!"
++        return 1
++    fi
++
++    dd if=/dev/zero of=$SWAP_FILE bs=1K count=$swap_size >/dev/null 2>&1
++    mkswap -f -c $SWAP_FILE >/dev/null 2>&1
++    if [ $? -ne 0 ]; then
++        echo "mkswap create $SWAP_FILE failed!"
++        return 1
++    fi
++
++    swapon $SWAP_FILE
++    if [ $? -ne 0 ]; then
++        echo "Trun on $SWAP_FILE failed!"
++        return 1
++    fi
++    return 0
++}
++
++hugetlb_setup()
++{
++    # System configurations
++    hugepagesize=$(gawk '/^Hugepagesize:/ { print $2; exit; }' /proc/meminfo)
++    hugepages=$(($(gawk '/^MemFree:/ { print $2; exit; }' /proc/meminfo)/hugepagesize/2))
++
++    # Allocate half of free memory for huge pages
++    echo ${hugepages} > /proc/sys/vm/nr_hugepages
++
++    [[ $(cat /proc/sys/vm/nr_hugepages) -eq ${hugepages} ]] || {
++        echo "Cannot allocate huge pages"
++        RUN_HUGETLB_TEST=0
++    }
++
++    [[ $(gawk '/^HugePages_Free:/ { print $2; }' /proc/meminfo) -eq ${hugepages} ]] || {
++        echo "Number of free huge pages is not as expected"
++        RUN_HUGETLB_TEST=0
++    }
++
++    # Configure maximum size for a shared memory segment: all of huge pages allocated
++    echo  $((hugepages*hugepagesize*1024)) > /proc/sys/kernel/shmmax
++
++    # Mount hugetlbfs
++
++    mount -t hugetlbfs none ${hugefspath} || {
++        echo "Cannot mount hugetlbfs"
++        RUN_HUGETLB_TEST=0
++    }
++
++
++    # Patch hugetlb
++    sed -i -e "s#-H[[:space:]]*[^[:space:]]\+#-H ${hugefspath}#" $LTPROOT/runtest/hugetlb
++
++    # Specify a small number of shmmni for hugeshmget03 to run as expected
++    # $LTPROOT/runtest/hugetlb:hugeshmget03 hugeshmget03 -c 10 -i 10
++    grep -q -E -e '^hugeshmget03 orignmi' $LTPROOT/runtest/hugetlb ||
++    sed -i -e 's#^\(hugeshmget03\)\(.*\)#\1 orignmi=$(cat /proc/sys/kernel/shmmni); echo 16 > /proc/sys/kernel/shmmni; \2; echo ${orignmi} > /proc/sys/kernel/shmmni#' $LTPROOT/runtest/hugetlb
++}
++
++
++# Setup LTP runtime environment
++setup()
++{
++
++# Get runtime LTP related system feature
++
++    [ -d "$RUNTIME_PATH" ] || mkdir $RUNTIME_PATH
++    [ -d "$LOGPATH" ] || mkdir $LOGPATH
++    cp /proc/config.gz $RUNTIME_PATH && \
++    gunzip -f $RUNTIME_PATH/config.gz || exit 1
++
++# change test case execution parameter in runtest
++
++    mem02flag=`file /bin/ls | awk '/64-bit/&&/x86-64/ {print "true"}'`
++    if [ "$mem02flag" == "true" ]; then
++        sed  's/mem02 mem02 -m 4/mem02 mem02 -m 32/' $LTPROOT/runtest/mm > \
++        $LTPROOT/runtest/mm.temp
++        rm -f $LTPROOT/runtest/mm
++        cp $LTPROOT/runtest/mm.temp $LTPROOT/runtest/mm
++    fi
++
++# Create a swap partition when the total memory is less than 64M.
++
++    MemTotal=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
++    test_swap_size=`free | tail -n 1 | awk '{print $2}'`
++
++    [ $test_swap_size -eq 0 ] && [ $MemTotal -lt 65536 ] && {
++        echo "Start to add a swap partition ..."
++        create_swap
++        if [ $? -ne 0 ]; then
++            echo "Add swap partition failed, we'll run ltp without swap partion..."
++        else
++            echo "Create swap partition complete!"
++        fi
++    }
++
++
++    uname -m | grep -q -E "i686|x86_64" && CPU_ARCH=x86
++    uname -m | grep -q -E "ppc|ppc64" && CPU_ARCH=ppc
++    uname -m | grep -q "arm" && CPU_ARCH=arm
++    uname -m | grep -q -E "mips|mips64" && CPU_ARCH=mips
++    uname -r | grep -q "preempt_rt$" && KERNEL_ARCH=preempt_rt
++    uname -r | grep -q "cgl$" && KERNEL_ARCH=cgl
++
++# Create scenario group file
++
++# When it is a fresh LTP execution, create scenario group file based on
++# default scenario group list or the one given from parameter
++
++# When it is NOT a fresh LTP execution, create scenario group list from
++# existing runtime scenario group
++
++    if [ "$RUN_RESUME_TEST" -eq 0 ]; then
++
++        # Before start a fresh LTP execution, delete the obsolete runtime file
++        [ -f "$RUNTIME_SKIPFILE" ] && rm $RUNTIME_SKIPFILE
++        [ -f "$RUNTIME_TESTFILE" ] && rm $RUNTIME_TESTFILE
++        [ -f "$RUNTIME_LOGFILE" ] && rm $RUNTIME_LOGFILE
++        [ -f "$SCENARIO_GROUP_FILE" ] && rm $SCENARIO_GROUP_FILE
++        [ -f "$TEST_SKIPFILE" ] && rm $TEST_SKIPFILE
++        [ -f "$RESUME_LOGFILE" ] && rm $RESUME_LOGFILE
++
++        # Check kernel option before execute some scenario group
++        if [ "$RUN_SELECTED_GROUP" -eq 1 ]; then
++            echo $SCENARIO_GROUP_LIST | grep -q "numa" && {
++		grep -q "CONFIG_NUMA=y" $RUNTIME_PATH/config || {
++                    echo "FATAL: please open proper kernel option for numa test"
++                    exit 1
++		}
++            }
++        fi
++
++        if [ "$RUN_SELECTED_GROUP" -eq 1 ]; then
++            echo $SCENARIO_GROUP_LIST | grep -q "hugetlb" && {
++		grep -q "CONFIG_HUGETLBFS=y" $RUNTIME_PATH/config || {
++                    echo "FATAL: please open proper kernel option for hugetlb test"
++                    exit 1
++		}
++		RUN_HUGETLB_TEST=1
++            }
++        fi
++
++        if [ "$RUN_SELECTED_GROUP" -eq 1 ]; then
++            echo $SCENARIO_GROUP_LIST | grep -q "controllers" && {
++		grep -q "CONFIG_CGROUPS=y" $RUNTIME_PATH/config || {
++                    echo "FATAL: please open proper kernel option for controllers test"
++                    exit 1
++		}
++            }
++        fi
++
++        if [ "$RUN_SELECTED_GROUP" -eq 1 ]; then
++            echo $SCENARIO_GROUP_LIST | grep -q "cpuhotplug" && {
++		grep -q "CONFIG_HOTPLUG_CPU=y" $RUNTIME_PATH/config || {
++                    echo "FATAL: please open proper kernel option for cpuhotplug test"
++                    exit 1
++		}
++            }
++        fi
++
++        echo "$SCENARIO_GROUP_LIST" > $SCENARIO_GROUP_FILE
++    else
++        if [ ! -f "$SCENARIO_GROUP_FILE" ]; then
++	    echo "FATAL: There is NO runtime scenario group file"
++            exit 1
++        fi
++        SCENARIO_GROUP_LIST=$(cat $SCENARIO_GROUP_FILE)
++    fi
++
++    # Print out the scenario group list if there is no selected test case
++    echo "$external_parameter" |  grep -q -e "-s" || \
++    echo "Ltp scenario group list $SCENARIO_GROUP_LIST"
++
++    if [ "$RUN_HUGETLB_TEST" -eq 1 ]; then
++        hugefspath=/mnt/huge
++        mkdir -p ${hugefspath}
++        hugetlb_setup
++    fi
++
++# Create runtime skipping test file
++
++# When it is a fresh LTP execution, create skipping test file based on
++# skipping test data base and runtime test file
++
++# When it is NOT a fresh LTP execution, create skipping tets file based on
++# the existing one and runtime test log
++
++if [ "$RUN_RESUME_TEST" -eq 0 ]; then
++
++    # Create runtime command file based on scenario group list
++    for scenfile in `echo "$SCENARIO_GROUP_LIST" | tr ',' ' '`; do
++        scenfile="$LTPROOT/runtest/$scenfile"
++        cat "$scenfile" | grep -v -E "^#|^$"  >> $RUNTIME_TESTFILE
++    done
++
++    echo "Ltp Test Start Time: $START_TIME" > $TEST_SKIPFILE
++    echo "-------------------------------------------" >> $TEST_SKIPFILE
++    printf "%-50s %-21s %s \n" Testcase Type "Skip Reason" >> $TEST_SKIPFILE
++    printf "%-50s %-21s %s \n" -------- ----  -----------  >> $TEST_SKIPFILE
++
++    while read line
++    do
++        testcase=$(echo $line | awk '{print $1}')
++        skip_reason=$(grep "^#std[[:space:]]$testcase[[:space:]]" $SKIP_PATH/common | cut -d "|" -f 2)
++        [ -z "$skip_reason" -a -n "$KERNEL_ARCH" ] && \
++        skip_reason=$(grep "^#$KERNEL_ARCH[[:space:]]$testcase[[:space:]]" $SKIP_PATH/common | cut -d "|" -f 2)
++        [ -z "$skip_reason" -a -e "$SKIP_PATH/$CPU_ARCH" ] && \
++        skip_reason=$(grep "^#std[[:space:]]$testcase[[:space:]]" $SKIP_PATH/$CPU_ARCH | cut -d "|" -f 2)
++        [ -z "$skip_reason" -a -e "$SKIP_PATH/$CPU_ARCH" -a -n "$KERNEL_ARCH" ] && \
++        skip_reason=$(grep "^#$KERNEL_ARCH[[:space:]]$testcase[[:space:]]" $SKIP_PATH/$CPU_ARCH | cut -d "|" -f 2)
++
++        if [ -n "$skip_reason" ]; then
++            printf "%-50s %-20s %s \n" "$testcase" SKIP "$skip_reason" >> $TEST_SKIPFILE
++            echo "$testcase" >> $RUNTIME_SKIPFILE
++        fi
++    done < $RUNTIME_TESTFILE
++
++else
++
++    if [ ! -f "$RUNTIME_TESTFILE" -o ! -f "$RUNTIME_LOGFILE" ]; then
++        echo "FATAL: There is NO runtime test file to resume LTP execution"
++        exit 1
++    fi
++
++    if grep "Total Tests" $RUNTIME_LOGFILE >/dev/null 2>&1; then
++        echo "FATAL: last LTP execution has finished."
++        exit 1
++    fi
++
++    # Record the finished LTP runtime log
++    if [ -f "$RESUME_LOGFILE" ]; then
++        sed '1,4d' $RUNTIME_LOGFILE >> $RESUME_LOGFILE
++    else
++        cp $RUNTIME_LOGFILE $RESUME_LOGFILE
++    fi
++
++
++    # Find out the test case which make system panic
++
++    last_test=$(sed '1,4d' $RUNTIME_LOGFILE | tail -n 1 | awk '{print $1}')
++    panic_test=$last_test
++    find_out=0
++
++    if [ -z "$last_test" ];then
++	echo "Failed to find out last test case and resume stop"
++        exit 1
++    fi
++
++    while [ "$find_out" -eq 0 ]; do
++        panic_test=$(cat $RUNTIME_TESTFILE | awk '{print $1}' | sed -n "/\<$last_test\>/{n;p;q}")
++	find_out=1
++        if [ -f $TEST_SKIPFILE ];then
++            grep -q "^$panic_test " $TEST_SKIPFILE && {
++                last_test=$panic_test
++                find_out=0
++            }
++        fi
++    done
++
++    if [ -z "$panic_test" ];then
++        echo "Failed to find out panic test and resume stop"
++        exit 1
++    fi
++    printf "%-50s %-21s %s \n" "$panic_test" "SKIP" "system panic" >> $TEST_SKIPFILE
++
++    # Create runtime skipping file for this execution
++    [ -f $RUNTIME_SKIPFILE ] && rm $RUNTIME_SKIPFILE
++    sed '1,4d' $TEST_SKIPFILE | awk '{print $1}' > $RUNTIME_SKIPFILE
++
++    # Add the finished test case to runtime skipping test file
++    sed '1,4d' $RESUME_LOGFILE | awk '{print $1}' >> $RUNTIME_SKIPFILE
++
++    # Delete any runtime log before run LTP Test
++    rm $RUNTIME_LOGFILE || exit 1
++fi
++
++}
++
++
++# Create an unmounted block device for syscalls test
++create_block_device()
++{
++    LOOP_DEVICE_BLOCK=$(losetup -f)
++    [[ ${LOOP_DEVICE_BLOCK} ]] || {
++        echo No free loop device
++        exit 1
++    }
++
++    dd if=/dev/zero of=${LOOPFILE} bs=1M count=256 > /dev/null 2>&1 || {
++        echo "Failed to create file $LOOPFILE"
++        exit 1
++    }
++
++    losetup $LOOP_DEVICE_BLOCK $LOOPFILE > /dev/null 2>&1 || {
++        echo "Fail to setup loop device $LOOP_DEVICE_BLOCK"
++        exit 1
++    }
++
++    mkfs.${BLOCK_DEVICE_FSTYPE} ${LOOP_DEVICE_BLOCK} > /dev/null 2>&1 || {
++        echo Failed to format ${LOOP_DEVICE_BLOCK} into ${BLOCK_DEVICE_FSTYPE}
++        exit 1
++    }
++}
++
++# mount ext4 filesystem on /tmp
++mount_tmp()
++{
++    LOOP_DEVICE_FS=$(losetup -f)
++
++    if [ -z $LOOP_DEVICE_FS ]; then
++        echo "No loop device available!"
++        exit 1
++    fi
++
++    # Check if /tmp has been mounted with ext3/4 file system
++
++    [[ $(df -P -T /tmp | tail -1 | awk '{print $2}' ) =~ "^ext(2|3|4)$" ]] || {
++        # Obtain the free memory size in K
++        MemFree=$(cat /proc/meminfo | grep MemFree | awk '{print $2}')
++        # Change the free memory size in M
++        MemFree_M=$(($MemFree/1024))
++
++        if [ $MemFree_M -lt 400 ]; then
++            block_count=$(($MemFree_M/2))
++        else
++            block_count=200
++        fi
++
++        dd if=/dev/zero of=tmp_image bs=1M count=$block_count > /dev/null 2>&1 || {
++            echo "Failed to create file tmp_image"
++            exit 1
++        }
++
++        losetup $LOOP_DEVICE_FS tmp_image >/dev/null 2>&1 || {
++            echo "Fail to setup loop device $LOOP_DEVICE_FS"
++            exit 1
++        }
++
++        mkfs.${BLOCK_DEVICE_FSTYPE} -m 0 $LOOP_DEVICE_FS >/dev/null 2>&1 || {
++            echo Failed to format $LOOP_DEVICE_FS into $BLOCK_DEVICE_FSTYPE
++            exit 1
++        }
++
++        mount -t $BLOCK_DEVICE_FSTYPE -o mand $LOOP_DEVICE_FS /tmp >/dev/null 2>&1 || {
++            echo "Failed to mount $LOOP_DEVICE_FS to /tmp"
++            exit 1
++        }
++    }
++    return 0
++}
++
++
++# Execute LTP Test with runltp
++
++main()
++{
++    $LTPROOT/runltp -l $RUNTIME_LOGFILE -f $SCENARIO_GROUP_LIST \
++    -S $RUNTIME_SKIPFILE $external_parameter $internal_parameter \
++    -p | tee $SCREEN_LOGFILE
++
++}
++
++report()
++{
++
++# In resumed LTP test, join runtime log and resume log together
++
++    if [ "$RUN_RESUME_TEST" -eq 1 ]; then
++        sed '1,4d' $RUNTIME_LOGFILE >> $RESUME_LOGFILE
++        pass_num=$(grep -c PASS $RESUME_LOGFILE)
++        fail_num=$(grep -c FAIL $RESUME_LOGFILE)
++        test_num=$(expr $pass_num + $fail_num)
++        cat $RESUME_LOGFILE | sed -e "s/^Total Tests.*/Total Tests: $test_num/" \
++        -e "s/^Total Failures.*/Total Failures: $fail_num/" > $RUNTIME_LOGFILE
++    fi
++    cp $RUNTIME_LOGFILE $LOGFILE
++
++# Create the failed test report
++
++    [ -f "$LOGFILE" ] || exit 1
++
++    sed -n '1,4p' $LOGFILE | sed -e '/Testcase/ s/$/\tFail Reason/' \
++                                 -e '4 s/$/\t----------/' > $FAIL_REPORT
++    failtest=$(grep "FAIL" $LOGFILE | awk '{print $1}')
++
++    for test in $failtest; do
++        failreason=$(grep "^#std[[:space:]]$test[[:space:]]" $FAIL_PATH/common | cut -d "|" -f 2)
++        [ -z "$failreason" -a -n "$KERNEL_ARCH" ] && \
++        failreason=$(grep "^#$KERNEL_ARCH[[:space:]]$test[[:space:]]" $FAIL_PATH/common | cut -d "|" -f 2)
++        [ -z "$failreason" -a -e "$FAIL_PATH/$CPU_ARCH" ] && \
++        failreason=$(grep "^#std[[:space:]]$test[[:space:]]" $FAIL_PATH/$CPU_ARCH | cut -d "|" -f 2)
++        [ -z "$failreason" -a -e "$FAIL_PATH/$CPU_ARCH" -a -n "$KERNEL_ARCH" ] && \
++        failreason=$(grep "^#$KERNEL_ARCH[[:space:]]$test[[:space:]]" $FAIL_PATH/$CPU_ARCH | cut -d "|" -f 2)
++        [ -z "$failreason" ] && UNKNOWN_FAILURE=1
++        grep "FAIL" $LOGFILE | sed -n "/^$test / s/$/\t\t$failreason/p" >> $FAIL_REPORT
++     done
++
++    [ "$UNKNOWN_FAILURE" -eq 1  ] && echo "Ltp test has unknown failure"
++
++# Creat skipping test report
++
++    cp $TEST_SKIPFILE $SKIP_REPORT
++
++    cat <<-EOF >&2
++
++LTP Test Result:
++
++1. The report of LTP test : $LOGFILE
++2. The list of skipped test case : $SKIP_REPORT
++3. The list of failed test case : $FAIL_REPORT
++
++	EOF
++
++}
++
++cleanup()
++{
++    # clean up hugetlb test environment
++    if [ "$RUN_HUGETLB_TEST" -eq 1 ]; then
++        umount ${hugefspath}
++        rm -fr ${hugefspath}
++    fi
++
++    swapoff $SWAP_FILE >/dev/null 2>&1
++    umount $SWAP_MOUNT_POINT >/dev/null 2>&1
++    rm -fr $SWAP_MOUNT_POINT >/dev/null 2>&1
++    rm $SWAP_FILE_REPOSITORY >/dev/null 2>&1
++    losetup -d $LOOP_DEVICE_SWAP >/dev/null 2>&1
++    losetup -d $LOOP_DEVICE_FS >/dev/null 2>&1
++
++    [[ ${LOOP_DEVICE_BLOCK} =~ /dev/loop ]] && {
++        umount /tmp
++        losetup -d ${LOOP_DEVICE_BLOCK}
++        rm -f ${LOOPFILE}
++    }
++}
++
++while getopts hRa:c:C:d:D:f:F:ehi:K:g:l:m:M:Nno:pqr:s:S:t:T:w:x:b:B: arg
++    do  case $arg in
++        f)  RUN_SELECTED_GROUP=1
++            SCENARIO_GROUP_LIST=$OPTARG
++            external_parameter=$(echo "$external_parameter" | sed "s/-f $OPTARG//g");;
++        h)  usage;;
++
++        R)  RUN_RESUME_TEST=1
++            external_parameter=$(echo $external_parameter | sed "s/-R//g");;
++
++b|B|S|l|p)  echo "The runltp option $arg has been used internally by wr-runltp"
++            exit 1;;
++        esac
++    done
++
++env_check
++
++setup
++
++echo "$SCENARIO_GROUP_LIST" | grep -q "syscalls" && {
++
++    create_block_device
++    internal_parameter="-b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE"
++
++}
++
++mount_tmp
++
++main
++
++# Check the LTP runtime log before creating report
++grep -q "Total Tests" $RUNTIME_LOGFILE && report
++
++cleanup
++[ "$UNKNOWN_FAILURE" -eq 1  ] && exit 1
++exit 0
++
+-- 
+1.7.11
+

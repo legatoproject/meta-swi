@@ -1,0 +1,40 @@
+From f843e1c3d1dcf167aad764ca4f141667efa3b244 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Fri, 14 Dec 2012 15:41:55 +0800
+Subject: [PATCH] LTP: rename kernel type preempt_rt to preempt-rt
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ .../open_posix_testsuite/wrLinux_posix/wr-runposix |    2 +-
+ wrLinux_ltp/wr-runltp                              |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+index 2d6743a..f08cdc8 100755
+--- a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
++++ b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+@@ -100,7 +100,7 @@ setup()
+     [ -d "$RUNTIME_PATH" ] || mkdir $RUNTIME_PATH
+     [ -d "$LOGPATH" ] || mkdir $LOGPATH
+ 
+-    uname -a|grep -q "preempt_rt" && KERNEL_ARCH=preempt_rt
++    uname -a|grep -q "preempt-rt" && KERNEL_ARCH=preempt-rt
+     uname -a|grep -q "cgl$" && KERNEL_ARCH=cgl
+ 
+     # Create runtime test suite list based on scenario group list
+diff --git a/wrLinux_ltp/wr-runltp b/wrLinux_ltp/wr-runltp
+index ff6c82e..8f7ad8b 100755
+--- a/wrLinux_ltp/wr-runltp
++++ b/wrLinux_ltp/wr-runltp
+@@ -280,7 +280,7 @@ fi
+     uname -m | grep -q -E "ppc|ppc64" && CPU_ARCH=ppc
+     uname -m | grep -q "arm" && CPU_ARCH=arm
+     uname -m | grep -q -E "mips|mips64" && CPU_ARCH=mips
+-    uname -r | grep -q "preempt_rt$" && KERNEL_ARCH=preempt_rt
++    uname -r | grep -q "preempt-rt$" && KERNEL_ARCH=preempt-rt
+     uname -r | grep -q "cgl$" && KERNEL_ARCH=cgl
+ 
+ # Set runtime log file
+-- 
+1.7.1
+

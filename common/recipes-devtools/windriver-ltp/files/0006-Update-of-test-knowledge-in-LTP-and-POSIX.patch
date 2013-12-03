@@ -1,0 +1,938 @@
+From ab37513def84ca8c641534da054102d9d7f868d4 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Thu, 26 Jul 2012 13:38:39 +0800
+Subject: [PATCH] Update of test knowledge in LTP and POSIX
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ .../wrLinux_posix/failtest/common                  | 145 +++++++++++++-
+ .../open_posix_testsuite/wrLinux_posix/wr-runposix |   5 +-
+ .../wrLinux_posix/wr-runposix.install              |  16 ++
+ wrLinux_ltp/failtest/arm                           |   5 +
+ wrLinux_ltp/failtest/common                        | 221 +++++++++++++++------
+ wrLinux_ltp/skiptest/ppc                           |   2 +-
+ wrLinux_ltp/wr-runltp                              | 110 +++++-----
+ 7 files changed, 372 insertions(+), 132 deletions(-)
+ create mode 100755 testcases/open_posix_testsuite/wrLinux_posix/wr-runposix.install
+ create mode 100644 wrLinux_ltp/failtest/arm
+
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/failtest/common b/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
+index 84f4dc0..c3bdfb7 100644
+--- a/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
++++ b/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
+@@ -5,32 +5,157 @@
+ # of this software may be licensed only pursuant to the terms
+ # of an applicable Wind River license agreement.
+ 
+-Test Suit -- conformance/interfaces TMR
++Test Suit -- conformance/interfaces AIO
+ ---------------------------------------
++#std conformance/interfaces/lio_listio 11-1.run-test | Not a bug. NO defined invalid operation
++For aio_lio_opcode posix says:
++"The supported operations are LIO_READ, LIO_WRITE, and LIO_NOP"
++But it does not say what should happen if the value is not one of the above. eglibc
++doesn't validate the parameter aio_lio_opcode when in function __aio_enqueue_request
++called by lio_listio().
++
++#std conformance/interfaces/aio_error 3-1.run-test | Not a bug and test result depends on system implement
++This test tries to call aio_error with argument aiocbp which does not point at
++a control block for an asynchronous I/O request, and expect error EINVAL.
++
++The POSIX spec says about aio_error:
++
++ERRORS
++The aio_error( ) function may fail if:
++[EINVAL]   The aiocbp argument does not refer to an asynchronous operation whose
++           return status has not yet been retrieved.
++
++It just say "may" and not a compelling contraint, so this is implement dependent and not a bug.
++
++#std conformance/interfaces/aio_read 9-1.run-test | Test case bug and has been fixed upstream in LTP
++The test case has been fixed upstream in LTP.
++Please see LTP commit 91d8c0c85c97366a7ec4ee08ef3b3e7a38661ac8.
++
++#std conformance/interfaces/aio_return 2-1.run-test | Not a bug and test result depends on system implement
++In specification, second call to aio_return() return -1 is a kind of possibility
++depending on implementation. In eglibc the return value is same as first return.
++
++#std conformance/interfaces/aio_return 3-2.run-test | Not a bug and test result depends on system implement
++Same with test aio_return/2-1.run-test.
++
++#std conformance/interfaces/aio_return 4-1.run-test | Not a bug and test result depends on system implement
++The case tries to call aio_return with argument aiocbp which does not point
++at a control block for an asynchronous I/O request, and expect error EINVAL. But
++this is optional and depends on system implementation.
++
++#std conformance/interfaces/aio_write 7-1.run-test | Test case bug and has been fixed upstream in LTP
++This case  has been fixed in LTP.
++Please see LTP commit b56638a7a8ae9cd37e5698de3186dc3cb1434cd8.
+ 
+-#std conformance/interfaces/timer_getoverrun 2-2.runtest | performance issue WIND00310571
+-#std conformance/interfaces/timer_getoverrun 2-3.runtest | performance issue CQ:WIND00310571
+-#std conformance/interfaces/timer_gettime 1-3.runtest | performance issue CQ:WIND00310571
+ 
+-Test Suit -- conformance/interfaces MSG
++
++Test Suit -- conformance/interfaces TMR
+ ---------------------------------------
+ 
+-#preempt_rt conformance/interfaces/mq_timedreceive 5-1.runtest | preempt_rt issue WIND00323712
+-#preempt_rt conformance/interfaces/mq_timedsend    5-2.runtest | preempt_rt issue WIND00323712
++#std conformance/interfaces/timer_settime 5-3.run-test | Not a bug. Test pass when executed manually
++It take a little longer for test to run. So POSIX take the result as HUNG.
++
++#std conformance/interfaces/clock_getcpuclockid 5-1.run-test | Test case bug and the result depends on system implementation
++
++When call clock_getcpuclockid() as a unpriviledge user to get process 'init' cpu
++time, it succeeds but expect fails with EPERM.
++
++In Linux man page, it addresses EPERM:
++Specified as an optional error in POSIX.1-2001; does not occur on Linux unless
++the kernel does not support obtaining the per-process CPU-time clock of another process.
++
+ 
+ Test Suit -- conformance/interfaces MEM
+ ---------------------------------------
+ 
+-#std conformance/interfaces/mmap 24-2.runtest | WIND00310801
+-#std conformance/interfaces/mmap 13-1.runtest | time fields limitation on NFS
++#std conformance/interfaces/mmap 13-1.run-test | Not a bug. Time fields limitation on NFS
+ Not all of the Linux filesystems implement all of the time fields. Some file
+ system types allow mounting in such a way that file accesses do not cause an
+ update of the st_atime field, also see 'noatime' in mount(8).
+ 
++#std conformance/interfaces/mmap 11-4.run-test | Not a bug. Test fails when the mapped page is cached
++Test case map a file with size of 1/2 * page_size, then write char 'b' to next
++byte of 1/2 * page_size. Then try to re-mmap() the file and expect the byte
++next to of 1/2 * page_size should not be character 'b'. Test on all platforms
++are failed. The reason is after first mmap(), the mapped page for the file is
++cached in page cache. When do the 2nd or 3rd mmap() still get the same mapped page. 
++
++mmap() is a system call and implemented by mmap2(). Then the call sequence is
++mmap2() ==> sys_mmap_pgoff() ==> do_mmap_pgoff() ==> mmap_region() ==> file->f_op->mmap().
++In ext3 file system, file->f_op->mmap() point to generic_file_mmap().
++In generic_file_mmap(), assign the Page Fault Exception Handler to filemap_fault().
++When access the Virtual Memory Area, page fault will occur and the run filemap_fault().
++In filemap_fault(), kernel run find_get_page() to search the physical page in the page cache.
++
++#std conformance/interfaces/mmap 11-5.run-test | Not a bug. Test fails when the mapped page is cached
++Same with mmap/11-4, and this test case is to test share memory,
++so file->f_op->mmap() point to shm_fault() in ipc/shm.c, then it call
++shmem_fault() ==> shmem_getpage() ==> shmem_getpage_gfp() ==> find_lock_page().
++In find_lock_page() it will search the desired pagecache page. 
++
++#std conformance/interfaces/mmap 28-1.run-test | Not a bug. This case is NOT supported by Linux
++This case tests mmap() with length of 2 timed file size and expects fail with
++errno ENXIO( No such device or address), but mmap() successed. Because Linux
++kernel just make the mmap connection between file and memory when mmap() called.
++When first read/write, the kernel mmap the physical file page to the virtual
++memory page. So it doesn't fail in mmap().
++
++#std conformance/interfaces/mmap 31-1.run-test | Not a bug. This case is NOT supported by Linux
++Test parameters lenth and offset for mmap() are too large. In function
++get_unmapped_area(), it checks that len should less than TASK_SIZE, otherwise
++it returns -ENOMEM. TASK_SIZE value differs on different platforms.
++
+ 
+ Test Suit -- conformance/interfaces THR
+ ---------------------------------------
+ 
+-#std conformance/interfaces/pthread_cond_signal 1-1.runtest | performance issue WIND00310571
++#std conformance/interfaces/pthread_key_create/speculative 5-1.run-test | Test case bug and will be fixed upstream
++The  pthread_key_delete()  function  shall delete a thread-specific data key
++previously returned by pthread_key_create
++
++#std conformance/interfaces/pthread_mutexattr_gettype/speculative 3-1.run-test | Not a bug and test result depends on system implement
++Test case try to initialize a pthread_mutexattr_t object with
++pthread_mutexattr_init() and call pthread_mutexattr_gettype() with an invalid 'attr'.
++
++#std conformance/interfaces/pthread_rwlock_rdlock 2-1.run-test | Not a bug. This case is NOT supported by eglibc
++This test case is to test option Thread Execution Scheduling of pthread rwlock.
++But eglibc don not support this option Main thread read lock 'rwlock' with high
++priority. Child thread1 write lock 'wrlock' with medium priority will block.
++child thread2 read lock 'rwlock' with low priority should block because a high
++priority write lock is waiting, but read lock doesn't block.
++
++#std conformance/interfaces/pthread_rwlock_rdlock 2-2.run-test | Not a bug. This case is NOT supported by eglibc
++Same with pthread_rwlock_rdlock/2-1.run-test
++
++#std conformance/interfaces/pthread_rwlock_rdlock 3-1.run-test | Not a bug. This case is NOT supported by eglibc
++Same with pthread_rwlock_rdlock/2-1.run-test
++
++#std conformance/interfaces/pthread_cond_broadcast 1-2.run-test | Not a bug. Lack of memory
++
++Test Suit -- conformance/interfaces TPS
++---------------------------------------
++
++#std conformance/interfaces/sched_getparam 6-1.run-test | Not a bug. Test is NOT supported by Linux
++This case tries to call sched_getparam as non-root user to get scheduling parameters
++of process with pid 0.
++
++In the manual of sched_getparam about return value:
++
++EPERM  The calling process does not have appropriate privileges (Linux: does not have the CAP_SYS_NICE capability).
++
++It is obvious that Linux does NOT support this case. 
++
++#std conformance/interfaces/sched_getscheduler 7-1.run-test | Not a bug. Test is NOT supported by Linux
++Same with test case sched_getparam/6-1.run-test
++
++Test Suit -- conformance/interfaces SIG
++---------------------------------------
++
++#std sigaction/16-1 | Not a bug. The test case will be updated upstream in POSIX
++The case tries to check that if SA_RESTART is set in sa_flags, interruptible
++function interrupted by signal shall restart silently. The global varialbe
++"ready" which is used to synced up between threads is incorrectly set to static.
++Remove the "static" and the test passed as expected.
++
+ 
+ 
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+index 056b850..46192d0 100755
+--- a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
++++ b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+@@ -172,7 +172,7 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+             done
+         done
+     else
+-        TESTSUITE_LIST=$(echo $TESTSUITE_LIST | sed "s/\/opt\/ltp\/testcases\/open_posix_testsuite\///")
++        TESTSUITE_LIST=$(echo $TESTSUITE_LIST | sed "s/\/opt\/open_posix_testsuite\///")
+         for testcase in `echo "$TESTCASE_LIST" | tr ',' ' '`; do
+             echo "$TESTSUITE_LIST $testcase" >> $RUNTIME_TESTFILE
+         done
+@@ -302,7 +302,7 @@ report()
+ 
+     while read line
+     do
+-        if echo $line | grep -E -q 'execution: FAILED|execution: UNTESTED|execution: UNRESOLVED|execution: UNSUPPORTED|execution: HUNG'; then
++        if echo $line | grep -E -q 'execution: FAILED|execution: UNRESOLVED|execution: HUNG'; then
+             fail_suite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $3}')
+             fail_subsuite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $4}')
+             fail_test=$(echo "$line" | awk '{print $1}' | awk -F"/" '{printf $5}')
+@@ -331,6 +331,7 @@ report()
+ 
+ POSIX Test Finished
+ POSIX Test Log Path: $LOGPATH
++POSIX Test Knowledge Base Path: $FAIL_PATH
+ 
+ 	EOF
+ }
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix.install b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix.install
+new file mode 100755
+index 0000000..82e451d
+--- /dev/null
++++ b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix.install
+@@ -0,0 +1,16 @@
++#!/bin/bash
++
++cd `dirname $0` || \
++{
++    echo "FATAL: unable to change directory to $(dirname $0)"
++    exit $TEST_RETVAL_FAIL
++}
++
++cd ../conformance/interfaces/
++
++for subfolder in `ls -d */speculative/`;do
++    cp $subfolder/*.run-test $subfolder/../
++done
++
++
++
+diff --git a/wrLinux_ltp/failtest/arm b/wrLinux_ltp/failtest/arm
+new file mode 100644
+index 0000000..8102409
+--- /dev/null
++++ b/wrLinux_ltp/failtest/arm
+@@ -0,0 +1,5 @@
++Test Suit -- syscall
++---------------------------------------
++
++#std getcontext01 | Test case is NOT supported on arm arch
++eglibc doesn't implement getcontext for arm, so this result is expected.
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index 151c0a4..43b29ff 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -9,94 +9,127 @@
+ Test Suit -- hugetlb
+ ---------------------------------------
+ 
+-#std hugeshmat02 | To be added
+-If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax, the shmget() will fail with the error EINVAL
++#std hugeshmat02 | Not a bug. The limitation of function shmget
++If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax,
++the shmget() will fail with the error EINVAL
+ 
+-#std hugeshmat03 | To be added
+-If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax, the shmget() will fail with the error EINVAL
++#std hugeshmat03 | Not a bug. The limitation of function shmget
++If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax,
++the shmget() will fail with the error EINVAL
+ 
+-#std hugeshmctl02 | To be added
+-If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax, the shmget() will fail with the error EINVAL
++#std hugeshmctl02 | Not a bug. The limitation of function shmget
++If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax,
++the shmget() will fail with the error EINVAL
+ 
+-#std hugeshmget02 | To be added
+-If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax, the shmget() will fail with the error EINVAL
++#std hugeshmget02 | Not a bug. The limitation of function shmget
++If the value of hugepages in wr-runltp is bigger than /proc/sys/kernel/shmmax,
++the shmget() will fail with the error EINVAL
+ 
+ 
+ Test Suit -- syscall
+ ---------------------------------------
+ 
+-#std inotify03 | Kernel bug on version 2.6.34
+-Kernel bug on version 2.6.34. Kernel couldn't monitor the umount envent. CQ:WIND00211255
++#std sysctl03 | Not a bug. Expected result when kernel version is greater than 2.6.32
++TWARN is not a failure, especially in this case. The test sysctl03 throws out
++the warning when the kernel version >2.6.32
+ 
+-#std set_robust_list01 | Pass after disable GRSecurity and PAX kernel option
++#std set_robust_list01 | Not a bug. Pass after disable GRSecurity and PAX kernel option
+ Pass after disable GRSecurity and PAX kernel option
+ 
+-#std cacheflush01 | meanlingless test
++#std cacheflush01 | Not a bug. meanlingless test
+ cache argument is ignored in kernel and testing this argument is meaningless
+ 
+-#cgl mq_timedsend01 | CFLAGS -fstack-protector issue
++#cgl mq_timedsend01 | Not a bug. CFLAGS fstack protector issue
+ In the cgl-glibc_cgl combs, -fstack-protector is set in the default CFLAGS.
+ When there are stack overflow, kernel will print error informations, and stop
+ the applications.mq_timedsend01 case has stack overflow in the fouth sub-case
+ and cause failure in cgl-glibc_cgl comb. If compile the application with
+ -fno-stack-protector, this case will be PASS.
+ 
+-#std msgctl11 | creating child process failed when the target is lack of memory
+-The kernel can not create child process when the target is lack of memory
++#std msgctl11 | Not a bug. Test fails on the target with memeory more than 4GB
+ 
+-#std fallocate01 | Test fallocate is NOT supported by NFS filesystem
+-Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
+-case fails because it's carried out with nfs rootfs,CQ:WIND00177771.
++The test msgctl11 will fail with log as follows once it is on the
++target with more than 4G memory and use default maximum pid value 32768.
++
++"msgctl11    1  TBROK  :  Not enough free pids"
+ 
+-#std fallocate02 | Test fallocate is NOT supported by NFS filesystem
++Because in this case, the maxnkids is always 0 which will cause fail
++and exit: maxnkids = ((free_pids / 4) / MSGMNI);
++
++#std fallocate01 | Not a bug. Test fallocate is NOT supported on NFS filesystem
+ Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
+-case fails because it's carried out with nfs rootfs,CQ:WIND00177771.
++case fails when it's executed with nfs rootfs.
+ 
+-#std fallocate03 | Test fallocate is NOT supported by NFS filesystem
++#std fallocate02 | Not a bug. Test fallocate is NOT supported on NFS filesystem
+ Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
+-case fails because it's carried out with nfs rootfs,CQ:WIND00177771.
++case fails when it's executed with nfs rootfs.
+ 
+-#std syslog07 | Will pass in manually execution
+-Will pass in manually execution
++#std fallocate03 | Not a bug. Test fallocate is NOT supported on NFS filesystem
++Test fallocate is only supported by three filesystem: ext4, ocfs2, xfs. The test
++case fails when it's executed with nfs rootfs.
+ 
+-#std pselect01 | timestamp sensitive test fail with user application latency
+-This test case is very sensitive to timestamp. It could be failed because of
++#std pselect01 | Not a bug. May fail because user application latency
++This test case is very sensitive to timestamp. It may fail because of
+ user application latency associated with workload.
+ 
+-#std pelect01_64 | timestamp sensitive test fail with user application latency
+-This test case is very sensitive to timestamp. It could be failed because of
++#std pelect01_64 | Not a bug. May fail because user application latency
++This test case is very sensitive to timestamp. It may fail because of
+ user application latency associated with workload.
+ 
+-#std mq_timedsend01 | Known ltp test code defect WIND00323712
+-When preparing the message to be sent, the number of written bytes should be
+-limited to the array's size.
+-
+-#cgl get_robust_list01 | CGL kernel check uid instead of euid
++#cgl get_robust_list01 | Not a bug. CGL kernel check uid instead of euid
+ In CGL kernel, the futex code (get_robust_list()) uses ptrace_may_access() to
+-check the current process' uid against the target process' euid instead of euid.
++check the current process's uid against the target process's euid instead of euid.
+ 
+-#std clock_nanosleep01 | non-supported clock type MONOTONIC cause case01 fail
++#std clock_nanosleep01 | Not a bug. non-supported clock type MONOTONIC
+ Test case03 use clock type MONOTONIC to test syscall clock_nanosleep. This kind
+ of clock is not supproted in some processor architecture. In this situation,
+ clock_nanosleep will returen ENOTSUP as error numer.
+ 
+-
+-#std clock_nanosleep2_01 | non-supported clock type MONOTONIC cause test fail
++#std clock_nanosleep2_01 | Not a bug. non-supported clock type MONOTONIC
+ This test use clock type MONOTONIC to test syscall clock_nanosleep. This kind
+ of clock is not supproted in some processor architecture. In this situation,
+ clock_nanosleep will returen ENOTSUP as error numer.
+ 
++#std get_robust_list01 | Test case issue and has been fixed upstream
++This case tries to seteuid to a non-root user and get the futex list of init
++process. A failure(EPERM) is expected from the system call. While in 3.2 , the
++call behaved as per the expectation and failed, but in 3.4-rc3 the system call
++is successful causing the failure of this case. A patch was submitted to make
++the permission check implementation of the system call same as that of grsecurity.
++Now, if the user has access to the /proc of the process, it has access to the
++futext list, else not.
++
++#std chdir01A | Not a bug. Test fails on NFS file system
++The test tries to make sure that the current working directory location is under
++/tmp. But on NFS, the /tmp link to /var/volatile/tmp, and the fail is expected.
++
++#std mount02 | Test case bug and will be fixed upstream
++This test tries to get the right "error" number of mount syscall. Currently, the
++number of test case have rised to 13, but the number of error array is still 8
++
++#std mount03 | Test case bug and will be fixed upstream
++
++#std getrusage03 | Not a bug. Test fails on embedded system with small memory
++To use this test also in embedded systems it needs to reduce the memory
++allocation to avoid the test failure when it check the ru_maxrss field expecting
++a value close to the allocated one. The ru_maxrss field contains the total amount
++of resident set memory used, so this field doesn't take into account of the
++swapped memory. Passing [num] parameter at command line the test is executed
++using the input parameter as multiply factor instead of 10, that is the default
++value when no argument is passed.
++
++#std getrusage04 | Test case bug and will be fixed upstream
+ 
+ Test Suit -- commands
+ ---------------------------------------
+ 
+-#std file | wrLinux don't support gcc on TEST 6
++#std file | Not a bug. wrLinux don't support gcc
+ Test 6 use gcc to build C file, but wrLinux don't support gcc.
+ 
+ Test Suit -- fs
+ ---------------------------------------
+ 
+-#std quota_remount_test01 | Lack of quota_check command in rootfs
++#std quota_remount_test01 | Not a bug. Lack of quota_check command in rootfs
+ Lack of quota_check command in rootfs
+ 
+ #std iogen01 | NFS rootfs read or write speed limitation
+@@ -120,6 +153,9 @@ fail is caused by read or write stress over NFS, could pass in harddisk filesyst
+ #std gf09 | NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
++#std gf10 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
+ #std gf11 | NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+@@ -129,6 +165,9 @@ fail is caused by read or write stress over NFS, could pass in harddisk filesyst
+ #std gf15 | NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
++#std gf18 | NFS rootfs read or write speed limitation
++fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
++
+ #std gf19 | NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+@@ -137,15 +176,17 @@ The CGL kernel option CONFIG_GRKERNSEC, which will pretent the reading from
+ /proc/kpageflags and /proc/kpagecount, is set and cause "read failed and Bad
+ address" error
+ 
++#std proc01 | Not a bug. Test will fail if acpi daemon stopped
++The test case tries to read /proc/acpi/event but failed when acpi daemon stopped
+ 
+ Test Suit -- mm
+ ---------------------------------------
+ 
+-#std mtest01 | Memory used by case is over 80% in total.
++#std mtest01 | Memory used by case is over 80% in total
+ The fail is caused by the parameter. Memory used by case as parameter is over
+ 80% in total.
+ 
+-#std mtest01w | Memory used by case is over 80% in total.
++#std mtest01w | Memory used by case is over 80% in total
+ The fail is caused by the parameter. Memory used by case as parameter is over
+ 80% in total.
+ 
+@@ -155,16 +196,51 @@ requires a space larger than 64M.
+ 2. For the ppc64 target such as fsl_p50x0, calloc don't guaranty the pointer
+ created at the second time is equal to the one just freed.
+ 
+-#std mtest06_2 | Failed when fsiz * MB is over 2^32
+-When the system memory is so large that fsize*MB exceeds 2^32, fsize is int
+-type, it will convert to unsigned long in kernel.
++#std mtest06 | Not a bug. test pass when executed seperately
++On target with small memory such as 256M, the test will pass when executed seperately
+ 
++#std mtest06_2 | Test will fail when the memory is less than 1GB
+ 
+-Test Suit -- ipc
+----------------------------------------
++#std overcommit_memory | On target with 0 swap, this test is expected to fail
++In some target with 0 swap, the value of CommitLimit (Swap+RAM*overcommit_ratio)
++is 0 when overcommit_ratio is set to 0. This will break the test because the
++test want to make sure that CommitLimit > Committed_AS.
+ 
+-#std shmem_test_05 | Test case bug CQ:WIND00230639
+-Test case bug CQ:WIND00230639
++#std vma01 | This test assume the wrong value of child vma pointer
++The test case assumes child vma pointer < parent vma pointer. It is true on
++x86 arch, but false on ppc and arm. So, on ppc and arm, the test case will
++search vma out of the bound to cause the issue.
++Even in x86, although u = mmap(t + 3*ps, 3*ps, PROT_WRITE, MAP_ANONYMOUS|MAP_PRIVATE, 0, 0) 
++is called to get child vma pointer, kernel assigns child vma pointer to t - 3*ps.
++According to man page of mmap, the addr parameter is just a hint, so kernel
++doesn't make sure the final address is as same as addr parameter.
++
++#std max_map_count | Not a bug. Difference of system implement
++The test case tries to invoke mmap() endless until triggering MAP_FAILED, then
++read the process's maps file /proc/[pid]/maps, save the line number to map_count
++variable, compare it with /proc/sys/vm/max_map_count and make sure that the
++map_count should less than max_map_count. 
++
++Generally speaking, there are two special vmas VDSO and VSYSCALL, which are
++allocated via install_special_mapping(), install_specail_mapping() which allows
++the VMAs to be allocated and inserted without checking the sysctl_map_map_count.
++So during comparing with map_count and /proc/sys/vm/max_map_count, we should
++except the two special vmas from map_count: map_count -= 2
++
++But the output of /proc/self/maps vary in different arch. In i686, the key word
++"vsyscall" is missed. In addition, the gate_vma is used for vectors user mapping
++in arm arch. So key word "vectors" should also be removed from map_count in arm arch :
++
++In i686: map_count -= 3
++In arm : map_count -= 4
++
++#std thp02 | Not a bug. Test break when CONFIG_HUGETLBFS is not enabled
++When the kernel feature CONFIG_HUGETLBFS is not enabled, this test case will fail with:
++
++thp02       1  TBROK  :  cannot find "Hugepagesize:" in /proc/meminfo
++thp02       2  TBROK  :  Remaining cases broken
++
++#std ksm05 | Not a bug. The test fails when CONFIG_KSM is disabled
+ 
+ 
+ Test Suit -- math
+@@ -183,32 +259,38 @@ Out of memory
+ Out of memory
+ 
+ 
+-Test Suit -- containers
++Test Suit -- admin_tools
+ ---------------------------------------
+ 
+-#std Containers | kernel option CONFIG_VETH is NOT enabled
+-The case required the CONFIG_VETH enabled in your kernel and some shell script
+-path has a wrong value
++#std cron | Not a bug. Test fail because different implement of cron
++The crontab is recorded in /var/log/sysctl in wrLinux5.0.
+ 
++#std cron_allow01 | Not a bug. Test fail because different implement of cron
++cronie itself lacks of necessary files and permissions to support non-root
++user using crontab.
+ 
+-Test Suit -- admin_tools
+----------------------------------------
++#std cron_deny01 | Not a bug. Test fail because different implement of cron
++cronie itself lacks of necessary files and permissions to support non-root
++user using crontab.
+ 
+-#std cron | target date is older than the date of installer
+-If the target date is older than the date on the installer,changing the contents
+-of /var/spool/cron will not cause crond to update its db.
++#std cron02 | Not a bug. Test fail because different implement of cron
++Firstly, the same reason as cron_allow01.
+ 
+-#std cron02 | target date is older than the date of installer
+-If the target date is older than the date on the installer,changing the contents
+-of /var/spool/cron will not cause crond to update its db.
++Secondly, LTP cron test assumes vixie-cron behavior, which allows any user to
++use crontab if there's no /etc/cron.deny and /etc/cron.allow. cronie however
++enforces the reverse, that only superuser is allowed under that condition. LTP
++test case needs to be enhanced to explicitly set cron.allow before the test. 
+ 
+-#std cron_allow01 | target date is older than the date of installer
+-If the target date is older than the date on the installer,changing the contents
+-of /var/spool/cron will not cause crond to update its db.
++#std cron_dirs_checks01 | Not a bug. Lack of write permission to /var/spool/cron
++This case tries to get write permission for other users, however the write
++permission of /var/spool/cron is owned only by user root and group crontab.
++The write permission for /var/spool/cron is kept to make crontab working correctly.
++They are controlled by final policy deployed on the product.
++
++#std su01 | Not a bug. Lack of /usr/bin/expect
++su01_s1 uses '/usr/bin/expect' as the interpreter, which has not been added into
++yocto. Therefore, the failure is expected.
+ 
+-#std cron_deny01 | target date is older than the date of installer
+-If the target date is older than the date on the installer,changing the contents
+-of /var/spool/cron will not cause crond to update its db.
+ 
+ Test Suit -- commands
+ ---------------------------------------
+@@ -219,3 +301,10 @@ Test Suit -- commands
+ 
+ #std nm | gcc is not supported
+ 
++Test Suit -- hyperthreading
++---------------------------------------
++
++#std smt_smp_enabled | Not a bug. Test case NOT supported on arm arch
++
++#std smt_smp_affinity | Not a bug. Test case NOT supported on arm arch
++
+diff --git a/wrLinux_ltp/skiptest/ppc b/wrLinux_ltp/skiptest/ppc
+index 831c536..d52ad5e 100644
+--- a/wrLinux_ltp/skiptest/ppc
++++ b/wrLinux_ltp/skiptest/ppc
+@@ -12,4 +12,4 @@ Test Suit -- fs_bind
+ Test case bug, the test bind/test03: did not properly clean up its proc mounts,
+ and cause system hung.
+ 
+-
++#std min_free_kbytes | cause system hung
+diff --git a/wrLinux_ltp/wr-runltp b/wrLinux_ltp/wr-runltp
+index ebeb456..a0b1a06 100755
+--- a/wrLinux_ltp/wr-runltp
++++ b/wrLinux_ltp/wr-runltp
+@@ -11,7 +11,7 @@
+ cd `dirname $0` || \
+ {
+     echo "FATAL: unable to change directory to $(dirname $0)"
+-    exit 1
++    exit $TEST_RETVAL_FAIL
+ }
+ 
+ export WRLTPROOT=${PWD}
+@@ -20,6 +20,8 @@ external_parameter="$*"
+ internal_parameter=""
+ EXECUTION_TIME=`date +"%Y_%b_%d-%Hh_%Mm_%Ss"`
+ START_TIME=`date`
++TEST_RETVAL_FAIL=1
++KERNEL_VERSION=`uname -a| cut -d ' ' -f 3`
+ 
+ LOOP_DEVICE_FS=""
+ LOOP_DEVICE_SWAP=""
+@@ -79,22 +81,25 @@ wr-runltp
+ exit 0
+ }
+ 
++
+ # LTP runtime environment check
++
+ env_check()
+ {
+-    [ -r /proc/config.gz ] || {
++    [ -e ~/config ] && rm ~/config
++    [ -r /proc/config.gz -o -r /boot/config-$KERNEL_VERSION ] || {
+         echo "FATAL: missing file /proc/config.gz"
+-        exit 1
++        exit $TEST_RETVAL_FAIL
++    }
++
++    [ -d ~ ] || {
++        echo "FATAL: missing home directory"
++        exit $TEST_RETVAL_FAIL
+     }
+ 
+     which gunzip >& /dev/null || {
+         echo "FATAL: gunzip not found"
+-        exit 1
+-    }
+-    
+-    chmod 777 /tmp || {
+-        echo Cannot chmod /tmp to 777
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     }
+ }
+ 
+@@ -110,7 +115,7 @@ create_swap()
+     if [ -z $LOOP_DEVICE_SWAP ]; then
+         echo "No loop device available in system!"
+         echo "We coun't setup a swap partition"
+-        return 1
++        return $TEST_RETVAL_FAIL
+     fi
+ 
+     dd if=/dev/zero of=$SWAP_FILE_REPOSITORY bs=1K count=$[swap_size+10] >/dev/null 2>&1
+@@ -123,33 +128,33 @@ create_swap()
+         mkfs.$swap_fs_type $LOOP_DEVICE_SWAP >/dev/null 2>&1
+         if [ $? -ne 0 ]; then
+             echo "Make $swap_fs_type failed!"
+-            return 1
++            return $TEST_RETVAL_FAIL
+         fi
+     fi
+ 
+     mkdir -p $SWAP_MOUNT_POINT
+     if [ $? -ne 0 ]; then
+         echo "Create swap partition mount point failed!"
+-        return 1
++        return $TEST_RETVAL_FAIL
+     fi
+ 
+     mount -t $swap_fs_type $LOOP_DEVICE_SWAP $SWAP_MOUNT_POINT
+     if [ $? -ne 0 ]; then
+         echo "Mount $LOOP_DEVICE_SWAP to $SWAP_MOUNT_POINT failed!"
+-        return 1
++        return $TEST_RETVAL_FAIL
+     fi
+ 
+     dd if=/dev/zero of=$SWAP_FILE bs=1K count=$swap_size >/dev/null 2>&1
+     mkswap -f -c $SWAP_FILE >/dev/null 2>&1
+     if [ $? -ne 0 ]; then
+         echo "mkswap create $SWAP_FILE failed!"
+-        return 1
++        return $TEST_RETVAL_FAIL
+     fi
+ 
+     swapon $SWAP_FILE
+     if [ $? -ne 0 ]; then
+         echo "Trun on $SWAP_FILE failed!"
+-        return 1
++        return $TEST_RETVAL_FAIL
+     fi
+     return 0
+ }
+@@ -202,8 +207,8 @@ setup()
+ 
+     [ -d "$RUNTIME_PATH" ] || mkdir $RUNTIME_PATH
+     [ -d "$LOGPATH" ] || mkdir $LOGPATH
+-    cp /proc/config.gz $RUNTIME_PATH && \
+-    gunzip -f $RUNTIME_PATH/config.gz || exit 1
++    [ -r /proc/config.gz ] && cp /proc/config.gz $RUNTIME_PATH && gunzip -f $RUNTIME_PATH/config.gz
++    [ -r /boot/config-$KERNEL_VERSION ] && cp /boot/config-$KERNEL_VERSION $RUNTIME_PATH/config
+ 
+ # change test case execution parameter in runtest
+ 
+@@ -261,7 +266,7 @@ setup()
+             echo $SCENARIO_GROUP_LIST | grep -q "numa" && {
+ 		grep -q "CONFIG_NUMA=y" $RUNTIME_PATH/config || {
+                     echo "FATAL: please open proper kernel option for numa test"
+-                    exit 1
++                    exit $TEST_RETVAL_FAIL
+ 		}
+             }
+         fi
+@@ -270,7 +275,7 @@ setup()
+             echo $SCENARIO_GROUP_LIST | grep -q "hugetlb" && {
+ 		grep -q "CONFIG_HUGETLBFS=y" $RUNTIME_PATH/config || {
+                     echo "FATAL: please open proper kernel option for hugetlb test"
+-                    exit 1
++                    exit $TEST_RETVAL_FAIL
+ 		}
+ 		RUN_HUGETLB_TEST=1
+             }
+@@ -280,7 +285,7 @@ setup()
+             echo $SCENARIO_GROUP_LIST | grep -q "controllers" && {
+ 		grep -q "CONFIG_CGROUPS=y" $RUNTIME_PATH/config || {
+                     echo "FATAL: please open proper kernel option for controllers test"
+-                    exit 1
++                    exit $TEST_RETVAL_FAIL
+ 		}
+             }
+         fi
+@@ -289,7 +294,7 @@ setup()
+             echo $SCENARIO_GROUP_LIST | grep -q "cpuhotplug" && {
+ 		grep -q "CONFIG_HOTPLUG_CPU=y" $RUNTIME_PATH/config || {
+                     echo "FATAL: please open proper kernel option for cpuhotplug test"
+-                    exit 1
++                    exit $TEST_RETVAL_FAIL
+ 		}
+             }
+         fi
+@@ -298,14 +303,14 @@ setup()
+     else
+         if [ ! -f "$SCENARIO_GROUP_FILE" ]; then
+ 	    echo "FATAL: There is NO runtime scenario group file"
+-            exit 1
++            exit $TEST_RETVAL_FAIL
+         fi
+         SCENARIO_GROUP_LIST=$(cat $SCENARIO_GROUP_FILE)
+     fi
+ 
+     # Print out the scenario group list if there is no selected test case
+     echo "$external_parameter" |  grep -q -e "-s" || \
+-    echo "LTP scenario group list $SCENARIO_GROUP_LIST"
++    echo "LTP scenario group list : $SCENARIO_GROUP_LIST"
+ 
+     if [ "$RUN_HUGETLB_TEST" -eq 1 ]; then
+         hugefspath=/mnt/huge
+@@ -352,12 +357,12 @@ else
+ 
+     if [ ! -f "$RUNTIME_TESTFILE" -o ! -f "$RUNTIME_LOGFILE" ]; then
+         echo "FATAL: There is NO runtime test file to resume LTP execution"
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     fi
+ 
+     if grep "Total Tests" $RUNTIME_LOGFILE >/dev/null 2>&1; then
+         echo "FATAL: last LTP execution has finished."
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     fi
+ 
+     # Record the finished LTP runtime log
+@@ -376,7 +381,7 @@ else
+ 
+     if [ -z "$last_test" ];then
+ 	echo "Failed to find out last test case and resume stop"
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     fi
+ 
+     while [ "$find_out" -eq 0 ]; do
+@@ -392,7 +397,7 @@ else
+ 
+     if [ -z "$panic_test" ];then
+         echo "Failed to find out panic test and resume stop"
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     fi
+     printf "%-50s %-21s %s \n" "$panic_test" "SKIP" "system panic" >> $TEST_SKIPFILE
+ 
+@@ -405,7 +410,7 @@ else
+     sed '1,4d' $RESUME_LOGFILE | awk '{print $1}' >> $RUNTIME_SKIPFILE
+ 
+     # Delete any runtime log before run LTP Test
+-    rm $RUNTIME_LOGFILE || exit 1
++    rm $RUNTIME_LOGFILE || exit $TEST_RETVAL_FAIL
+ fi
+ 
+ [ -f $RUNTIME_SKIPFILE ] && internal_parameter="$internal_parameter -S $RUNTIME_SKIPFILE"
+@@ -419,69 +424,67 @@ create_block_device()
+     LOOP_DEVICE_BLOCK=$(losetup -f)
+     [[ ${LOOP_DEVICE_BLOCK} ]] || {
+         echo No free loop device
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     }
+ 
+     dd if=/dev/zero of=${LOOPFILE} bs=1M count=256 > /dev/null 2>&1 || {
+         echo "Failed to create file $LOOPFILE"
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     }
+ 
+     losetup $LOOP_DEVICE_BLOCK $LOOPFILE > /dev/null 2>&1 || {
+         echo "Fail to setup loop device $LOOP_DEVICE_BLOCK"
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     }
+ 
+     mkfs.${BLOCK_DEVICE_FSTYPE} ${LOOP_DEVICE_BLOCK} > /dev/null 2>&1 || {
+         echo Failed to format ${LOOP_DEVICE_BLOCK} into ${BLOCK_DEVICE_FSTYPE}
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     }
+ }
+ 
+-# mount ext4 filesystem on /tmp
++# mount ext4 file system on /tmp over loop device on NFS
+ mount_tmp()
+ {
++    echo "mounting ext4 file system on /tmp over loop device for LTP test..."
++
+     LOOP_DEVICE_FS=$(losetup -f)
+ 
+     if [ -z $LOOP_DEVICE_FS ]; then
+         echo "No loop device available!"
+-        exit 1
++        exit $TEST_RETVAL_FAIL
+     fi
+ 
+     # Check if /tmp has been mounted with ext3/4 file system
+ 
+-    [[ $(df -P -T /tmp | tail -1 | awk '{print $2}' ) =~ "^ext(2|3|4)$" ]] || {
+-        # Obtain the free memory size in K
+-        MemFree=$(cat /proc/meminfo | grep MemFree | awk '{print $2}')
+-        # Change the free memory size in M
+-        MemFree_M=$(($MemFree/1024))
++    [[ $(df -P -T /tmp | tail -1 | awk '{print $2}' ) =~ "^ext(3|4)$" ]] || {
+ 
+-        if [ $MemFree_M -lt 400 ]; then
+-            block_count=$(($MemFree_M/2))
+-        else
+-            block_count=200
+-        fi
+-
+-        dd if=/dev/zero of=tmp_image bs=1M count=$block_count > /dev/null 2>&1 || {
++        dd if=/dev/zero of=tmp_image bs=1M count=1024 > /dev/null 2>&1 || {
+             echo "Failed to create file tmp_image"
+-            exit 1
++            exit $TEST_RETVAL_FAIL
+         }
+ 
+         losetup $LOOP_DEVICE_FS tmp_image >/dev/null 2>&1 || {
+             echo "Fail to setup loop device $LOOP_DEVICE_FS"
+-            exit 1
++            exit $TEST_RETVAL_FAIL
+         }
+ 
+         mkfs.${BLOCK_DEVICE_FSTYPE} -m 0 $LOOP_DEVICE_FS >/dev/null 2>&1 || {
+             echo Failed to format $LOOP_DEVICE_FS into $BLOCK_DEVICE_FSTYPE
+-            exit 1
++            exit $TEST_RETVAL_FAIL
+         }
+ 
+         mount -t $BLOCK_DEVICE_FSTYPE -o mand $LOOP_DEVICE_FS /tmp >/dev/null 2>&1 || {
+             echo "Failed to mount $LOOP_DEVICE_FS to /tmp"
+-            exit 1
++            exit $TEST_RETVAL_FAIL
+         }
+     }
++
++    chmod 777 /tmp || {
++        echo Cannot chmod /tmp to 777
++        exit $TEST_RETVAL_FAIL
++    }
++
+     return 0
+ }
+ 
+@@ -513,7 +516,7 @@ report()
+ 
+ # Create the failed test report
+ 
+-    [ -f "$LOGFILE" ] || exit 1
++    [ -f "$LOGFILE" ] || exit $TEST_RETVAL_FAIL
+ 
+     sed -n '1,4p' $LOGFILE | sed -e '/Testcase/ s/$/\tFail Reason/' \
+                                  -e '4 s/$/\t----------/' > $FAIL_REPORT
+@@ -537,6 +540,7 @@ report()
+     [ -f $TEST_SKIPFILE ] && cp $TEST_SKIPFILE $SKIP_REPORT
+ 
+     echo "LTP Test Log Path : $LOGPATH"
++    echo "LTP Test Knowledge Base Path : $FAIL_PATH"
+ }
+ 
+ cleanup()
+@@ -572,7 +576,7 @@ while getopts hRa:c:C:d:D:f:F:ehi:K:g:l:m:M:Nno:pqr:s:S:t:T:w:x:b:B: arg
+             external_parameter=$(echo $external_parameter | sed "s/-R//g");;
+ 
+ b|B|S|l|p)  echo "The runltp option $arg has been used internally by wr-runltp"
+-            exit 1;;
++            exit $TEST_RETVAL_FAIL;;
+         esac
+     done
+ 
+@@ -594,6 +598,6 @@ main
+ grep -q "Total Tests" $RUNTIME_LOGFILE && report
+ 
+ cleanup
+-[ "$UNKNOWN_FAILURE" -eq 1  ] && exit 1
++[ "$UNKNOWN_FAILURE" -eq 1  ] && exit $TEST_RETVAL_FAIL
+ exit 0
+ 
+-- 
+1.7.11
+

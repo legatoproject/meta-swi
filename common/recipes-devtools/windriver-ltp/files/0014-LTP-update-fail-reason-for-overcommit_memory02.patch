@@ -1,0 +1,26 @@
+From 73d04968a9eeeb208976339908db252f258e3300 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Fri, 14 Dec 2012 13:00:05 +0800
+Subject: [PATCH 1/2] LTP: update fail reason for overcommit_memory02
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ wrLinux_ltp/failtest/common |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index b53cb4d..9d4d4d8 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -145,7 +145,7 @@ read it such as:
+    memset(map_address, 'a', mwuargs[1]);
+ +  msync (map_address, (size_t)mwuargs[1], MS_SYNC);
+ 
+-#std overcommit_memory | On target with 0 swap, this test is expected to fail
++#std overcommit_memory02 | On target with 0 swap, this test is expected to fail
+ In some target with 0 swap, the value of CommitLimit (Swap+RAM*overcommit_ratio)
+ is 0 when overcommit_ratio is set to 0. This will break the test because the
+ test want to make sure that CommitLimit > Committed_AS.
+-- 
+1.7.1
+

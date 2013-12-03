@@ -1,0 +1,39 @@
+With CGL kernel which is grsecurity enabled, it won't allow a map which
+is PROT_EXEC|PROT_WRITE and kernel will return -EPERM.
+
+Change code to test if PROT_EXEC|PROT_WRITE both enabled and errno is
+EPERM then make it pass.
+
+Upstream-Status: Inappropriate [ grsecurity enabled kernel only]
+
+Signed-off-by: Yao Zhao <yao.zhao@windriver.com>
+---
+diff --git a/testcases/open_posix_testsuite/conformance/interfaces/mmap/5-1.c b/testcases/open_posix_testsuite/conformance/interfaces/mmap/5-1.c
+index ab84756..5aac460 100644
+--- a/testcases/open_posix_testsuite/conformance/interfaces/mmap/5-1.c
++++ b/testcases/open_posix_testsuite/conformance/interfaces/mmap/5-1.c
+@@ -92,6 +92,7 @@ int main(void)
+ 	void *pa;
+ 	size_t size = 1024;
+ 	int fd, i, fail = 0;
++	int prot_wrexec = (PROT_EXEC | PROT_WRITE);
+ 
+ 	snprintf(tmpfname, sizeof(tmpfname), "/tmp/pts_mmap_5_1_%d", getpid());
+ 	unlink(tmpfname);
+@@ -112,8 +113,14 @@ int main(void)
+ 
+ 		if (pa == MAP_FAILED) {
+ 			if (errno != ENOTSUP) {
+-				print_error(&testcases[i], errno);
+-				fail++;
++				if ((errno == EPERM) && 
++				    ((testcases[i].prot & prot_wrexec) == prot_wrexec)) {
++				    /* CGL kernels may not allow writeable, executable, pages */
++				}
++				else {
++					print_error(&testcases[i], errno);
++					fail++;
++				}
+ 			}
+ 		} else {
+ 			munmap(pa, size);

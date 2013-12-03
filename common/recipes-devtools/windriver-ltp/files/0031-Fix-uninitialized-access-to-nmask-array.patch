@@ -1,0 +1,34 @@
+From 2d97b345c0ad996e0ebc3bb36140b91fdc632fef Mon Sep 17 00:00:00 2001
+From: Lans Zhang <jia.zhang@windriver.com>
+Date: Fri, 8 Mar 2013 10:52:53 +0800
+Subject: [PATCH 1/2] Fix uninitialized access to nmask array.
+
+If mempolicy is zero, the access to nmask array using uninitialized
+node may violate memory protection.
+
+Signed-off-by: Lans Zhang <jia.zhang@windriver.com>
+---
+ testcases/kernel/mem/lib/mem.c |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/testcases/kernel/mem/lib/mem.c b/testcases/kernel/mem/lib/mem.c
+index e995bc9..5e0c49f 100644
+--- a/testcases/kernel/mem/lib/mem.c
++++ b/testcases/kernel/mem/lib/mem.c
+@@ -70,9 +70,11 @@ void oom(int testcase, int mempolicy, int lite)
+ 	unsigned long nmask[MAXNODES / (8*sizeof(unsigned long))] = { 0, };
+ 	unsigned int node;
+ 
+-	if (mempolicy)
++	if (mempolicy) {
+ 		node = get_a_numa_node(cleanup);
+-	nmask[node / (8*sizeof(unsigned long))] = 1 << (node % (8*sizeof(unsigned long)));
++		nmask[node / (8*sizeof(unsigned long))] =
++			1 << (node % (8*sizeof(unsigned long)));
++	}
+ #endif
+ 
+ 	switch (pid = fork()) {
+-- 
+1.7.8.110.g4cb5d
+

@@ -1,0 +1,206 @@
+From 02fa251293a03e0222c3c55357eae8d9c958f4d7 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Thu, 12 Jul 2012 14:06:57 +0800
+Subject: [PATCH] POSIX: remove skiptest file and update wr-runposix
+
+Signed-off-by: Jin Li <jin.li@windriver.com>
+---
+ .../wrLinux_posix/skiptest/common                  | 88 ----------------------
+ .../open_posix_testsuite/wrLinux_posix/wr-runposix | 56 +++++++-------
+ 2 files changed, 26 insertions(+), 118 deletions(-)
+ delete mode 100644 testcases/open_posix_testsuite/wrLinux_posix/skiptest/common
+
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/skiptest/common b/testcases/open_posix_testsuite/wrLinux_posix/skiptest/common
+deleted file mode 100644
+index b283cd4..0000000
+--- a/testcases/open_posix_testsuite/wrLinux_posix/skiptest/common
++++ /dev/null
+@@ -1,88 +0,0 @@
+-
+-# Copyright (c) 2012 Wind River Systems, Inc.
+-#
+-# The right to copy, distribute, modify, or otherwise make use
+-# of this software may be licensed only pursuant to the terms
+-# of an applicable Wind River license agreement.
+-
+-
+-Test Suit -- conformance/interfaces TMR
+----------------------------------------
+-#std conformance/interfaces/timer_create 10-1.run-test | To be added
+-#std conformance/interfaces/timer_create 11-1.run-test | To be added
+-#std conformance/interfaces/clock_getcpuclockid 2-1.run-test | To be added
+-
+-Test Suit -- conformance/interfaces AIO
+----------------------------------------
+-
+-#std conformance/interfaces/aio_cancel 3-1.run-test | To be added
+-#std conformance/interfaces/aio_error 3-1.run-test | To be added
+-#std conformance/interfaces/aio_suspend 1-1.run-test | To be added
+-#std conformance/interfaces/aio_suspend 4-1.run-test | To be added
+-#std conformance/interfaces/aio_suspend 7-1.run-test | To be added
+-#std conformance/interfaces/aio_suspend 8-1.run-test | To be added
+-#std conformance/interfaces/aio_suspend 9-1.run-test | To be added
+-#std conformance/interfaces/aio_read 10-1.run-test | To be added
+-#std conformance/interfaces/aio_return 2-1.run-test | To be added
+-#std conformance/interfaces/aio_return 3-2.run-test | To be added
+-#std conformance/interfaces/aio_return 4-1.run-test | To be added
+-#std conformance/interfaces/aio_write 8-1.run-test | To be added
+-#std conformance/interfaces/aio_write 8-2.run-test | To be added
+-#std conformance/interfaces/lio_listio 2-1.run-test | To be added
+-#std conformance/interfaces/lio_listio 11-1.run-test | To be added
+-#std conformance/interfaces/lio_listio 14-1.run-test | To be added
+-
+-Test Suit -- conformance/interfaces MSG
+----------------------------------------
+-#std conformance/interfaces/mq_open 16-1.run-test | To be added
+-#std conformance/interfaces/mq_send 5-1.run-test | To be added
+-#std conformance/interfaces/timedsend 5-1.run-test | To be added
+-#preempt_rt conformance/interfaces/mq_timedreceive 5-2.run-test | To be added
+-The time() can not specifies an abs_timeout to mq_timedreceiver () for preempt_rt kernel
+-
+-#preempt_rt conformance/interfaces/mq_timedreceive 10-2.run-test | To be added
+-kernel implementation-defined
+-
+-#std conformance/interfaces/mq_unlink/speculative 7-2.run-test | To be added
+-
+-Test Suit -- conformance/interfaces MEM
+----------------------------------------
+-
+-#std conformance/interfaces/mmap 11-4.run-test | To be added
+-#std conformance/interfaces/mmap 11-5.run-test | To be added
+-#std conformance/interfaces/mmap 18-1.run-test | To be added
+-#std conformance/interfaces/mmap 23-1.run-test | To be added
+-#std conformance/interfaces/mmap 28-1.run-test | To be added
+-#std conformance/interfaces/mmap 31-1.run-test | To be added
+-#std conformance/interfaces/mlock/speculative 12-1.run-test | To be added
+-
+-Test Suit -- conformance/interfaces THR
+----------------------------------------
+-
+-#std conformance/interfaces/pthread_attr_setschedparam/speculative 3-1.run-test | To be added
+-#std conformance/interfaces/pthread_attr_setschedparam/speculative 3-2.run-test | To be added
+-#std conformance/interfaces/pthread_mutexattr_gettype/speculative 3-1.run-test | To be added
+-#std conformance/interfaces/pthread_rwlock_rdlock 2-1.run-test | To be added
+-#std conformance/interfaces/pthread_rwlock_rdlock 2-2.run-test | To be added
+-#std conformance/interfaces/pthread_rwlock_unlock 3-1.run-test | To be added
+-#cgl conformance/interfaces/pthread_create 1-6.run-test | To be added
+-#preempt_rt conformance/interfaces/pthread_create 1-6.run-test | To be added
+-
+-Test Suit -- conformance/interfaces SIG
+----------------------------------------
+-
+-#std conformance/interfaces/sigaction 10-1.run-test | To be added
+-#std conformance/interfaces/sigset 8-1.run-test | To be added
+-
+-Test Suit -- conformance/interfaces TPS
+----------------------------------------
+-
+-#std conformance/interfaces/sched_getparam 6-1.run-test | To be added
+-#std conformance/interfaces/sched_getscheduler 7-1.run-test | To be added
+-#cgl-preempt_rt conformance/interfaces/sched_setparam 9-1.run-test | To be added
+-#cgl-preempt_rt conformance/interfaces/sched_setparam 10-1.run-test | To be added
+-#cgl-preempt_rt conformance/interfaces/sched_yield 1-1.run-test | To be added
+-#preempt_rt conformance/interfaces/sched_setparam 9-1.run-test | To be added
+-#preempt_rt conformance/interfaces/sched_setparam 10-1.run-test | To be added
+-#preempt_rt conformance/interfaces/sched_yield 1-1.run-test | To be added
+-
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+index fd6f8ff..056b850 100755
+--- a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
++++ b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+@@ -178,38 +178,36 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+         done
+     fi
+ 
+-    # Create runtime skipping test file based on processor arch and kernel type
++    # Create POSIX runtime skipping test file
+     echo "POSIX Test Start Time: $START_TIME" > $SKIPTEST
+     echo "-------------------------------------------" >> $SKIPTEST
+     printf "%-60s %-21s %s \n" Testcase Type "Skip Reason" >> $SKIPTEST
+     printf "%-60s %-21s %s \n" -------- ----  -----------  >> $SKIPTEST
+ 
+-    cat $RUNTIME_TESTFILE | while read line
+-    do
+-        skip_suite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $3}')
+-        skip_subsuite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $4}')
+-        [ -n "$skip_subsuite" ] && skip_suite="$skip_suite/$skip_subsuite"
+-        skip_test=$(echo "$line" | awk '{print $2}')
+-        skip_reason=$(cat $SKIP_PATH/common | grep "^#std .*$skip_suite $skip_test" | cut -d "|" -f 2)
+-        [ -z "$skip_reason" -a -n "$KERNEL_ARCH" ] && \
+-        skip_reason=$(cat $SKIP_PATH/common | grep "^#$KERNEL_ARCH .*$skip_suite $skip_test" | cut -d "|" -f 2)
+-        touch $RUNTIME_SKIPFILE
+-        if [ -n "$skip_reason" ]; then
+-            printf "%-60s %-20s %s \n" "$skip_suite $skip_test" SKIP "$skip_reason" >> $SKIPTEST
+-            echo "$skip_suite $skip_test" >> $RUNTIME_SKIPFILE
+-        fi
+-    done
+-
++    if [ -d $SKIP_PATH ];then
++
++        cat $RUNTIME_TESTFILE | while read line
++        do
++            skip_suite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $3}')
++            skip_subsuite=$(echo "$line" | awk '{print $1}' | awk -F"/" '{print $4}')
++            [ -n "$skip_subsuite" ] && skip_suite="$skip_suite/$skip_subsuite"
++            skip_test=$(echo "$line" | awk '{print $2}')
++            skip_reason=$(cat $SKIP_PATH/common | grep "^#std .*$skip_suite $skip_test" | cut -d "|" -f 2)
++            [ -z "$skip_reason" -a -n "$KERNEL_ARCH" ] && \
++            skip_reason=$(cat $SKIP_PATH/common | grep "^#$KERNEL_ARCH .*$skip_suite $skip_test" | cut -d "|" -f 2)
++
++            if [ -n "$skip_reason" ]; then
++                printf "%-60s %-20s %s \n" "$skip_suite $skip_test" SKIP "$skip_reason" >> $SKIPTEST
++                echo "$skip_suite $skip_test" >> $RUNTIME_SKIPFILE
++            fi
++        done
++    fi
+ else
+     # When it is NOT a fresh POSIX execution, use the existing runtime file
+     if [ ! -f "$RUNTIME_LOGFILE" -o ! -f "$RUNTIME_TESTFILE" ]; then
+         echo "FATAL: There is NO enough runtime file to resume POSIX execution"
+         exit 1
+     fi
+-    if [ ! -f "$SKIPTEST" -o ! -f "$RUNTIME_SKIPFILE" ]; then
+-	echo "FATAL: There is NO enough runtime file to resume POSIX execution"
+-        exit 1
+-    fi
+ 
+     if grep "POSIX Test Finish" $RUNTIME_LOGFILE >/dev/null 2>&1; then
+         echo "FATAL: last POSIX execution has been finished."
+@@ -256,8 +254,10 @@ else
+ fi
+ 
+     # Fliter out the skipping test case to create runtime test execution file
+-     grep -v -f $RUNTIME_SKIPFILE $RUNTIME_TESTFILE > $tmpfile 2>/dev/null
+-     mv $tmpfile $RUNTIME_TESTFILE
++    [ -f $RUNTIME_SKIPFILE ] && {
++        grep -v -f $RUNTIME_SKIPFILE $RUNTIME_TESTFILE > $tmpfile 2>/dev/null
++        mv $tmpfile $RUNTIME_TESTFILE
++    }
+ }
+ 
+ report()
+@@ -323,18 +323,14 @@ report()
+         fi
+     done < $RUNTIME_LOGFILE
+ 
+-[ "$UNKNOWN_FAILURE" -eq 1 ] && echo "Posix test has unknown failure"
++[ "$UNKNOWN_FAILURE" -eq 1 ] && echo "Warning: POSIX test has unknown failure"
+     # Create the skipping test report
+     cp $SKIPTEST  $SKIP_REPORT
+ 
+     cat <<-EOF >&2
+ 
+-Posix Test Finished
+-Posix Test Result:
+-
+-1. The report of Posix test : $POSIX_LOGFILE
+-2. The list of skipped test case : $SKIP_REPORT
+-3. The list of failed test case : $FAIL_REPORT
++POSIX Test Finished
++POSIX Test Log Path: $LOGPATH
+ 
+ 	EOF
+ }
+-- 
+1.7.11
+

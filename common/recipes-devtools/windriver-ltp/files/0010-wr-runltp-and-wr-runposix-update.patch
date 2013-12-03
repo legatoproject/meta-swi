@@ -1,0 +1,702 @@
+From d0d02135a6e84f5df688e38f94d7412d22964d70 Mon Sep 17 00:00:00 2001
+From: Jin Li <jin.li@windriver.com>
+Date: Mon, 22 Oct 2012 17:17:20 +0800
+Subject: [PATCH] wr-runltp and wr-runposix update
+
+update wr-runltp as follows:
+
+1. change -s option to run single test case instead of matching string
+2. mount /tmp to 256M block device
+3. add known fail statistic
+
+update wr-runposix as follows:
+1. Filter out the duplicated test case which is executed twice in POSIX test
+2. POSIX speculative test case failure analysis
+3. POSIX console output update
+4. Add POSIX known fail number
+---
+ .../wrLinux_posix/failtest/common                  |   4 +-
+ .../open_posix_testsuite/wrLinux_posix/wr-runposix |  74 ++++---
+ wrLinux_ltp/failtest/common                        |  18 +-
+ wrLinux_ltp/wr-runltp                              | 217 +++++++++++----------
+ 4 files changed, 171 insertions(+), 142 deletions(-)
+
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/failtest/common b/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
+index f11a48a..5d82cf7 100644
+--- a/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
++++ b/testcases/open_posix_testsuite/wrLinux_posix/failtest/common
+@@ -107,11 +107,11 @@ it returns -ENOMEM. TASK_SIZE value differs on different platforms.
+ Test Suit -- conformance/interfaces THR
+ ---------------------------------------
+ 
+-#std conformance/interfaces/pthread_key_create/speculative 5-1.run-test | Test case issue. Bug will be fixed upstream
++#std conformance/interfaces/pthread_key_create 5-1.run-test | Test case issue. Bug will be fixed upstream
+ The  pthread_key_delete()  function  shall delete a thread-specific data key
+ previously returned by pthread_key_create
+ 
+-#std conformance/interfaces/pthread_mutexattr_gettype/speculative 3-1.run-test | Not a bug. Test result depends on system implement
++#std conformance/interfaces/pthread_mutexattr_gettype 3-1.run-test | Not a bug. Test result depends on system implement
+ Test case try to initialize a pthread_mutexattr_t object with
+ pthread_mutexattr_init() and call pthread_mutexattr_gettype() with an invalid 'attr'.
+ 
+diff --git a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+index 004e33d..af71b33 100755
+--- a/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
++++ b/testcases/open_posix_testsuite/wrLinux_posix/wr-runposix
+@@ -15,6 +15,7 @@ cd `dirname $0` || \
+ }
+ export WRPOSIXROOT=${PWD}
+ export POSIXROOT=$(dirname $WRPOSIXROOT)
++binary_name=$(basename $0)
+ 
+ BASEDIR="$POSIXROOT/conformance/interfaces"
+ EXECUTION_TIME=`date +"%Y_%b_%d-%Hh_%Mm_%Ss"`
+@@ -44,6 +45,7 @@ RUN_SELECTED_CASE=0
+ RUN_RESUME_TEST=0
+ RIGHT_SUITE=0
+ UNKNOWN_FAILURE=0
++KNOWN_FAILURE=0
+ 
+ usage()
+ {
+@@ -65,6 +67,7 @@ EOF
+ # Check the input parameter
+ check()
+ {
++    echo "[$binary_name] Checking POSIX test plan...."
+     if [ "$RUN_SELECTED_SUITE" -eq 1 ];then
+         for suite in `echo $TESTSUITE_LIST |  tr ',' ' '`; do
+             ls $BASEDIR/$suite 2>/dev/null | grep "run.sh" >/dev/null 2>&1 || {
+@@ -87,6 +90,7 @@ check()
+             exit 1
+         fi
+     fi
++    echo "[$binary_name] POSIX test plan check pass"
+ }
+ 
+ # Create WRPOSIX runtime environment
+@@ -164,8 +168,9 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+         TESTSUITE_LIST="$suite_list"
+     fi
+ 
+-    # Create runtime test execution file based on test suite list
++    # Create runtime test file based on test suite list
+     if [ "$RUN_SELECTED_CASE" -eq 0 ]; then
++    echo "[$binary_name] Creating POSIX test file..."
+ 
+         for suite in $TESTSUITE_LIST; do
+             for test_script in $(find $suite -name run.sh);do
+@@ -183,6 +188,8 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+         done
+     fi
+     TESTSUITE_LIST=$(echo $TESTSUITE_LIST | sed "s/\/opt\/open_posix_testsuite\///")
++    echo "[$binary_name] POSIX test file creation pass"
++
+     # Create POSIX test plan when run selected test suite
+     echo "<<wr-runposix Test Plan>>"
+     if [ "$RUN_SELECTED_SUITE" -eq 0 ]; then
+@@ -192,6 +199,12 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+ 	[ "$RUN_SELECTED_CASE" -eq 1 ] && echo "POSIX test case list: $TESTCASE_LIST"
+     fi
+ 
++    # Filter the duplicated test case in test file.
++    sort -u $RUNTIME_TESTFILE -o $RUNTIME_TESTFILE
++
++    # Filter out the word "speculative" from test file.
++    sed -i "s/\/speculative//g" $RUNTIME_TESTFILE
++
+     # Create POSIX runtime skipped test file.
+     if [ -d $SKIP_PATH ];then
+         while read line
+@@ -208,7 +221,9 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+         done < $SKIP_PATH/common
+     fi
+ else
+-    # When it is NOT a fresh POSIX execution, use the existing runtime file
++    # When it is NOT a fresh POSIX execution, use the existing test file
++    echo "[$binary_name] To resume POSIX test execuion, use the existing test file"
++
+     if [ ! -f "$RUNTIME_LOGFILE" -o ! -f "$RUNTIME_TESTFILE" ]; then
+         echo "FATAL: There is NO enough runtime file to resume POSIX execution"
+         exit 1
+@@ -304,23 +319,10 @@ report()
+     echo "Machine Architecture: $cpu_arch"        >> $RUNTIME_LOGFILE
+     echo "Hostname: $hostname"                    >> $RUNTIME_LOGFILE
+ 
+-    if [ "$total_number" -eq 0 ]; then
+-        echo "There is no POSIX test result"
+-        echo "Please check the name of test suite and test case"
+-    else
+-        sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
+-    fi
+-
+-    # Create formatted test report when execute plenty of cases
+-    [ "$RUN_SELECTED_CASE" -eq 0 ] && {
+-        cp $RUNTIME_LOGFILE $POSIX_LOGFILE
+-        echo "POSIX Formatted Test report : $POSIX_LOGFILE"
+-    }
+ 
+     # Create formatted failed test report and detailed failure analysis
+ 
+ if [ "$total_number" -gt 0 ]; then
+-    echo "<<wr-runposix Test Analysis>>"
+     if [ "$fail_num" -gt 0 -o "$unresolved_num" -gt 0 -o "$hung_num" -gt 0 ]; then
+ 
+         cat $RUNTIME_LOGFILE | sed -n '1,2p' > $FAIL_REPORT
+@@ -345,20 +347,25 @@ if [ "$total_number" -gt 0 ]; then
+                 fail_reason=$(cat $FAIL_PATH/common | grep "^#std .*$fail_suite $fail_test" | cut -d "|" -f 2)
+                 [ -z "$fail_reason" -a -n "$KERNEL_ARCH" ] && \
+                 fail_reason=$(cat $FAIL_PATH/common | grep "^#$KERNEL_ARCH .*$fail_suite $fail_test" | cut -d "|" -f 2)
+-	        [ -z "$fail_reason" ] && UNKNOWN_FAILURE=1
++                [ -z "$fail_reason" ] && UNKNOWN_FAILURE=$(expr $UNKNOWN_FAILURE + 1)
+ 	        printf "%-60s %-20s %s \n" "$fail_suite/$fail_test" "$fail_type" "$fail_reason" >> $FAIL_REPORT
+             fi
+         done < $RUNTIME_LOGFILE
+ 
++        # Summary all failed, unresolved and hung test case
++        KNOWN_FAILURE=$(expr $fail_num + $unresolved_num + $hung_num  - $UNKNOWN_FAILURE)
++        sed -i "/Total Skip/a\Total Known Failures(Fail, Unresolved and Hung): $KNOWN_FAILURE" $RUNTIME_LOGFILE
++        sed -i "/Known Failures/a\Total Unknown Failures(Fail, Unresolved and Hung): $UNKNOWN_FAILURE" $RUNTIME_LOGFILE
++
+ 	if [ "$UNKNOWN_FAILURE" -eq 0 ]; then
+-            echo "POSIX test passed with known failure"
++            echo "[$binary_name] POSIX test passed with known failure"
+         else
+-            echo "Warning: POSIX test has unknown failure"
++            echo "[$binary_name] Warning: POSIX test has unknown failure"
+         fi
+-	echo "[Log Path] Formated failed test result: $FAIL_REPORT"
+-        echo "[Test Knowledge Base] Detailed result analysis about known failure: $FAIL_PATH"
++	echo "[Log Path] POSIX failed test report: $FAIL_REPORT"
++        echo "[Test Knowledge Base] POSIX test case known failure: $FAIL_PATH"
+     else
+-        echo "POSIX test passed"
++        echo "[$binary_name] POSIX test passed"
+     fi
+ 
+     # Create the skipped test report
+@@ -370,10 +377,24 @@ if [ "$total_number" -gt 0 ]; then
+         cat $SKIPTEST >> $SKIP_REPORT
+         echo "POSIX test has the following skipped case:"
+ 	cat $SKIPTEST | awk '{print $1 $2}'
+-	echo "[Log Path] Formated skipped test result: $SKIP_REPORT"
+-        echo "[Test Knowledge Base] Detailed skip reason: $SKIP_PATH"
++	echo "[Log Path] POSIX skipped test case report: $SKIP_REPORT"
++        echo "[Test Knowledge Base] POSIX test case skip reason: $SKIP_PATH"
+     fi
++
++    # Print out POSIX test result
++    sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
++
++else
++    echo "[$binary_name] There is no POSIX test result"
++    echo "[$binary_name] Please check the name of test suite and test case"
+ fi
++
++    # Create formatted test report when execute plenty of cases
++    [ "$RUN_SELECTED_CASE" -eq 0 ] && {
++        cp $RUNTIME_LOGFILE $POSIX_LOGFILE
++        echo "[Log Path] POSIX test log: $POSIX_LOGFILE"
++    }
++
+ }
+ 
+ main()
+@@ -389,8 +410,13 @@ main()
+     do
+         folder=$(echo  ${line} | cut -d " " -f 1)
+         testcase=$(echo  ${line} | cut -d " " -f 2)
+-        cd $POSIXROOT/$folder 
++        cd $POSIXROOT/$folder
++        suite=$(basename $folder)
++        echo "<<Test start>>"
++        echo "Test suite: $suite"
++        echo "Test case: $testcase"
+         $POSIXROOT/bin/run-tests.sh $folder $testcase
++        echo "<<Test end>>"
+     done
+     echo "-------------------------------------------" >> $RUNTIME_LOGFILE
+     echo "POSIX Test Finish" >> $RUNTIME_LOGFILE
+diff --git a/wrLinux_ltp/failtest/common b/wrLinux_ltp/failtest/common
+index 6124cff..b06e2a1 100644
+--- a/wrLinux_ltp/failtest/common
++++ b/wrLinux_ltp/failtest/common
+@@ -78,15 +78,6 @@ This test use clock type MONOTONIC to test syscall clock_nanosleep. This kind
+ of clock is not supproted in some processor architecture. In this situation,
+ clock_nanosleep will returen ENOTSUP as error numer.
+ 
+-#std get_robust_list01 | Test case issue and has been fixed upstream
+-This case tries to seteuid to a non-root user and get the futex list of init
+-process. A failure(EPERM) is expected from the system call. While in 3.2 , the
+-call behaved as per the expectation and failed, but in 3.4-rc3 the system call
+-is successful causing the failure of this case. A patch was submitted to make
+-the permission check implementation of the system call same as that of grsecurity.
+-Now, if the user has access to the /proc of the process, it has access to the
+-futext list, else not.
+-
+ #std chdir01A | Not a bug. Test fails on NFS file system
+ The test tries to make sure that the current working directory location is under
+ /tmp. But on NFS, the /tmp link to /var/volatile/tmp, and the fail is expected.
+@@ -117,9 +108,6 @@ Test 6 use gcc to build C file, but wrLinux don't support gcc.
+ Test Suit -- fs
+ ---------------------------------------
+ 
+-#std quota_remount_test01 | Not a bug. Lack of quota_check command in rootfs
+-Lack of quota_check command in rootfs
+-
+ #std iogen01 | Not a bug. NFS rootfs read or write speed limitation
+ fail is caused by read or write stress over NFS, could pass in harddisk filesystem.
+ 
+@@ -131,6 +119,12 @@ address" error
+ #std proc01 | Not a bug. Test will fail if acpi daemon stopped
+ The test case tries to read /proc/acpi/event but failed when acpi daemon stopped
+ 
++Test Suit -- dio
++---------------------------------------
++
++#std dio10 | Not a bug. Test fails when /tmp has space less than 256M
++Test case dio10 need to creat 256M file under /tmp folder.
++
+ Test Suit -- mm
+ ---------------------------------------
+ 
+diff --git a/wrLinux_ltp/wr-runltp b/wrLinux_ltp/wr-runltp
+index 713daea..ff6c82e 100755
+--- a/wrLinux_ltp/wr-runltp
++++ b/wrLinux_ltp/wr-runltp
+@@ -8,6 +8,8 @@
+ 
+ # Set up the proper environment for test environment
+ 
++TEST_RETVAL_FAIL=1
++
+ cd `dirname $0` || \
+ {
+     echo "FATAL: unable to change directory to $(dirname $0)"
+@@ -18,10 +20,9 @@ export WRLTPROOT=${PWD}
+ export LTPROOT=$(dirname $WRLTPROOT)
+ 
+ external_parameter="$*"
+-internal_parameter=""
++cmdline_skip=""
+ EXECUTION_TIME=`date +"%Y_%b_%d-%Hh_%Mm_%Ss"`
+ START_TIME=`date`
+-TEST_RETVAL_FAIL=1
+ KERNEL_VERSION=`uname -a| cut -d ' ' -f 3`
+ 
+ TMP_MOUNT_FILE=$WRLTPROOT/tmp_mount_file
+@@ -35,6 +36,7 @@ SWAPON=0
+ 
+ BLOCK_DEVICE_FILE=$WRLTPROOT/block_device_file
+ BLOCK_DEVICE_FSTYPE=ext4
++TMP_MOUNT_FSTYPE=ext4
+ LOOP_DEVICE_BLOCK=""
+ 
+ SKIP_PATH="$WRLTPROOT/skiptest"
+@@ -55,9 +57,9 @@ RUN_STRESS_CASE=0
+ SELECTED_CASE=""
+ RUNTIME_PATH="$WRLTPROOT/runtime"
+ TEST_SKIPFILE="$RUNTIME_PATH/skipfile"
+-RUNTIME_SKIPFILE="$RUNTIME_PATH/runtime.skip"
++RUNTIME_SKIPFILE=""
+ RUNTIME_TESTFILE="$RUNTIME_PATH/testfile"
+-RUNTIME_LOGFILE="$RUNTIME_PATH/runtime.log"
++RUNTIME_LOGFILE=""
+ RESUME_LOGFILE="$RUNTIME_PATH/resume.log"
+ SCREEN_LOGFILE=$RUNTIME_PATH/Ltp_console_output.log
+ 
+@@ -66,6 +68,7 @@ KERNEL_ARCH="std"
+ SCENARIO_GROUP_FILE="$WRLTPROOT/runtime/scenario_group"
+ RUN_HUGETLB_TEST=0
+ UNKNOWN_FAILURE=0
++KNOWN_FAILURE=0
+ LTP_passnum=0
+ LTP_failnum=0
+ LTP_skipnum=0
+@@ -209,6 +212,31 @@ hugetlb_setup()
+     sed -i -e 's#^\(hugeshmget03\)\(.*\)#\1 orignmi=$(cat /proc/sys/kernel/shmmni); echo 16 > /proc/sys/kernel/shmmni; \2; echo ${orignmi} > /proc/sys/kernel/shmmni#' $LTPROOT/runtest/hugetlb
+ }
+ 
++# Create an unmounted block device for syscalls test
++create_block_device()
++{
++    LOOP_DEVICE_BLOCK=$(losetup -f)
++    [[ ${LOOP_DEVICE_BLOCK} ]] || {
++        echo No free loop device
++        return 1
++    }
++
++    dd if=/dev/zero of=${BLOCK_DEVICE_FILE} bs=1M count=256 > /dev/null 2>&1 || {
++        echo "Failed to create file $BLOCK_DEVICE_FILE"
++        return 1
++    }
++
++    losetup $LOOP_DEVICE_BLOCK $BLOCK_DEVICE_FILE > /dev/null 2>&1 || {
++        echo "Fail to setup loop device $LOOP_DEVICE_BLOCK"
++        return 1
++    }
++
++    mkfs.${BLOCK_DEVICE_FSTYPE} ${LOOP_DEVICE_BLOCK} > /dev/null 2>&1 || {
++        echo Failed to format ${LOOP_DEVICE_BLOCK} into ${BLOCK_DEVICE_FSTYPE}
++        return 1
++    }
++    return 0
++}
+ 
+ # Setup LTP runtime environment
+ setup()
+@@ -221,6 +249,15 @@ setup()
+     [ -r /proc/config.gz ] && cp /proc/config.gz $RUNTIME_PATH && gunzip -f $RUNTIME_PATH/config.gz
+     [ -r /boot/config-$KERNEL_VERSION ] && cp /boot/config-$KERNEL_VERSION $RUNTIME_PATH/config
+ 
++# Create unmounted block device
++if [ -z "$LOOP_DEVICE_BLOCK" ]; then
++    if losetup -a | grep -q "$BLOCK_DEVICE_FILE"; then
++        LOOP_DEVICE_BLOCK=$(losetup -a | grep "$BLOCK_DEVICE_FILE" | cut -d " " -f 1 | tr -d ":")
++    else
++        create_block_device
++    fi
++fi
++
+ # Create a swap partition when the total memory is less than 64M.
+ 
+     MemTotal=`cat /proc/meminfo | grep MemTotal | awk '{print $2}'`
+@@ -246,6 +283,9 @@ setup()
+     uname -r | grep -q "preempt_rt$" && KERNEL_ARCH=preempt_rt
+     uname -r | grep -q "cgl$" && KERNEL_ARCH=cgl
+ 
++# Set runtime log file
++[ -z "$RUNTIME_LOGFILE" ] && RUNTIME_LOGFILE="$RUNTIME_PATH/runtime.log"
++
+ # Create scenario group file
+ 
+ # When it is a fresh LTP execution, create scenario group file based on
+@@ -257,7 +297,6 @@ setup()
+     if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+ 
+         # Before start a fresh LTP execution, delete the obsolete runtime file
+-        [ -f "$RUNTIME_SKIPFILE" ] && rm $RUNTIME_SKIPFILE
+         [ -f "$RUNTIME_TESTFILE" ] && rm $RUNTIME_TESTFILE
+         [ -f "$RUNTIME_LOGFILE" ] && rm $RUNTIME_LOGFILE
+         [ -f "$SCENARIO_GROUP_FILE" ] && rm $SCENARIO_GROUP_FILE
+@@ -265,16 +304,13 @@ setup()
+         [ -f "$RESUME_LOGFILE" ] && rm $RESUME_LOGFILE
+ 
+         # Check kernel option before execute some scenario group
+-        if [ "$RUN_SELECTED_GROUP" -eq 1 ]; then
+             echo $SCENARIO_GROUP_LIST | grep -q "numa" && {
+ 		grep -q "CONFIG_NUMA=y" $RUNTIME_PATH/config || {
+                     echo "FATAL: please open proper kernel option for numa test"
+                     exit $TEST_RETVAL_FAIL
+ 		}
+             }
+-        fi
+ 
+-        if [ "$RUN_SELECTED_GROUP" -eq 1 ]; then
+             echo $SCENARIO_GROUP_LIST | grep -q "hugetlb" && {
+ 		grep -q "CONFIG_HUGETLBFS=y" $RUNTIME_PATH/config || {
+                     echo "FATAL: please open proper kernel option for hugetlb test"
+@@ -282,25 +318,21 @@ setup()
+ 		}
+ 		RUN_HUGETLB_TEST=1
+             }
+-        fi
+ 
+-        if [ "$RUN_SELECTED_GROUP" -eq 1 ]; then
+             echo $SCENARIO_GROUP_LIST | grep -q "controllers" && {
+ 		grep -q "CONFIG_CGROUPS=y" $RUNTIME_PATH/config || {
+                     echo "FATAL: please open proper kernel option for controllers test"
+                     exit $TEST_RETVAL_FAIL
+ 		}
+             }
+-        fi
+ 
+-        if [ "$RUN_SELECTED_GROUP" -eq 1 ]; then
+             echo $SCENARIO_GROUP_LIST | grep -q "cpuhotplug" && {
+ 		grep -q "CONFIG_HOTPLUG_CPU=y" $RUNTIME_PATH/config || {
+                     echo "FATAL: please open proper kernel option for cpuhotplug test"
+                     exit $TEST_RETVAL_FAIL
+ 		}
+             }
+-        fi
++
+         [ "$RUN_SELECTED_CASE" -eq 0 ] && echo "$SCENARIO_GROUP_LIST" > $SCENARIO_GROUP_FILE
+ 
+     else
+@@ -361,25 +393,13 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+         echo "$SELECTED_CASE " > $RUNTIME_TESTFILE
+     fi
+ 
+-
+-    # Create LTP skipped case list based on cpu arch
+-    while read line
+-    do
+-        if echo $line | grep -E -q "^#std|^#$KERNEL_ARCH"; then
+-            testcase=$(echo $line | awk '{print $2}')
+-            skip_reason=$(echo $line | cut -d "|" -f 2)
+-            if grep -q "^$testcase[[:space:]]" $RUNTIME_TESTFILE; then
+-                printf "%-50s %-20s %s \n" "$testcase" SKIP "$skip_reason" >> $TEST_SKIPFILE
+-                echo "$testcase" >> $RUNTIME_SKIPFILE
+-            fi
+-        fi
+-    done < $SKIP_PATH/$CPU_ARCH
+-
+-    # Create LTP skipped case list of stress test
+-    if [ "$RUN_STRESS_CASE" -eq 0 ]; then
++    if [ -z "$RUNTIME_SKIPFILE" ]; then
++        # Create LTP skipped case list based on cpu arch
++        RUNTIME_SKIPFILE="$RUNTIME_PATH/runtime.skip"
++        [ -f "$RUNTIME_SKIPFILE" ] && rm $RUNTIME_SKIPFILE
+         while read line
+         do
+-            if echo $line | grep -E -q "^#std" ; then
++            if echo $line | grep -E -q "^#std|^#$KERNEL_ARCH"; then
+                 testcase=$(echo $line | awk '{print $2}')
+                 skip_reason=$(echo $line | cut -d "|" -f 2)
+                 if grep -q "^$testcase[[:space:]]" $RUNTIME_TESTFILE; then
+@@ -387,9 +407,23 @@ if [ "$RUN_RESUME_TEST" -eq 0 ]; then
+                     echo "$testcase" >> $RUNTIME_SKIPFILE
+                 fi
+             fi
+-        done < $STRESS_CASE
++        done < $SKIP_PATH/$CPU_ARCH
++
++        # Create LTP skipped case list of stress test
++        if [ "$RUN_STRESS_CASE" -eq 0 ]; then
++            while read line
++            do
++                if echo $line | grep -E -q "^#std" ; then
++                    testcase=$(echo $line | awk '{print $2}')
++                    skip_reason=$(echo $line | cut -d "|" -f 2)
++                    if grep -q "^$testcase[[:space:]]" $RUNTIME_TESTFILE; then
++                        printf "%-50s %-20s %s \n" "$testcase" SKIP "$skip_reason" >> $TEST_SKIPFILE
++                        echo "$testcase" >> $RUNTIME_SKIPFILE
++                    fi
++                fi
++            done < $STRESS_CASE
++        fi
+     fi
+-
+ else
+ 
+     if [ ! -f "$RUNTIME_TESTFILE" -o ! -f "$RUNTIME_LOGFILE" ]; then
+@@ -449,35 +483,8 @@ else
+ 
+ fi
+ 
+-[ -f $RUNTIME_SKIPFILE ] && internal_parameter="$internal_parameter -S $RUNTIME_SKIPFILE"
+-
+-}
+-
+-
+-# Create an unmounted block device for syscalls test
+-create_block_device()
+-{
+-    LOOP_DEVICE_BLOCK=$(losetup -f)
+-    [[ ${LOOP_DEVICE_BLOCK} ]] || {
+-        echo No free loop device
+-        return 1
+-    }
+-
+-    dd if=/dev/zero of=${BLOCK_DEVICE_FILE} bs=1M count=256 > /dev/null 2>&1 || {
+-        echo "Failed to create file $BLOCK_DEVICE_FILE"
+-        return 1
+-    }
+-
+-    losetup $LOOP_DEVICE_BLOCK $BLOCK_DEVICE_FILE > /dev/null 2>&1 || {
+-        echo "Fail to setup loop device $LOOP_DEVICE_BLOCK"
+-        return 1
+-    }
++[ -f $RUNTIME_SKIPFILE ] && cmdline_skip="-S $RUNTIME_SKIPFILE"
+ 
+-    mkfs.${BLOCK_DEVICE_FSTYPE} ${LOOP_DEVICE_BLOCK} > /dev/null 2>&1 || {
+-        echo Failed to format ${LOOP_DEVICE_BLOCK} into ${BLOCK_DEVICE_FSTYPE}
+-        return 1
+-    }
+-    return 0
+ }
+ 
+ # mount ext4 file system on /tmp over loop device on NFS
+@@ -496,7 +503,7 @@ mount_tmp()
+     [[ $(df -P -T /tmp | tail -1 | awk '{print $2}' ) =~ ext(3|4) ]] || {
+ 
+         echo "mounting ext4 file system on /tmp over loop device for LTP test..."
+-        dd if=/dev/zero of=$TMP_MOUNT_FILE bs=1M count=1024 > /dev/null 2>&1 || {
++        dd if=/dev/zero of=$TMP_MOUNT_FILE bs=1M count=256 > /dev/null 2>&1 || {
+             echo "Failed to create file $TMP_MOUNT_FILE"
+             exit $TEST_RETVAL_FAIL
+         }
+@@ -506,12 +513,12 @@ mount_tmp()
+             exit $TEST_RETVAL_FAIL
+         }
+ 
+-        mkfs.${BLOCK_DEVICE_FSTYPE} -m 0 $LOOP_DEVICE_TMP >/dev/null 2>&1 || {
+-            echo Failed to format $LOOP_DEVICE_TMP into $BLOCK_DEVICE_FSTYPE
++        mkfs.${TMP_MOUNT_FSTYPE} -m 0 $LOOP_DEVICE_TMP >/dev/null 2>&1 || {
++            echo Failed to format $LOOP_DEVICE_TMP into $TMP_MOUNT_FSTYPE
+             exit $TEST_RETVAL_FAIL
+         }
+ 
+-        mount -t $BLOCK_DEVICE_FSTYPE -o mand $LOOP_DEVICE_TMP /tmp >/dev/null 2>&1 || {
++        mount -t $TMP_MOUNT_FSTYPE -o mand $LOOP_DEVICE_TMP /tmp >/dev/null 2>&1 || {
+             echo "Failed to mount $LOOP_DEVICE_TMP to /tmp"
+             exit $TEST_RETVAL_FAIL
+         }
+@@ -530,9 +537,15 @@ mount_tmp()
+ 
+ main()
+ {
+-    
+-    $LTPROOT/runltp -l $RUNTIME_LOGFILE -f $SCENARIO_GROUP_LIST \
+-    $external_parameter $internal_parameter -p | tee $SCREEN_LOGFILE
++    if [ "$RUN_SELECTED_CASE" -eq 0 ]; then
++        $LTPROOT/runltp -l $RUNTIME_LOGFILE -f $SCENARIO_GROUP_LIST \
++        -b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE \
++        $external_parameter $cmdline_skip -p | tee $SCREEN_LOGFILE
++    else
++        $LTPROOT/runltp -l $RUNTIME_LOGFILE -f $SCENARIO_GROUP_LIST \
++        -b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE -s "^$SELECTED_CASE " \
++        $external_parameter $cmdline_skip -p | tee $SCREEN_LOGFILE
++    fi
+ 
+     # In resumed LTP test, join runtime log and resume log together
+     if [ "$RUN_RESUME_TEST" -eq 1 ]; then
+@@ -563,23 +576,13 @@ report()
+         LTP_testnum=$(expr $LTP_passnum + $LTP_skipnum + $LTP_failnum)
+         sed -i "s/^Total Tests.*/Total Tests: $LTP_testnum/" $RUNTIME_LOGFILE
+         sed -i "s/^Total Failures.*/Total Failures: $LTP_failnum/" $RUNTIME_LOGFILE
+-
+-        sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
+-
+-        [ "$RUN_SELECTED_CASE" -eq 0 ] && {
+-            cp $RUNTIME_LOGFILE $LOGFILE
+-            echo "[Log Path] LTP formatted test report : $LOGFILE"
+-        }
+     else
+         echo "There is no LTP test result"
+     fi
+-    echo "[Log Path] LTP test console output log: $SCREEN_LOGFILE"
+ 
+ 
+ # Create formatted failed test report and detailed failure analysis
+ 
+-    echo "<<wr-runltp Test Analysis>>"
+-
+     if [[ $LTP_testnum -gt 0 && $LTP_failnum -gt 0 ]]; then
+         sed -n '1,4p' $RUNTIME_LOGFILE | sed -e '/Testcase/ s/$/\tFail Reason/' \
+                                          -e '4 s/$/\t----------/' > $FAIL_REPORT
+@@ -593,22 +596,37 @@ report()
+             failreason=$(grep "^#std[[:space:]]$test[[:space:]]" $FAIL_PATH/$CPU_ARCH | cut -d "|" -f 2)
+             [ -z "$failreason" -a -e "$FAIL_PATH/$CPU_ARCH" -a "$KERNEL_ARCH" != "std" ] && \
+             failreason=$(grep "^#$KERNEL_ARCH[[:space:]]$test[[:space:]]" $FAIL_PATH/$CPU_ARCH | cut -d "|" -f 2)
+-            [ -z "$failreason" ] && UNKNOWN_FAILURE=1
++            [ -z "$failreason" ] && UNKNOWN_FAILURE=$(expr $UNKNOWN_FAILURE + 1)
+             grep "FAIL" $RUNTIME_LOGFILE | sed -n "/^$test / s/$/\t\t$failreason/p" >> $FAIL_REPORT
+          done
+ 
++        KNOWN_FAILURE=$(expr $LTP_failnum - $UNKNOWN_FAILURE)
++        sed -i "/Total Failures/a\Known Failures: $KNOWN_FAILURE" $RUNTIME_LOGFILE
++        sed -i "/Known Failures/a\Unknown Failures: $UNKNOWN_FAILURE" $RUNTIME_LOGFILE
++
+         # Tm-Fast use this console output to decide whether LTP test passes
+         if [ "$UNKNOWN_FAILURE" -eq 0 ]; then
+             echo "LTP test passed with known failure"
+         else
+-            echo "Warning : LTP test has unknown failure"
++            echo "Warning : LTP test failed with unknown failure"
+         fi
+-	echo "[Log Path] Formated failed test result: $FAIL_REPORT"
+-        echo "[Test Knowledge Base] Detailed result analysis about known failure: $FAIL_PATH"
++	echo "[Log Path] LTP failed test report: $FAIL_REPORT"
++        echo "[Test Knowledge Base] LTP test case known failure : $FAIL_PATH"
+     elif [[ $LTP_testnum -gt 0 ]]; then
+         echo "LTP test passed"
+     fi
+ 
++    if grep -q "Total Tests" $RUNTIME_LOGFILE; then
++        [ "$RUN_SELECTED_CASE" -eq 0 ] && {
++            cp $RUNTIME_LOGFILE $LOGFILE
++            echo "[Log Path] LTP test result : $LOGFILE"
++        }
++        echo "[Log Path] LTP test console output log: $SCREEN_LOGFILE"
++
++        # Print test result on console
++        sed -n '/Total Tests/,$'p $RUNTIME_LOGFILE
++    fi
++
+ # Creat skipped test report and detailed skip reason
+     if grep "SKIP" $TEST_SKIPFILE > /dev/null 2>&1 ; then
+         echo "LTP Test Start Time: $START_TIME" > $SKIP_REPORT
+@@ -616,8 +634,8 @@ report()
+         printf "%-50s %-21s %s \n" Testcase Type "Skip Reason" >> $SKIP_REPORT
+         printf "%-50s %-21s %s \n" -------- ----  -----------  >> $SKIP_REPORT
+         cat $TEST_SKIPFILE >> $SKIP_REPORT
+-        echo "[Log Path] Formated skipped test result: $SKIP_REPORT"
+-        echo "[Test Knowledge Base] Detailed skipped reason: $SKIP_PATH"
++        echo "[Log Path] LTP skipped test case report: $SKIP_REPORT"
++        echo "[Test Knowledge Base] LTP test case skip reason: $SKIP_PATH"
+     fi
+ 
+ }
+@@ -637,46 +655,37 @@ cleanup()
+         rm $SWAP_FILE_REPOSITORY >/dev/null 2>&1
+         losetup -d $LOOP_DEVICE_SWAP >/dev/null 2>&1
+     }
+-
+ }
+ 
+ while getopts hRPa:c:C:d:D:f:F:ehi:K:g:l:m:M:Nno:pqr:s:S:t:T:w:x:b:B: arg
+     do  case $arg in
+         f)  RUN_SELECTED_GROUP=1
+-            SCENARIO_GROUP_LIST=$OPTARG
+-            external_parameter=$(echo "$external_parameter" | sed "s/-f $OPTARG//g");;
++            SCENARIO_GROUP_LIST=$OPTARG;;
+         h)  usage;;
+-
++        s)  RUN_SELECTED_CASE=1
++            SELECTED_CASE=$OPTARG
++            external_parameter=$(echo $external_parameter | sed "s/-s $OPTARG//g");;
++        b)  LOOP_DEVICE_BLOCK=$OPTARG;;
++        B)  BLOCK_DEVICE_FSTYPE=$OPTARG;;
++        S)  RUNTIME_SKIPFILE=$OPTARG;;
++        l)  RUNTIME_LOGFILE=$OPTARG;;
+         R)  RUN_RESUME_TEST=1
+             external_parameter=$(echo $external_parameter | sed "s/-R//g");;
+-        s)  RUN_SELECTED_CASE=1
+-            SELECTED_CASE=$OPTARG;;
+         P)  RUN_STRESS_CASE=1
+             external_parameter=$(echo $external_parameter | sed "s/-P//g");;
+-
+-b|B|S|l|p)  echo "The runltp option $arg has been used internally by wr-runltp"
+-            exit $TEST_RETVAL_FAIL;;
+         esac
+     done
+ 
+ env_check
++
+ mount_tmp
+-setup
+ 
+-# Create unmounted block device
+-if losetup -a | grep -q "$BLOCK_DEVICE_FILE"; then
+-    LOOP_DEVICE_BLOCK=$(losetup -a | grep "$BLOCK_DEVICE_FILE" | cut -d " " -f 1 | tr -d ":")
+-    internal_parameter="$internal_parameter -b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE"
+-else
+-    if create_block_device; then
+-        internal_parameter="$internal_parameter -b $LOOP_DEVICE_BLOCK -B $BLOCK_DEVICE_FSTYPE"
+-    else
+-        echo "Warning: Execute LTP without unmounted block device"
+-    fi
+-fi
++setup
+ 
+ main
++
+ report
++
+ [ "$RUN_SELECTED_CASE" -eq 0 ] && cleanup
+ [ "$UNKNOWN_FAILURE" -eq 1  ] && exit $TEST_RETVAL_FAIL
+ exit 0
+-- 
+1.7.11
+
