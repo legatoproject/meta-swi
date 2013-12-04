@@ -34,35 +34,43 @@ static uint8_t mode;
 static uint8_t bits = 8;
 static uint32_t speed = 500000;
 static uint16_t delay;
+static uint8_t length=32;
+static uint8_t pattern[16] = {0xA0,0xA1,0xA2,0xA3,0xA4,0xA5,0xA6,0xA7,
+							  0xA8,0xA9,0xAA,0xAB,0xAC,0xAD,0xAE,0xEF};
+
 
 static void transfer(int fd)
 {
-	int ret;
-	uint8_t tx[] = {
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0x40, 0x00, 0x00, 0x00, 0x00, 0x95,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0xDE, 0xAD, 0xBE, 0xEF, 0xBA, 0xAD,
-		0xF0, 0x0D,
-	};
-	uint8_t rx[ARRAY_SIZE(tx)] = {0, };
+	int i,ret;
+	uint8_t *tx;
+	uint8_t *rx;
 	struct spi_ioc_transfer tr = {
-		.tx_buf = (unsigned long)tx,
-		.rx_buf = (unsigned long)rx,
-		.len = ARRAY_SIZE(tx),
+		.tx_buf = NULL,
+		.rx_buf = NULL,
+		.len = length,
 		.delay_usecs = delay,
 		.speed_hz = speed,
 		.bits_per_word = bits,
 	};
 
+	/* create tx & rx buffers */
+	tx=calloc(sizeof(uint8_t),length);
+	rx=calloc(sizeof(uint8_t),length);
+	for (i=0;i<length-1;i+=ARRAY_SIZE(pattern))
+		if ((i+ARRAY_SIZE(pattern)) > length)
+			memcpy(tx+i,pattern,length-i);
+		else
+			memcpy(tx+i,pattern,ARRAY_SIZE(pattern));
+
+	tr.tx_buf=(unsigned long)tx;
+	tr.rx_buf=(unsigned long)rx;
+	
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 	if (ret < 1)
 		pabort("can't send spi message");
 
-	for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
-		if (!(ret % 6))
+	for (ret = 0; ret < length; ret++) {
+		if (!(ret % 8))
 			puts("");
 		printf("%.2X ", rx[ret]);
 	}
@@ -71,11 +79,12 @@ static void transfer(int fd)
 
 static void print_usage(const char *prog)
 {
-	printf("Usage: %s [-DsbdlHOLC3]\n", prog);
+	printf("Usage: %s [-DsbdPlHOLC3]\n", prog);
 	puts("  -D --device   device to use (default /dev/spidev1.1)\n"
 	     "  -s --speed    max speed (Hz)\n"
 	     "  -d --delay    delay (usec)\n"
 	     "  -b --bpw      bits per word \n"
+		 "  -P --lenght   data pattern length to sent (default 32)\n"
 	     "  -l --loop     loopback\n"
 	     "  -H --cpha     clock phase\n"
 	     "  -O --cpol     clock polarity\n"
@@ -92,6 +101,7 @@ static void parse_opts(int argc, char *argv[])
 			{ "device",  1, 0, 'D' },
 			{ "speed",   1, 0, 's' },
 			{ "delay",   1, 0, 'd' },
+			{ "lenght",  1, 0, 'P' },
 			{ "bpw",     1, 0, 'b' },
 			{ "loop",    0, 0, 'l' },
 			{ "cpha",    0, 0, 'H' },
@@ -105,7 +115,7 @@ static void parse_opts(int argc, char *argv[])
 		};
 		int c;
 
-		c = getopt_long(argc, argv, "D:s:d:b:lHOLC3NR", lopts, NULL);
+		c = getopt_long(argc, argv, "D:s:d:b:P:lHOLC3NR", lopts, NULL);
 
 		if (c == -1)
 			break;
@@ -119,6 +129,9 @@ static void parse_opts(int argc, char *argv[])
 			break;
 		case 'd':
 			delay = atoi(optarg);
+			break;
+		case 'P':
+			length = atoi(optarg);
 			break;
 		case 'b':
 			bits = atoi(optarg);

@@ -1,5 +1,5 @@
 DESCRIPTION = "userspace tests"
-LIC_FILES_CHKSUM = "file://spidev_test.c;md5=5d1188f6d90e425ad7557cd14d35dfc9"
+LIC_FILES_CHKSUM = "file://spidev_test.c;beginline=1;endline=12;md5=5f6a6ca88bef579b2b82d58218f9ee3a"
 LICENSE = "GPLv2+"
 
 inherit autotools
