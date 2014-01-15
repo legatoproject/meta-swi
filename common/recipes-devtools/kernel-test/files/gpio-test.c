@@ -24,7 +24,9 @@
 #ifdef CONFIG_ARCH_YKEM
 #include <mach/cpu_it_ctrl.const.h>
 
-static int gpio_num = 80;
+static int gpio_num = 94;
+static int gpio_peer_num = 95;
+static int gpio_nnirq = 0;
 #else 
 static int gpio_num = 26;
 #endif
@@ -39,7 +41,12 @@ struct gpio_context {
 
 static irqreturn_t gpio_test_handler(int irq, void *data)
 {
-	printk("%s\n", __func__);
+	extern int ykem_gpio_set_dataout( int gpio, int value );
+	if( irq_trigger & 0x0C )
+		ykem_gpio_set_dataout( gpio_peer_num, irq_trigger & 0x8 ? 1 : 0 );
+
+	gpio_nnirq++;
+	printk("irq=%d: %s, irq_trigger=%d gpio=%d nnirq=%d\n", irq, __func__, irq_trigger, gpio_num, gpio_nnirq);
 	return IRQ_HANDLED;
 }
 
@@ -51,8 +58,8 @@ static int gpio_test_install_nr_gpio(struct platform_device *pdev)
 	dev_dbg(&pdev->dev, "gpio_test_install_nr_gpio\n");
 
 #ifdef CONFIG_ARCH_YKEM
-	*(volatile u32 *)(IO_ADDRESS(0x70290324)) = gpio_num;
-	nr_irq = CPU_IT_CTRL_IT_ID_GPIO_INTR01;
+	*(volatile u32 *)(IO_ADDRESS(0x70290328)) = gpio_num;
+	nr_irq = CPU_IT_CTRL_IT_ID_GPIO_INTR02;
 #else
 	nr_irq = MSM_GPIO_TO_INT(gpio_num);
 #endif
@@ -98,7 +105,7 @@ static int gpio_test_probe(struct platform_device *pdev)
 int gpio_test_remove(struct platform_device *pdev)
 {
 #ifdef CONFIG_ARCH_YKEM
-	free_irq(CPU_IT_CTRL_IT_ID_GPIO_INTR01, NULL);
+	free_irq(CPU_IT_CTRL_IT_ID_GPIO_INTR02, NULL);
 #else
 	free_irq(MSM_GPIO_TO_INT(gpio_num), NULL);
 #endif
@@ -139,6 +146,8 @@ module_exit(gpio_test_exit);
 
 module_param(gpio_num, int, 0644);
 MODULE_PARM_DESC(gpio_num, "gpio number");
+module_param(gpio_peer_num, int, 0644);
+MODULE_PARM_DESC(gpio_peer_num, "gpio peer number");
 module_param(irq_trigger, int, 0644);
 MODULE_PARM_DESC(irq_trigger, "irq trigger method. 1 - RISING, 2 - FALLING, 4 - HIGH, 8 -LOW");
 MODULE_LICENSE("GPL v2");
