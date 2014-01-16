@@ -1,0 +1,104 @@
+This Readme explain how to install FSB bootloader: bootfsbconfig.GPIO.bin 
+which configure the following PINs as GPIOs: 94, 95, 96 & 97.
+
+
+!!!! Please read carefully the INSTALL file to work with the installation of the new
+!!!!   Telecom firmware.
+   
+Flash addresses :
+   FSB    : bootfsbconfig.bin      - 0x40000000 .. 0x4003ffff [NEVER USE !!!!!]
+   ! Following addresses are not fully fixed and will be subject to change !
+   SWIR   : Reserved for SWIR      - 0x40040000 .. 0x40ffffff
+   JFFS2  : jffs2 partition        - 0x41000000 .. 0x417fffff  Linux /dev/mtd0  U-Boot nor0,0
+   Linux  : uImage.ASIX            - 0x41800000 .. 0x41dfffff  Linux /dev/mtd1  U-Boot nor0,1
+   U-Boot : u-boot.bin             - 0x41e00000 .. 0x41efffff  Linux /dev/mtd2  U-Boot nor0,2
+   SWIR   : Reserved for SWIR      - 0x41f00000 .. 0x41fdffff
+   U-Boot : Environment            - 0x41fe0000 .. 0x41ffffff
+
+
+DDR/SDRAM addresses :
+   ! Following addresses are not fully fixed and will be subject to change !
+   U-Boot : stack/variables        - 0x23e00000 .. 0x23efffff
+   U-Boot : code                   - 0x23f00000 .. 0x23ffffff
+   Linux  :                        - 0x21008000 .. 0x23ffffff
+
+  
+  Install the bootfsbconfig.GPIO.bin n the tftp server (in the example, we assume the
+  absolute path /srv/tftp).
+  Switch on the module, and under U-Boot do the following:
+
+  - Flash the provided bootfsb.flash image:
+
+     protect off 0x40000000 0x4003ffff
+
+     erase 0x40000000 0x4003ffff
+
+     tftp 0x22000000 /srv/tftp/bootfsbconfig.GPIO.bin
+
+     cp.b 0x22000000 0x40000000 0x40000
+
+  - Now switch off the board.
+
+  - At restart the new FSB will be launched and so will configure the GPIO at 1Mhz
+    correctly.
+
+LOG OF THE INSTALLATION:
+U-Boot 1.1.6 (Apr 30 2013 - 15:08:56)
+
+DRAM:   0 kB
+Failed to send BSP_ICC_SYS_CMD_FMS
+Failed to send BSP_ICC_SYS_CMD_FMS
+Failed to send BSP_ICC_SYS_CMD_FMS
+Failed to send BSP_ICC_SYS_CMD_FMS
+Failed to send BSP_ICC_SYS_CMD_FMS
+Failed to send BSP_ICC_SYS_CMD_FMS
+Failed to send BSP_ICC_SYS_CMD_FMS
+Failed to send BSP_ICC_SYS_CMD_FMS
+Failed to send BSP_ICC_SYS_CMD_FMS
+Failed to send BSP_ICC_SYS_CMD_FMS
+## Unknown FLASH on Bank 0 - Size = 0x00000000 = 0 MB
+Flash:  0 kB
+In:    serial
+Out:   serial
+Err:   serial
+Net:   ax88796c
+Hit any key to stop autoboot:  0 
+Ykem # CPU 1 is connected and ready
+Flash: 32 MB
+
+Ykem # protect off 0x40000000 0x4003ffff
+.. done
+Un-Protected 2 sectors
+Ykem # erase 0x40000000 0x4003ffff
+
+.. done
+Erased 2 sectors
+Ykem # tftp 0x22000000 /srv/tftp/bootfsbconfig.GPIO.bin
+Using ax88796c device
+TFTP from server 192.168.1.1; our IP address is 192.168.1.10
+Filename '/srv/tftp/bootfsbconfig.GPIO.bin'.
+Load address: 0x22000000
+Loading: ####################################################
+done
+Bytes transferred = 262144 (40000 hex)
+Ykem # cp.b 0x22000000 0x40000000 0x40000
+Copy to Flash... done
+Ykem # md 40000100
+40000100: 00004848 702903ac 00018733 00029266    HH....)p3...f...
+40000110: 00000801 78001010 702903f0 20323332    .......x..)p232 
+40000120: 33313131 31203331 31323a32 20202020    111313 12:21    
+40000130: 20202020 00202020 8f544c9e 20363133           ..LT.316 
+40000140: 33313131 31203331 31323a32 20202020    111313 12:21    
+40000150: 20202020 00202020 64475e08 ffffffff           ..^Gd....
+40000160: ffffffff ffffffff ffffffff ffffffff    ................
+40000170: ffffffff ffffffff ffffffff ffffffff    ................
+40000180: ffffffff ffffffff ffffffff ffffffff    ................
+40000190: ffffffff ffffffff ffffffff ffffffff    ................
+400001a0: ffffffff ffffffff ffffffff ffffffff    ................
+400001b0: ffffffff ffffffff ffffffff ffffffff    ................
+400001c0: ffffffff ffffffff ffffffff ffffffff    ................
+400001d0: ffffffff ffffffff ffffffff ffffffff    ................
+400001e0: ffffffff ffffffff ffffffff ffffffff    ................
+400001f0: ffffffff ffffffff ffffffff ffffffff    ................
+Ykem # 
+
