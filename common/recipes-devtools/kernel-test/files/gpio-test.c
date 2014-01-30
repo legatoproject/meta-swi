@@ -41,12 +41,16 @@ struct gpio_context {
 
 static irqreturn_t gpio_test_handler(int irq, void *data)
 {
+#ifdef CONFIG_ARCH_YKEM
 	extern int ykem_gpio_set_dataout( int gpio, int value );
 	if( irq_trigger & 0x0C )
 		ykem_gpio_set_dataout( gpio_peer_num, irq_trigger & 0x8 ? 1 : 0 );
 
 	gpio_nnirq++;
 	printk("irq=%d: %s, irq_trigger=%d gpio=%d nnirq=%d\n", irq, __func__, irq_trigger, gpio_num, gpio_nnirq);
+#else
+	printk("%s\n", __func__);
+#endif	
 	return IRQ_HANDLED;
 }
 
@@ -146,8 +150,10 @@ module_exit(gpio_test_exit);
 
 module_param(gpio_num, int, 0644);
 MODULE_PARM_DESC(gpio_num, "gpio number");
+#ifdef CONFIG_ARCH_YKEM
 module_param(gpio_peer_num, int, 0644);
 MODULE_PARM_DESC(gpio_peer_num, "gpio peer number");
+#endif
 module_param(irq_trigger, int, 0644);
 MODULE_PARM_DESC(irq_trigger, "irq trigger method. 1 - RISING, 2 - FALLING, 4 - HIGH, 8 -LOW");
 MODULE_LICENSE("GPL v2");
