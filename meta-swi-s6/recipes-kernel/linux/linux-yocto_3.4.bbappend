@@ -10,5 +10,5 @@ SRC_URI = "git://${KSRC_linux_yocto_3_4};protocol=file;branch=${KBRANCH},meta;na
 
 # uncomment and replace these SRCREVs with the real commit ids once you've had
 # the appropriate changes committed to the upstream linux-yocto repo
-SRCREV_machine_pn-linux-yocto_swi-s6 ?= "f48bcd68e88138fdc836550d01f0fc966d83827d"
+SRCREV_machine_pn-linux-yocto_swi-s6 ?= "854fb218c97f4b954751422e2eee5a50b19a577c"
 SRCREV_meta_pn-linux-yocto_swi-s6 ?= "919d77ed32aeb051a37231aee1ff727c941d1b44"
