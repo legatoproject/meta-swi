@@ -45,7 +45,7 @@ int main(int ac, char **av)
 		ev = (struct input_event *)buf;
 
 		if (ev->type == EV_PWR) {
-			if (ev->value == 0x1b1b) {
+			if ((ev->value & 0x1f1f) == 0x1b1b) {
 				gfinished = 1;
 				printf("key(2,2) Pressed, Keypad "\
 						"testing is terminated \n");
