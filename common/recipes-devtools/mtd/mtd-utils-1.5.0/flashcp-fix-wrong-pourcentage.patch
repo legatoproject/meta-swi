@@ -1,0 +1,28 @@
+From 919b3a1eee10698896e6c98752bc2ae9c86e37d1 Mon Sep 17 00:00:00 2001
+From: Herve Patriarche <herve.patriarche@windriver.com>
+Date: Mon, 17 Feb 2014 14:21:52 +0100
+Subject: flashcp: fix wrong pourcentage
+
+Signed-off-by: Herve Patriarche <herve.patriarche@windriver.com>
+---
+ flashcp.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/flashcp.c b/flashcp.c
+index d58c81b..1f32cf4 100644
+--- a/flashcp.c
++++ b/flashcp.c
+@@ -59,8 +59,8 @@ typedef int bool;
+ #define DEBUG(fmt,args...)
+ #endif
+ 
+-#define KB(x) ((x) / 1024)
+-#define PERCENTAGE(x,total) (((x) * 100) / (total))
++#define KB(x) (((unsigned long) x) / 1024)
++#define PERCENTAGE(x,total) (((x) * 100) / ((unsigned long) total))
+ 
+ /* size of read/write buffer */
+ #define BUFSIZE (10 * 1024)
+-- 
+1.7.9.5
+
