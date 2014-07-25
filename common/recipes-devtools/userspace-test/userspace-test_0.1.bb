@@ -45,3 +45,6 @@ do_install () {
 
 FILES_${PN} += "/opt/userspace-test/*" 
 FILES_${PN}_dbg += "/opt/userspace-test/.debug" 
+
+INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
+INHIBIT_PACKAGE_STRIP = "1"
