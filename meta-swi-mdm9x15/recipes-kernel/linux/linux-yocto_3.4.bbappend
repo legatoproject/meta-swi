@@ -1,6 +1,6 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-LINUX_VERSION ?= "3.4.91"
+LINUX_VERSION = "3.4.91"
 
 PR := "${PR}.1"
 
