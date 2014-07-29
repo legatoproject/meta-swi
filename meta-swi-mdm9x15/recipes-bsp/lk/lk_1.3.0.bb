@@ -17,14 +17,16 @@ EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' ${MY_TARGET}"
 
 do_install() {
 	install	-d ${D}/boot
-	install build-${MY_TARGET}/appsboot.{mbn,raw} ${D}/boot
+	install ${S}/build-${MY_TARGET}/appsboot.mbn ${D}/boot
+	install ${S}/build-${MY_TARGET}/appsboot.raw ${D}/boot
 }
 
 FILES_${PN} = "/boot"
 
 do_deploy () {
-        install -d ${DEPLOY_DIR_IMAGE}
-        install build-${MY_TARGET}/appsboot.{mbn,raw} ${DEPLOY_DIR_IMAGE}
+	install -d ${DEPLOY_DIR_IMAGE}
+	install ${S}/build-${MY_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
+	install ${S}/build-${MY_TARGET}/appsboot.raw ${DEPLOY_DIR_IMAGE}
 }
 do_deploy[dirs] = "${S}"
 addtask deploy before do_package_stage after do_compile
