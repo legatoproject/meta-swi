@@ -7,8 +7,9 @@ PROVIDES = "virtual/lk"
 
 PR = "r0"
 
-SRC_URI = "file://lk.tar.gz \
-          "
+SRC_URI = "file://lk.tar.gz"
+SRC_URI += "file://0002-TRAC-1223-lk-make_sure_that_Yocto_kernel_receives_correct_atag_MTD_partition_information_from_bootloader.patch"
+
 S = "${WORKDIR}/${PN}"
 
 MY_TARGET = "mdm9615"

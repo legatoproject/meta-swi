@@ -1,0 +1,13 @@
+Include this patch if you want to have very chatty bootloader.
+diff -u a/include/debug.h b/include/debug.h
+--- a/include/debug.h	2014-06-17 17:19:31.381997862 -0700
++++ b/include/debug.h	2014-06-17 17:21:10.922011423 -0700
+@@ -33,6 +33,8 @@
+ extern "C" {
+ #endif
+ 
++#define DEBUG	2
++
+ #if defined(DEBUG)
+ #define DEBUGLEVEL DEBUG
+ #else

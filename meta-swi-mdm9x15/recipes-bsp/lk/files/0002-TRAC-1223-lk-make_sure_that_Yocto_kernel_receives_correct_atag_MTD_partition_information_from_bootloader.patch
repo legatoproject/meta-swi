@@ -1,0 +1,865 @@
+Make sure that Yocto kernel receives correct atag MTD partition information
+from the bootloader.
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/app/aboot/aboot.c b/app/aboot/aboot.c
+--- a/app/aboot/aboot.c	2013-08-15 03:35:25.000000000 -0700
++++ b/app/aboot/aboot.c	2014-06-18 14:25:32.062407479 -0700
+@@ -75,6 +75,12 @@
+ #define EMMC_BOOT_IMG_HEADER_ADDR 0xFF000
+ #endif
+ 
++#ifndef MEMSIZE
++#define MEMSIZE 1024*1024
++#endif
++
++#define MAX_TAGS_SIZE   1024
++
+ #define RECOVERY_MODE   0x77665502
+ #define FASTBOOT_MODE   0x77665500
+ 
+@@ -319,13 +325,73 @@
+ 	entry(0, machtype, tags);
+ }
+ 
++
+ unsigned page_size = 0;
+ unsigned page_mask = 0;
+ 
++/* Function to check if the memory address range falls within the aboot
++ * boundaries.
++ * start: Start of the memory region
++ * size: Size of the memory region
++ */
++int check_aboot_addr_range_overlap(uint32_t start, uint32_t size)
++{
++	/* Check for boundary conditions. */
++	if ((start + size) < start)
++		return -1;
++
++	/* Check for memory overlap. */
++	if ((start < MEMBASE) && ((start + size) <= MEMBASE))
++		return 0;
++	else if (start > (MEMBASE + MEMSIZE))
++		return 0;
++	else
++		return -1;
++}
++
+ #define ROUND_TO_PAGE(x,y) (((x) + (y)) & (~(y)))
+ 
+ static unsigned char buf[4096]; //Equal to max-supported pagesize
+ 
++static void verify_signed_bootimg(uint32_t bootimg_addr, uint32_t bootimg_size)
++{
++	int ret;
++
++	/* Assume device is rooted at this time. */
++	device.is_tampered = 1;
++
++	dprintf(INFO, "Authenticating boot image (%d): start\n", bootimg_size);
++
++	ret = image_verify((unsigned char *)bootimg_addr,
++					   (unsigned char *)(bootimg_addr + bootimg_size),
++					   bootimg_size,
++					   CRYPTO_AUTH_ALG_SHA256);
++
++	dprintf(INFO, "Authenticating boot image: done return value = %d\n", ret);
++
++	if (ret)
++	{
++		/* Authorized kernel */
++		device.is_tampered = 0;
++	}
++
++#if USE_PCOM_SECBOOT
++	set_tamper_flag(device.is_tampered);
++#endif
++
++	if(device.is_tampered)
++	{
++		write_device_info_mmc(&device);
++	#ifdef TZ_TAMPER_FUSE
++		set_tamper_fuse_cmd();
++	#endif
++	#ifdef ASSERT_ON_TAMPER
++		dprintf(CRITICAL, "Device is tampered. Asserting..\n");
++		ASSERT(0);
++	#endif
++	}
++}
++
+ int boot_linux_from_mmc(void)
+ {
+ 	struct boot_img_hdr *hdr = (void*) buf;
+@@ -347,8 +413,14 @@
+ 		hdr = uhdr;
+ 		goto unified_boot;
+ 	}
+-	if (!boot_into_recovery) {
+-		index = partition_get_index("boot");
++	if (!boot_into_recovery) { 
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++		index = partition_get_index("kernel");
++#else
++		index = partition_get_index("boot"); 
++#endif
++/* SWISTOP */
+ 		ptn = partition_get_offset(index);
+ 		if(ptn == 0) {
+ 			dprintf(CRITICAL, "ERROR: No boot partition found\n");
+@@ -379,18 +451,38 @@
+ 		page_mask = page_size - 1;
+ 	}
+ 
++	kernel_actual  = ROUND_TO_PAGE(hdr->kernel_size,  page_mask);
++	ramdisk_actual = ROUND_TO_PAGE(hdr->ramdisk_size, page_mask);
++
++	/* Check if the addresses in the header are valid. */
++	if (check_aboot_addr_range_overlap(hdr->kernel_addr, kernel_actual) ||
++		check_aboot_addr_range_overlap(hdr->ramdisk_addr, ramdisk_actual))
++	{
++		dprintf(CRITICAL, "kernel/ramdisk addresses overlap with aboot addresses.\n");
++		return -1;
++	}
++
+ 	/* Authenticate Kernel */
+-	if(target_use_signed_kernel() && (!device.is_unlocked) && (!device.is_tampered))
++	dprintf(INFO, "use_signed_kernel=%d, is_unlocked=%d, is_tampered=%d.\n",
++		(int) target_use_signed_kernel(),
++		device.is_unlocked,
++		device.is_tampered);
++
++	if(target_use_signed_kernel() && (!device.is_unlocked))
+ 	{
++		offset = 0;
++
+ 		image_addr = (unsigned char *)target_get_scratch_address();
+-		kernel_actual = ROUND_TO_PAGE(hdr->kernel_size, page_mask);
+-		ramdisk_actual = ROUND_TO_PAGE(hdr->ramdisk_size, page_mask);
++
+ 		imagesize_actual = (page_size + kernel_actual + ramdisk_actual);
+ 
+-		offset = 0;
++		dprintf(INFO, "Loading boot image (%d): start\n", imagesize_actual);
+ 
+-		/* Assuming device rooted at this time */
+-		device.is_tampered = 1;
++		if (check_aboot_addr_range_overlap(image_addr, imagesize_actual))
++		{
++			dprintf(CRITICAL, "Boot image buffer address overlaps with aboot addresses.\n");
++			return -1;
++		}
+ 
+ 		/* Read image without signature */
+ 		if (mmc_read(ptn + offset, (void *)image_addr, imagesize_actual))
+@@ -400,44 +492,30 @@
+ 		}
+ 
+ 		offset = imagesize_actual;
++
++		if (check_aboot_addr_range_overlap(image_addr + offset, page_size))
++		{
++			dprintf(CRITICAL, "Signature read buffer address overlaps with aboot addresses.\n");
++			return -1;
++		}
++
+ 		/* Read signature */
+ 		if(mmc_read(ptn + offset, (void *)(image_addr + offset), page_size))
+ 		{
+ 			dprintf(CRITICAL, "ERROR: Cannot read boot image signature\n");
++			return -1;
+ 		}
+-		else
+-		{
+-			auth_kernel_img = image_verify((unsigned char *)image_addr,
+-					(unsigned char *)(image_addr + imagesize_actual),
+-					imagesize_actual,
+-					CRYPTO_AUTH_ALG_SHA256);
+ 
+-			if(auth_kernel_img)
+-			{
+-				/* Authorized kernel */
+-				device.is_tampered = 0;
+-			}
+-		}
++		verify_signed_bootimg(image_addr, imagesize_actual);
+ 
+ 		/* Move kernel and ramdisk to correct address */
+ 		memmove((void*) hdr->kernel_addr, (char *)(image_addr + page_size), hdr->kernel_size);
+ 		memmove((void*) hdr->ramdisk_addr, (char *)(image_addr + page_size + kernel_actual), hdr->ramdisk_size);
+-
+-		/* Make sure everything from scratch address is read before next step!*/
+-		if(device.is_tampered)
+-		{
+-			write_device_info_mmc(&device);
+-		#ifdef TZ_TAMPER_FUSE
+-			set_tamper_fuse_cmd();
+-		#endif
+-		}
+-	#if USE_PCOM_SECBOOT
+-		set_tamper_flag(device.is_tampered);
+-	#endif
+ 	}
+ 	else
+ 	{
+-		offset += page_size;
++		dprintf(INFO, "Loading boot image (%d): start\n",
++				kernel_actual + ramdisk_actual);
+ 
+ 		n = ROUND_TO_PAGE(hdr->kernel_size, page_mask);
+ 		if (mmc_read(ptn + offset, (void *)hdr->kernel_addr, n)) {
+@@ -454,7 +532,16 @@
+ 				return -1;
+ 			}
+ 		}
+-		offset += n;
++		offset += ramdisk_actual;
++
++		dprintf(INFO, "Loading boot image (%d): done\n",
++				kernel_actual + ramdisk_actual);
++
++		if(hdr->second_size != 0) {
++			/* Second image loading not implemented. */
++			ASSERT(0);
++		}
++
+ 	}
+ 
+ unified_boot:
+@@ -509,7 +596,13 @@
+ 
+ 	if(!boot_into_recovery)
+ 	{
+-	        ptn = ptable_find(ptable, "boot");
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++			ptn = ptable_find(ptable, "kernel");
++#else
++			ptn = ptable_find(ptable, "boot");
++#endif
++/* SWISTOP */
+ 	        if (ptn == NULL) {
+ 		        dprintf(CRITICAL, "ERROR: No boot partition found\n");
+ 		        return -1;
+@@ -539,18 +632,24 @@
+ 		return -1;
+ 	}
+ 
++	kernel_actual  = ROUND_TO_PAGE(hdr->kernel_size,  page_mask);
++	ramdisk_actual = ROUND_TO_PAGE(hdr->ramdisk_size, page_mask);
++
++	/* Check if the addresses in the header are valid. */
++	if (check_aboot_addr_range_overlap(hdr->kernel_addr, kernel_actual) ||
++		check_aboot_addr_range_overlap(hdr->ramdisk_addr, ramdisk_actual))
++	{
++		dprintf(CRITICAL, "kernel/ramdisk addresses overlap with aboot addresses.\n");
++		return -1;
++	}
++
+ 	/* Authenticate Kernel */
+-	if(target_use_signed_kernel() && (!device.is_unlocked) && (!device.is_tampered))
++	if(target_use_signed_kernel() && (!device.is_unlocked))
+ 	{
+ 		image_addr = (unsigned char *)target_get_scratch_address();
+-		kernel_actual = ROUND_TO_PAGE(hdr->kernel_size, page_mask);
+-		ramdisk_actual = ROUND_TO_PAGE(hdr->ramdisk_size, page_mask);
+-		imagesize_actual = (page_size + kernel_actual + ramdisk_actual);
+-
+ 		offset = 0;
+ 
+-		/* Assuming device rooted at this time */
+-		device.is_tampered = 1;
++		imagesize_actual = (page_size + kernel_actual + ramdisk_actual);
+ 
+ 		/* Read image without signature */
+ 		if (flash_read(ptn, offset, (void *)image_addr, imagesize_actual))
+@@ -564,22 +663,9 @@
+ 		if (flash_read(ptn, offset, (void *)(image_addr + offset), page_size))
+ 		{
+ 			dprintf(CRITICAL, "ERROR: Cannot read boot image signature\n");
++			return -1;
+ 		}
+-		else
+-		{
+-
+-			/* Verify signature */
+-			auth_kernel_img = image_verify((unsigned char *)image_addr,
+-						(unsigned char *)(image_addr + imagesize_actual),
+-						imagesize_actual,
+-						CRYPTO_AUTH_ALG_SHA256);
+-
+-			if(auth_kernel_img)
+-			{
+-				/* Authorized kernel */
+-				device.is_tampered = 0;
+-			}
+-		}
++		verify_signed_bootimg(image_addr, imagesize_actual);
+ 
+ 		/* Move kernel and ramdisk to correct address */
+ 		memmove((void*) hdr->kernel_addr, (char *)(image_addr + page_size), hdr->kernel_size);
+@@ -610,7 +696,12 @@
+ 			dprintf(CRITICAL, "ERROR: Cannot read ramdisk image\n");
+ 			return -1;
+ 		}
+-		offset += n;
++
++		offset += ramdisk_actual;
++
++		dprintf(INFO, "Loading boot image (%d): done\n",
++				kernel_actual + ramdisk_actual);
++
+ 	}
+ continue_boot:
+ 	dprintf(INFO, "\nkernel  @ %x (%d bytes)\n", hdr->kernel_addr,
+@@ -643,7 +734,13 @@
+ 	unsigned long long size;
+ 	int index = INVALID_PTN;
+ 
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++	index = partition_get_index("bootloader");
++#else
+ 	index = partition_get_index("aboot");
++#endif
++/* SWISTOP */
+ 	ptn = partition_get_offset(index);
+ 	if(ptn == 0)
+ 	{
+@@ -668,7 +765,13 @@
+ 	unsigned long long size;
+ 	int index = INVALID_PTN;
+ 
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++	index = partition_get_index("bootloader");
++#else
+ 	index = partition_get_index("aboot");
++#endif
++/* SWISTOP */
+ 	ptn = partition_get_offset(index);
+ 	if(ptn == 0)
+ 	{
+@@ -822,14 +925,35 @@
+ 	kernel_actual = ROUND_TO_PAGE(hdr.kernel_size, page_mask);
+ 	ramdisk_actual = ROUND_TO_PAGE(hdr.ramdisk_size, page_mask);
+ 
++	/* Check if the addresses in the header are valid. */
++	if (check_aboot_addr_range_overlap(hdr.kernel_addr, kernel_actual) ||
++		check_aboot_addr_range_overlap(hdr.ramdisk_addr, ramdisk_actual))
++	{
++		dprintf(CRITICAL, "kernel/ramdisk addresses overlap with aboot addresses.\n");
++		return -1;
++	}
++
+ 	/* sz should have atleast raw boot image */
+ 	if (page_size + kernel_actual + ramdisk_actual > sz) {
+ 		fastboot_fail("incomplete bootimage");
+ 		return;
+ 	}
+ 
+-	memmove((void*) hdr.kernel_addr, ptr + page_size, hdr.kernel_size);
++	if (check_aboot_addr_range_overlap(hdr.tags_addr, MAX_TAGS_SIZE))
++	{
++		dprintf(CRITICAL, "Tags addresses overlap with aboot addresses.\n");
++		return -1;
++	}
++
++	/* Load ramdisk & kernel */
+ 	memmove((void*) hdr.ramdisk_addr, ptr + page_size + kernel_actual, hdr.ramdisk_size);
++	memmove((void*) hdr.kernel_addr, ptr + page_size, hdr.kernel_size);
++
++	if (check_aboot_addr_range_overlap(hdr.tags_addr, MAX_TAGS_SIZE))
++	{
++		dprintf(CRITICAL, "Tags addresses overlap with aboot addresses.\n");
++		return -1;
++	}
+ 
+ 	fastboot_okay("");
+ 	udc_stop();
+@@ -910,7 +1034,13 @@
+ 			return;
+ 		}
+ 
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++		if (!strcmp(arg, "kernel") || !strcmp(arg, "recovery")) {
++#else		
+ 		if (!strcmp(arg, "boot") || !strcmp(arg, "recovery")) {
++#endif
++/* SWISTOP */		
+ 			if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
+ 				fastboot_fail("image is not a boot image");
+ 				return;
+@@ -1154,7 +1284,13 @@
+ #endif /* SIERRA */
+ /* SWISTOP */
+ 
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++	if (!strcmp(ptn->name, "kernel") || !strcmp(ptn->name, "recovery")) {
++#else	
+ 	if (!strcmp(ptn->name, "boot") || !strcmp(ptn->name, "recovery")) {
++#endif
++/* SWISTOP */	
+ 		if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
+ /* SWISTART */
+ #ifndef SIERRA
+@@ -1175,9 +1311,17 @@
+ 		}
+ 	}
+ 
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++	if (!strcmp(ptn->name, "rootfs")
++		|| !strcmp(ptn->name, "user0")
++		|| !strcmp(ptn->name, "user3")
++#else		
+ 	if (!strcmp(ptn->name, "system")
+ 		|| !strcmp(ptn->name, "userdata")
+ 		|| !strcmp(ptn->name, "persist")
++#endif
++/* SWISTOP */		
+ /* SWISTART */
+ #ifdef SIERRA
+ 		|| !strcmp(ptn->name, "hdata")
+@@ -1321,6 +1465,8 @@
+ 		page_mask = page_size - 1;
+ 	}
+ 
++	ASSERT((MEMBASE + MEMSIZE) > MEMBASE);
++
+ 	if(target_use_signed_kernel())
+ 	{
+ 		read_device_info(&device);
+@@ -1350,7 +1496,6 @@
+ 		if (keys_get_state(KEY_VOLUMEDOWN) != 0)
+ 			goto fastboot;
+ 	}
+-
+ /* SWISTART - not go to fastboot mode based GPIO or DIP switch */
+ #ifndef SIERRA
+ 	#if NO_KEYPAD_DRIVER
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/app/aboot/rules.mk b/app/aboot/rules.mk
+--- a/app/aboot/rules.mk	2013-08-15 03:34:46.000000000 -0700
++++ b/app/aboot/rules.mk	2014-06-18 14:25:32.062407479 -0700
+@@ -13,4 +13,4 @@
+ 	$(LOCAL_DIR)/sierra_crcrc32.o \
+ 	$(LOCAL_DIR)/sierra_bl.o
+ # endif
+-# SWISTOP
++# SWISTOP
+\ No newline at end of file
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/app/aboot/sierra_bl.c b/app/aboot/sierra_bl.c
+--- a/app/aboot/sierra_bl.c	2013-08-15 03:36:44.000000000 -0700
++++ b/app/aboot/sierra_bl.c	2014-06-18 14:25:32.062407479 -0700
+@@ -247,19 +247,32 @@
+         if(!strncmp((char *)entryp->part, "APPS", BL_SIMG_CB_MAX_PART_SIZE))
+         {
+           /* write Linux kernel */
++#ifdef FEATURE_M2M_AR7
++          strcpy(partname, "kernel");
++#else
+           strcpy(partname, "boot");
++#endif
+           need_update = true;
+         }
+         else if(!strncmp((char *)entryp->part, "SYSTEM", BL_SIMG_CB_MAX_PART_SIZE))
+         {
+           /* write Linux root fs */
++#ifdef FEATURE_M2M_AR7
++          strcpy(partname, "rootfs");
++#else
+           strcpy(partname, "system");
++#endif
++
+           need_update = true;
+         }
+         else if(!strncmp((char *)entryp->part, "USERDATA", BL_SIMG_CB_MAX_PART_SIZE))
+         {
+           /* write Linux partition */
++#ifdef FEATURE_M2M_AR7
++          strcpy(partname, "user0");
++#else
+           strcpy(partname, "userdata");
++#endif	  
+           need_update = true;
+         }
+         else if(!strncmp((char *)entryp->part, "HDATA", BL_SIMG_CB_MAX_PART_SIZE))
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/app/aboot/sierra_bludefs.h b/app/aboot/sierra_bludefs.h
+--- a/app/aboot/sierra_bludefs.h	2013-08-15 03:37:08.000000000 -0700
++++ b/app/aboot/sierra_bludefs.h	2014-06-18 14:25:32.058407480 -0700
+@@ -18,7 +18,7 @@
+ #define BS_BOOT_APP_MSG_START              (MSM_SHARED_BASE + 0x100000 - 0x1020)
+ #define BS_BOOT_APP_MSG_STARTMARKER        BS_BOOT_APP_MSG_START
+ #define BS_BOOT_APP_MSG_FLAGS              (BS_BOOT_APP_MSG_START + 24)
+-#define BS_BOOT_APP_MSG_ENDMARKER          (BS_BOOT_APP_MSG_START + 28)
++#define BS_BOOT_APP_MSG_ENDMARKER          (BS_BOOT_APP_MSG_START + 68)
+ #define BC_VALID_BOOT_MSG_MARKER           0xBABECAFEU   /* indicates message from Boot to App */
+ #define BC_MSG_MARKER_M                    0xFFFF0000U
+ #define BCBOOTAPPFLAG_UPDATE_PENDING_M     0x00000001
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/app/nandwrite/nandwrite.c b/app/nandwrite/nandwrite.c
+--- a/app/nandwrite/nandwrite.c	2013-08-15 03:13:39.000000000 -0700
++++ b/app/nandwrite/nandwrite.c	2014-06-18 14:25:32.246407467 -0700
+@@ -105,7 +105,13 @@
+ 		return;
+ 	}
+ 
+-	if (!strcmp(ptn->name, "boot") || !strcmp(ptn->name, "recovery")) {
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++	if (!strcmp(ptn->name, "kernel") || !strcmp(ptn->name, "recovery")) {
++#else	
++	if (!strcmp(ptn->name, "boot") || !strcmp(ptn->name, "recovery")) { 
++#endif
++/* SWISTOP */	
+ 		if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
+ 			jtag_fail("image is not a boot image");
+ 			return;
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/arch/arm/rules.mk b/arch/arm/rules.mk
+--- a/arch/arm/rules.mk	2013-08-15 03:14:49.000000000 -0700
++++ b/arch/arm/rules.mk	2014-06-18 14:25:51.162406063 -0700
+@@ -120,7 +120,7 @@
+ $(error missing MEMBASE or MEMSIZE variable, please set in target rules.mk)
+ endif
+ 
+-LIBGCC := $(shell $(CC) $(CFLAGS) $(THUMBCFLAGS) -print-libgcc-file-name)
++LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(CFLAGS) $(THUMBCFLAGS) -print-libgcc-file-name)
+ #$(info LIBGCC = $(LIBGCC))
+ 
+ # potentially generated files that should be cleaned out with clean make rule
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/arch/x86/rules.mk b/arch/x86/rules.mk
+--- a/arch/x86/rules.mk	2013-08-15 03:14:49.000000000 -0700
++++ b/arch/x86/rules.mk	2014-06-18 14:25:51.222406061 -0700
+@@ -20,7 +20,7 @@
+ # set the default toolchain to x86 elf and set a #define
+ TOOLCHAIN_PREFIX ?= i386-elf-
+ 
+-LIBGCC := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
++LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(CFLAGS) -print-libgcc-file-name)
+ #$(info LIBGCC = $(LIBGCC))
+ 
+ cc-option = $(shell if test -z "`$(1) $(2) -S -o /dev/null -xc /dev/null 2>&1`"; \
+Only in b/lk: .gitignore
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/makefile b/makefile
+--- a/makefile	2013-08-15 03:14:49.000000000 -0700
++++ b/makefile	2014-06-18 14:25:51.550406035 -0700
+@@ -146,6 +146,8 @@
+ SIERRA := yes
+ DEFINES += \
+ 	SIERRA
++DEFINES += \
++	FEATURE_M2M_AR7
+ # SWISTOP 
+ 
+ ALLOBJS := $(addprefix $(BUILDDIR)/,$(ALLOBJS))
+@@ -154,13 +156,13 @@
+ 
+ # default to no ccache
+ CCACHE ?= 
+-CC ?= $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
+-LD ?= $(TOOLCHAIN_PREFIX)ld.bfd
+-OBJDUMP ?= $(TOOLCHAIN_PREFIX)objdump
+-OBJCOPY ?= $(TOOLCHAIN_PREFIX)objcopy
+-CPPFILT ?= $(TOOLCHAIN_PREFIX)c++filt
+-SIZE ?= $(TOOLCHAIN_PREFIX)size
+-NM ?= $(TOOLCHAIN_PREFIX)nm
++CC := $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
++LD := $(TOOLCHAIN_PREFIX)ld
++OBJDUMP := $(TOOLCHAIN_PREFIX)objdump
++OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
++CPPFILT := $(TOOLCHAIN_PREFIX)c++filt
++SIZE := $(TOOLCHAIN_PREFIX)size
++NM := $(TOOLCHAIN_PREFIX)nm
+ 
+ # comment out or override if you want to see the full output of each command
+ NOECHO ?= @
+Only in b/lk: makefile_arwp
+Only in b/lk: makefile_mc
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/platform/mdm9x15/include/platform/iomap.h b/platform/mdm9x15/include/platform/iomap.h
+--- a/platform/mdm9x15/include/platform/iomap.h	2013-08-15 03:13:39.000000000 -0700
++++ b/platform/mdm9x15/include/platform/iomap.h	2014-06-18 14:25:36.454407155 -0700
+@@ -68,6 +68,7 @@
+ #define DGT_COUNT_VAL     TMR_REG(0x0028)
+ #define DGT_ENABLE        TMR_REG(0x002C)
+ #define DGT_CLEAR         TMR_REG(0x0030)
++#define DGT_CLK_CTL       TMR_REG(0x0034)
+ /* TMR_STS - status of SCSS timers */
+ #define SPSS_TIMER_STATUS TMR_REG(0x0088)
+ 
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/platform/mdm9x15/platform.c b/platform/mdm9x15/platform.c
+--- a/platform/mdm9x15/platform.c	2013-08-15 03:13:39.000000000 -0700
++++ b/platform/mdm9x15/platform.c	2014-06-18 14:25:36.462407152 -0700
+@@ -49,10 +49,14 @@
+ {
+ 	uint8_t cfg_bid = 0x1;
+ 	uint8_t cfg_pid = 0x1;
++/* SWISTART */
++/* We don't need init UART1 in APP here */
++#ifndef SIERRA
+ 	uint8_t gsbi_id = target_uart_gsbi();
+ 
+ 	uart_dm_init(gsbi_id, GSBI_BASE(gsbi_id), GSBI_UART_DM_BASE(gsbi_id));
+-
++#endif /* !SIERRA */
++/* SWISTOP */
+ 	/* Timers - QGIC Config */
+ 	writel((cfg_bid << 7 | cfg_pid << 10), APCS_GLB_QGIC_CFG);
+ 	qgic_init();
+@@ -76,7 +80,12 @@
+ 	/* disable timer */
+ 	writel(0, DGT_ENABLE);
+ 
+-	ticks_per_sec = 19200000; /* Uses CXO (19.2 MHz) */
++	/* DGT uses CXO source which is 19.2MHz.
++  * Set clock divider to 4.
++  */
++	writel(3, DGT_CLK_CTL);
++
++	ticks_per_sec = 4800000; /* (19.2MHz/4) */
+ }
+ 
+ /* Returns timer ticks per sec */
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/platform/msm_shared/partition_parser.c b/platform/msm_shared/partition_parser.c
+--- a/platform/msm_shared/partition_parser.c	2013-08-15 03:13:39.000000000 -0700
++++ b/platform/msm_shared/partition_parser.c	2014-06-18 14:25:35.374407234 -0700
+@@ -32,7 +32,13 @@
+ #include "partition_parser.h"
+ 
+ char *ext3_partitions[] =
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++    { "rootfs", "user0", "user3", "cache", "tombstones" };
++#else	
+     { "system", "userdata", "persist", "cache", "tombstones" };
++#endif
++/* SWISTOP */	
+ char *vfat_partitions[] = { "modem", "mdm", "NONE" };
+ 
+ unsigned int ext3_count = 0;
+@@ -770,11 +776,23 @@
+ #if PLATFORM_MSM7X27A
+ 		memcpy(partition_ent->name, "FOTA", 4);
+ #else
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++		memcpy(partition_ent->name, "bootloader", 10);
++#else		
+ 		memcpy(partition_ent->name, "aboot", 5);
+ #endif
++/* SWISTOP */		
++#endif
+ 		break;
+ 	case MBR_BOOT_TYPE:
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)	
++		memcpy(partition_ent->name, "kernel", 6);
++#else		
+ 		memcpy(partition_ent->name, "boot", 4);
++#endif
++/* SWISTOP */		
+ 		break;
+ 	case MBR_MODEM_ST1_TYPE:
+ 		memcpy(partition_ent->name, "modem_st1", 9);
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/target/mdm9615/atags.c b/target/mdm9615/atags.c
+--- a/target/mdm9615/atags.c	2013-08-15 03:13:39.000000000 -0700
++++ b/target/mdm9615/atags.c	2014-06-18 14:25:37.918407045 -0700
+@@ -45,6 +45,7 @@
+ #define SIZE_88M    (11 * SIZE_8M)
+ /* SWISTART */
+ #ifdef SIERRA
++#define SIZE_160M   (160 * SIZE_1M)
+ #define SIZE_128M   (128 * SIZE_1M)
+ #define SIZE_92M    (92  * SIZE_1M)
+ #define SIZE_19M    (19  * SIZE_1M)
+@@ -90,18 +91,25 @@
+                         *ptr++ = ram_ptable.parts[i].start + SIZE_92M;
+                     }
+                     else
+-                    {                       
++                    { 
++/* use same RAM size for APP as 2G-4G memory */
++#ifdef FEATURE_M2M_AR7
++						*ptr++ = SIZE_19M;
++						*ptr++ = ram_ptable.parts[i].start + SIZE_92M;					
++#else                     
+ 						*ptr++ = SIZE_23M;
+ 						*ptr++ = ram_ptable.parts[i].start + SIZE_88M;
++#endif	
+                     }
+ 				}
+ #endif
+ /* SWISTOP */
++/* SWISTART */
++/* DSP3 exists for all 4.7 products, we don't need check here */
++#ifndef SIERRA
+ 				nand_ptable = flash_get_ptable();
+ 				dsp3_ptn = ptable_find(nand_ptable, "dsp3");
+ 				
+-/* SWISTART */
+-#ifndef SIERRA
+ 				/* Check for DSP3 partition and its size */
+ 				if(dsp3_ptn != NULL){
+ 					size = dsp3_ptn->start;
+@@ -115,28 +123,6 @@
+ 				*ptr++ = 0x54410002;
+ 				*ptr++ = SIZE_17M;
+ 				*ptr++ = ram_ptable.parts[i].start + SIZE_88M + SIZE_23M;
+-#else
+-				if(dsp3_ptn != NULL)
+-				{
+-					size = dsp3_ptn->start;
+-					size += dsp3_ptn->length;
+-					if(size == dsp3_ptn->start)
+-					{
+-						/*Add additional atag to pass DSP3 memory to kernel*/
+-						*ptr++ = 4;
+-						*ptr++ = 0x54410002;
+-						*ptr++ = SIZE_17M;
+-						*ptr++ = ram_ptable.parts[i].start + SIZE_88M + SIZE_23M;
+-					}
+-				}else
+-				{
+-					/*Add additional atag to pass DSP3 memory to kernel*/
+-					*ptr++ = 4;
+-					*ptr++ = 0x54410002;
+-					*ptr++ = SIZE_17M;
+-					*ptr++ = ram_ptable.parts[i].start + SIZE_88M + SIZE_23M;					
+-				}
+-
+ #endif
+ /* SWISTOP */
+ 
+@@ -185,7 +171,7 @@
+   if ((curr_flash_info->block_size == 0x00040000) &&
+           (curr_flash_info->num_blocks == 0x0800))
+   {
+-    return (SIZE_19M);
++    return (SIZE_160M);
+   }
+   else
+   {
+diff '--exclude=.svn' '--exclude=.git' --strip-trailing-cr -ru a/target/mdm9615/init.c b/target/mdm9615/init.c
+--- a/target/mdm9615/init.c	2013-08-15 03:34:16.000000000 -0700
++++ b/target/mdm9615/init.c	2014-06-18 14:25:37.918407045 -0700
+@@ -57,14 +57,22 @@
+ unsigned target_msm_id = 0;
+ 
+ /* Partition names for fastboot flash */
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++static char *apps_ptn_names[] = { "bootloader", "kernel", "cache", "misc", "recovery", "fota",
++#else
+ static char *apps_ptn_names[] = { "aboot", "boot", "cache", "misc", "recovery", "fota",
++#endif
++/* SWISTOP */
+ /* SWISTART */
+ #ifndef SIERRA
+ 	"recoveryfs", "system", "userdata" };
+-#else
++#elif defined(FEATURE_M2M_AR7) 
++	"recoveryfs", "rootfs", "user0"
++	, "hdata", "user1", "user2", "user3" };
++#else	
+ 	"recoveryfs", "system", "userdata"
+-	, "hdata", "userrw"
+-	                                   };
++	, "hdata", "userrw" };
+ #endif
+ /* SWISTOP */
+ 
+@@ -73,10 +81,12 @@
+ /* SWISTART */
+ #ifndef SIERRA
+ 	"FOTA", "RECOVERYFS", "SYSTEM", "USERDATA" };
++#elif defined(FEATURE_M2M_AR7) 
++	"FOTA", "RECOVERYFS", "SYSTEM", "USERDATA"
++	, "HDATA", "USERAPP", "USERRW", "PERSIST" };
+ #else
+ 	"FOTA", "RECOVERYFS", "SYSTEM", "USERDATA"
+-	, "HDATA", "USERRW" 
+-	                                           };
++	, "HDATA", "USERRW" };
+ #endif
+ /* SWISTOP */
+ 
+@@ -96,7 +106,13 @@
+ /* Apps partition flags to detect the presence of FOTA partitions.
+  * Initially, assume that the FOTA partitions are absent.
+  */
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7) 
++static unsigned int apps_ptn_flag[] = {1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1};
++#else
+ static unsigned int apps_ptn_flag[] = {1, 1, 0, 0, 0, 0, 0, 1, 1};
++#endif
++/* SWISTOP */
+ /* Modem partition flags to detect the presence of DSP3 partitions.
+  * Initially, assume that the DSP3 partition is absent.
+  * The order of modem partiotions -
+@@ -331,6 +347,8 @@
+ 
+ void update_ptable_modem_partitions(void)
+ {
++/* SWISTART */
++#ifndef FEATURE_M2M_AR7
+ 	uint32_t ptn_index, i = 0;
+ 	uint32_t name_size;
+ 	struct ptentry *ptentry_ptr = flash_ptable.parts;
+@@ -366,6 +384,8 @@
+ 		}
+         ptentry_ptr[ptn_index].type = TYPE_APPS_PARTITION;
+ 	}
++#endif
++/* SWISTOP */
+ }
+ 
+ void update_ptable_apps_partitions(void)
+@@ -444,8 +464,40 @@
+ 		    ptentry_ptr[ptn_index].start;
+ }
+ 
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++void update_ptable_swap_index(int new_inde, const char * par_name)
++{
++	int boot_index;
++	struct ptentry boot_ptn;
++
++	boot_index = ptable_get_index(&flash_ptable, par_name);
++	if(boot_index == -1) {
++		dprintf (CRITICAL, "ERROR: Boot Partition not found. \n");
++		return;
++	}
++	boot_ptn = flash_ptable.parts[boot_index] ;
++	flash_ptable.parts[boot_index] = flash_ptable.parts[new_inde];
++	flash_ptable.parts[new_inde] = boot_ptn;
++}
++#endif
++/* SWISTOP */
++
+ void update_ptable_reorder(void)
+ {
++/* SWISTART */
++#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++  update_ptable_swap_index(0, "bootloader");
++  update_ptable_swap_index(1, "kernel");
++  update_ptable_swap_index(2, "rootfs");
++  update_ptable_swap_index(3, "user0");
++  update_ptable_swap_index(4, "user1");
++  update_ptable_swap_index(5, "user2");
++  update_ptable_swap_index(6, "user3");
++	flash_ptable.count = 7;
++
++#else	
++
+ 	int boot_index;
+ 	struct ptentry boot_ptn;
+ 
+@@ -457,4 +509,6 @@
+ 	boot_ptn = flash_ptable.parts[boot_index] ;
+ 	flash_ptable.parts[boot_index] = flash_ptable.parts[0];
+ 	flash_ptable.parts[0] = boot_ptn;
++#endif
++/* SWISTOP */
+ }
