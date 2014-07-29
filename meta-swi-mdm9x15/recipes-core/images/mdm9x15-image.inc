@@ -15,7 +15,7 @@ IMAGE_INSTALL += "pimd"
 IMAGE_INSTALL += "reboot-daemon"
 
 # Make the bootimg image file using the information available in the sysroot...
-swi_do_rootfs_append() {
+createimg() {
     ver=`cat ${STAGING_KERNEL_DIR}/kernel-abiversion`
     kernelsize=`awk --non-decimal-data '/ _end/ {end="0x" $1} /_stext/ {beg="0x" $1} END {size1=end-beg+4096; size=and(size1,compl(4095)); printf("%#x",size)}' ${STAGING_DIR_TARGET}/usr/src/kernel/System.map-${ver}`
 
@@ -28,4 +28,4 @@ swi_do_rootfs_append() {
         --output ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x15.img
 }
 
-ROOTFS_POSTPROCESS_COMMAND += "swi_do_rootfs_append;"
+ROOTFS_POSTPROCESS_COMMAND += "createimg;"
