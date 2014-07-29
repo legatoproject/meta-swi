@@ -5,7 +5,8 @@ PR := "${PR}.1"
 COMPATIBLE_MACHINE_swi-mdm9x15 = "swi-mdm9x15"
 KBRANCH_swi-mdm9x15  = "standard/preempt-rt/swi-mdm9x15"
 
-KSRC_linux_yocto_3_4 := "${THISDIR}/../../../../linux-yocto-3.4.git"
+KSRC_linux_yocto_3_4 := "${LINUX_REPO_DIR}"
+KSRC_linux_yocto_3_4 ?= "${THISDIR}/../../../../linux-yocto-3.4.git"
 SRC_URI = "git://${KSRC_linux_yocto_3_4};protocol=file;branch=${KBRANCH},meta;name=machine,meta"
 
 # uncomment and replace these SRCREVs with the real commit ids once you've had
