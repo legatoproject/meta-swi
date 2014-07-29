@@ -1,0 +1,2 @@
+Files common for mdm9x15 . The files here will be looked up first, and if they do not
+exist, files from meta-swi-extras may override them.

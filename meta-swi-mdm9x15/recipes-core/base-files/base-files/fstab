@@ -1,0 +1,17 @@
+# Basic Legato fstab 
+
+rootfs               /                    auto       defaults              1  1
+proc                 /proc                proc       defaults              0  0
+devpts               /dev/pts             devpts     mode=0620,gid=5       0  0
+usbfs                /proc/bus/usb        usbfs      defaults              0  0
+tmpfs                /dev/shm             tmpfs      mode=0777             0  0
+
+# SWISTART - update for Sierra partition
+#/dev/mmcblk0p1      /media/card          auto       defaults,gid=1015,umask=002     0  0
+#/dev/mtdblock9       /cache               yaffs2     defaults              0  0
+/dev/mtdblock5      /mnt/userrw          yaffs2     defaults              0  0
+
+#/mnt/flash is a large area for the Legato frameowkr and user apps
+/dev/mtdblock4      /mnt/flash           yaffs2     defaults              0  0
+# SWISTOP
+
