@@ -26,6 +26,9 @@ createimg() {
         ${MKBOOTIMG_IMAGE_FLAGS_4K} \
         --ramdisk_offset $kernelsize \
         --output ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x15.img
+
+    rm -f ${DEPLOY_DIR_IMAGE}/kernel
+    ln -s ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x15.img ${DEPLOY_DIR_IMAGE}/kernel
 }
 
 ROOTFS_POSTPROCESS_COMMAND += "createimg;"
