@@ -16,12 +16,12 @@ SRC_URI = "file://functions \
            file://checkroot.sh \
            file://umountnfs.sh \
            file://sysfs.sh \
-           file://device_table.txt \
            file://populate-volatile.sh \
            file://read-only-rootfs-hook.sh \
            file://volatiles \
            file://save-rtc.sh \
-           file://GPLv2.patch"
+           file://GPLv2.patch \
+"
 
 SRC_URI_append_arm = " file://alignment.sh"
 
@@ -40,7 +40,7 @@ do_configure() {
 	sed -i -e "s:SED_HALTARGS:${HALTARGS}:g" ${WORKDIR}/halt
 }
 
-do_install () {
+do_install_append () {
 #
 # Create directories and install device independent scripts
 #
@@ -86,22 +86,21 @@ do_install () {
 #
 	install -m 0755 ${WORKDIR}/banner.sh	${D}${sysconfdir}/init.d/banner.sh
 	install -m 0755 ${WORKDIR}/umountfs	${D}${sysconfdir}/init.d/umountfs
-	install -m 0755		${WORKDIR}/device_table.txt		${D}${sysconfdir}/device_table
 #
 # Create runlevel links
 #
 	update-rc.d -r ${D} rmnologin.sh start 99 2 3 4 5 .
 	update-rc.d -r ${D} sendsigs start 20 0 6 .
 	update-rc.d -r ${D} urandom start 30 S 0 6 .
-	update-rc.d -r ${D} umountnfs.sh start 31 0 6 .
+	update-rc.d -r ${D} umountnfs.sh start 31 0 1 6 .
 	update-rc.d -r ${D} umountfs start 40 0 6 .
 	update-rc.d -r ${D} halt start 90 0 .
 	update-rc.d -r ${D} save-rtc.sh start 25 0 6 .
 	update-rc.d -r ${D} banner.sh start 02 S .
-	update-rc.d -r ${D} checkroot.sh start 10 S .
-	update-rc.d -r ${D} mountall.sh start 35 S .
+	update-rc.d -r ${D} checkroot.sh start 06 S .
+	update-rc.d -r ${D} mountall.sh start 03 S .
 	update-rc.d -r ${D} hostname.sh start 39 S .
-	update-rc.d -r ${D} mountnfs.sh start 45 S .
+	update-rc.d -r ${D} mountnfs.sh start 15 2 3 4 5 .
 	update-rc.d -r ${D} bootmisc.sh start 55 S .
 	update-rc.d -r ${D} sysfs.sh start 02 S .
 	update-rc.d -r ${D} populate-volatile.sh start 37 S .
@@ -110,5 +109,4 @@ do_install () {
 	if [ "${TARGET_ARCH}" = "arm" ]; then
 	        update-rc.d -r ${D} alignment.sh start 06 S .
 	fi
-
 }
