@@ -20,8 +20,7 @@ SRC_URI = "file://functions \
            file://read-only-rootfs-hook.sh \
            file://volatiles \
            file://save-rtc.sh \
-           file://GPLv2.patch \
-"
+           file://GPLv2.patch"
 
 SRC_URI_append_arm = " file://alignment.sh"
 
@@ -40,7 +39,7 @@ do_configure() {
 	sed -i -e "s:SED_HALTARGS:${HALTARGS}:g" ${WORKDIR}/halt
 }
 
-do_install_append () {
+do_install () {
 #
 # Create directories and install device independent scripts
 #
