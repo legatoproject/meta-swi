@@ -13,6 +13,7 @@ IMAGE_INSTALL += "powerapp-shutdown"
 IMAGE_INSTALL += "bridge-utils"
 IMAGE_INSTALL += "pimd"
 IMAGE_INSTALL += "reboot-daemon"
+IMAGE_INSTALL += "procps"
 
 # Make the bootimg image file using the information available in the sysroot...
 createimg() {
