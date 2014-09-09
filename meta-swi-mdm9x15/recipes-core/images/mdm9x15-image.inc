@@ -14,7 +14,7 @@ IMAGE_INSTALL += "bridge-utils"
 IMAGE_INSTALL += "pimd"
 IMAGE_INSTALL += "reboot-daemon"
 IMAGE_INSTALL += "procps"
-
+IMAGE_INSTALL += "mtd-utils"
 # Make the bootimg image file using the information available in the sysroot...
 createimg() {
     ver=`cat ${STAGING_KERNEL_DIR}/kernel-abiversion`
