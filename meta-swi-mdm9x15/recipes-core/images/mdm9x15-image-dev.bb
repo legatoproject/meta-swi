@@ -10,7 +10,7 @@ PR = "${INC_PR}.0"
 VALGRIND_arm = "valgrind"
 
 IMAGE_INSTALL += "mtd-utils"
-IMAGE_INSTALL += "mtd-uils-ubifs"
+IMAGE_INSTALL += "mtd-utils-ubifs"
 IMAGE_INSTALL += "i2c-tools"
 IMAGE_INSTALL += "tcpdump"
 IMAGE_INSTALL += "iperf"
