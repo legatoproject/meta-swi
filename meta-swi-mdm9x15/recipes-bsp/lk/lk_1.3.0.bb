@@ -9,6 +9,9 @@ PR = "r0"
 
 SRC_URI = "file://lk.tar.gz"
 SRC_URI += "file://0002-TRAC-1223-lk-make_sure_that_Yocto_kernel_receives_correct_atag_MTD_partition_information_from_bootloader.patch"
+SRC_URI += "file://0003-SBM-14659-Modem-cannot-bootup-after-flash-customer-Yocto-image-with-fastboot.patch"
+SRC_URI += "file://0004-SBM-15385-GPIO-cooperation-mode-support.patch"
+SRC_URI += "file://0005-SBM-15691-support-squashfs-download.patch"
 
 S = "${WORKDIR}/${PN}"
 

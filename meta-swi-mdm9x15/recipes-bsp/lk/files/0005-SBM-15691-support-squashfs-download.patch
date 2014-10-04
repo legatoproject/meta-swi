@@ -1,0 +1,61 @@
+diff -ruN lk_base/app/aboot/aboot.c lk_dev/app/aboot/aboot.c
+--- lk_base/app/aboot/aboot.c	2014-08-01 17:53:20.377182027 +0800
++++ lk_dev/app/aboot/aboot.c	2014-09-03 11:20:02.644614447 +0800
+@@ -84,6 +84,12 @@
+ #define RECOVERY_MODE   0x77665502
+ #define FASTBOOT_MODE   0x77665500
+ 
++/* SWISTART */
++#ifdef SIERRA
++#define SQUASHFS_MAGIC_NUM 0x73717368
++#endif /* SIERRA */
++/* SWISTOP */
++
+ static const char *emmc_cmdline = " androidboot.emmc=true";
+ static const char *usb_sn_cmdline = " androidboot.serialno=";
+ static const char *battchg_pause = " androidboot.mode=charger";
+@@ -1230,6 +1236,12 @@
+ 	struct ptable *ptable;
+ 	unsigned extra = 0;
+ 
++/* SWISTART */
++#ifdef SIERRA
++	unsigned fs_magic_num = 0;
++#endif /* SIERRA */
++/* SWISTOP */
++
+ 	ptable = flash_get_ptable();
+ 	if (ptable == NULL) {
+ /* SWISTART */
+@@ -1328,11 +1340,31 @@
+ #endif
+ /* SWISTOP */
+ 		|| !strcmp(ptn->name, "recoveryfs")) {
++/* SWISTART */
++/* to add downloading of Squash FS which doesn't support MTD bad block handling */
++#ifdef SIERRA
++		/* get magic number from image */
++		memcpy((void *)&fs_magic_num, data, sizeof(fs_magic_num));
++
++		/* squash fs has different downloading process */
++		if(fs_magic_num == SQUASHFS_MAGIC_NUM)
++		{
++			sz = ROUND_TO_PAGE(sz, page_mask);
++		}
++		else
++		{
++#endif /* SIERRA */
++/* SWISTOP */
+ 		if (flash_ecc_bch_enabled())
+ 			/* Spare data bytes for 8 bit ECC increased by 4 */
+ 			extra = ((page_size >> 9) * 20);
+ 		else
+ 			extra = ((page_size >> 9) * 16);
++/* SWISTART */
++#ifdef SIERRA
++		}
++#endif /* SIERRA */
++/* SWISTOP */
+ 	} else
+ 		sz = ROUND_TO_PAGE(sz, page_mask);
+ 

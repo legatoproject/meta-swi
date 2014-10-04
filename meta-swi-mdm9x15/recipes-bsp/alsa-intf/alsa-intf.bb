@@ -12,7 +12,6 @@ prefix="/etc"
 S = "${WORKDIR}/mm-audio"
 
 EXTRA_OECONF += "--prefix=/etc \
-                 --with-kernel=${STAGING_KERNEL_DIR} \
                  --with-sanitized-headers=${STAGING_KERNEL_DIR}/include \
                  --with-glib"
 

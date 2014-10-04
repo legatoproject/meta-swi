@@ -1,0 +1,14 @@
+--- a/app/aboot/sierra_bludefs.h	2014-07-17 02:08:10.354059892 +0800
++++ b/app/aboot/sierra_bludefs.h	2014-07-17 02:15:22.969504000 +0800
+@@ -48,6 +48,11 @@
+ #define DLOAD_MAGIC_NUM_1           0xE47B337D
+ #define DLOAD_MAGIC_NUM_2           0xCE14091A
+ 
++/* Cooperative mode mssage */
++#define BS_COWORK_MSG_START         (MSM_SHARED_BASE + 0x100000 - 0xAEAC)
++#define BS_COWORK_MSG_STARTMARKER   BS_COWORK_MSG_START
++#define BS_COWORK_MSG_ENDMARKER     (BS_COWORK_MSG_START + 63)
++
+ 
+ /* structures */
+ 
