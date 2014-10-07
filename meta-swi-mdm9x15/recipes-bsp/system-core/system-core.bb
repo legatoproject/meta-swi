@@ -13,6 +13,8 @@ inherit autotools
 
 S = "${WORKDIR}/core"
 
+ALLOW_EMPTY_${PN} = "1"
+
 INITSCRIPT_PACKAGES = "${PN}-adbd ${PN}-usb"
 
 INITSCRIPT_NAME_${PN}-adbd = "adbd"
@@ -46,10 +48,14 @@ do_install_append() {
    ln -s /usr/bin/usb/compositions/sierra ${D}${bindir}/usb/boot_hsic_composition
 }
 
+PACKAGES =+ "${PN}-libmincrypt-dev ${PN}-libmincrypt-staticdev"
+FILES_${PN}-libmincrypt-dev        = "${libdir}/libmincrypt.la ${libdir}/pkgconfig/libmincrypt.pc"
+FILES_${PN}-libmincrypt-staticdev  = "${libdir}/libmincrypt.a"
+
 PACKAGES =+ "${PN}-libcutils-dbg ${PN}-libcutils ${PN}-libcutils-dev ${PN}-libcutils-staticdev"
 FILES_${PN}-libcutils-dbg    = "${libdir}/.debug/libcutils.*"
 FILES_${PN}-libcutils        = "${libdir}/libcutils.so.*"
-FILES_${PN}-libcutils-dev    = "${libdir}/libcutils.so ${libdir}/libcutils.la ${includedir}"
+FILES_${PN}-libcutils-dev    = "${libdir}/libcutils.so ${libdir}/libcutils.la ${libdir}/pkgconfig/libcutils.pc ${includedir}"
 FILES_${PN}-libcutils-staticdev = "${libdir}/libcutils.a"
 
 PACKAGES =+ "${PN}-adbd-dbg ${PN}-adbd"
