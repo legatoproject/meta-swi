@@ -4,6 +4,7 @@ rootfs               /                    auto       defaults              1  1
 proc                 /proc                proc       defaults              0  0
 devpts               /dev/pts             devpts     mode=0620,gid=5       0  0
 usbfs                /proc/bus/usb        usbfs      defaults              0  0
+tmpfs                /run                 tmpfs      mode=0755,nodev,nosuid,strictatime 0  0
 tmpfs                /dev/shm             tmpfs      mode=0777             0  0
 
 # SWISTART - update for Sierra partition
@@ -11,7 +12,7 @@ tmpfs                /dev/shm             tmpfs      mode=0777             0  0
 #/dev/mtdblock9       /cache               yaffs2     defaults              0  0
 /dev/mtdblock5      /mnt/userrw          yaffs2     defaults              0  0
 
-#/mnt/flash is a large area for the Legato frameowkr and user apps
+#/mnt/flash is a large area for the Legato framework and user apps
 /dev/mtdblock4      /mnt/flash           yaffs2     defaults              0  0
 # SWISTOP
 
