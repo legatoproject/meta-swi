@@ -16,7 +16,6 @@ IMAGE_INSTALL += "reboot-daemon"
 IMAGE_INSTALL += "procps"
 IMAGE_INSTALL += "mtd-utils"
 IMAGE_INSTALL += "mtd-utils-ubifs"
-IMAGE_INSTALL += "grep"
 
 # Make the bootimg image file using the information available in the sysroot...
 createimg() {
