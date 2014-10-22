@@ -28,15 +28,7 @@ l5:5:wait:/etc/init.d/rc 5
 l6:6:wait:/etc/init.d/rc 6
 # Normally not reached, but fallthrough in case of emergency.
 z6:6:respawn:/sbin/sulogin
-S:2345:respawn:/sbin/getty ttyHSL1 115200 console
-# /sbin/getty invocations for the runlevels.
-#
-# The "id" field MUST be the same as the last
-# characters of the device (after "tty").
-#
-# Format:
-#  <id>:<runlevels>:<action>:<process>
-#
 
-1:2345:respawn:/sbin/getty 38400 tty1
+# Attempt to start getty on UARTx
+S:2345:respawn:/etc/init.d/run_getty.sh
 
