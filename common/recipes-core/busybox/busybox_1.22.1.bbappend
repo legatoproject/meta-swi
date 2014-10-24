@@ -1,5 +1,5 @@
 # look for files in the layer first
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-${PV}:"
 
 do_install_append() {
     # Modify the busybox command line
