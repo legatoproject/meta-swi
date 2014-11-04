@@ -10,7 +10,8 @@ SRCREV = "ca39eb1d98e736109c64ff9c1aa2a6ecca222d8f"
 SRC_URI = "git://git.infradead.org/mtd-utils.git;protocol=git \
 		file://add-exclusion-to-mkfs-jffs2-git-2.patch \
         file://mtd-utils-fix-corrupt-cleanmarker-with-flash_erase--j-command.patch \
-        file://flashcp-fix-wrong-pourcentage.patch "
+        file://flashcp-fix-wrong-pourcentage.patch \
+        file://ubi-utils-Add-ubiblkvol-tool.patch "
 
 S = "${WORKDIR}/git/"
 
