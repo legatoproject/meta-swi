@@ -47,8 +47,6 @@ SRC_URI = "${GNU_MIRROR}/gcc/gcc-${PV}/gcc-${PV}.tar.bz2 \
            file://306-libstdc++-namespace.patch  \
            file://740-sh-pr24836.patch  \
            file://800-arm-bigendian.patch  \
-           file://gcc-poison-system-directories.patch \
-           file://gcc-poison-dir-extend.patch \
            file://gcc-4.3.3-SYSROOT_CFLAGS_FOR_TARGET.patch \
 	   file://64bithack.patch \
 	   file://optional_libstdc.patch \
@@ -67,7 +65,6 @@ SRC_URI = "${GNU_MIRROR}/gcc/gcc-${PV}/gcc-${PV}.tar.bz2 \
 	   file://GLIBC_DYNAMIC_LINKER.patch \
 	   file://arm-hard-float-loader.patch \
 	   file://gcc-argument-list-too-long.patch \
-	   file://fix-g++-sysroot.patch \
 	   file://disablesdt.patch \
 	   file://libtool.patch \
 	   file://gcc-armv4-pass-fix-v4bx-to-ld.patch \
