@@ -57,6 +57,10 @@ IMAGE_INSTALL += "libopkg"
 # Add legato startup
 IMAGE_INSTALL += "legato-init"
 
+# Require to provide some extended privileges
+# to non-root processes
+IMAGE_INSTALL += "libcap-ng"
+
 # Prepare a package with kernel + hdd image
 do_prepare_virt() {
     VIRT_DIR=${WORKDIR}/virt

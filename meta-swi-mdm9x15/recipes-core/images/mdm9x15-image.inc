@@ -20,6 +20,10 @@ IMAGE_INSTALL += "procps"
 IMAGE_INSTALL += "mtd-utils"
 IMAGE_INSTALL += "mtd-utils-ubifs"
 
+# Require to provide some extended privileges
+# to non-root processes
+IMAGE_INSTALL += "libcap-ng"
+
 # Make the bootimg image file using the information available in the sysroot...
 do_bootimg() {
     ver=`cat ${STAGING_KERNEL_DIR}/kernel-abiversion`
