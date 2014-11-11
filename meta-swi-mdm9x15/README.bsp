@@ -32,6 +32,27 @@ This BSP is developed under following hardware environment:
 Adjustment may be needed if run the bsp on other variants of MDM9x15
 related boards.
 
+2.1. Known Working Hardware/Firmware combinations 
+=================================================
+2.1.1 Yocto 1.4
+===============
+Supported HARDWARE - AR7554/WP7014
+Supported firmware version : 06.00.04
+Other known working firmare version : 06.01.04, 06.02.15
+
+Other tested hardware: AR7552/WP7102
+Known working firmware version : 06.00.04, 06.01.04, 06.02.15
+
+Known Issue: 
+On 06.00.04 firmare fastboot boot <kernel image> command hangs 
+The kernel can be used only by flashing it on to the kernel partition
+fastboot flash kernel <kernel image>
+
+2.1.2 Yocto 1.6
+===============
+Supported HARDWARE - AR7558
+Supported firmware version : 06.03.14
+
 
 3. Dependencies
 ===============
