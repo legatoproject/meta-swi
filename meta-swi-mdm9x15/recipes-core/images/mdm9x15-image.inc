@@ -22,7 +22,7 @@ createimg() {
     ver=`cat ${STAGING_KERNEL_DIR}/kernel-abiversion`
     kernelsize=`awk --non-decimal-data '/ _end/ {end="0x" $1} /_stext/ {beg="0x" $1} END {size1=end-beg+4096; size=and(size1,compl(4095)); printf("%#x",size)}' ${STAGING_DIR_TARGET}/usr/src/kernel/System.map-${ver}`
 
-    ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg --kernel ${STAGING_DIR_TARGET}/usr/src/kernel/Image \
+    ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg --kernel ${STAGING_DIR_TARGET}/usr/src/kernel/${KERNEL_IMAGETYPE} \
         --ramdisk /dev/null \
         --cmdline "${KERNEL_BOOT_OPTIONS}" \
         --base 0x40800000 \
