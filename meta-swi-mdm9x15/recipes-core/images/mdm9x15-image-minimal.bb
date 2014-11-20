@@ -13,3 +13,5 @@ IMAGE_ROOTFS_SIZE = "8192"
 require mdm9x15-image.inc
 
 PR = "${INC_PR}.0"
+
+addtask ubi after do_rootfs before do_build

@@ -51,7 +51,6 @@ do_ubi() {
 
     ${STAGING_DIR_NATIVE}/usr/sbin/ubinize -o ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubi -m 4096 -p 256KiB -s 4096 ${DEPLOY_DIR_IMAGE}/ubinize.cfg
 }
-addtask ubi after do_rootfs before do_build
 
 # Re-enable fetch & unpack tasks, because of bug(s) in Yocto 1.6 .
 do_fetch2[dirs] = "${DL_DIR}"
