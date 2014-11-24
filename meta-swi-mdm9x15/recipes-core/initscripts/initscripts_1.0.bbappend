@@ -1,3 +1,6 @@
+# look for files in the layer first
+FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+
 SRC_URI = "file://functions \
            file://halt \
            file://umountfs \
@@ -20,7 +23,8 @@ SRC_URI = "file://functions \
            file://read-only-rootfs-hook.sh \
            file://volatiles \
            file://save-rtc.sh \
-           file://GPLv2.patch"
+           file://GPLv2.patch \
+          "
 
 SRC_URI_append_arm = " file://alignment.sh"
 
