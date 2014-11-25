@@ -43,7 +43,7 @@ addtask bootimg after do_rootfs before do_build
 do_ubi() {
     local cimg=${DEPLOY_DIR_IMAGE}/ubinize.cfg
 
-	# Make sure ubinize.cfg variables are fully resolved.
+    # Make sure ubinize.cfg variables are fully resolved.
 
     cp -af ${WORKDIR}/ubinize.cfg ${cimg}
     sed -i -e "s|@@DEPLOY_DIR_IMAGE@@|${DEPLOY_DIR_IMAGE}|g" ${cimg}
@@ -51,6 +51,8 @@ do_ubi() {
 
     ${STAGING_DIR_NATIVE}/usr/sbin/ubinize -o ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubi -m 4096 -p 256KiB -s 4096 ${DEPLOY_DIR_IMAGE}/ubinize.cfg
 }
+
+addtask ubi after do_rootfs before do_build
 
 # Re-enable fetch & unpack tasks, because of bug(s) in Yocto 1.6 .
 do_fetch2[dirs] = "${DL_DIR}"
