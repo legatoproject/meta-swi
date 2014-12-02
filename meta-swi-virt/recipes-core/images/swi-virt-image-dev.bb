@@ -65,8 +65,7 @@ IMAGE_INSTALL += "libcap-ng"
 do_prepare_virt() {
     VIRT_DIR=${WORKDIR}/virt
 
-    IMG_ARCH=x86
-    IMG_NAME=img-virt-$IMG_ARCH
+    IMG_NAME=img-virt-${VIRT_ARCH}
 
     KERNEL=kernel
     ROOTFS=rootfs.qcow2

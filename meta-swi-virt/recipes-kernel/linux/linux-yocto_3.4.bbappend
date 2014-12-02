@@ -1,10 +1,13 @@
-COMPATIBLE_MACHINE_swi-virt = "swi-virt"
+COMPATIBLE_MACHINE_swi-virt-x86 = "swi-virt-x86"
+COMPATIBLE_MACHINE_swi-virt-arm = "swi-virt-arm"
 
-KMACHINE_swi-virt = "qemux86"
-KBRANCH_swi-virt = "standard/common-pc/base"
+KMACHINE_swi-virt-x86 = "qemux86"
+KBRANCH_swi-virt-x86 = "${KBRANCH_qemux86}"
 
-KERNEL_FEATURES_append_swi-virt = " cfg/sound.scc cfg/paravirt_kvm.scc"
+KMACHINE_swi-virt-arm = "qemuarm"
+KBRANCH_swi-virt-arm = "${KBRANCH_qemuarm}"
 
-# Use latest commits from KBRANCH & KMETA
-SRCREV_machine_swi-mdm9x15 = "${AUTOREV}"
-SRCREV_meta_swi-mdm9x15 = "${AUTOREV}"
+KERNEL_FEATURES_append_swi-virt-x86 = "${KERNEL_FEATURES_append_qemux86}"
+
+SRCREV_machine_swi-virt-x86 = "${SRCREV_machine_qemux86}"
+SRCREV_machine_swi-virt-arm = "${SRCREV_machine_qemuarm}"
