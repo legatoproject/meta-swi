@@ -11,6 +11,8 @@ LICENSE = "MIT"
 
 inherit core-image
 
+DEPENDS += "linux-yocto"
+
 IMAGE_ROOTFS_SIZE ?= "8192"
 
 FSTYPE_VIRT ?= "ext3"
@@ -69,6 +71,7 @@ do_prepare_virt() {
 
     IMG_NAME=img-virt-${VIRT_ARCH}
 
+    CFG=qemu-config
     KERNEL=kernel
     ROOTFS=rootfs.qcow2
 
@@ -84,10 +87,25 @@ do_prepare_virt() {
     mkdir -p ${DEPLOY_DIR_IMAGE}
 
     cd ${VIRT_DIR}
-    dd if=/dev/zero of=hda.raw bs=1M count=1k
+
+    # QEmu Config
+    touch $CFG
+    if [[ "${VIRT_ARCH}" == "x86" ]]; then
+        echo 'CMDLINE="root=/dev/hda1 console=ttyS0 rw mem=128M"' >> $CFG
+        echo 'ARG_TARGET=""' >> $CFG
+        echo 'ROOTFS_METHOD=-hda' >> $CFG
+
+    elif [[ "${VIRT_ARCH}" == "arm" ]]; then
+        echo 'CMDLINE="root=/dev/sda1 console=ttyS0 rootwait mem=128M"' >> $CFG
+        echo 'ARG_TARGET="-M versatilepb -m 128"' >> $CFG
+        echo 'ROOTFS_METHOD=-hda' >> $CFG
+    fi
 
     # Kernel
     cp -H ${ELF_KERNEL} ${VIRT_DIR}/kernel
+
+    # Hard drive
+    dd if=/dev/zero of=hda.raw bs=1M count=1k
 
     # Partitions
     touch part.sch
@@ -132,7 +150,7 @@ do_prepare_virt() {
     qemu-img convert -f raw -O qcow2 hda.raw rootfs.qcow2
 
     # release
-    tar jcf $VIRT_NAME $KERNEL $ROOTFS
+    tar jcf $VIRT_NAME $CFG $KERNEL $ROOTFS
 
     cp $VIRT_NAME ${DEPLOY_DIR_IMAGE}
 
