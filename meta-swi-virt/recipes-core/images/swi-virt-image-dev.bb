@@ -13,6 +13,8 @@ inherit core-image
 
 IMAGE_ROOTFS_SIZE ?= "8192"
 
+FSTYPE_VIRT ?= "ext3"
+
 IMAGE_INSTALL += "util-linux"
 IMAGE_INSTALL += "util-linux-blkid"
 IMAGE_INSTALL += "util-linux-mount"
@@ -83,15 +85,17 @@ do_prepare_virt() {
 
     cd ${VIRT_DIR}
     dd if=/dev/zero of=hda.raw bs=1M count=1k
-    
+
     # Kernel
-    cp -H ${DEPLOY_DIR_IMAGE}/bzImage ${VIRT_DIR}/kernel
+    cp -H ${ELF_KERNEL} ${VIRT_DIR}/kernel
 
     # Partitions
     touch part.sch
+    # part 1 = rootfs
     echo ",512,L,*" >> part.sch
+    # part 2 = /mnt/flash
     echo ",+,L,-" >> part.sch
-    sfdisk -u M hda.raw < part.sch
+    sfdisk -u M --force hda.raw < part.sch
 
     fdisk -l hda.raw
 
@@ -100,25 +104,28 @@ do_prepare_virt() {
     OFFSET_1=$(sfdisk -d hda.raw |grep hda.raw1 |awk '{print $4}' |sed 's/,//g')
     SIZE_1=$(sfdisk -d hda.raw |grep hda.raw1 |awk '{print $6}' |sed 's/,//g')
 
+    echo "Part 1 | of $OFFSET_1 | sz $SIZE_1"
+
     OFFSET_2=$(sfdisk -d hda.raw |grep hda.raw2 |awk '{print $4}' |sed 's/,//g')
     SIZE_2=$(sfdisk -d hda.raw |grep hda.raw2 |awk '{print $6}' |sed 's/,//g')
 
+    echo "Part 2 | of $OFFSET_2 | sz $SIZE_2"
+
     SECTOR_SZ=512
 
-    echo "$OFFSET_1 $SIZE_1"
+    ROOTFS_IMG="${PN}-${MACHINE}.${FSTYPE_VIRT}"
+    echo "Managing rootfs: ${ROOTFS_IMG}"
+    cp ${DEPLOY_DIR_IMAGE}/${ROOTFS_IMG} rootfs.${FSTYPE_VIRT}
+    e2fsck -p rootfs.${FSTYPE_VIRT}
+    resize2fs rootfs.${FSTYPE_VIRT} "$SIZE_1"s
 
-    echo "Managing rootfs"
-    cp ${DEPLOY_DIR_IMAGE}/swi-virt-image-dev-swi-virt.ext3 rootfs.ext3
-    e2fsck -p rootfs.ext3
-    resize2fs rootfs.ext3 "$SIZE_1"s
-
-    dd if=rootfs.ext3 conv=notrunc of=hda.raw bs=$SECTOR_SZ seek=$OFFSET_1 count=$SIZE_1
+    dd if=rootfs.${FSTYPE_VIRT} conv=notrunc of=hda.raw bs=$SECTOR_SZ seek=$OFFSET_1 count=$SIZE_1
 
     echo "Generating /mnt/flash"
-    dd if=/dev/zero of=flash.ext3 bs=$SECTOR_SZ count=$SIZE_2
-    mkfs.ext3 -F flash.ext3
+    dd if=/dev/zero of=flash.${FSTYPE_VIRT} bs=$SECTOR_SZ count=$SIZE_2
+    mkfs.${FSTYPE_VIRT} -F flash.${FSTYPE_VIRT}
 
-    dd if=flash.ext3 conv=notrunc of=hda.raw bs=$SECTOR_SZ seek=$OFFSET_2 count=$SIZE_2
+    dd if=flash.${FSTYPE_VIRT} conv=notrunc of=hda.raw bs=$SECTOR_SZ seek=$OFFSET_2 count=$SIZE_2
 
     fdisk -l hda.raw
 
@@ -134,3 +141,4 @@ do_prepare_virt() {
 }
 
 addtask prepare_virt after do_rootfs before do_build
+
