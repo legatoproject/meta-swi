@@ -1,0 +1,110 @@
+#!/bin/sh
+###############################################################
+# This script will execute system shutdown ('K') scripts and
+# other shutdown executables.
+#
+# Copyright (C) 2014 Sierra Wireless, Inc
+# Author: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+###############################################################
+
+# Import runtime environment
+source /etc/run.env
+
+# The name of this script
+this_e=$( basename $0 )
+
+#
+# Helper functions
+#
+
+# Execute 'K' scripts. This method will not execute scripts
+# which are not executable.
+run_K_scripts()
+{
+    local ret=0
+    local root_path=""
+    local file=""
+
+    # Execute all 'K' scripts. It is assumed that 'K' scripts
+    # are soft links to the executable scripts elsewhere.
+    for k in ${root_path}/etc/rcS.d/K* ; do
+        file=$( realpath ${k} )
+        if [ -x ${file} ] ; then
+            ${k} stop
+        fi
+    done
+
+    return ${ret}
+}
+
+# unmount file systems which does not require special attention.
+umount_fs_generic()
+{
+    local ret=0
+
+	# Make sure that root file system is remounted read-only
+    # before shutdown (well, bad things could and will happen).
+    mount -n -o remount,ro / 2>/dev/null
+
+    # Umount all file systems (/ and /proc will stay intact)
+    umount -a -l -n 2>/dev/null
+
+    return ${ret}
+}
+
+
+# Kill all processes
+kill_all_proc()
+{
+    local ret=0
+
+    # Send SIGTERM to all processes (except process in our own session).
+    # FIXME: Install killall5
+#    killall5
+
+    return ${ret}
+}
+
+# Print shutdown message.
+print_shutdown_msg()
+{
+    local ret=0
+
+    echo "** SYSTEM SHUTDOWN COMPLETE **"
+
+    return ${ret}
+}
+
+#
+# Main method
+#
+rcK_main()
+{
+    local ret=0
+
+    # list of methods to execute
+    local method_list="
+                       run_K_scripts
+                       kill_all_proc
+                       umount_fs_generic
+                       print_shutdown_msg
+                      "
+
+    for method in ${method_list} ; do
+        echo "${this_e}: Executing ${method}... "
+        ${method}
+        if [ $? -ne 0 ] ; then return 1 ; fi
+    done
+
+    return ${ret}
+}
+
+
+#
+# The execution starts here.
+#
+rcK_main
+if [ $? -ne 0 ] ; then
+    echo "System error! "
+    exit 1
+fi

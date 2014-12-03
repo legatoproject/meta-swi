@@ -20,9 +20,14 @@ IMAGE_INSTALL += "procps"
 IMAGE_INSTALL += "mtd-utils"
 IMAGE_INSTALL += "mtd-utils-ubifs"
 
-# Require to provide some extended privileges
+# Required to provide some extended privileges
 # to non-root processes
 IMAGE_INSTALL += "libcap-ng"
+
+# Install busybox mdev instead of udev. This is
+# here just as a reminder, because we are doing
+# manual installation of mdev.
+# IMAGE_INSTALL += "busybox-mdev"
 
 # Make the bootimg image file using the information available in the sysroot...
 do_bootimg() {

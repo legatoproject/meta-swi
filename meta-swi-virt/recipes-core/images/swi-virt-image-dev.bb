@@ -31,7 +31,6 @@ IMAGE_INSTALL += "lttng-ust"
 
 IMAGE_INSTALL += "iproute2"
 IMAGE_INSTALL += "iptables"
-IMAGE_INSTALL += "udev-cache"
 
 IMAGE_INSTALL += "opkg"
 IMAGE_INSTALL += "openssl"

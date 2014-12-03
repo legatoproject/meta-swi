@@ -1,0 +1,100 @@
+#!/bin/sh
+###############################################################
+# This script will execute system startup ('S') scripts.
+#
+# Copyright (C) 2014 Sierra Wireless, Inc
+# Author: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+###############################################################
+
+# Import runtime environment
+source /etc/run.env
+
+# The name of this script
+this_e=$( basename $0 )
+
+#
+# Helper functions
+#
+
+#
+# Mount essential file systems
+#
+mount_essential_fs()
+{
+    local ret=0
+
+    # Mount proc file system
+    mount -t proc proc /proc -o smackfsdef=_
+
+    # Mount sysfs file system
+    mount -t sysfs sysfs /sys
+
+    # mount debugfs
+    mount -t debugfs debugfs /sys/kernel/debug
+
+    return ${ret}
+}
+
+simple_network()
+{
+    local ret=0
+
+    ifconfig lo up
+
+    return ${ret}
+}
+
+# Execute 'S' scripts. This method will not execute scripts
+# which are not executable.
+run_S_scripts()
+{
+    local ret=0
+    local root_path=""
+    local file=""
+
+    # Execute all 'S' scripts. It is assumed that 'S' scripts
+    # are soft links to the executable scripts elsewhere.
+    for s in ${root_path}/etc/rcS.d/S* ; do
+        file=$( realpath ${s} )
+        if [ -x ${file} ] ; then
+            ${s} start
+        else
+            echo "${this_e}: Not starting ${s}, it is not executable."
+        fi
+    done
+
+    return ${ret}
+}
+
+#
+# Main method
+#
+rcS_main()
+{
+    local ret=0
+
+    # list of methods to execute
+    local method_list="
+                       mount_essential_fs
+                       simple_network
+                       run_S_scripts
+                      "
+
+    for method in ${method_list} ; do
+        echo "${this_e}: Executing ${method}... "
+        ${method}
+        if [ $? -ne 0 ] ; then return 1 ; fi
+    done
+
+    return ${ret}
+}
+
+
+#
+# The execution starts here.
+#
+rcS_main
+if [ $? -ne 0 ] ; then
+    echo "System error! "
+    exit 1
+fi

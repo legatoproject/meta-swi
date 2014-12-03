@@ -3,7 +3,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += "file://init"
 
-INITSCRIPT_PARAMS_dropbear = "start 10 2 3 4 5 . stop 10 0 1 6 ."
+INITSCRIPT_PARAMS_dropbear = "start 10 S . stop 90 S ."
 
 do_install_append () {
     install -d ${D}${sysconfdir}/init.d

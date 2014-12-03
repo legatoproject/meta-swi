@@ -1,16 +1,1 @@
-# Basic Legato fstab
-
-rootfs              /                   auto        defaults,smackfsdef=_               1  1
-proc                /proc               proc        defaults,smackfsdef=_               0  0
-devpts              /dev/pts            devpts      mode=0620,gid=5,smackfsdef=_        0  0
-usbfs               /proc/bus/usb       usbfs       defaults,smackfsdef=_               0  0
-tmpfs               /run                tmpfs       mode=0755,nodev,nosuid,strictatime,smackfsdef=_  0  0
-tmpfs               /dev/shm            tmpfs       mode=0777,smackfsdef=_              0  0
-
-# SWISTART - update for Sierra partition
-#/dev/mmcblk0p1      /media/card          auto       defaults,gid=1015,umask=002,smackfsdef=_  0  0
-#/dev/mtdblock9      /cache               yaffs2     defaults,smackfsdef=_               0  0
-/dev/mtdblock5      /mnt/userrw         yaffs2      defaults,smackfsdef=_               0  0
-
-# SWISTOP
-
+# /etc/fstab placeholder. Customers should put their file system mounts here.

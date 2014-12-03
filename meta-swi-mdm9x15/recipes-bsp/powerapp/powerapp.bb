@@ -4,6 +4,12 @@ LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/\
 ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
+# FIXME, DM: Move reboot and shutdown to rcK, because we cannot reboot
+# until complete cleanup is done. And shutdown will be faster since only
+# one script is executing (rcK).
+# However, the real question is, do we really need these two scripts in
+# shutdown sequence.
+
 PR = "r0"
 
 SRC_URI = "file://powerapp.tar.gz"
@@ -35,23 +41,25 @@ do_install() {
 pkg_postinst_${PN}-reboot () {
         [ -n "$D" ] && OPT="-r $D" || OPT="-s"
         update-rc.d $OPT -f reboot remove
-        update-rc.d $OPT reboot start 99 6 .
+        # Take a look at the FIXME comment.
+        # update-rc.d $OPT reboot stop 98 K .
 }
 
 pkg_postinst_${PN}-shutdown () {
         [ -n "$D" ] && OPT="-r $D" || OPT="-s"
         update-rc.d $OPT -f shutdown remove
-        update-rc.d $OPT shutdown start 99 0 .
+        # Take a look at the FIXME comment above.
+        # update-rc.d $OPT shutdown stop 99 K .
 }
 
 pkg_postinst_${PN}-powerconfig () {
         [ -n "$D" ] && OPT="-r $D" || OPT="-s"
         update-rc.d $OPT -f power_config remove
-        update-rc.d $OPT power_config start 50 2 3 4 5 . stop 50 0 1 6 .
+        update-rc.d $OPT power_config start 50 S . stop 50 S .
 }
 
 pkg_postinst_${PN} () {
     [ -n "$D" ] && OPT="-r $D" || OPT="-s"
     update-rc.d $OPT -f reset_reboot_cookie remove
-    update-rc.d $OPT reset_reboot_cookie start 55 2 3 4 5 .
+    update-rc.d $OPT reset_reboot_cookie start 55 S .
 }
