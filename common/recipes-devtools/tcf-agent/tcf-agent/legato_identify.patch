@@ -1,0 +1,28 @@
+--- a/framework/mdep.c	2014-12-02 11:24:01.341286309 +0100
++++ framework/mdep.c	2014-12-11 10:41:22.688306610 +0100
+@@ -713,6 +713,25 @@
+ const char * get_os_name(void) {
+     static char str[256];
+     struct utsname info;
++/* SWISTART */
++    static FILE *fd = NULL;
++    char *pstr;
++    if( NULL == fd ) {
++        char *p;
++        memset( str, 0, sizeof(str) );
++        fd = fopen( "/etc/tcf-agent.conf", "r" );
++        if( fd ) {
++            strcpy( str, "Legato " );
++            pstr = str + strlen(str);
++            if( fgets( pstr, sizeof(str) - (pstr - str), fd ) && (p = strchr( pstr, '\n')) )
++                *p = '\0';
++            str[sizeof(str) - 1] = '\0';
++            fclose( fd );
++            if( *pstr )
++                return str;
++            }
++        }
++/* SWISTOP */
+     memset(&info, 0, sizeof(info));
+     uname(&info);
+     assert(strlen(info.sysname) + strlen(info.release) < sizeof(str));
