@@ -8,6 +8,7 @@ PR = "r0"
 
 SRC_URI = "file://mm-audio.tar.bz2"
 SRC_URI += "file://0001-SBM-16534-12181-aplay-arec-amix-consume-too-much-CPU-resource.patch"
+SRC_URI += "file://0002-SBM-17175-optimize-aplay-arec.patch"
 prefix="/etc"
 
 S = "${WORKDIR}/mm-audio"
