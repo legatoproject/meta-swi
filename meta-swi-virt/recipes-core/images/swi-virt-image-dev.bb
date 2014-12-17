@@ -20,7 +20,6 @@ FSTYPE_VIRT ?= "ext3"
 IMAGE_INSTALL += "util-linux"
 IMAGE_INSTALL += "util-linux-blkid"
 IMAGE_INSTALL += "util-linux-mount"
-IMAGE_INSTALL += "nfs-utils-client"
 
 # Add some extra packages for tool integration
 IMAGE_INSTALL += "dropbear"
@@ -48,10 +47,8 @@ IMAGE_INSTALL += "attr"
 
 # Required for some Developer Studio features. 
 # Not needed for production builds
-# Note that this pulls bash back in
 IMAGE_INSTALL += "openssh-sftp-server"
 IMAGE_INSTALL += "tcf-agent"
-IMAGE_INSTALL += "bash"
 
 # Add some things for dev & system intg
 IMAGE_INSTALL += "cmake"
