@@ -7,9 +7,16 @@
 STARTUP_DIR=/mnt/flash/startup
 STOP_FILE1=".STOPLEGATO"
 STOP_FILE2="STOPLEGATO"
+PRE_INSTALL_DIR=/mnt/legato/usr/local/bin
 
 case "$1" in
     start)
+
+        # Check for a new uninitialized install
+        if [ -x $PRE_INSTALL_DIR/legato ]
+        then
+            $PRE_INSTALL_DIR/legato bootcheck
+        fi
 
         echo "Legato start sequence"
         # Make sure the directory actually exists
@@ -20,7 +27,6 @@ case "$1" in
         fi
 
         # Check our directory to see if there is anything to run
-        
         files=`ls $STARTUP_DIR`
         cd $STARTUP_DIR
 
@@ -46,7 +52,6 @@ case "$1" in
         done
 
         # Now handle the background ones
-
         for file in $bgfiles
         do
           # Execute these files in the foreground
