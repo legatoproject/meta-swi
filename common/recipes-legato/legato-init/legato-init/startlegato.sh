@@ -61,6 +61,11 @@ case "$1" in
             ./${file} &
           fi
         done
+
+        if [ -x $PRE_INSTALL_DIR/legato ]
+        then
+            $PRE_INSTALL_DIR/legato postbootcheck
+        fi
         ;;
 
     stop)

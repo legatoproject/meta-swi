@@ -23,7 +23,11 @@ do_prepare_tools() {
     mkdir -p ${S}/bin
     cd ${S}
 
-    ln -sf $(which mk) bin/mk
+    sysval=`uname -m`-linux
+    realmk=$(pwd | sed -e "s/armv7a-vfp-neon-poky-linux-gnueabi/$sysval/" | sed -e "s/legato-af/legato-tools/")
+
+    #ln -sf $(which mk) bin/mk
+    ln -sf $realmk/bin/mk bin/mk
     ln -sf mk bin/mkif
     ln -sf mk bin/mkcomp
     ln -sf mk bin/mkexe
