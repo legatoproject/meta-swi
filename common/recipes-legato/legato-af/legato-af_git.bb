@@ -9,7 +9,7 @@ FILESEXTRAPATHS += "${THISDIR}/files"
 
 LEGATO_ROOT ?= "/mnt/legato"
 
-LEGATO_ROOTFS_TARGETS ?= "ar7 wp7 ar7-ecall"
+LEGATO_ROOTFS_TARGETS ?= "ar7,wp7,ar7-ecall"
 
 do_configure[noexec] = "1"
 
@@ -73,7 +73,10 @@ do_compile() {
         git submodule update
     fi
 
-    for target in ${LEGATO_ROOTFS_TARGETS}; do
+    ROOTFS_TARGS=$(echo ${LEGATO_ROOTFS_TARGETS} | sed -e "s/\,/ /g")
+    echo "About to build for targets ${ROOTFS_TARGS}"
+
+    for target in ${ROOTFS_TARGS}; do
 
         # If it is an ar7 target need to handle ecall separately
         if [ $(expr substr $target 1 3) = "ar7" ]
