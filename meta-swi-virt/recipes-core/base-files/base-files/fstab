@@ -8,3 +8,4 @@ tmpfs                /run                 tmpfs      mode=0755,nodev,nosuid,stri
 tmpfs                /var/volatile        tmpfs      defaults              0  0
 
 /dev/hda2            /mnt/flash           ext3       defaults              0  0    
+/dev/sda2            /mnt/flash           ext3       defaults              0  0    

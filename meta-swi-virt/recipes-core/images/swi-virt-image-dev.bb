@@ -20,6 +20,7 @@ FSTYPE_VIRT ?= "ext3"
 IMAGE_INSTALL += "util-linux"
 IMAGE_INSTALL += "util-linux-blkid"
 IMAGE_INSTALL += "util-linux-mount"
+IMAGE_INSTALL += "nfs-utils-client"
 
 # Add some extra packages for tool integration
 IMAGE_INSTALL += "dropbear"
@@ -60,6 +61,9 @@ IMAGE_INSTALL += "legato-init"
 # Require to provide some extended privileges
 # to non-root processes
 IMAGE_INSTALL += "libcap-ng"
+
+# Legato
+IMAGE_INSTALL += "legato-af"
 
 # Prepare a package with kernel + hdd image
 do_prepare_virt() {
