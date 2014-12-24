@@ -1,5 +1,6 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://smack.cfg"
+SRC_URI += "file://pm.cfg"
 
 # x86
 COMPATIBLE_MACHINE_swi-virt-x86 = "swi-virt-x86"
