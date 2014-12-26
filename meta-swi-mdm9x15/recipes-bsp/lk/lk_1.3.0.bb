@@ -12,6 +12,7 @@ SRC_URI += "file://0002-TRAC-1223-lk-make_sure_that_Yocto_kernel_receives_correc
 SRC_URI += "file://0003-SBM-14659-Modem-cannot-bootup-after-flash-customer-Yocto-image-with-fastboot.patch"
 SRC_URI += "file://0004-SBM-15385-GPIO-cooperation-mode-support.patch"
 SRC_URI += "file://0005-SBM-15691-support-squashfs-download.patch"
+SRC_URI += "file://0006-SBM-17249-support-ubi-download.patch"
 
 S = "${WORKDIR}/${PN}"
 
