@@ -11,8 +11,11 @@ LEGATO_ROOT ?= "/mnt/legato"
 
 LEGATO_ROOTFS_TARGETS ?= "ar7,wp7,ar7-ecall"
 
+libdir = "/usr/local/lib"
+
 do_configure[noexec] = "1"
 
+do_prepare_tools[depends] = "legato-tools:do_populate_sysroot"
 do_prepare_tools() {
     # Remove 'tools' target
     sed -i 's/.PHONY: tools//g' ${S}/Makefile
@@ -23,18 +26,18 @@ do_prepare_tools() {
     mkdir -p ${S}/bin
     cd ${S}
 
-    sysval=`uname -m`-linux
-    realmk=$(pwd | sed -e "s/armv7a-vfp-neon-poky-linux-gnueabi/$sysval/" | sed -e "s/legato-af/legato-tools/")
+    realmk=$(which mk)
+    echo "mk: $realmk"
 
-    #ln -sf $(which mk) bin/mk
-    ln -sf $realmk/bin/mk bin/mk
-    ln -sf mk bin/mkif
-    ln -sf mk bin/mkcomp
-    ln -sf mk bin/mkexe
-    ln -sf mk bin/mkapp
-    ln -sf mk bin/mksys
-    ln -sf ${S}/framework/tools/scripts/* bin/
-    ln -sf ${S}/framework/tools/ifgen/ifgen bin/
+    cd ${S}/bin
+    ln -sf $realmk mk
+    ln -sf mk mkif
+    ln -sf mk mkcomp
+    ln -sf mk mkexe
+    ln -sf mk mkapp
+    ln -sf mk mksys
+    ln -sf ${S}/framework/tools/scripts/* ./
+    ln -sf ${S}/framework/tools/ifgen/ifgen ifgen
 }
 
 addtask prepare_tools before do_compile after do_unpack
@@ -103,11 +106,6 @@ do_compile() {
     done
 }
 
-ship_target() {
-    TARGET=$1
-    bzip2 -c ${S}/build/$TARGET/legato-runtime.tar > ${D}/opt/legato/pkgs/$PKG
-}
-
 do_install() {
     install -d ${D}/opt/legato
 
@@ -122,19 +120,17 @@ do_install() {
             install $script ${D}/opt/legato/startupDefaults/
         done
     done
-
-    # Generate the framework images
-    targs=`ls -1 ${S}/build`
-    for target in ${targs}; do
-        rm -fr ${D}/${target}
-        mkdir ${D}/${target}
-        cp -R ${S}/build/${target}/staging/* ${D}/${target}/
-        mkyaffs2image -c 4096 -s 160 ${D}/${target}/ ${DEPLOY_DIR_IMAGE}/legato_af_${target}.yaffs2
-    done
 }
+
+FILES_${PN}-dbg += "usr/local/bin/.debug/*"
+FILES_${PN}-dbg += "usr/local/lib/.debug/*"
+
+FILES_${PN}-dev += "usr/local/lib/libjansson.so"
+FILES_${PN}-dev += "usr/local/lib/libjansson.so.4"
 
 FILES_${PN} += "opt/legato/*"
 FILES_${PN} += "usr/local/*"
 FILES_${PN} += "mnt/legato/*"
 
 INSANE_SKIP_${PN} = "installed-vs-shipped"
+
