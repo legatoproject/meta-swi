@@ -58,13 +58,7 @@ compile_target() {
     echo "Building for $TARGET"
     toolchain_env $TARGET
 
-    # Need a special case for European eCall
-    if [ "x$TARGET" = "xar7-ecall" ]
-    then
-        make $TARGET INCLUDE_ECALL=1
-    else
-        make $TARGET
-    fi
+    make $TARGET
 }
 
 do_compile() {
@@ -80,29 +74,7 @@ do_compile() {
     echo "About to build for targets ${ROOTFS_TARGS}"
 
     for target in ${ROOTFS_TARGS}; do
-
-        # If it is an ar7 target need to handle ecall separately
-        if [ $(expr substr $target 1 3) = "ar7" ]
-        then
-            compile_target ar7
-            if [ "x$target" = "xar7" ]
-            then
-                target_dir=${S}/build/ar7-noecall
-            else
-                target_dir=${S}/build/ar7-ecall
-            fi
-
-            if [ -d ${target_dir} ]
-            then
-                rm -fr ${target_dir}
-            fi
-
-            # Move the build out of the way so that we can 
-            # multip[le AR7 variants
-            mv ${S}/build/ar7 ${target_dir}
-        else
-            compile_target $target
-        fi
+        compile_target $target
     done
 }
 
