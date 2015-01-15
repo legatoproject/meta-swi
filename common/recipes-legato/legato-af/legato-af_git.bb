@@ -9,7 +9,7 @@ FILESEXTRAPATHS += "${THISDIR}/files"
 
 LEGATO_ROOT ?= "/mnt/legato"
 
-LEGATO_ROOTFS_TARGETS ?= "ar7,wp7"
+LEGATO_ROOTFS_TARGETS ?= "ar7,wp7,ar86"
 
 libdir = "/usr/local/lib"
 
