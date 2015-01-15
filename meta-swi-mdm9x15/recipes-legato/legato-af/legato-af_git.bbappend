@@ -1,4 +1,5 @@
 DEPENDS += "yaffs2-utils"
+DEPENDS += "alsa-intf"
 
 do_install_append() {
     # Generate the framework images
