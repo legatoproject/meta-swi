@@ -1,5 +1,9 @@
 DEPENDS += "yaffs2-utils"
 DEPENDS += "alsa-intf"
+DEPENDS += "qmi"
+DEPENDS += "qmi-framework"
+DEPENDS += "sierra"
+DEPENDS += "loc-api"
 
 do_install_append() {
     # Generate the framework images
@@ -12,3 +16,4 @@ do_install_append() {
         mkyaffs2image -c 4096 -s 160 ${DIMG}/ ${DEPLOY_DIR_IMAGE}/legato_af_${target}.yaffs2
     done
 }
+
