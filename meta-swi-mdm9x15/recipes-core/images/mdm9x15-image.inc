@@ -42,8 +42,9 @@ do_bootimg() {
         --ramdisk_offset $kernelsize \
         --output ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x15.img
 
-    rm -f ${DEPLOY_DIR_IMAGE}/kernel
-    ln -s ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x15.img ${DEPLOY_DIR_IMAGE}/kernel
+    cd ${DEPLOY_DIR_IMAGE}
+    rm -f kernel
+    ln -s boot-yocto-mdm9x15.img kernel
 }
 
 addtask bootimg after do_rootfs before do_build
@@ -77,3 +78,4 @@ python do_unpack2() {
 }
 
 addtask unpack2 before do_rootfs
+
