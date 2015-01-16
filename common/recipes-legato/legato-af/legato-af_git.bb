@@ -13,6 +13,9 @@ LEGATO_ROOTFS_TARGETS ?= "ar7,wp7"
 
 libdir = "/usr/local/lib"
 
+LDFLAGS = ""
+TARGET_LDFLAGS = ""
+
 do_configure[noexec] = "1"
 
 do_prepare_tools[depends] = "legato-tools:do_populate_sysroot"
