@@ -65,6 +65,9 @@ IMAGE_INSTALL += "libcap-ng"
 # Legato
 IMAGE_INSTALL += "legato-af"
 
+# Tool to recognize the platform
+IMAGE_INSTALL += "bsinfo"
+
 # Prepare a package with kernel + hdd image
 do_prepare_virt() {
     VIRT_DIR=${WORKDIR}/virt
