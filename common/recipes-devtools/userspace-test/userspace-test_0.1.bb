@@ -28,10 +28,10 @@ do_compile () {
 
 do_install () {
         install -d ${D}/opt/userspace-test
-        install -m 0644 ${WORKDIR}/vodafone ${D}/opt/userspace-test
-        install -m 0644 ${WORKDIR}/vodafone.chat ${D}/opt/userspace-test
-        install -m 0644 ${WORKDIR}/peer-china-unicom ${D}/opt/userspace-test
-        install -m 0644 ${WORKDIR}/china-unicom ${D}/opt/userspace-test
+        install -m 0644 ${S}/vodafone ${D}/opt/userspace-test
+        install -m 0644 ${S}/vodafone.chat ${D}/opt/userspace-test
+        install -m 0644 ${S}/peer-china-unicom ${D}/opt/userspace-test
+        install -m 0644 ${S}/china-unicom ${D}/opt/userspace-test
         find ${S}/ -executable -type f -exec cp {} ${D}/opt/${BPN}/ \;
 }
 
