@@ -6,10 +6,9 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5
 PR = "r0"
 
 SRC_URI = "file://core.tar.bz2 \
-	   file://50-log.rules \
-	   "
-
-SRC_URI += "file://compositions_sierra.patch"
+           file://50-log.rules \
+           file://composition-sierra \
+           "
 
 inherit autotools
 
@@ -43,6 +42,7 @@ do_install_append() {
    install -m 0755 ${S}/usb/usb_composition -D ${D}${bindir}/
    install -d ${D}${bindir}/usb/compositions/
    install -m 0755 ${S}/usb/compositions/* -D ${D}${bindir}/usb/compositions/
+   install -m 0755 ${WORKDIR}/composition-sierra -D ${D}${bindir}/usb/compositions/sierra
    ln -s /usr/bin/usb/compositions/sierra ${D}${bindir}/usb/boot_hsusb_composition
    ln -s /usr/bin/usb/compositions/sierra ${D}${bindir}/usb/boot_hsic_composition
 }
