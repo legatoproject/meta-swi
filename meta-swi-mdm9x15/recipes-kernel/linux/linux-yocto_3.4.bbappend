@@ -26,6 +26,10 @@ do_bootimg() {
 
     ls -al $kernel_img
 
+    if ! [ -e "${DEPLOY_DIR_IMAGE}" ]; then
+        mkdir -p ${DEPLOY_DIR_IMAGE}
+    fi
+
     ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg --kernel $kernel_img \
         --ramdisk /dev/null \
         --cmdline "${KERNEL_BOOT_OPTIONS}" \
