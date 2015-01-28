@@ -40,4 +40,6 @@ IMAGE_INSTALL += "ltrace"
 IMAGE_INSTALL += "lmbench"
 IMAGE_INSTALL += "valgrind"
 
-do_ubi[noexec] = "1"
+prepare_ubi() {
+    :
+}
