@@ -12,7 +12,9 @@ ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 PR = "r0"
 
-SRC_URI = "file://powerapp.tar.gz"
+SRC_URI = "file://powerapp.tar.gz \
+           file://0001-meta-swi-mdm9x15-remove-startup-errors.patch \
+           file://0002-trac-1219-Switch-sysV-init-to-busybox-style-init.patch"
 
 PACKAGES =+ "${PN}-reboot ${PN}-shutdown ${PN}-powerconfig"
 FILES_${PN}-reboot = "${sysconfdir}/init.d/reboot"

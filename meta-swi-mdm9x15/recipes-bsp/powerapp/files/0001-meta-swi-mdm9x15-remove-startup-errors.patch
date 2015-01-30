@@ -1,0 +1,13 @@
+commitID f8c4ae9b67a87ccbc40cdd3a9d0bde54f687f994
+diff -ru a/start_power_config b/start_power_config
+--- a/start_power_config	2013-08-14 15:01:31.000000000 -0700
++++ b/start_power_config	2014-02-26 01:41:00.000000000 -0800
+@@ -44,8 +44,6 @@
+ # SWISTART
+ #ifndef SIERRA
+ #        echo ondemand > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+-#else
+-        (sleep 30; echo ondemand > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor)&
+ #endif
+ # SWISTOP
+         echo "done"
