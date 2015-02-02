@@ -1,0 +1,24 @@
+From 3663d8dd8701518da705163a83d218a6d539d41c Mon Sep 17 00:00:00 2001
+From: Bertrand Roussel <broussel@sierrawireless.com>
+Date: Mon, 2 Feb 2015 09:59:33 -0800
+Subject: [PATCH] mdm9x15: Remove startup errors
+
+---
+ powerapp/start_power_config | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/powerapp/start_power_config b/powerapp/start_power_config
+index 5739ab2..f784fc1 100644
+--- a/powerapp/start_power_config
++++ b/powerapp/start_power_config
+@@ -41,7 +41,6 @@ case "$1" in
+         echo 1 > /sys/module/rpm_resources/enable_low_power/pxo
+         echo 2 > /sys/module/rpm_resources/enable_low_power/vdd_dig
+         echo 2 > /sys/module/rpm_resources/enable_low_power/vdd_mem
+-        echo ondemand > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+         echo "done"
+         ;;
+   stop)
+-- 
+2.2.2
+

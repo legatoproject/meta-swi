@@ -12,8 +12,8 @@ ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 PR = "r0"
 
-SRC_URI = "file://powerapp.tar.gz \
-           file://0001-meta-swi-mdm9x15-remove-startup-errors.patch \
+SRC_URI = "git://codeaurora.org/platform/system/core;rev=2e258be69a0aa2e864fd5fcda822ebc2a6571ddd;branch=penguin \
+           file://0001-mdm9x15-Remove-startup-errors.patch;striplevel=2 \
            file://0002-trac-1219-Switch-sysV-init-to-busybox-style-init.patch"
 
 PACKAGES =+ "${PN}-reboot ${PN}-shutdown ${PN}-powerconfig"
@@ -25,17 +25,17 @@ PROVIDES =+ "${PN}-reboot ${PN}-shutdown ${PN}-powerconfig"
 
 inherit autotools
 
-S = "${WORKDIR}/powerapp"
+S = "${WORKDIR}/git/powerapp"
 
 do_install() {
-        install -m 0755 ${WORKDIR}/powerapp/powerapp -D ${D}/sbin/powerapp
-        install -m 0755 ${WORKDIR}/powerapp/reboot -D ${D}${sysconfdir}/init.d/reboot
+        install -m 0755 ${S}/powerapp -D ${D}/sbin/powerapp
+        install -m 0755 ${S}/reboot -D ${D}${sysconfdir}/init.d/reboot
         install -m 0755 ${S}/reboot-bootloader -D ${D}/sbin/reboot-bootloader
         install -m 0755 ${S}/reboot-recovery -D ${D}/sbin/reboot-recovery
         install -m 0755 ${S}/reboot-cookie -D ${D}${sysconfdir}/reboot-cookie
         install -m 0755 ${S}/reset_reboot_cookie -D ${D}${sysconfdir}/init.d/reset_reboot_cookie
-        install -m 0755 ${WORKDIR}/powerapp/shutdown -D ${D}${sysconfdir}/init.d/shutdown
-        install -m 0755 ${WORKDIR}/powerapp/start_power_config -D ${D}${sysconfdir}/init.d/power_config
+        install -m 0755 ${S}/shutdown -D ${D}${sysconfdir}/init.d/shutdown
+        install -m 0755 ${S}/start_power_config -D ${D}${sysconfdir}/init.d/power_config
         pushd ${D}${base_sbindir}
         ln -s powerapp sys_reboot
         ln -s powerapp sys_shutdown

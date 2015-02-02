@@ -1,6 +1,6 @@
 inherit native
 
-PR = "r0"
+PR = "r1"
 
 MY_PN = "mincrypt"
 MY_LPN = "libmincrypt"
@@ -9,13 +9,22 @@ DESCRIPTION = "Minimalistic encryption library from Android"
 LICENSE = "BSD"
 LIC_FILES_CHKSUM = "file://NOTICE;md5=c19179f3430fd533888100ab6616e114"
 
-SRC_URI = "file://libmincrypt.tar.bz2"
+SRC_URI  = "git://codeaurora.org/platform/system/core;rev=2e258be69a0aa2e864fd5fcda822ebc2a6571ddd;branch=penguin"
+SRC_URI += "file://Makefile"
 
-EXTRA_OEMAKE = "INCLUDES='-I./include'"
+EXTRA_OEMAKE = "INCLUDES='-I${WORKDIR}/git/include'"
+
+S = "${WORKDIR}/git/libmincrypt"
+
+copy_makefile() {
+    cp ${WORKDIR}/Makefile ${S}
+}
+
+do_patch[postfuncs] += "copy_makefile"
 
 do_install() {
 	install -d ${D}${includedir}/${MY_PN} ${D}${libdir}/${MY_PN}
-	install include/${MY_PN}/*.h ${D}${includedir}/${MY_PN}
+	install ${WORKDIR}/git/include/${MY_PN}/*.h ${D}${includedir}/${MY_PN}
 	install ${MY_LPN}.a ${D}${libdir}/${MY_PN}
 }
 

@@ -3,16 +3,17 @@ HOMEPAGE = "http://developer.android.com/"
 LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
-PR = "r0"
+PR = "r1"
 
-SRC_URI = "file://core.tar.bz2 \
+SRC_URI = "git://codeaurora.org/platform/system/core;rev=2e258be69a0aa2e864fd5fcda822ebc2a6571ddd;branch=penguin \
            file://50-log.rules \
            file://composition-sierra \
+           file://0001-Fix-libmincrypt-include-path.patch \
            "
 
 inherit autotools
 
-S = "${WORKDIR}/core"
+S = "${WORKDIR}/git"
 
 ALLOW_EMPTY_${PN} = "1"
 
