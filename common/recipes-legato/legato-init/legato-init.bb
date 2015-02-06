@@ -22,7 +22,7 @@ do_install_append () {
 
     [ -n "${D}" ] && OPT="-r ${D}" || OPT="-s"
     update-rc.d $OPT -f startlegato.sh remove
-    update-rc.d $OPT startlegato.sh start 99 S . stop 01 S .
+    update-rc.d $OPT startlegato.sh start 94 S . stop 06 S .
 }
 
 FILES_${PN} = " \

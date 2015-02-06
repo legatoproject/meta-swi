@@ -84,7 +84,7 @@ do_install () {
 #
 # Create runlevel links
 #
-	update-rc.d -r ${D} rmnologin.sh start 99 S .
+	update-rc.d -r ${D} rmnologin.sh start 98 S .
 	update-rc.d -r ${D} urandom start 08 S .
 	update-rc.d -r ${D} save-rtc.sh start 25 S .
 	update-rc.d -r ${D} banner.sh start 02 S .
