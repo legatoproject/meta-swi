@@ -3,13 +3,13 @@ SECTION = "base"
 DEPENDS = "legato-tools"
 PR = "r0"
 
+inherit legato
+
 require legato.inc
 
 FILESEXTRAPATHS += "${THISDIR}/files"
 
 LEGATO_ROOT ?= "/mnt/legato"
-
-LEGATO_ROOTFS_TARGETS ?= "ar7,wp7,ar86"
 
 libdir = "/usr/local/lib"
 
@@ -45,26 +45,11 @@ do_prepare_tools() {
 
 addtask prepare_tools before do_compile after do_unpack
 
-toolchain_env() {
-    TARGET=$1
-    TOOLCHAIN_DIR_ENV="${TARGET^^}_TOOLCHAIN_DIR"
-    TOOLCHAIN_DIR=$(dirname $(which $(echo $CC |awk '{print $1}')))
-
-    export ${TOOLCHAIN_DIR_ENV}=$TOOLCHAIN_DIR
-
-    echo "Toolchain: ${TOOLCHAIN_DIR_ENV} $TOOLCHAIN_DIR"
-}
-
 compile_target() {
-    TARGET=$1
-
-    echo "Building for $TARGET"
-    toolchain_env $TARGET
-
-    make $TARGET
+    make $LEGATO_TARGET
 }
 
-do_compile() {
+do_compile_prepend() {
     # For some reason this doesn't work in do_unpack_append
     # Need to grab the airvantage module if it isn't there already
     if [ ! -f "${S}/airvantage/CMakeLists.txt" ]
@@ -72,13 +57,6 @@ do_compile() {
         git submodule init
         git submodule update
     fi
-
-    ROOTFS_TARGS=$(echo ${LEGATO_ROOTFS_TARGETS} | sed -e "s/\,/ /g")
-    echo "About to build for targets ${ROOTFS_TARGS}"
-
-    for target in ${ROOTFS_TARGS}; do
-        compile_target $target
-    done
 }
 
 do_install() {
@@ -95,6 +73,44 @@ do_install() {
             install $script ${D}/opt/legato/startupDefaults/
         done
     done
+
+    # headers
+    install -d ${D}${includedir}
+    for file in $(find ${S}/framework/c/inc -type f); do
+        echo "Installing header: $file"
+        install $file ${D}${includedir}
+    done
+
+    # private headers required by _main.c
+    install -d ${D}/usr/share/legato/src
+    cd ${S}/framework/c/src
+    for file in eventLoop.h log.h args.h; do
+        install $file ${D}/usr/share/legato/src/
+    done
+
+    # liblegato
+    install -d ${D}${libdir}
+    install ${S}/build/$(echo ${LEGATO_ROOTFS_TARGETS} | awk '{print $1}')/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
+
+    # API files
+    install -d ${D}/usr/share/legato/interfaces
+    cd ${S}
+    for file in $(find ./interfaces -name "*.api"); do
+        dir=$(dirname $file)
+        echo "Installing API: $file"
+        if [[ "$dir" != "." ]]; then
+            install -d ${D}/usr/share/legato/$dir
+        fi
+        install $file ${D}/usr/share/legato/$file
+    done
+}
+
+do_install_image() {
+    # legato-image
+    for target in ${LEGATO_ROOTFS_TARGETS}; do
+        mkdir -p ${LEGATO_STAGING_DIR}/${target}
+        cp -R ${S}/build/${target}/staging/* ${LEGATO_STAGING_DIR}/${target}/
+    done
 }
 
 FILES_${PN}-dbg += "usr/local/bin/.debug/*"
@@ -108,4 +124,3 @@ FILES_${PN} += "usr/local/*"
 FILES_${PN} += "mnt/legato/*"
 
 INSANE_SKIP_${PN} = "installed-vs-shipped"
-

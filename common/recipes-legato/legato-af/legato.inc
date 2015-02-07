@@ -19,4 +19,3 @@ SRC_URI[sha256sum] ?= "${LEGATO_CHKSUM}"
 #SRCREV_pn-${PN} = "${AUTOREV}"
 
 S = "${LEGATO_WRKDIR}"
-
