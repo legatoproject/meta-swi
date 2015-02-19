@@ -28,13 +28,15 @@ IMAGE_INSTALL += "libcap-ng"
 # manual installation of mdev.
 # IMAGE_INSTALL += "busybox-mdev"
 
-# Create UBI image
-prepare_ubi() {
+# Create UBI image (for a specific page size)
+prepare_ubi_ps() {
+    local page_size=$1
     local cimg=${DEPLOY_DIR_IMAGE}/ubinize.cfg
 
     local image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs"
-    local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubi"
-    local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
+
+    local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.ubi"
+    local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${page_size}.ubi"
 
     if ! [ -e "$image_path" ]; then
         echo "${IMAGE_NAME} doesn't exist"
@@ -46,13 +48,46 @@ prepare_ubi() {
     cp -af ${WORKDIR}/ubinize.cfg ${cimg}
     sed -i -e "s|@@IMAGE_PATH@@|$image_path|g" ${cimg}
 
-    ${STAGING_DIR_NATIVE}/usr/sbin/ubinize -o $ubi_path -m 4096 -p 256KiB -s 4096 ${DEPLOY_DIR_IMAGE}/ubinize.cfg
+    local ubinize_args=''
+
+    case $page_size in
+    2k)
+        ubinize_args='-m 2048 -p 128KiB -s 2048'
+        ;;
+    4k)
+        ubinize_args='-m 4096 -p 256KiB -s 4096'
+        ;;
+    *)
+        exit 1
+        ;;
+    esac
+
+    ${STAGING_DIR_NATIVE}/usr/sbin/ubinize -o $ubi_path $ubinize_args ${DEPLOY_DIR_IMAGE}/ubinize.cfg
 
     rm -f $ubi_link_path
     ln -s $(basename $ubi_path) $ubi_link_path
+
+    # Default image (no bs suffix) to 4k
+    if [[ "$page_size" == "4k" ]]; then
+        ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
+        rm -f $ubi_link_path
+        ln -s $(basename $ubi_path) $ubi_link_path
+    fi
+}
+
+# Create UBI images
+prepare_ubi() {
+    prepare_ubi_ps '2k'
+    prepare_ubi_ps '4k'
+}
+
+default_rootfs_ps() {
+    # Default to 4k
+    ln -sf ${IMAGE_NAME}.rootfs.4k.yaffs2 ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.yaffs2
 }
 
 do_rootfs[postfuncs] += "prepare_ubi"
+do_rootfs[postfuncs] += "default_rootfs_ps"
 
 # Re-enable fetch & unpack tasks, because of bug(s) in Yocto 1.6 .
 do_fetch2[dirs] = "${DL_DIR}"

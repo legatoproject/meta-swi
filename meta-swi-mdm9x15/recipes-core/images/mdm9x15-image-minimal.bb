@@ -14,3 +14,10 @@ require mdm9x15-image.inc
 
 PR = "${INC_PR}.0"
 
+rootfs_symlink() {
+    # Provide minimal image as rootfs symlink
+    ln -sf ${IMAGE_NAME}.rootfs.4k.yaffs2 ${DEPLOY_DIR_IMAGE}/rootfs
+}
+
+do_rootfs[postfuncs] += "rootfs_symlink"
+
