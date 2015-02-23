@@ -12,7 +12,7 @@ DEPENDS = "libmincrypt-native"
 
 PR = "r1"
 
-SRC_URI  = "git://codeaurora.org/platform/system/core;rev=2e258be69a0aa2e864fd5fcda822ebc2a6571ddd;branch=penguin"
+SRC_URI  = "git://codeaurora.org/platform/system/core;tag=M9615AAAARNLZA1611263;branch=penguin"
 SRC_URI += "file://Makefile"
 
 S = "${WORKDIR}/git/mkbootimg"

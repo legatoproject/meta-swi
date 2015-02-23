@@ -2,12 +2,12 @@ DESCRIPTION = "Little Kernel bootloader"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/\
 ${LICENSE};md5=0835ade698e0bcf8506ecda2f7b4f302"
-HOMEPAGE = "https://www.codeaurora.org/gitweb/quic/la?p=kernel/lk.git"
+HOMEPAGE = "https://www.codeaurora.org/cgit/quic/la/kernel/lk"
 PROVIDES = "virtual/lk"
 
 PR = "r1"
 
-SRC_URI  = "git://codeaurora.org/kernel/lk;rev=297a9cf7cab2bd1f2b90806f59aee3556434b962;branch=ics_strawberry"
+SRC_URI  = "git://codeaurora.org/kernel/lk;tag=M9615AAAARNLZA1713041;branch=ics_strawberry"
 SRC_URI += "file://0000-mdm9x15-Import-SWI-changes.patch"
 SRC_URI += "file://0002-TRAC-1223-lk-make_sure_that_Yocto_kernel_receives_correct_atag_MTD_partition_information_from_bootloader.patch"
 SRC_URI += "file://0003-SBM-14659-Modem-cannot-bootup-after-flash-customer-Yocto-image-with-fastboot.patch"

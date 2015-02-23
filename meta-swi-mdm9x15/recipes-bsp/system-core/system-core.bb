@@ -1,11 +1,11 @@
 DESCRIPTION = "Android system/core components"
-HOMEPAGE = "http://developer.android.com/"
+HOMEPAGE = "https://www.codeaurora.org/cgit/external/gigabyte/platform/system/core/"
 LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 PR = "r1"
 
-SRC_URI = "git://codeaurora.org/platform/system/core;rev=2e258be69a0aa2e864fd5fcda822ebc2a6571ddd;branch=penguin \
+SRC_URI = "git://codeaurora.org/platform/system/core;tag=M9615AAAARNLZA1611263;branch=penguin \
            file://50-log.rules \
            file://composition-sierra \
            file://0001-Fix-libmincrypt-include-path.patch \
