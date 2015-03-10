@@ -1,0 +1,54 @@
+--- a/app/aboot/aboot.c	2015-03-24 09:46:48.251756309 +0100
++++ b/app/aboot/aboot.c	2015-03-24 09:50:42.647747165 +0100
+@@ -62,6 +62,7 @@
+ /* SWISTART */
+ #ifdef SIERRA
+ #include "sierra_bludefs.h"
++#include "sierra_lkversion.h"
+ #endif /* SIERRA */
+ /* SWISTOP */
+ 
+@@ -104,6 +105,12 @@
+ static const char *baseband_mdm     = " androidboot.baseband=mdm";
+ static const char *baseband_sglte   = " androidboot.baseband=sglte";
+ 
++/* SWISTART */
++#ifdef SIERRA
++static const char *lkversion        = " lkversion=" LKVERSION;
++#endif /* SIERRA */
++/* SWISTOP */
++
+ /* Assuming unauthorized kernel image by default */
+ static int auth_kernel_img = 0;
+ 
+@@ -204,6 +211,12 @@
+ 		cmdline_len += strlen(auth_kernel);
+ 	}
+ 
++/* SWISTART */
++#ifdef SIERRA
++	cmdline_len += strlen(lkversion);
++#endif /* SIERRA */
++/* SWISTOP */
++
+ 	/* Determine correct androidboot.baseband to use */
+ 	switch(target_baseband())
+ 	{
+@@ -275,6 +288,17 @@
+ 			while ((*dst++ = *src++));
+ 		}
+ 
++/* SWISTART */
++#ifdef SIERRA
++		{
++		int l = strlen(lkversion);
++		src = lkversion;
++		if (have_cmdline) --dst;
++		while ((*dst++ = *src++) && l--);
++		}
++#endif /* SIERRA */
++/* SWISTOP */
++
+ 		switch(target_baseband())
+ 		{
+ 			case BASEBAND_APQ:

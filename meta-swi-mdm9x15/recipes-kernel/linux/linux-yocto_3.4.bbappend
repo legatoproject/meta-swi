@@ -1,6 +1,7 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 LINUX_VERSION = "3.4.91"
+LINUX_VERSION_EXTENSION = "${PV}"
 
 PR := "${PR}.1"
 
@@ -59,4 +60,10 @@ do_bootimg() {
 }
 
 addtask bootimg after do_compile before do_build
+
+do_tag_config() {
+    sed -i '/LOCALVERSION/s/=".*+/="-/' .config
+}
+
+addtask tag_config after do_configure before do_kernel_configcheck
 

@@ -14,6 +14,7 @@ SRC_URI += "file://0003-SBM-14659-Modem-cannot-bootup-after-flash-customer-Yocto
 SRC_URI += "file://0004-SBM-15385-GPIO-cooperation-mode-support.patch"
 SRC_URI += "file://0005-SBM-15691-support-squashfs-download.patch"
 SRC_URI += "file://0006-SBM-17249-support-ubi-download.patch"
+SRC_URI += "file://0007-TRAC-2357-LK-version.patch"
 
 # Verbose bootloader
 #SRC_URI += "file://0001-TRAC-1223-lk-verbose-logging.patch"
@@ -23,6 +24,16 @@ S = "${WORKDIR}/git"
 MY_TARGET = "mdm9615"
 
 EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' ${MY_TARGET}"
+
+do_tag_lk() {
+	# We remove the sierra_lkversion.h to avoid this file to be counted in sha1
+	( cd ${S}; \
+		echo "#define LKVERSION  \"${PV}_"`for file in $(find -type f -not -regex '.*\(pc\|git\|build-\|patches\).*'); do \
+		sha256sum $file; done | \
+		sort | grep -v sierra_lkversion.h | awk '{print $1}' | sha256sum | cut -c 1-10 -`"\"" ) >${S}/app/aboot/sierra_lkversion.h
+}
+
+addtask tag_lk before do_compile after do_configure
 
 do_install() {
 	install	-d ${D}/boot
