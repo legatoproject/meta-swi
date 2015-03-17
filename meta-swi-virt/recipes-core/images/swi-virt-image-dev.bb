@@ -21,6 +21,7 @@ IMAGE_INSTALL += "util-linux"
 IMAGE_INSTALL += "util-linux-blkid"
 IMAGE_INSTALL += "util-linux-mount"
 IMAGE_INSTALL += "nfs-utils-client"
+IMAGE_INSTALL += "procps"
 
 # Add some extra packages for tool integration
 IMAGE_INSTALL += "dropbear"
