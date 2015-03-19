@@ -1,6 +1,6 @@
 --- a/framework/mdep.c	2014-12-02 11:24:01.341286309 +0100
 +++ framework/mdep.c	2014-12-11 10:41:22.688306610 +0100
-@@ -713,6 +713,25 @@
+@@ -713,6 +713,33 @@
  const char * get_os_name(void) {
      static char str[256];
      struct utsname info;
@@ -14,9 +14,17 @@
 +        if( fd ) {
 +            strcpy( str, "Legato " );
 +            pstr = str + strlen(str);
-+            if( fgets( pstr, sizeof(str) - (pstr - str), fd ) && (p = strchr( pstr, '\n')) )
-+                *p = '\0';
++            gethostname(pstr, sizeof(str) - (pstr - str));
 +            str[sizeof(str) - 1] = '\0';
++            pstr += strlen(pstr);
++            /* If still room, add a space and then contents of tcf-agent.conf */
++            if (pstr < str + sizeof(str) - 3 /* at least space, 1 other char & terminal \0 */) {
++                *pstr = ' ';
++                pstr++;
++                if( fgets( pstr, sizeof(str) - (pstr - str), fd ) && (p = strchr( pstr, '\n')) )
++                    *p = '\0';
++                str[sizeof(str) - 1] = '\0';
++            }
 +            fclose( fd );
 +            if( *pstr )
 +                return str;
