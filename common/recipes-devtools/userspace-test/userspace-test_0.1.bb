@@ -2,12 +2,11 @@ DESCRIPTION = "userspace tests"
 LIC_FILES_CHKSUM = "file://spidev_test.c;beginline=1;endline=12;md5=5f6a6ca88bef579b2b82d58218f9ee3a"
 LICENSE = "GPLv2+"
 
-inherit autotools
 
 PR = "r0"
 PV = "0.1"
 
-DEPENDS = "gdb-cross i2c-tools"
+DEPENDS = "i2c-tools"
 
 SRC_URI = "file://${BPN}-${PV}/"
 
