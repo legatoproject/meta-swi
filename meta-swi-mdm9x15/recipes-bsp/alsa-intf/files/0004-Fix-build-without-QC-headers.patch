@@ -1,0 +1,39 @@
+From afba9cc1148af30e48f3a0352bc109e83c262aa0 Mon Sep 17 00:00:00 2001
+From: Bertrand Roussel <broussel@sierrawireless.com>
+Date: Thu, 2 Apr 2015 05:38:14 -0700
+Subject: [PATCH] Fix build without QC headers
+
+---
+ libalsa-intf/alsa_ucm.c     |    3 ++-
+ libalsa-intf/alsaucm_test.c |    1 -
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/libalsa-intf/alsa_ucm.c b/libalsa-intf/alsa_ucm.c
+index 716983b..c1fbd11 100644
+--- a/libalsa-intf/alsa_ucm.c
++++ b/libalsa-intf/alsa_ucm.c
+@@ -62,7 +62,8 @@
+ #include <linux/ioctl.h>
+ #include "msm8960_use_cases.h"
+ #if defined(QC_PROP)
+-    #include "acdb-loader.h"
++    void acdb_loader_send_voice_cal(int rxacdb_id, int txacdb_id);
++    void acdb_loader_send_audio_cal(int acdb_id, int capability);
+ #else
+     #define acdb_loader_send_voice_cal(rxacdb_id, txacdb_id) (-EPERM)
+     #define acdb_loader_send_audio_cal(acdb_id, capability) (-EPERM)
+diff --git a/libalsa-intf/alsaucm_test.c b/libalsa-intf/alsaucm_test.c
+index 335f143..a73685a 100644
+--- a/libalsa-intf/alsaucm_test.c
++++ b/libalsa-intf/alsaucm_test.c
+@@ -43,7 +43,6 @@
+ 
+ #include "alsa_ucm.h"
+ #include "msm8960_use_cases.h"
+-#include "acdb-loader.h"
+ 
+ /* Function prototypes */
+ static void print_help_menu(void);
+-- 
+1.7.10.4
+
