@@ -19,6 +19,8 @@ IMAGE_INSTALL += "procps"
 IMAGE_INSTALL += "mtd-utils"
 IMAGE_INSTALL += "mtd-utils-ubifs"
 IMAGE_INSTALL += "libopencore-amr"
+IMAGE_INSTALL += "iperf"
+IMAGE_INSTALL += "iproute2-tc"
 
 # Required to provide some extended privileges
 # to non-root processes
