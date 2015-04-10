@@ -19,11 +19,8 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/types.h>
-#include <linux/i2c-dev-user.h>
+#include <linux/i2c/sierra_i2c.h>
 
-#define SWI_IOCTL_MAGIC_NUM 'I'
-#define SWI_IOCTL_I2C_ADDR_CONFIG _IOW(SWI_IOCTL_MAGIC_NUM,0x1,int)
-#define SWI_IOCTL_I2C_FREQ_CONFIG _IOW(SWI_IOCTL_MAGIC_NUM,0x2,int)
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
 static void pabort(const char *s)
@@ -34,51 +31,9 @@ static void pabort(const char *s)
 
 static const char *device = "/dev/sierra_i2c";
 static uint8_t bits = 8;
-static uint16_t addr = 0;
+int *addr = 0;
 static uint16_t reg = 0;
 static uint16_t freq = 0;
-
-static void transfer(int fd)
-{
-	int ret;
-	uint8_t tx[] = {
-		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-		0x40, 0x00, 0x00, 0x00, 0x00, 0x95,
-		0xDE, 0xAD, 0xBE, 0xEF, 0xBA, 0xAD,
-		0xF0, 0x0D,
-	};
-	uint8_t rx[ARRAY_SIZE(tx)] = {0, };
-	struct i2c_msg msg[] = {
-		{
-			.flags = 0,
-			.len = ARRAY_SIZE(tx),
-			.buf = (__u8 *)tx,
-		},
-		{
-			.flags = I2C_M_RD,
-			.len = ARRAY_SIZE(rx),
-			.buf = (__u8 *)rx,
-		},
-	};
-	struct i2c_rdwr_ioctl_data iodata = {
-		.msgs = msg,
-		.nmsgs = 2,
-	};
-
-	msg[0].addr = addr;
-	msg[1].addr = addr;
-
-	ret = ioctl(fd, I2C_RDWR, &iodata);
-	if (ret < 1)
-		pabort("can't send i2c message");
-
-	for (ret = 0; ret < ARRAY_SIZE(tx); ret++) {
-		if (!(ret % 6))
-			puts("");
-		printf("%.2X ", rx[ret]);
-	}
-	puts("");
-}
 
 static void print_usage(const char *prog)
 
@@ -144,7 +99,7 @@ int main(int argc, char *argv[])
 	if (fd < 0)
 		pabort("can't open device");
 
-	if (ioctl(fd, SWI_IOCTL_I2C_ADDR_CONFIG, addr) < 0) {
+	if (ioctl(fd, SWI_IOCTL_I2C_ADDR_CONFIG, &addr) < 0) {
 		printf("Failed to acquire bus access and/or talk to slave.\n");
 		/* ERROR HANDLING; you can check errno to see what went wrong */
 		exit(1);
