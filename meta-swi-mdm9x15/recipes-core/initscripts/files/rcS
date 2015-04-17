@@ -24,17 +24,13 @@ mount_essential_fs()
     local ret=0
 
     # Mount proc file system
-    mount -t proc proc /proc -o smackfsdef='_'
-    echo "*" > /proc/self/attr/current
+    mount -t proc proc /proc -o smackfsdef=_
 
     # Mount sysfs file system
     mount -t sysfs sysfs /sys
 
     # mount debugfs
     mount -t debugfs debugfs /sys/kernel/debug
-
-    # Mount smack control
-    mount -t smackfs smackfs ${SMACK_MOUNTPOINT} -o smackfsdef='_'
 
     return ${ret}
 }
