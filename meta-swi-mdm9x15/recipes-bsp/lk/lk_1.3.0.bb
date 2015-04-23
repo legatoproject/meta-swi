@@ -2,19 +2,38 @@ DESCRIPTION = "Little Kernel bootloader"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/\
 ${LICENSE};md5=0835ade698e0bcf8506ecda2f7b4f302"
-HOMEPAGE = "https://www.codeaurora.org/gitweb/quic/la?p=kernel/lk.git"
+HOMEPAGE = "https://www.codeaurora.org/cgit/quic/la/kernel/lk"
 PROVIDES = "virtual/lk"
 
-PR = "r0"
+PR = "r1"
 
-SRC_URI = "file://lk.tar.gz"
+SRC_URI  = "git://codeaurora.org/kernel/lk;tag=M9615AAAARNLZA1713041;branch=ics_strawberry"
+SRC_URI += "file://0000-mdm9x15-Import-SWI-changes.patch"
 SRC_URI += "file://0002-TRAC-1223-lk-make_sure_that_Yocto_kernel_receives_correct_atag_MTD_partition_information_from_bootloader.patch"
+SRC_URI += "file://0003-SBM-14659-Modem-cannot-bootup-after-flash-customer-Yocto-image-with-fastboot.patch"
+SRC_URI += "file://0004-SBM-15385-GPIO-cooperation-mode-support.patch"
+SRC_URI += "file://0005-SBM-15691-support-squashfs-download.patch"
+SRC_URI += "file://0006-SBM-17249-support-ubi-download.patch"
+SRC_URI += "file://0007-TRAC-2357-LK-version.patch"
 
-S = "${WORKDIR}/${PN}"
+# Verbose bootloader
+#SRC_URI += "file://0001-TRAC-1223-lk-verbose-logging.patch"
+
+S = "${WORKDIR}/git"
 
 MY_TARGET = "mdm9615"
 
 EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' ${MY_TARGET}"
+
+do_tag_lk() {
+	# We remove the sierra_lkversion.h to avoid this file to be counted in sha1
+	( cd ${S}; \
+		echo "#define LKVERSION  \"${PV}_"`for file in $(find -type f -not -regex '.*\(pc\|git\|build-\|patches\).*'); do \
+		sha256sum $file; done | \
+		sort | grep -v sierra_lkversion.h | awk '{print $1}' | sha256sum | cut -c 1-10 -`"\"" ) >${S}/app/aboot/sierra_lkversion.h
+}
+
+addtask tag_lk before do_compile after do_configure
 
 do_install() {
 	install	-d ${D}/boot

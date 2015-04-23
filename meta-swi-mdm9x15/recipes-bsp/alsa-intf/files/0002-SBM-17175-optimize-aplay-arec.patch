@@ -1,0 +1,1100 @@
+diff -ur a/libalsa-intf/aplay.c b/libalsa-intf/aplay.c
+--- a/libalsa-intf/aplay.c	2014-12-08 11:15:58.186584308 +0800
++++ b/libalsa-intf/aplay.c	2014-12-11 11:01:03.269713938 +0800
+@@ -25,7 +25,13 @@
+ #include <sys/poll.h>
+ #include <sys/ioctl.h>
+ #include <getopt.h>
+-
++/* SWISTART */
++#ifdef SIERRA
++#include <semaphore.h>
++#include <sys/types.h>
++#include <sys/shm.h>
++#endif
++/* SWISTOP */
+ #include <sound/asound.h>
+ #include "alsa_audio.h"
+ 
+@@ -47,9 +53,20 @@
+ static int format = SNDRV_PCM_FORMAT_S16_LE;
+ static int period = 0;
+ static int compressed = 0;
+-static char *compr_codec;
++/* SWISTART */ //should be initialized to NULL
++static char *compr_codec = NULL;
++/* SWISTOP */
+ static int piped = 0;
+ 
++/* SWISTART */
++#ifdef SIERRA
++#ifdef SOLIB_APLAY
++#define MAX_DEVICE 5
++static int *spForceStop[MAX_DEVICE] = {NULL};
++#endif
++#endif
++/* SWISTOP */
++
+ static struct option long_options[] =
+ {
+     {"pcm", 0, 0, 'P'},
+@@ -161,8 +178,11 @@
+     return 0;
+ }
+ 
++/* SWISTART */ //Add "thisid", to distinguish different devices
+ static int play_file(unsigned rate, unsigned channels, int fd,
+-              unsigned flags, const char *device, unsigned data_sz)
++              unsigned flags, const char *device, unsigned data_sz, int thisid)
++/* SWISTOP */
++
+ {
+     struct pcm *pcm;
+     struct mixer *mixer;
+@@ -250,14 +270,24 @@
+           pcm_close(pcm);
+           return -errno;
+        }
+-/* SWISTART */
+-#ifndef SIERRA
++       /* SWISTART */
++       #ifndef SIERRA
+        while(1);
+-#else
+-       while(1)
+-         sleep(1);
++       #else
++       for(;;)
++       {
++#ifdef SOLIB_APLAY
++         if (*spForceStop[thisid] == 1)
++         {
++           pcm_close(pcm);
++           *spForceStop[thisid] = 0;
++           return 0;
++         }
+ #endif
+-/* SWISTOP */
++         sleep(1);
++       }
++       #endif
++       /* SWISTOP */
+     }
+ 
+     remainingData = data_sz;
+@@ -352,6 +382,17 @@
+                  if (remainingData <= 0)
+                      break;
+              }
++/* SWISTART */
++#ifdef SIERRA
++#ifdef SOLIB_APLAY
++             if (*spForceStop[thisid] == 1)
++             {
++                 *spForceStop[thisid] = 0;
++                break;
++             }
++#endif
++#endif
++/* SWISTOP */
+ 
+              /*
+               * Increment the application pointer with data written to kernel.
+@@ -441,7 +482,22 @@
+                 bufsize = remainingData;
+         }
+ 
+-        while (read(fd, data, bufsize) > 0) {
++        while (read(fd, data, bufsize) > 0) 
++        {
++        
++/* SWISTART */
++#ifdef SIERRA
++#ifdef SOLIB_APLAY
++            if (*spForceStop[thisid] == 1)
++            {
++                *spForceStop[thisid] = 0;
++                break;
++            }
++#endif
++#endif  
++/* SWISTOP */ 
++
++
+             if (pcm_write(pcm, data, bufsize)){
+                 fprintf(stderr, "Aplay: pcm_write failed\n");
+                 free(data);
+@@ -465,7 +521,10 @@
+     return 0;
+ }
+ 
+-int play_raw(const char *fg, int rate, int ch, const char *device, const char *fn)
++/* SWISTART */ //Add "thisid", to distinguish different devices
++int play_raw(const char *fg, int rate, int ch, const char *device, const char *fn, int thisid)
++/* SWISTOP */
++
+ {
+     int fd;
+     unsigned flag = 0;
+@@ -479,6 +538,11 @@
+             fprintf(stderr, "Aplay:aplay: cannot open '%s'\n", fn);
+             return fd;
+         }
++/* SWISTART */
++#ifdef SIERRA
++        lseek(fn, 0, SEEK_SET);
++#endif  
++/* SWISTOP */ 
+     }
+ 
+     if (!strncmp(fg, "M", sizeof("M")))
+@@ -488,10 +552,12 @@
+ 
+     fprintf(stderr, "aplay: Playing '%s': format %s ch = %d\n",
+ 		    fn, get_format_desc(format), ch );
+-    return play_file(rate, ch, fd, flag, device, 0);
++    return play_file(rate, ch, fd, flag, device, 0, thisid);
+ }
+ 
+-int play_wav(const char *fg, int rate, int ch, const char *device, const char *fn)
++/* SWISTART */ //Add "thisid", to distinguish different devices
++int play_wav(const char *fg, int rate, int ch, const char *device, const char *fn, int thisid)
++/* SWISTOP */
+ {
+     struct wav_header hdr;
+     int fd;
+@@ -507,6 +573,11 @@
+                 fprintf(stderr, "Aplay:aplay: cannot open '%s'\n", fn);
+                 return fd;
+             }
++/* SWISTART */
++#ifdef SIERRA
++            lseek(fn, 0, SEEK_SET);
++#endif  
++/* SWISTOP */ 
+         }
+         if (compressed) {
+             hdr.sample_rate = rate;
+@@ -549,7 +620,7 @@
+         flag = PCM_NMMAP;
+     fprintf(stderr, "aplay: Playing '%s':%s\n", fn, get_format_desc(format) );
+ 
+-    return play_file(hdr.sample_rate, hdr.num_channels, fd, flag, device, hdr.data_sz);
++    return play_file(hdr.sample_rate, hdr.num_channels, fd, flag, device, hdr.data_sz, thisid);
+ }
+ 
+ int main(int argc, char **argv)
+@@ -649,17 +720,279 @@
+        strlcpy(filename, argv[optind++], 30);
+     }
+ 
++    /* SWISTART */ //For the original calling method, just set "thisid" to 0
+     if (pcm_flag) {
+ 	 if (format == SNDRV_PCM_FORMAT_S16_LE) 
+-             rc = play_wav(mmap, rate, ch, device, filename);
++             rc = play_wav(mmap, rate, ch, device, filename, 0);
+          else
+-             rc = play_raw(mmap, rate, ch, device, filename);
++             rc = play_raw(mmap, rate, ch, device, filename, 0);
+     } else {
+-        rc = play_wav(mmap, rate, ch, device, "dummy");
++        rc = play_wav(mmap, rate, ch, device, "dummy", 0);
+     }
++	/* SWISTOP */
++
+     if (filename)
+         free(filename);
+ 
+     return rc;
+ }
+ 
++
++/* SWISTART */
++#ifdef SIERRA
++#ifdef SOLIB_APLAY
++
++enum APLAY_OPTION_HOST{
++    APLAY_HOST_STREAM = 0,
++    APLAY_HOSTLESS_STREAM,
++};
++
++enum APLAY_OPTION_MEMMAP{
++    APLAY_NO_MEMMAP_STEAM = 0,
++    APLAY_MEMMAP_STEAM
++};
++
++typedef struct tagAplayParam{
++    char device[16];
++    char format[32];
++    char compr_codec[16];
++    char filename[128];
++    enum APLAY_OPTION_HOST host;
++    enum APLAY_OPTION_MEMMAP memmap;
++    int channel;
++    int rate;
++    int period;
++    int debug;
++    int thisidx;
++    int finish_pa1;
++    int finish_pa2;
++    int (*pfinish_Callback)(int pa1, int pa2);
++}T_AplayParam;
++
++typedef struct tagShmData{
++    T_AplayParam sInputParam[MAX_DEVICE];
++    int iPlayingFlag[MAX_DEVICE];
++    int iForceStop[MAX_DEVICE];
++}t_ShmData;
++
++
++static T_AplayParam *spInputParam[MAX_DEVICE] = {NULL};
++static int *spPlayingFlag[MAX_DEVICE] = {NULL};
++static int sNoFinishCallbackFlag = 0;
++
++#define APLAY_SHM_KEY 0xFEFE3355
++
++int GetForceStop(int thisid)
++{
++    return *spForceStop[thisid];
++}
++
++int ResetForceStop(int thisid)
++{
++    *spForceStop[thisid] = 0;
++    return 0;
++}
++
++static int getMatchDeviceIndex(const char* pdevice)
++{
++    int loop;
++    char* pDeviceIn = "hw:0,0";
++
++    if (strlen(pdevice) > 0)
++        pDeviceIn = pdevice;        
++
++    for (loop = 0; loop < MAX_DEVICE; loop++)
++    {
++        if ((*spPlayingFlag[loop] == 1) &&
++            (!strncmp(pDeviceIn, spInputParam[loop]->device, strlen(pDeviceIn))))
++        {
++            return loop;
++        }
++    }    
++
++    return -1;
++}
++
++static int getFreeDeviceIndex()
++{
++    int loop = -1;
++    for (loop = 0; loop < MAX_DEVICE; loop++)
++    {
++        if (strlen(spInputParam[loop]->device) <= 0)
++            return loop;
++    }
++
++    return -1;
++}
++
++
++static void* exec_playing_thread(void* param)
++{
++
++    int rc = 0;    
++    T_AplayParam *pInputParam = (T_AplayParam *)param;
++    char* pCompr_codec = NULL;
++    char *pMmap = "N";
++    int iRate = 44100;
++    int iCh = 2;
++    char* pDevice = "hw:0,0";
++    char* pFilename = NULL;
++    format = SNDRV_PCM_FORMAT_S16_LE;
++    int thisid = pInputParam->thisidx;
++    
++    pcm_flag = (pInputParam->host == APLAY_HOSTLESS_STREAM)? 0:1;
++
++    debug = pInputParam->debug;
++
++    period = pInputParam->period;
++    
++    //if (pInputParam->filename != NULL)
++    if (strlen(pInputParam->filename) > 0)
++        pFilename = pInputParam->filename;
++
++    if (strlen(pInputParam->device) > 0)
++        pDevice = pInputParam->device;        
++
++    if (pInputParam->channel != 0)
++        iCh = pInputParam->channel;
++    
++    if (pInputParam->rate != 0)
++        iRate = pInputParam->rate;
++    
++    //if (pInputParam->format != NULL)
++    if (strlen(pInputParam->format) > 0)
++    {
++        printf("Aplay_format optarg = %s\n", pInputParam->format);
++        format = get_format(pInputParam->format);
++    }
++
++    //if (pInputParam->compr_codec != NULL)    
++    if (strlen(pInputParam->compr_codec) > 0)
++        pCompr_codec = pInputParam->compr_codec;
++
++    if (pInputParam->memmap == APLAY_MEMMAP_STEAM)
++        pMmap = "M";
++    
++    if (pInputParam->host == APLAY_HOST_STREAM)
++    {
++        if (format == SNDRV_PCM_FORMAT_S16_LE) 
++        {
++             rc = play_wav(pMmap, iRate, iCh, pDevice, pFilename, thisid);
++        }
++        else
++        {
++             rc = play_raw(pMmap, iRate, iCh, pDevice, pFilename, thisid);
++        }
++    }
++    else //ring up
++    {
++        rc = play_wav(pMmap, iRate, iCh, pDevice, "dummy", thisid);
++    }
++    
++    if ((pInputParam->pfinish_Callback != NULL) && (sNoFinishCallbackFlag == 0))
++    {
++        printf("APLAY: CALL BACK EXEC!\n");
++        (*pInputParam->pfinish_Callback)(pInputParam->finish_pa1, pInputParam->finish_pa2);
++        sNoFinishCallbackFlag = 0;
++    }
++    
++    /* reset all */
++    memset(spInputParam[thisid], 0, sizeof(T_AplayParam));
++    *spForceStop[thisid] = 0;
++    *spPlayingFlag[thisid] = 0;
++    
++    printf("APLAY: PLAY END!\n");
++    
++}
++
++int APlay_Start(const T_AplayParam *ptAplayParam)
++{
++    int res;
++    int shmid;
++    t_ShmData *ptShmdata= NULL;
++    pthread_t tid;
++    int loop;
++    int matchid, freeid;
++    
++    if (spInputParam[0] == NULL)
++    {
++        shmid = shmget(APLAY_SHM_KEY, sizeof(t_ShmData),IPC_CREAT);
++        ptShmdata=(t_ShmData *)shmat(shmid, NULL, 0);
++        for (loop = 0; loop < MAX_DEVICE; loop++)
++        {
++            spInputParam[loop] = &ptShmdata->sInputParam[loop];
++            spPlayingFlag[loop] = &ptShmdata->iPlayingFlag[loop];
++            spForceStop[loop] = &ptShmdata->iForceStop[loop];            
++        }
++        
++    }
++
++    matchid = getMatchDeviceIndex(ptAplayParam->device);
++    /* when ringing up, swiapp will call aplay twice. so skip the second call */
++    if ((matchid != -1) && (spInputParam[matchid]->host == APLAY_HOSTLESS_STREAM))
++    {
++        printf("APLAY: nothing to do with APlay_Start, because now is playing hostless now!\n");
++        return 0;
++    }
++    else if (matchid != -1) 
++    {
++        sNoFinishCallbackFlag = 1; /* doesn't need to call callback this time. */
++        *spForceStop[matchid] = 1;
++        while (*spPlayingFlag[matchid] == 1) //wait until last time playing finish 
++            usleep(10000);
++        /* reset all */
++        memset(spInputParam[matchid], 0, sizeof(T_AplayParam));
++        *spForceStop[matchid] = 0;
++        *spPlayingFlag[matchid] = 0;
++    }
++
++    freeid = getFreeDeviceIndex();
++    memcpy(spInputParam[freeid], ptAplayParam, sizeof(T_AplayParam));
++    spInputParam[freeid]->thisidx = freeid;
++    if (strlen(ptAplayParam->device) <= 0)
++    {
++        strncpy(spInputParam[freeid]->device, "hw:0,0", strlen("hw:0,0"));
++    }
++    
++    *spForceStop[freeid] = 0;
++    *spPlayingFlag[freeid] = 1;
++    
++    pthread_create(&tid, NULL, exec_playing_thread, spInputParam[freeid]);
++
++    return 0;
++    
++}
++
++int Aplay_Stop(const T_AplayParam *ptAplayParam)
++{
++
++    t_ShmData *ptShmdata= NULL;
++    int shmid;
++    int loop;
++    
++    if (spInputParam[0] == NULL)
++    {
++        shmid = shmget(APLAY_SHM_KEY, sizeof(t_ShmData),IPC_CREAT);
++        ptShmdata=(t_ShmData *)shmat(shmid, NULL, 0);
++        for (loop = 0; loop < MAX_DEVICE; loop++)
++        {
++            spInputParam[loop] = &ptShmdata->sInputParam[loop];
++            spPlayingFlag[loop] = &ptShmdata->iPlayingFlag[loop];
++            spForceStop[loop] = &ptShmdata->iForceStop[loop];            
++        }
++        
++    }
++
++    int thisid = getMatchDeviceIndex(ptAplayParam->device);
++    printf("APLAY: GET STOP, thisid: %d\n", thisid);
++    if (thisid < 0)
++        return -1;
++    
++    *spForceStop[thisid] = 1;
++    return 0;
++}
++
++#endif
++#endif
++/* SWISTOP */
++
+diff -ur a/libalsa-intf/arec.c b/libalsa-intf/arec.c
+--- a/libalsa-intf/arec.c	2014-12-08 11:15:58.186584308 +0800
++++ b/libalsa-intf/arec.c	2014-12-11 11:01:16.529710807 +0800
+@@ -27,7 +27,12 @@
+ #include <sys/ioctl.h>
+ #include <getopt.h>
+ #include <limits.h>
+-
++/* SWISTART */ 
++#ifdef SIERRA
++#include <sys/types.h>
++#include <sys/shm.h>
++#endif  
++/* SWISTOP */ 
+ #include "alsa_audio.h"
+ 
+ #define ID_RIFF 0x46464952
+@@ -43,8 +48,14 @@
+ #endif
+ 
+ static struct wav_header hdr;
++/* SWISTART */ 
++#ifdef SIERRA
++static int sfd_save = -1;
++#else
+ static int fd;
+ static struct pcm *pcm;
++#endif  
++/* SWISTOP */ 
+ static debug = 0;
+ static pcm_flag = 1;
+ static duration = 0;
+@@ -54,6 +65,15 @@
+ static int period = 0;
+ static int piped = 0;
+ 
++/* SWISTART */ 
++#ifdef SIERRA
++#ifdef SOLIB_AREC
++#define MAX_DEVICE 5
++static int *spForceStop[MAX_DEVICE] = {NULL};
++#endif
++#endif  
++/* SWISTOP */ 
++
+ static struct option long_options[] =
+ {
+     {"pcm", 0, 0, 'P'},
+@@ -175,7 +195,9 @@
+ 
+ }
+ 
+-int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsigned flags, const char *device)
++/* SWISTART */ //Add "thisid", to distinguish different devices
++int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsigned flags, const char *device, int thisid)
++/* SWISTOP */
+ {
+     unsigned xfer, bufsize;
+     int r, avail;
+@@ -187,6 +209,12 @@
+     int err;
+     struct pollfd pfd[1];
+     int rec_size = 0;
++/* SWISTART */ 
++#ifdef SIERRA
++    struct pcm *pcm;
++    sfd_save = fd;
++#endif  
++/* SWISTOP */ 
+ 
+     flags |= PCM_IN;
+ 
+@@ -226,14 +254,24 @@
+             return -errno;
+ 	}
+         
+-/* SWISTART */
+-#ifndef SIERRA
++    /* SWISTART */
++    #ifndef SIERRA
+     while(1);
+-#else
+-    while(1)
+-      sleep(1);
++    #else
++    for(;;)
++    {
++#ifdef SOLIB_AREC
++      if (*spForceStop[thisid] == 1)
++      {
++        *spForceStop[thisid] = 0;
++        pcm_close(pcm);
++        return 0;
++      }
+ #endif
+-/* SWISTOP */
++      sleep(1);
++    }
++    #endif
++    /* SWISTOP */
+    }
+ 
+     if (flags & PCM_MMAP) {
+@@ -265,6 +303,11 @@
+ 			pcm->running = 0;
+ 		} else {
+ 			fprintf(stderr, "Arec:Error no %d \n", errno);
++/* SWISTART */ 
++#ifdef SIERRA
++            pcm_close(pcm);
++#endif  
++/* SWISTOP */ 
+ 			return -errno;
+ 		}
+         }
+@@ -284,9 +327,29 @@
+         }
+         x.frames = frames;
+         for(;;) {
++
++/* SWISTART */ 
++#ifdef SIERRA
++#ifdef SOLIB_AREC
++            if (*spForceStop[thisid] == 1)
++            {
++              *spForceStop[thisid] = 0;
++              break;
++            }
++#endif
++#endif  
++/* SWISTOP */
++
+ 		if (!pcm->running) {
+                     if (pcm_prepare(pcm))
++                    {
++/* SWISTART */ 
++#ifdef SIERRA
++                        pcm_close(pcm);
++#endif  
++/* SWISTOP */
+                         return --errno;
++                    }
+                     start = 0;
+                 }
+                 /* Sync the current Application pointer from the kernel */
+@@ -307,7 +370,14 @@
+                 if (debug)
+                      fprintf(stderr, "Arec:avail 1 = %d frames = %ld\n",avail, frames);
+                 if (avail < 0)
+-                        return avail;
++                {
++/* SWISTART */ 
++#ifdef SIERRA
++                    pcm_close(pcm);
++#endif  
++/* SWISTOP */
++                    return avail;
++                }
+                 if (avail < pcm->sw_p->avail_min) {
+                         poll(pfd, nfds, TIMEOUT_INFINITE);
+                         continue;
+@@ -327,6 +397,11 @@
+                 */
+                 if (write(fd, dst_addr, bufsize) != bufsize) {
+                     fprintf(stderr, "Arec:could not write %d bytes\n", bufsize);
++/* SWISTART */ 
++#ifdef SIERRA
++                    pcm_close(pcm);
++#endif  
++/* SWISTOP */
+                     return -errno;
+                 }
+                 x.frames -= frames;
+@@ -354,31 +429,50 @@
+ 	    bufsize = pcm->period_size;
+             if (pcm_prepare(pcm)) {
+                 fprintf(stderr, "Arec:Failed in pcm_prepare\n");
++/* SWISTART */ 
++#ifdef SIERRA
+                 pcm_close(pcm);
++#endif  
++/* SWISTOP */
+                 return -errno;
+             }
+ 
+ 	    data = calloc(1, bufsize);
+ 	    if (!data) {
+ 		fprintf(stderr, "Arec:could not allocate %d bytes\n", bufsize);
++        pcm_close(pcm);
+ 		return -ENOMEM;
+ 	    }
+ 
+ 	    while (!pcm_read(pcm, data, bufsize)) {
+-		if (write(fd, data, bufsize) != bufsize) {
+-		    fprintf(stderr, "Arec:could not write %d bytes\n", bufsize);
+-		    break;
+-		}
+-                rec_size += bufsize;
+-                hdr.data_sz += bufsize;
+-                hdr.riff_sz = hdr.data_sz + 44 - 8;
+-                if (!piped) {
+-                    lseek(fd, 0, SEEK_SET);
+-                    write(fd, &hdr, sizeof(hdr));
+-                    lseek(fd, 0, SEEK_END);
+-                }
+-                if (rec_size >= count)
+-                    break;
++/* SWISTART */ 
++#ifdef SIERRA
++#ifdef SOLIB_AREC
++            if (*spForceStop[thisid] == 1)
++            {
++              printf("ffff get arec stop & end!\n");
++              *spForceStop[thisid] = 0;
++              break;
++            }
++#endif
++#endif  
++/* SWISTOP */
++
++    		if (write(fd, data, bufsize) != bufsize) {
++    		    fprintf(stderr, "Arec:could not write %d bytes\n", bufsize);
++    		    break;
++    		}
++        
++            rec_size += bufsize;
++            hdr.data_sz += bufsize;
++            hdr.riff_sz = hdr.data_sz + 44 - 8;
++            if (!piped) {
++                lseek(fd, 0, SEEK_SET);
++                write(fd, &hdr, sizeof(hdr));
++                lseek(fd, 0, SEEK_END);
++            }
++            if (rec_size >= count)
++                break;
+ 	    }
+     }
+     fprintf(stderr, " rec_size =%d count =%d\n", rec_size, count);
+@@ -392,13 +486,20 @@
+     return -errno;
+ }
+ 
++/* SWISTART */ //Add "thisid", to distinguish different devices
+ int rec_raw(const char *fg, const char *device, int rate, int ch,
+-                    const char *fn)
++                    const char *fn, int thisid)
++/* SWISTOP */
+ {
+     unsigned flag = 0;
+     uint32_t rec_max_sz = 2147483648LL;
+     uint32_t count;
+     int i = 0;
++/* SWISTART */ 
++#ifdef SIERRA
++    int fd = -1;
++#endif  
++/* SWISTOP */
+ 
+     if (!fn) {
+         fd = fileno(stdout);
+@@ -426,15 +527,22 @@
+     } else if (!strncmp(fg, "N", sizeof("N"))) {
+         flag = PCM_NMMAP;
+     }
+-    return record_file(rate, ch, fd, count, flag, device);
++    return record_file(rate, ch, fd, count, flag, device, thisid);
+ }
+ 
+-int rec_wav(const char *fg, const char *device, int rate, int ch, const char *fn)
++/* SWISTART */ //Add "thisid", to distinguish different devices
++int rec_wav(const char *fg, const char *device, int rate, int ch, const char *fn, int thisid)
++/* SWISTOP */
+ {
+     unsigned flag = 0;
+     uint32_t rec_max_sz = 2147483648LL;
+     uint32_t count = 0;
+     int i = 0;
++/* SWISTART */ 
++#ifdef SIERRA
++    int fd = -1;
++#endif  
++/* SWISTOP */
+ 
+     if (pcm_flag) {
+             if (!fn) {
+@@ -487,13 +595,18 @@
+     } else if (!strncmp(fg, "N", sizeof("N"))) {
+         flag = PCM_NMMAP;
+     }
+-    return record_file(hdr.sample_rate, hdr.num_channels, fd, count, flag, device);
++    return record_file(hdr.sample_rate, hdr.num_channels, fd, count, flag, device, thisid);
+ }
+ 
+ static void signal_handler(int sig)
+ {
+     long file_size;
+     FILE *fp;
++/* SWISTART */ 
++#ifdef SIERRA
++    int fd = sfd_save;
++#endif
++/* SWISTOP */ 
+ 
+     fprintf(stderr, "Arec:Aborted by signal %s...\n", strsignal(sig));
+     fprintf(stderr, "Arec:lseeked to %d", (int) lseek(fd, 0, SEEK_SET));
+@@ -504,7 +617,8 @@
+ 	if (debug)
+             fprintf(stderr, "Arec:arec: cannot write header\n");
+     } else
+-       fd = -1;
++        fd = -1;
++    
+ 
+     if (fd > 1) {
+         close(fd);
+@@ -512,7 +626,12 @@
+     }
+     free(filename);
+     free(data);
++    
++/* SWISTART */ 
++#ifndef SIERRA
+     pcm = NULL;
++#endif
++/* SWISTOP */ 
+     raise(sig);
+ }
+ 
+@@ -612,17 +731,271 @@
+     sa.sa_handler = &signal_handler;
+     sigaction(SIGABRT, &sa, NULL);
+ 
++    /* SWISTART */ //For the original calling method, just set "thisid" to 0
+     if (pcm_flag) {
+ 	 if (format == SNDRV_PCM_FORMAT_S16_LE)
+-             rc = rec_wav(mmap, device, rate, ch, filename);
++             rc = rec_wav(mmap, device, rate, ch, filename, 0);
+          else
+-             rc = rec_raw(mmap, device, rate, ch, filename);
++             rc = rec_raw(mmap, device, rate, ch, filename, 0);
+     } else {
+-        rc = rec_wav(mmap, device, rate, ch, "dummy");
++        rc = rec_wav(mmap, device, rate, ch, "dummy", 0);
+     }
++	/* SWISTOP */
++
+     if (filename)
+         free(filename);
+ 
+     return rc;
+ }
+ 
++/* SWISTART */ 
++#ifdef SIERRA
++
++#ifdef SOLIB_AREC
++
++
++enum AREC_OPTION_HOST{
++    AREC_HOST_STREAM,
++    AREC_HOSTLESS_STREAM,
++};
++
++enum AREC_OPTION_MEMMAP{
++    AREC_NO_MEMMAP_STEAM,
++    AREC_MEMMAP_STEAM
++};
++
++typedef struct tagArecParam{
++    char device[16];
++    char format[32];
++    char filename[128];
++    enum AREC_OPTION_HOST host;
++    enum AREC_OPTION_MEMMAP memmap;
++    int channel;
++    int rate;
++    int duration;
++    int period;
++    int debug;
++    int thisidx;
++    int finish_pa1;
++    int finish_pa2;
++    int (*pfinish_Callback)(int pa1, int pa2);
++}T_ArecParam;
++
++typedef struct tagArecShmData{
++    T_ArecParam sInputParam[MAX_DEVICE];
++    int iRecingFlag[MAX_DEVICE];
++    int iForceStop[MAX_DEVICE];
++}t_ArecShmData;
++
++
++#define AREC_SHM_KEY 0xFEFE3366
++static T_ArecParam *spInputParam[MAX_DEVICE] = {NULL};
++static int *spRecingFlag[MAX_DEVICE] = {NULL};
++
++static int getArecMatchDeviceIndex(const char* pdevice)
++{
++    int loop;
++    char* pDeviceIn = "hw:0,0";
++
++    if (strlen(pdevice) > 0)
++        pDeviceIn = pdevice;        
++
++    for (loop = 0; loop < MAX_DEVICE; loop++)
++    {
++        if ((*spRecingFlag[loop] == 1) &&
++            (!strncmp(pDeviceIn, spInputParam[loop]->device, strlen(pDeviceIn))))
++        {
++            return loop;
++        }
++    }    
++
++    return -1;
++}
++
++static int getArecFreeDeviceIndex()
++{
++    int loop = -1;
++    for (loop = 0; loop < MAX_DEVICE; loop++)
++    {
++        if (strlen(spInputParam[loop]->device) <= 0)
++            return loop;
++    }
++
++    return -1;
++}
++
++
++static void* exec_playing_thread(void* param)
++{
++
++    int rc = 0;    
++    T_ArecParam *pInputParam = (T_ArecParam *)param;
++    int iFormat = SNDRV_PCM_FORMAT_S16_LE;
++    char *pMmap = "N";
++    int iRate = 48000;
++    int iCh = 1;
++    char* pDevice = "hw:0,0";
++    char* pFilename = NULL;
++    int thisid = pInputParam->thisidx;
++    format = SNDRV_PCM_FORMAT_S16_LE;
++    
++    pcm_flag = (pInputParam->host == AREC_HOSTLESS_STREAM)? 0:1;
++    
++    debug = pInputParam->debug;
++
++    period = pInputParam->period;
++    
++    //if (pInputParam->filename != NULL)
++    if (strlen(pInputParam->filename) > 0)
++        pFilename = pInputParam->filename;
++
++    if (strlen(pInputParam->device) > 0)
++        pDevice = pInputParam->device;        
++
++    if (pInputParam->channel != 0)
++        iCh = pInputParam->channel;
++    
++    if (pInputParam->rate != 0)
++        iRate = pInputParam->rate;
++
++    duration = pInputParam->duration;
++    
++    //if (pInputParam->format != NULL)
++    if (strlen(pInputParam->format) > 0)
++    {
++        printf("Aplay_format optarg = %s\n", pInputParam->format);
++        format = get_format(pInputParam->format);
++    }
++
++    if (pInputParam->memmap == AREC_MEMMAP_STEAM)
++        pMmap = "M";
++
++    if (pcm_flag) {
++	 if (format == SNDRV_PCM_FORMAT_S16_LE)
++             rc = rec_wav(pMmap, pDevice, iRate, iCh, pFilename, thisid);
++         else
++             rc = rec_raw(pMmap, pDevice, iRate, iCh, pFilename, thisid);
++    } else {
++        rc = rec_wav(pMmap, pDevice, iRate, iCh, "dummy", thisid);
++    }
++
++#if 0
++    if (fd != -1)
++    {
++        fprintf(stderr, "Arec:lseeked to %d", (int) lseek(fd, 0, SEEK_SET));
++        hdr.riff_sz = hdr.data_sz + 44 - 8;
++        fprintf(stderr, "Arec: hdr.data_sz =%d\n", hdr.data_sz);
++        fprintf(stderr, "Arec: hdr.riff_sz =%d\n", hdr.riff_sz);
++        if (write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
++    	if (debug)
++                fprintf(stderr, "Arec:arec: cannot write header\n");
++        } else
++           fd = -1;
++
++        if (fd > 1) {
++            close(fd);
++            fd = -1;
++        }
++        free(data);
++    }
++#endif
++
++    printf("AREC: CALL BACK EXEC!\n");
++    if (pInputParam->pfinish_Callback != NULL)
++        (*pInputParam->pfinish_Callback)(pInputParam->finish_pa1, pInputParam->finish_pa2);
++
++    /* reset all */
++    memset(spInputParam[thisid], 0, sizeof(T_ArecParam));
++    *spForceStop[thisid] = 0;
++    *spRecingFlag[thisid] = 0;
++
++    printf("AREC: REC END!\n");
++
++}
++
++
++int ARec_Start(const T_ArecParam *ptArecParam)
++{
++    int res;
++    int shmid;
++    t_ArecShmData *ptShmdata= NULL;
++    pthread_t tid;
++    int loop;
++    int matchid, freeid;
++    
++    if (spInputParam[0] == NULL)
++    {
++        shmid = shmget(AREC_SHM_KEY, sizeof(t_ArecShmData),IPC_CREAT);
++        ptShmdata=(t_ArecShmData *)shmat(shmid, NULL, 0);
++        for (loop = 0; loop < MAX_DEVICE; loop++)
++        {
++            spInputParam[loop] = &ptShmdata->sInputParam[loop];
++            spRecingFlag[loop] = &ptShmdata->iRecingFlag[loop];
++            spForceStop[loop] = &ptShmdata->iForceStop[loop];            
++        }
++    }
++
++    matchid = getArecMatchDeviceIndex(ptArecParam->device);
++    if ((matchid != -1) && (spInputParam[matchid]->host == AREC_HOSTLESS_STREAM))
++    {
++        printf("AREC: nothing to do with APlay_Start, because now is playing hostless now!\n");
++        return 0;
++    }
++    else if (matchid != -1)
++    {
++        *spForceStop[matchid] = 1;
++        while (*spRecingFlag[matchid] == 1) //wait until last time playing finish 
++            usleep(10000);
++        /* reset all */
++        memset(spInputParam[matchid], 0, sizeof(T_ArecParam));
++        *spForceStop[matchid] = 0;
++        *spRecingFlag[matchid] = 0;
++    }
++
++    freeid = getArecFreeDeviceIndex();
++    memcpy(spInputParam[freeid], ptArecParam, sizeof(T_ArecParam));
++    spInputParam[freeid]->thisidx = freeid;
++    if (strlen(ptArecParam->device) <= 0)
++    {
++        strncpy(spInputParam[freeid]->device, "hw:0,0", strlen("hw:0,0"));
++    }
++    *spForceStop[freeid] = 0;
++    *spRecingFlag[freeid] = 1;
++    
++    pthread_create(&tid, NULL, exec_playing_thread, spInputParam[freeid]);
++
++    return 0;
++    
++}
++
++int Arec_Stop(const T_ArecParam *ptArecParam)
++{
++    t_ArecShmData *ptShmdata= NULL;
++    int shmid;
++    int loop;
++    
++    if (spInputParam[0] == NULL)
++    {
++        shmid = shmget(AREC_SHM_KEY, sizeof(t_ArecShmData),IPC_CREAT);
++        ptShmdata=(t_ArecShmData *)shmat(shmid, NULL, 0);
++        for (loop = 0; loop < MAX_DEVICE; loop++)
++        {
++            spInputParam[loop] = &ptShmdata->sInputParam[loop];
++            spRecingFlag[loop] = &ptShmdata->iRecingFlag[loop];
++            spForceStop[loop] = &ptShmdata->iForceStop[loop];            
++        }
++    }
++
++    int thisid = getArecMatchDeviceIndex(ptArecParam->device);
++    printf("AREC: GET STOP, thisid: %d\n", thisid);
++    if (thisid < 0)
++        return -1;
++    
++    *spForceStop[thisid] = 1;
++    return 0;
++}
++
++#endif
++#endif  
++/* SWISTOP */ 
++
+diff -ur a/libalsa-intf/Makefile.am b/libalsa-intf/Makefile.am
+--- a/libalsa-intf/Makefile.am	2014-12-08 11:15:58.196584336 +0800
++++ b/libalsa-intf/Makefile.am	2014-12-08 11:42:05.776586389 +0800
+@@ -49,3 +49,24 @@
+ 
+ alsaucm_test_SOURCES = alsaucm_test.c
+ alsaucm_test_LDADD = -lpthread $(requiredlibs)
++
++#SWISTART
++lib_LTLIBRARIES += libaplay.la libarec.la
++
++#aplay library
++libaplay_la_CC = @CC@
++libaplay_la_SOURCES = aplay.c
++libaplay_la_CFLAGS = $(AM_CFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DSOLIB_APLAY
++libaplay_la_CPPFLAGS = $(AM_CPPFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DSOLIB_APLAY
++libaplay_la_LIBADD = $(requiredlibs)
++libaplay_la_LDFLAGS = -lm -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
++
++#arec library
++libarec_la_CC = @CC@
++libarec_la_SOURCES = arec.c
++libarec_la_CFLAGS = $(AM_CFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DSOLIB_AREC
++libarec_la_CPPFLAGS = $(AM_CPPFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DSOLIB_AREC
++libarec_la_LIBADD = $(requiredlibs)
++libarec_la_LDFLAGS = -lm -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
++#SWISTOP
++

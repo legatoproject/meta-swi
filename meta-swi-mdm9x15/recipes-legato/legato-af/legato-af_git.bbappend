@@ -1,0 +1,5 @@
+DEPENDS += "alsa-intf"
+DEPENDS += "qmi"
+DEPENDS += "qmi-framework"
+DEPENDS += "sierra"
+DEPENDS += "loc-api"

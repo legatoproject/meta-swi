@@ -1,0 +1,1440 @@
+From 8c11729b21080b3f95458881518d063664a2c2af Mon Sep 17 00:00:00 2001
+From: Bertrand Roussel <broussel@sierrawireless.com>
+Date: Mon, 2 Feb 2015 10:22:27 -0800
+Subject: [PATCH] mdm9x15: Import SWI changes
+
+---
+ app/aboot/aboot.c                            | 124 +++++++++-
+ app/aboot/rules.mk                           |   7 +
+ app/aboot/sierra_bl.c                        | 325 +++++++++++++++++++++++++++
+ app/aboot/sierra_bludefs.h                   | 128 +++++++++++
+ app/aboot/sierra_crcrc32.c                   | 143 ++++++++++++
+ arch/arm/rules.mk                            |   2 +-
+ arch/x86/rules.mk                            |   2 +-
+ makefile                                     |  20 +-
+ platform/msm7x27a/platform.c                 |   0
+ platform/msm7x30/platform.c                  |   0
+ platform/msm8x60/include/platform/machtype.h |   0
+ platform/msm8x60/include/platform/pmic.h     |   0
+ platform/msm8x60/panel.c                     |   0
+ platform/msm8x60/panel_auo_wvga.c            |   0
+ platform/msm8x60/platform.c                  |   0
+ platform/msm8x60/pmic.c                      |   0
+ platform/msm8x60/rules.mk                    |   0
+ platform/msm_shared/adm.c                    |   0
+ platform/msm_shared/adm.h                    |   0
+ platform/msm_shared/crypto4_eng.c            |   0
+ platform/msm_shared/hsusb.c                  |   0
+ platform/msm_shared/nand.c                   |  25 +++
+ platform/msm_shared/qtimer.c                 |   0
+ platform/msm_shared/smem_ptable.c            |  24 ++
+ target/mdm9615/atags.c                       |  98 +++++++-
+ target/mdm9615/init.c                        |  82 ++++++-
+ target/mdm9615/rules.mk                      |   6 +
+ target/msm8660_surf/rules.mk                 |   0
+ target/msm8660_surf/tools/makefile           |   0
+ target/msm8660_surf/tools/mkheader.c         |   0
+ target/msm8960/keypad.c                      |   0
+ 31 files changed, 969 insertions(+), 17 deletions(-)
+ create mode 100644 app/aboot/sierra_bl.c
+ create mode 100644 app/aboot/sierra_bludefs.h
+ create mode 100644 app/aboot/sierra_crcrc32.c
+ mode change 100755 => 100644 platform/msm7x27a/platform.c
+ mode change 100755 => 100644 platform/msm7x30/platform.c
+ mode change 100644 => 100755 platform/msm8x60/include/platform/machtype.h
+ mode change 100644 => 100755 platform/msm8x60/include/platform/pmic.h
+ mode change 100644 => 100755 platform/msm8x60/panel.c
+ mode change 100644 => 100755 platform/msm8x60/panel_auo_wvga.c
+ mode change 100755 => 100644 platform/msm8x60/platform.c
+ mode change 100644 => 100755 platform/msm8x60/pmic.c
+ mode change 100644 => 100755 platform/msm8x60/rules.mk
+ mode change 100644 => 100755 platform/msm_shared/adm.c
+ mode change 100644 => 100755 platform/msm_shared/adm.h
+ mode change 100755 => 100644 platform/msm_shared/crypto4_eng.c
+ mode change 100644 => 100755 platform/msm_shared/hsusb.c
+ mode change 100644 => 100755 platform/msm_shared/qtimer.c
+ mode change 100755 => 100644 target/mdm9615/atags.c
+ mode change 100644 => 100755 target/msm8660_surf/rules.mk
+ mode change 100644 => 100755 target/msm8660_surf/tools/makefile
+ mode change 100644 => 100755 target/msm8660_surf/tools/mkheader.c
+ mode change 100644 => 100755 target/msm8960/keypad.c
+
+diff --git a/app/aboot/aboot.c b/app/aboot/aboot.c
+index 1e8dccd..167ba82 100644
+--- a/app/aboot/aboot.c
++++ b/app/aboot/aboot.c
+@@ -59,6 +59,12 @@
+ 
+ #include "scm.h"
+ 
++/* SWISTART */
++#ifdef SIERRA
++#include "sierra_bludefs.h"
++#endif /* SIERRA */
++/* SWISTOP */
++
+ #define EXPAND(NAME) #NAME
+ #define TARGET(NAME) EXPAND(NAME)
+ #define DEFAULT_CMDLINE "mem=100M console=null";
+@@ -1082,7 +1088,13 @@ void cmd_flash_mmc(const char *arg, void *data, unsigned sz)
+ 	return;
+ }
+ 
++/* SWISTART */
++#ifndef SIERRA
+ void cmd_flash(const char *arg, void *data, unsigned sz)
++#else /* SIERRA */
++bool cmd_flash(const char *arg, void *data, unsigned sz)
++#endif /* SIERRA */
++/* SWISTOP */
+ {
+ 	struct ptentry *ptn;
+ 	struct ptable *ptable;
+@@ -1090,26 +1102,87 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
+ 
+ 	ptable = flash_get_ptable();
+ 	if (ptable == NULL) {
++/* SWISTART */
++#ifndef SIERRA
+ 		fastboot_fail("partition table doesn't exist");
+ 		return;
++#else /* SIERRA */
++		if(sierra_is_infastboot())
++		{
++		 fastboot_fail("partition table doesn't exist");
++		}
++		else
++		{
++		  dprintf(CRITICAL, "partition table doesn't exist");
++		}
++		return false;
++#endif /* SIERRA */
++/* SWISTOP */
+ 	}
+ 
+ 	ptn = ptable_find(ptable, arg);
+ 	if (ptn == NULL) {
++/* SWISTART */
++#ifndef SIERRA
+ 		fastboot_fail("unknown partition name");
+ 		return;
+-	}
++#else /* SIERRA */
++		if(sierra_is_infastboot())
++		{
++		  fastboot_fail("unknown partition name");
++		}
++		else
++		{
++		  dprintf(CRITICAL, "unknown partition name");
++		}
++		return false;
++#endif /* SIERRA */
++/* SWISTOP */
++	}
++
++/* SWISTART */
++#ifdef SIERRA
++    /* Sierra non-fastboot mode update, erase partition before write */
++    if(!sierra_is_infastboot())
++    {
++      if (flash_erase(ptn))
++      {
++        dprintf(CRITICAL, "failed to erase partition");
++        return false;
++      }
++    }
++#endif /* SIERRA */
++/* SWISTOP */
+ 
+ 	if (!strcmp(ptn->name, "boot") || !strcmp(ptn->name, "recovery")) {
+ 		if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
++/* SWISTART */
++#ifndef SIERRA
+ 			fastboot_fail("image is not a boot image");
+ 			return;
++#else /* SIERRA */
++			if(sierra_is_infastboot())
++			{
++			  fastboot_fail("image is not a boot image");
++			}
++			else
++			{
++			  dprintf(CRITICAL, "image is not a boot image");
++			}
++			return false;
++#endif /* SIERRA */
++/* SWISTOP */
+ 		}
+ 	}
+ 
+ 	if (!strcmp(ptn->name, "system")
+ 		|| !strcmp(ptn->name, "userdata")
+ 		|| !strcmp(ptn->name, "persist")
++/* SWISTART */
++#ifdef SIERRA
++		|| !strcmp(ptn->name, "hdata")
++#endif
++/* SWISTOP */
+ 		|| !strcmp(ptn->name, "recoveryfs")) {
+ 		if (flash_ecc_bch_enabled())
+ 			/* Spare data bytes for 8 bit ECC increased by 4 */
+@@ -1121,11 +1194,35 @@ void cmd_flash(const char *arg, void *data, unsigned sz)
+ 
+ 	dprintf(INFO, "writing %d bytes to '%s'\n", sz, ptn->name);
+ 	if (flash_write(ptn, extra, data, sz)) {
++/* SWISTART */
++#ifdef SIERRA
+ 		fastboot_fail("flash write failure");
+ 		return;
++#else /* SIERRA */
++		if(sierra_is_infastboot())
++		{
++		  fastboot_fail("flash write failure");
++		}
++		else
++		{
++		  dprintf(CRITICAL, "flash write failure");
++		}
++		return false;
++#endif /* SIERRA */
++/* SWISTOP */
+ 	}
+ 	dprintf(INFO, "partition '%s' updated\n", ptn->name);
++/* SWISTART */
++#ifndef SIERRA
+ 	fastboot_okay("");
++#else /* SIERRA */
++	if(sierra_is_infastboot())
++	{
++	  fastboot_okay("");
++	}
++	return true;
++#endif /* SIERRA */
++/* SWISTOP */
+ }
+ 
+ void cmd_continue(const char *arg, void *data, unsigned sz)
+@@ -1234,6 +1331,13 @@ void aboot_init(const struct app_descriptor *app)
+ 	dprintf(SPEW,"serial number: %s\n",sn_buf);
+ 	surf_udc_device.serialno = sn_buf;
+ 
++/* SWISTART */
++#ifdef SIERRA
++	/* write pending Linux images downloaded by SBL2 */
++	sierra_bl_flash_pending_linux_images();
++#endif /* SIERRA */
++/* SWISTOP */
++
+ 	/* Check if we should do something other than booting up */
+ 	if (keys_get_state(KEY_HOME) != 0)
+ 		boot_into_recovery = 1;
+@@ -1247,11 +1351,14 @@ void aboot_init(const struct app_descriptor *app)
+ 			goto fastboot;
+ 	}
+ 
++/* SWISTART - not go to fastboot mode based GPIO or DIP switch */
++#ifndef SIERRA
+ 	#if NO_KEYPAD_DRIVER
+ 	if (fastboot_trigger())
+ 		goto fastboot;
+ 	#endif
+-
++#endif /* SIERRA */
++/* SWISTOP */
+ 	reboot_mode = check_reboot_mode();
+ 	if (reboot_mode == RECOVERY_MODE) {
+ 		boot_into_recovery = 1;
+@@ -1291,6 +1398,19 @@ void aboot_init(const struct app_descriptor *app)
+ 
+ fastboot:
+ 
++/* SWISTART */
++#ifdef SIERRA
++	/* if fastboot is disabled, set DLOAD flag and reboot to SBL2 */
++	if(sierra_is_fastboot_disabled())
++	{
++	  dprintf(INFO, "SWI - fastboot disabled, reboot\n");
++
++	  reboot_device(DLOAD_MAGIC_NUM_1);
++	  return;
++	}
++#endif /* SIERRA */
++/* SWISTOP */
++
+ 	target_fastboot_init();
+ 
+ 	if(!usb_init)
+diff --git a/app/aboot/rules.mk b/app/aboot/rules.mk
+index a26937b..15988d2 100644
+--- a/app/aboot/rules.mk
++++ b/app/aboot/rules.mk
+@@ -7,3 +7,10 @@ OBJS += \
+ 	$(LOCAL_DIR)/fastboot.o \
+ 	$(LOCAL_DIR)/recovery.o
+ 
++# SWISTART
++# ifeq ($(SIERRA),yes)
++OBJS += \
++	$(LOCAL_DIR)/sierra_crcrc32.o \
++	$(LOCAL_DIR)/sierra_bl.o
++# endif
++# SWISTOP
+diff --git a/app/aboot/sierra_bl.c b/app/aboot/sierra_bl.c
+new file mode 100644
+index 0000000..758c406
+--- /dev/null
++++ b/app/aboot/sierra_bl.c
+@@ -0,0 +1,325 @@
++/************
++ *
++ * $Id$
++ *
++ * Filename:  sierra_bl.c
++ *
++ * Purpose:   Sierra Little Kernel changes            
++ *
++ * Copyright: © 2012 Sierra Wireless, Inc.
++ *            All rights reserved
++ *
++ * Note:       
++ *
++ ************/
++
++#include <string.h>
++#include <reg.h>
++#include <debug.h>
++#include <platform.h>
++#include <platform/iomap.h>
++#include <arch/ops.h>
++
++#include "sierra_bludefs.h"
++
++/*
++ *  externs
++ */
++extern bool cmd_flash(const char *arg, void *data, unsigned sz);
++
++
++/*
++ *  Local variables
++ */
++static bool sierra_infastboot = true;
++static uint32_t sierra_b2aflags = 0;
++
++/* 
++ * Local functions 
++ */
++
++/************
++ *
++ * Name:     blpkggcb
++ *
++ * Purpose:  Get package control block pointer
++ *
++ * Parms:    none
++ *
++ * Return:   control block pointer
++ *
++ * Abort:    none
++ *
++ * Notes:    none
++ *
++ ************/
++static struct blspkgcbs *blpkggcb(
++  void )
++{
++  return (struct blspkgcbs *)BL_DLOAD_SPKG_CB_START;  
++}
++
++/************
++ *
++ * Name:     blpkgimgcbvalid
++ *
++ * Purpose:  check if package control block is valid
++ *
++ * Parms:    none
++ *
++ * Return:   TRUE if image update control block valid, 
++ *           FALSE otherwise
++ *
++ * Abort:    none
++ *
++ * Notes:    none
++ *
++ ************/
++static bool blpkgimgcbvalid(
++  void )
++{
++  struct blspkgcbs *blpkgcbp = blpkggcb();
++
++  if(blpkgcbp->imgcb_magic_1 == BL_SIMG_CB_MAGIC_NUM1 &&
++     blpkgcbp->imgcb_magic_2 == BL_SIMG_CB_MAGIC_NUM2)
++  {
++    return true;
++  }
++  else
++  {
++    return false;
++  }
++}
++
++/************
++ *
++ * Name:     sierra_is_fastboot_disabled
++ *
++ * Purpose:  check if fastboot disabled
++ *
++ * Parms:    none
++ *
++ * Return:   TRUE - if disabled
++ *           FALSE - otherwise
++ *
++ * Abort:    none
++ *
++ * Notes:    none
++ *
++ ************/
++bool sierra_is_fastboot_disabled(
++  void)
++{
++  return (sierra_b2aflags & BCBOOTAPPFLAG_ADB_ENABLE_M) ? false : true;
++}
++
++/************
++ *
++ * Name:     sierra_set_b2aflags
++ *
++ * Purpose:  set local copy of b2aflags
++ *
++ * Parms:    none
++ *
++ * Return:   none
++ *
++ * Abort:    none
++ *
++ * Notes:    none
++ *
++ ************/
++static void sierra_set_b2aflags(
++  uint32_t flags)
++{
++  sierra_b2aflags = flags;
++}
++
++/************
++ *
++ * Name:     sierra_set_infastboot
++ *
++ * Purpose:  set the flag to indicate whether the device is in fast boot
++ *           and fast boot host link connection is present
++ *
++ * Parms:    none
++ *
++ * Return:   none
++ *
++ * Abort:    none
++ *
++ * Notes:    none
++ *
++ ************/
++static void sierra_set_infastboot(
++  bool mode)
++{
++  sierra_infastboot = mode;
++}
++
++/************
++ *
++ * Name:     sierra_is_infastboot
++ *
++ * Purpose:  get the flag to inidicate whether if the device is in fast boot
++ *           and fast boot host link connection is present
++ *
++ * Parms:    none
++ *
++ * Return:   TRUE - in fastboot mode and fastboot usb link is present
++ *           FALSE otherwise
++ *
++ * Abort:    none
++ *
++ * Notes:    none
++ *
++ ************/
++bool sierra_is_infastboot(
++  void)
++{
++  return sierra_infastboot;
++}
++
++/************
++ *
++ * Name:     sierra_bl_flash_pending_linux_images
++ *
++ * Purpose:  flsh pending Linux images
++ *
++ * Parms:    none
++ *
++ * Return:   none
++ *
++ * Abort:    none
++ *
++ * Notes:    none
++ *
++ ************/
++void sierra_bl_flash_pending_linux_images(
++  void)
++{
++  struct blspkgcbs *blpkgcbp = blpkggcb();
++  struct blimagecb* entryp;
++  uint32_t entry;
++  bool result, need_update, need_reboot = false;
++  uint32_t b2aflags;
++  char partname[BL_SIMG_CB_MAX_PART_SIZE + 1];
++
++  /* first check Sierra SMEM b2a flags to see if pending update */
++  if((readl(BS_BOOT_APP_MSG_STARTMARKER) & BC_MSG_MARKER_M) == (BC_VALID_BOOT_MSG_MARKER & BC_MSG_MARKER_M) &&
++     (readl(BS_BOOT_APP_MSG_ENDMARKER) & BC_MSG_MARKER_M) == (BC_VALID_BOOT_MSG_MARKER & BC_MSG_MARKER_M))   
++  {
++    b2aflags = readl(BS_BOOT_APP_MSG_FLAGS);
++    sierra_set_b2aflags(b2aflags);
++    if(b2aflags & BCBOOTAPPFLAG_UPDATE_PENDING_M)
++    {
++      /* only continue if set, otherwise could not access downloaded images
++       * since the regions will be locked for Sparrow processor
++       */
++      dprintf(INFO, "SWI - pending image update\n");
++
++    }
++    else
++    {
++      /* no pending updates, return */
++      return;
++    }
++  }
++  else
++  {
++    /* no valid flag marker, return */
++    return;
++  }
++
++  if(blpkgimgcbvalid())
++  {
++    /* set update mode - no fastboot host present */
++    sierra_set_infastboot(false);
++    
++    for(entry = 0; entry < BL_MAX_NUM_IMAGE; entry ++)
++    {
++      entryp = &blpkgcbp->imgupdatestatus[entry];
++      if(entryp->part[0] != 0 &&
++         entryp->start_address != 0 &&
++         entryp->image_size != 0 &&
++         entryp->status == BC_FW_DLOADED)
++      {
++        /* examine if it is a Linux partition */
++        if(!strncmp((char *)entryp->part, "APPS", BL_SIMG_CB_MAX_PART_SIZE))
++        {
++          /* write Linux kernel */
++          strcpy(partname, "boot");
++          need_update = true;
++        }
++        else if(!strncmp((char *)entryp->part, "SYSTEM", BL_SIMG_CB_MAX_PART_SIZE))
++        {
++          /* write Linux root fs */
++          strcpy(partname, "system");
++          need_update = true;
++        }
++        else if(!strncmp((char *)entryp->part, "USERDATA", BL_SIMG_CB_MAX_PART_SIZE))
++        {
++          /* write Linux partition */
++          strcpy(partname, "userdata");
++          need_update = true;
++        }
++        else if(!strncmp((char *)entryp->part, "HDATA", BL_SIMG_CB_MAX_PART_SIZE))
++        {
++          /* write Linux partition */
++          strcpy(partname, "hdata");
++          need_update = true;
++        }
++        else
++        {
++          /* not update */
++          need_update = false;
++        }
++        
++        if(need_update)
++        {
++          /* check image crc32 first
++           * Note that the CRC check takes long time:
++           * for USERDATA partition: CRC check 7s, flash time 3s
++           * SWI_TBD BD 120425 need to find a fast crc32 algorithm
++           */
++          if(entryp->image_crc != sierra_crcrc32(entryp->start_address, entryp->image_size))
++          {
++            dprintf(INFO, "SWI - image CRC check failed \n");
++            result = false; 
++          }
++          else
++          {
++            result = cmd_flash(partname, 
++                               entryp->start_address, 
++                               entryp->image_size);
++            
++          }
++          
++          if(result)
++          {
++            entryp->status = BC_FW_UPDATED_OK;
++          }
++          else
++          {
++            entryp->status = BC_FW_UPDATE_FALED;
++            break;
++          }
++          need_reboot = true;
++        } /* end if updated */
++        
++      } /* end if need update */
++    } /* end for entry */
++
++    /* set update mode back */
++    sierra_set_infastboot(true);
++ 
++    if(need_reboot)
++    {
++      /* last image update status will not be written without this cache sync */       
++      arch_sync_cache_range((void *)&blpkgcbp->imgupdatestatus[0], 
++                            sizeof(blpkgcbp->imgupdatestatus));
++      /* need reboot */
++      reboot_device(0);
++    }
++
++  } /* end if valid fw update cb */
++}
+diff --git a/app/aboot/sierra_bludefs.h b/app/aboot/sierra_bludefs.h
+new file mode 100644
+index 0000000..e6aba61
+--- /dev/null
++++ b/app/aboot/sierra_bludefs.h
+@@ -0,0 +1,128 @@
++/************
++ * $Id$
++ *
++ * Filename:  bludefs.h
++ *
++ * Purpose:   external definitions for BL package
++ *
++ * NOTES:
++ *
++ * Copyright: © 2010 - 2012 Sierra Wireless, Inc.
++ *            All rights reserved
++ *
++ ************/
++
++#ifndef bludefs_h
++#define bludefs_h
++
++#define BS_BOOT_APP_MSG_START              (MSM_SHARED_BASE + 0x100000 - 0x1020)
++#define BS_BOOT_APP_MSG_STARTMARKER        BS_BOOT_APP_MSG_START
++#define BS_BOOT_APP_MSG_FLAGS              (BS_BOOT_APP_MSG_START + 24)
++#define BS_BOOT_APP_MSG_ENDMARKER          (BS_BOOT_APP_MSG_START + 28)
++#define BC_VALID_BOOT_MSG_MARKER           0xBABECAFEU   /* indicates message from Boot to App */
++#define BC_MSG_MARKER_M                    0xFFFF0000U
++#define BCBOOTAPPFLAG_UPDATE_PENDING_M     0x00000001
++#define BCBOOTAPPFLAG_ADB_ENABLE_M         0x00000004
++
++#define BC_PKGDESC_MAXSIZE          1536
++
++#define BL_DLOAD_BASE               0x41800000
++#define BL_DLOAD_SPKG_CB_START      BL_DLOAD_BASE
++#define BL_DLOAD_SPKG_CB_SIZE       0x1000
++#define BL_SPKG_CB_MAGIC_NUM1       0x53504B47  /* SPKG */
++#define BL_SPKG_CB_MAGIC_NUM2       0x474B5053  /* SPKG */
++#define BL_SIMG_CB_MAGIC_NUM1       0x53494D47  /* SIMG */
++#define BL_SIMG_CB_MAGIC_NUM2       0x474D4953  /* SIMG */
++#define BL_SPKG_TEST_SKU_NUM        9999999
++#define BL_MAX_NUM_IMAGE            16
++#define BL_SIMG_CB_MAX_PART_SIZE    8
++
++/* FW Update results */
++#define BC_FW_DLOADED               0x00000000
++#define BC_FW_UPDATED_OK            0x00000001
++#define BC_FW_UPDATE_FALED          0xFFFFFFFF
++
++#define BL_DLOAD_START_ADDR         (BL_DLOAD_BASE + BL_DLOAD_SPKG_CB_SIZE)
++#define BL_DLOAD_AREA_SIZE          (BL_DLOAD_SIZE - BL_DLOAD_SPKG_CB_SIZE)
++
++#define DLOAD_MAGIC_NUM_1           0xE47B337D
++#define DLOAD_MAGIC_NUM_2           0xCE14091A
++
++
++/* structures */
++
++/*************
++ *
++ * Name:     blimagecb
++ *
++ * Purpose:  Structure of image update status control block for a single image
++ *
++ * Members:
++ *           part               : partition name
++ *           start_address      : start address in RAM (downloaded image)
++ *           image_size         : image size
++ *           image_crc          : image crc32
++ *           status             : Image update status and other flags:
++ *                                - 0x00: BLIMG_DLOADED - downloaded and pending update
++ *                                - 0x01: BLIMG_UPDATED_OK - applied OK
++ *                                - 0xFF: BLIMG_UPDATED_FALED - update FAILED
++ *           image_type         : type of the image (as shown in bcimagetype)
++ *           reserved           : reserved for future use
++ *
++ * Notes:    This structure has the fixed size of 32 byte
++ *
++ **************/
++struct __PACKED blimagecb
++{
++  uint8_t                 part[BL_SIMG_CB_MAX_PART_SIZE];
++  uint8_t                 *start_address;
++  uint32_t                image_size;  
++  uint32_t                image_crc;  
++  uint32_t                status;
++  uint8_t                 image_type;
++  uint8_t                 reserved[7];
++};
++
++/*************
++ *
++ * Name:     blspkgcbs
++ *
++ * Purpose:  Structure of Sierra package download control block
++ *
++ * Members:
++ *           magic_1            : magic number 1 (SPKG)
++ *           imagebufp          : SPKG CWE image buffer pointer
++ *           imgsize            : total size of SPKG CWE image
++ *           imgoffset          : current image offset (from beginning of SPKG CWE hdr)
++ *           compnum            : current component number
++ *           reserved           : reserved
++ *           magic_2            : magic number 2, end of structure (SPKG)
++ *           imgcb_magic_1      : magic number for image update status (SIMG)
++ *           imgupdatestatus    : image update status for each image
++ *           imgcb_magic_2      : magic number ofr image update status (SIMG)
++ *
++ * Notes:    max possible structure size is BL_DLOAD_SPKG_CB_SIZE. This structure is
++ *           placed at the fix RAM location at BL_DLOAD_SPKG_CB_START 
++ *
++ **************/
++struct __PACKED blspkgcbs
++{
++  uint32_t                magic_1;
++  uint8_t                 *imagebufp;
++  uint32_t                imgsize;  
++  int32_t                 imgoffset;
++  uint16_t                compnum;
++  uint8_t                 reserved[234];
++  uint8_t                 pkgdesc[BC_PKGDESC_MAXSIZE];
++  uint32_t                magic_2;
++  uint32_t                imgcb_magic_1;
++  struct blimagecb        imgupdatestatus[BL_MAX_NUM_IMAGE];
++  uint32_t                imgcb_magic_2;
++};
++
++extern void sierra_bl_flash_pending_linux_images(void);
++extern bool sierra_is_infastboot(void);
++extern bool sierra_is_fastboot_disabled(void);
++extern uint32_t sierra_crcrc32(uint8_t *address, uint32_t size);
++
++#endif /* bludefs_h */
+diff --git a/app/aboot/sierra_crcrc32.c b/app/aboot/sierra_crcrc32.c
+new file mode 100644
+index 0000000..c5f2ad3
+--- /dev/null
++++ b/app/aboot/sierra_crcrc32.c
+@@ -0,0 +1,143 @@
++/*************
++ *
++ * $Id$
++ *
++ * Filename:  crmain.c
++ *
++ * Purpose:   Provides CRC-32 services
++ *
++ * Copyright: © 2009 Sierra Wireless, Inc.
++ *            All rights reserved
++ *
++ **************/
++
++/* Include files */
++#include <string.h>
++
++
++/* Local constants and enumerated types */
++
++/* This table was generated by the "crctable" program */
++static const uint32_t crc32table[256] =
++{
++  0x00000000U, 0x77073096U, 0xEE0E612CU, 0x990951BAU,     /* 0x00 */
++  0x076DC419U, 0x706AF48FU, 0xE963A535U, 0x9E6495A3U,     /* 0x04 */
++  0x0EDB8832U, 0x79DCB8A4U, 0xE0D5E91EU, 0x97D2D988U,     /* 0x08 */
++  0x09B64C2BU, 0x7EB17CBDU, 0xE7B82D07U, 0x90BF1D91U,     /* 0x0C */
++  0x1DB71064U, 0x6AB020F2U, 0xF3B97148U, 0x84BE41DEU,     /* 0x10 */
++  0x1ADAD47DU, 0x6DDDE4EBU, 0xF4D4B551U, 0x83D385C7U,     /* 0x14 */
++  0x136C9856U, 0x646BA8C0U, 0xFD62F97AU, 0x8A65C9ECU,     /* 0x18 */
++  0x14015C4FU, 0x63066CD9U, 0xFA0F3D63U, 0x8D080DF5U,     /* 0x1C */
++  0x3B6E20C8U, 0x4C69105EU, 0xD56041E4U, 0xA2677172U,     /* 0x20 */
++  0x3C03E4D1U, 0x4B04D447U, 0xD20D85FDU, 0xA50AB56BU,     /* 0x24 */
++  0x35B5A8FAU, 0x42B2986CU, 0xDBBBC9D6U, 0xACBCF940U,     /* 0x28 */
++  0x32D86CE3U, 0x45DF5C75U, 0xDCD60DCFU, 0xABD13D59U,     /* 0x2C */
++  0x26D930ACU, 0x51DE003AU, 0xC8D75180U, 0xBFD06116U,     /* 0x30 */
++  0x21B4F4B5U, 0x56B3C423U, 0xCFBA9599U, 0xB8BDA50FU,     /* 0x34 */
++  0x2802B89EU, 0x5F058808U, 0xC60CD9B2U, 0xB10BE924U,     /* 0x38 */
++  0x2F6F7C87U, 0x58684C11U, 0xC1611DABU, 0xB6662D3DU,     /* 0x3C */
++  0x76DC4190U, 0x01DB7106U, 0x98D220BCU, 0xEFD5102AU,     /* 0x40 */
++  0x71B18589U, 0x06B6B51FU, 0x9FBFE4A5U, 0xE8B8D433U,     /* 0x44 */
++  0x7807C9A2U, 0x0F00F934U, 0x9609A88EU, 0xE10E9818U,     /* 0x48 */
++  0x7F6A0DBBU, 0x086D3D2DU, 0x91646C97U, 0xE6635C01U,     /* 0x4C */
++  0x6B6B51F4U, 0x1C6C6162U, 0x856530D8U, 0xF262004EU,     /* 0x50 */
++  0x6C0695EDU, 0x1B01A57BU, 0x8208F4C1U, 0xF50FC457U,     /* 0x54 */
++  0x65B0D9C6U, 0x12B7E950U, 0x8BBEB8EAU, 0xFCB9887CU,     /* 0x58 */
++  0x62DD1DDFU, 0x15DA2D49U, 0x8CD37CF3U, 0xFBD44C65U,     /* 0x5C */
++  0x4DB26158U, 0x3AB551CEU, 0xA3BC0074U, 0xD4BB30E2U,     /* 0x60 */
++  0x4ADFA541U, 0x3DD895D7U, 0xA4D1C46DU, 0xD3D6F4FBU,     /* 0x64 */
++  0x4369E96AU, 0x346ED9FCU, 0xAD678846U, 0xDA60B8D0U,     /* 0x68 */
++  0x44042D73U, 0x33031DE5U, 0xAA0A4C5FU, 0xDD0D7CC9U,     /* 0x6C */
++  0x5005713CU, 0x270241AAU, 0xBE0B1010U, 0xC90C2086U,     /* 0x70 */
++  0x5768B525U, 0x206F85B3U, 0xB966D409U, 0xCE61E49FU,     /* 0x74 */
++  0x5EDEF90EU, 0x29D9C998U, 0xB0D09822U, 0xC7D7A8B4U,     /* 0x78 */
++  0x59B33D17U, 0x2EB40D81U, 0xB7BD5C3BU, 0xC0BA6CADU,     /* 0x7C */
++  0xEDB88320U, 0x9ABFB3B6U, 0x03B6E20CU, 0x74B1D29AU,     /* 0x80 */
++  0xEAD54739U, 0x9DD277AFU, 0x04DB2615U, 0x73DC1683U,     /* 0x84 */
++  0xE3630B12U, 0x94643B84U, 0x0D6D6A3EU, 0x7A6A5AA8U,     /* 0x88 */
++  0xE40ECF0BU, 0x9309FF9DU, 0x0A00AE27U, 0x7D079EB1U,     /* 0x8C */
++  0xF00F9344U, 0x8708A3D2U, 0x1E01F268U, 0x6906C2FEU,     /* 0x90 */
++  0xF762575DU, 0x806567CBU, 0x196C3671U, 0x6E6B06E7U,     /* 0x94 */
++  0xFED41B76U, 0x89D32BE0U, 0x10DA7A5AU, 0x67DD4ACCU,     /* 0x98 */
++  0xF9B9DF6FU, 0x8EBEEFF9U, 0x17B7BE43U, 0x60B08ED5U,     /* 0x9C */
++  0xD6D6A3E8U, 0xA1D1937EU, 0x38D8C2C4U, 0x4FDFF252U,     /* 0xA0 */
++  0xD1BB67F1U, 0xA6BC5767U, 0x3FB506DDU, 0x48B2364BU,     /* 0xA4 */
++  0xD80D2BDAU, 0xAF0A1B4CU, 0x36034AF6U, 0x41047A60U,     /* 0xA8 */
++  0xDF60EFC3U, 0xA867DF55U, 0x316E8EEFU, 0x4669BE79U,     /* 0xAC */
++  0xCB61B38CU, 0xBC66831AU, 0x256FD2A0U, 0x5268E236U,     /* 0xB0 */
++  0xCC0C7795U, 0xBB0B4703U, 0x220216B9U, 0x5505262FU,     /* 0xB4 */
++  0xC5BA3BBEU, 0xB2BD0B28U, 0x2BB45A92U, 0x5CB36A04U,     /* 0xB8 */
++  0xC2D7FFA7U, 0xB5D0CF31U, 0x2CD99E8BU, 0x5BDEAE1DU,     /* 0xBC */
++  0x9B64C2B0U, 0xEC63F226U, 0x756AA39CU, 0x026D930AU,     /* 0xC0 */
++  0x9C0906A9U, 0xEB0E363FU, 0x72076785U, 0x05005713U,     /* 0xC4 */
++  0x95BF4A82U, 0xE2B87A14U, 0x7BB12BAEU, 0x0CB61B38U,     /* 0xC8 */
++  0x92D28E9BU, 0xE5D5BE0DU, 0x7CDCEFB7U, 0x0BDBDF21U,     /* 0xCC */
++  0x86D3D2D4U, 0xF1D4E242U, 0x68DDB3F8U, 0x1FDA836EU,     /* 0xD0 */
++  0x81BE16CDU, 0xF6B9265BU, 0x6FB077E1U, 0x18B74777U,     /* 0xD4 */
++  0x88085AE6U, 0xFF0F6A70U, 0x66063BCAU, 0x11010B5CU,     /* 0xD8 */
++  0x8F659EFFU, 0xF862AE69U, 0x616BFFD3U, 0x166CCF45U,     /* 0xDC */
++  0xA00AE278U, 0xD70DD2EEU, 0x4E048354U, 0x3903B3C2U,     /* 0xE0 */
++  0xA7672661U, 0xD06016F7U, 0x4969474DU, 0x3E6E77DBU,     /* 0xE4 */
++  0xAED16A4AU, 0xD9D65ADCU, 0x40DF0B66U, 0x37D83BF0U,     /* 0xE8 */
++  0xA9BCAE53U, 0xDEBB9EC5U, 0x47B2CF7FU, 0x30B5FFE9U,     /* 0xEC */
++  0xBDBDF21CU, 0xCABAC28AU, 0x53B39330U, 0x24B4A3A6U,     /* 0xF0 */
++  0xBAD03605U, 0xCDD70693U, 0x54DE5729U, 0x23D967BFU,     /* 0xF4 */
++  0xB3667A2EU, 0xC4614AB8U, 0x5D681B02U, 0x2A6F2B94U,     /* 0xF8 */
++  0xB40BBE37U, 0xC30C8EA1U, 0x5A05DF1BU, 0x2D02EF8DU      /* 0xFC */
++};
++
++
++/* Local structures */
++
++
++/* Functions */
++
++/*************
++ *
++ * Name:     crcrc32 - CRC-32 calculator
++ *
++ * Purpose:  To calculate the CRC-32 of a buffer
++ *
++ * Parms:    (IN) address - input buffer
++ *           size         - number of bytes to read
++ *           crc          - starting CRC seed
++ *
++ * Return:   32-bit CRC
++ *
++ * Abort:    None
++ *
++ * Notes:    None
++ *
++ **************/
++static uint32_t crcrc32(uint8_t *address, uint32_t size, uint32_t crc)
++{
++  while (size-- != 0)
++  {
++    /* byte loop */
++    crc = (((crc >> 8) & 0x00FFFFFFU) ^ crc32table[(crc ^ (uint32_t) (*address++)) & 0x000000FFU]);
++  }
++  return(crc);
++}
++
++/*************
++ *
++ * Name:     sierra_crcrc32 - CRC-32 calculator
++ *
++ * Purpose:  To calculate the CRC-32 of a full buffer
++ *
++ * Parms:    (IN) address - input buffer
++ *           size         - number of bytes to read
++ *
++ * Return:   32-bit CRC
++ *
++ * Abort:    None
++ *
++ * Notes:    None
++ *
++ **************/
++uint32_t sierra_crcrc32(uint8_t *address, uint32_t size)
++{
++  uint32_t crc = 0xFFFFFFFF;
++  crc = crcrc32(address, size, crc);
++  return(crc);
++}
+diff --git a/arch/arm/rules.mk b/arch/arm/rules.mk
+index d822430..cbc6206 100644
+--- a/arch/arm/rules.mk
++++ b/arch/arm/rules.mk
+@@ -120,7 +120,7 @@ ifeq ($(MEMVARS_SET),0)
+ $(error missing MEMBASE or MEMSIZE variable, please set in target rules.mk)
+ endif
+ 
+-LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(CFLAGS) $(THUMBCFLAGS) -print-libgcc-file-name)
++LIBGCC := $(shell $(CC) $(CFLAGS) $(THUMBCFLAGS) -print-libgcc-file-name)
+ #$(info LIBGCC = $(LIBGCC))
+ 
+ # potentially generated files that should be cleaned out with clean make rule
+diff --git a/arch/x86/rules.mk b/arch/x86/rules.mk
+index d929cb6..0222ca1 100644
+--- a/arch/x86/rules.mk
++++ b/arch/x86/rules.mk
+@@ -20,7 +20,7 @@ OBJS += \
+ # set the default toolchain to x86 elf and set a #define
+ TOOLCHAIN_PREFIX ?= i386-elf-
+ 
+-LIBGCC := $(shell $(TOOLCHAIN_PREFIX)gcc $(CFLAGS) -print-libgcc-file-name)
++LIBGCC := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
+ #$(info LIBGCC = $(LIBGCC))
+ 
+ cc-option = $(shell if test -z "`$(1) $(2) -S -o /dev/null -xc /dev/null 2>&1`"; \
+diff --git a/makefile b/makefile
+index 4c31db2..83fce7c 100644
+--- a/makefile
++++ b/makefile
+@@ -142,19 +142,25 @@ DEFINES += \
+ 	DEBUG=$(DEBUG)
+ endif
+ 
++# SWISTART
++SIERRA := yes
++DEFINES += \
++	SIERRA
++# SWISTOP 
++
+ ALLOBJS := $(addprefix $(BUILDDIR)/,$(ALLOBJS))
+ 
+ DEPS := $(ALLOBJS:%o=%d)
+ 
+ # default to no ccache
+ CCACHE ?= 
+-CC := $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
+-LD := $(TOOLCHAIN_PREFIX)ld
+-OBJDUMP := $(TOOLCHAIN_PREFIX)objdump
+-OBJCOPY := $(TOOLCHAIN_PREFIX)objcopy
+-CPPFILT := $(TOOLCHAIN_PREFIX)c++filt
+-SIZE := $(TOOLCHAIN_PREFIX)size
+-NM := $(TOOLCHAIN_PREFIX)nm
++CC ?= $(CCACHE) $(TOOLCHAIN_PREFIX)gcc
++LD ?= $(TOOLCHAIN_PREFIX)ld.bfd
++OBJDUMP ?= $(TOOLCHAIN_PREFIX)objdump
++OBJCOPY ?= $(TOOLCHAIN_PREFIX)objcopy
++CPPFILT ?= $(TOOLCHAIN_PREFIX)c++filt
++SIZE ?= $(TOOLCHAIN_PREFIX)size
++NM ?= $(TOOLCHAIN_PREFIX)nm
+ 
+ # comment out or override if you want to see the full output of each command
+ NOECHO ?= @
+diff --git a/platform/msm7x27a/platform.c b/platform/msm7x27a/platform.c
+old mode 100755
+new mode 100644
+diff --git a/platform/msm7x30/platform.c b/platform/msm7x30/platform.c
+old mode 100755
+new mode 100644
+diff --git a/platform/msm8x60/include/platform/machtype.h b/platform/msm8x60/include/platform/machtype.h
+old mode 100644
+new mode 100755
+diff --git a/platform/msm8x60/include/platform/pmic.h b/platform/msm8x60/include/platform/pmic.h
+old mode 100644
+new mode 100755
+diff --git a/platform/msm8x60/panel.c b/platform/msm8x60/panel.c
+old mode 100644
+new mode 100755
+diff --git a/platform/msm8x60/panel_auo_wvga.c b/platform/msm8x60/panel_auo_wvga.c
+old mode 100644
+new mode 100755
+diff --git a/platform/msm8x60/platform.c b/platform/msm8x60/platform.c
+old mode 100755
+new mode 100644
+diff --git a/platform/msm8x60/pmic.c b/platform/msm8x60/pmic.c
+old mode 100644
+new mode 100755
+diff --git a/platform/msm8x60/rules.mk b/platform/msm8x60/rules.mk
+old mode 100644
+new mode 100755
+diff --git a/platform/msm_shared/adm.c b/platform/msm_shared/adm.c
+old mode 100644
+new mode 100755
+diff --git a/platform/msm_shared/adm.h b/platform/msm_shared/adm.h
+old mode 100644
+new mode 100755
+diff --git a/platform/msm_shared/crypto4_eng.c b/platform/msm_shared/crypto4_eng.c
+old mode 100755
+new mode 100644
+diff --git a/platform/msm_shared/hsusb.c b/platform/msm_shared/hsusb.c
+old mode 100644
+new mode 100755
+diff --git a/platform/msm_shared/nand.c b/platform/msm_shared/nand.c
+index fae7fbb..7ad0375 100644
+--- a/platform/msm_shared/nand.c
++++ b/platform/msm_shared/nand.c
+@@ -134,6 +134,13 @@ static struct flash_identification supported_flash[] = {
+ 	/* Flash ID     ID Mask Density(MB)  Wid Pgsz   Blksz   oobsz onenand   Manuf */
+ 	{0x00000000, 0xFFFFFFFF, 0, 0, 0, 0, 0, 0}, /*ONFI*/ {0x1500aaec, 0xFF00FFFF, (256 << 20), 0, 2048, (2048 << 6), 64, 0},	/*Sams */
+ 	{0x5500baec, 0xFF00FFFF, (256 << 20), 1, 2048, (2048 << 6), 64, 0},	/*Sams */
++/* SWISTART - Add support for Samsung, Toshiba, and Micron flash */
++#ifdef SIERRA
++	{0x1900aaec, 0xFF00FFFF, (256 << 20), 0, 2048, (2048 << 6), 64, 0},	/*Sams */
++	{0x1590aa98, 0xFFFFFFFF, (256 << 20), 0, 2048, (2048 << 6), 64, 0},	/*Tosh */
++	{0x2690ac2c, 0xFFFFFFFF, (512 << 20), 0, 4096, (4096 << 6), 224, 0},	/*Micr */
++#endif /* SIERRA */
++/* SWISTOP */
+ 	{0x1500aa98, 0xFFFFFFFF, (256 << 20), 0, 2048, (2048 << 6), 64, 0},	/*Tosh */
+ 	{0x5500ba98, 0xFFFFFFFF, (256 << 20), 1, 2048, (2048 << 6), 64, 0},	/*Tosh */
+ 	{0xd580b12c, 0xFFFFFFFF, (256 << 20), 1, 2048, (2048 << 6), 64, 0},	/*Micr */
+@@ -3225,6 +3232,16 @@ static void flash_read_id(dmov_s * cmdlist, unsigned *ptrlist)
+ 		    && flash_info.id == 0x2600482c) {
+ 			enable_bch_ecc = 1;
+ 		}
++/* SWISTART */
++#ifdef SIERRA
++		//Look for 8bit BCH ECC Nand, TODO: ECC Correctability >= 8
++		/* This change is from QC, see case# 01004936 */
++		if ((flash_ctrl_hwinfo(cmdlist, ptrlist) == 0x4030)
++		    && flash_info.id == 0x2690ac2c) {
++			enable_bch_ecc = 1;
++		}
++#endif /* SIERRA */
++/* SWISTOP */	
+ 		return;
+ 	}
+ 	// Flash device is not supported, print flash device info and halt
+@@ -3326,8 +3343,16 @@ void flash_init(void)
+ 
+ 	flash_ptrlist = memalign(32, 1024);
+ 	flash_cmdlist = memalign(32, 1024);
++/* SWISTART */
++#ifndef SIERRA
+ 	flash_data = memalign(32, 4096 + 128);
+ 	flash_spare = memalign(32, 128);
++#else
++/* Spare area is 224 on Micron 4G NAND */
++	flash_data = memalign(32, 4096 + 224);
++	flash_spare = memalign(32, 224);
++#endif /* SIERRA */
++/* SWISTOP */
+ 
+ 	flash_read_id(flash_cmdlist, flash_ptrlist);
+ 	if ((FLASH_8BIT_NAND_DEVICE == flash_info.type)
+diff --git a/platform/msm_shared/qtimer.c b/platform/msm_shared/qtimer.c
+old mode 100644
+new mode 100755
+diff --git a/platform/msm_shared/smem_ptable.c b/platform/msm_shared/smem_ptable.c
+index 1db9021..d21da5e 100644
+--- a/platform/msm_shared/smem_ptable.c
++++ b/platform/msm_shared/smem_ptable.c
+@@ -37,6 +37,12 @@
+ 
+ #include "smem.h"
+ 
++/* SWISTART */
++#define SIERRA
++/* increase max part to 32, see solution 23815 */
++#define FLASH_NUM_PART_ENTRIES_SMEM    32
++/* SWISTOP */
++
+ struct smem_ptn {
+ 	char name[16];
+ 	unsigned start;
+@@ -50,7 +56,13 @@ struct smem_ptable {
+ 	unsigned magic[2];
+ 	unsigned version;
+ 	unsigned len;
++/* SWISTART */
++#ifndef SIERRA
+ 	struct smem_ptn parts[16];
++#else /* SIERRA */
++	struct smem_ptn parts[FLASH_NUM_PART_ENTRIES_SMEM];
++#endif /* SIERRA */
++/* SWISTOP */
+ } __attribute__ ((__packed__));
+ 
+ /* partition table from SMEM */
+@@ -61,7 +73,13 @@ static void dump_smem_ptable(void)
+ {
+ 	int i;
+ 
++/* SWISTART */
++#ifndef SIERRA
+ 	for (i = 0; i < 16; i++) {
++#else /* SIERRA */
++	for (i = 0; i < FLASH_NUM_PART_ENTRIES_SMEM; i++) {
++#endif /* SIERRA */
++/* SWISTOP */
+ 		struct smem_ptn *p = &smem_ptable.parts[i];
+ 		if (p->name[0] == '\0')
+ 			continue;
+@@ -112,7 +130,13 @@ void smem_add_modem_partitions(struct ptable *flash_ptable)
+ 	    smem_ptable.magic[1] != _SMEM_PTABLE_MAGIC_2)
+ 		return;
+ 
++/* SWISTART */
++#ifndef SIERRA
+ 	for (i = 0; i < 16; i++) {
++#else /* SIERRA */
++	for (i = 0; i < FLASH_NUM_PART_ENTRIES_SMEM && i < smem_ptable.len; i++) {
++#endif /* SIERRA */
++/* SWISTOP */
+ 		char *token;
+ 		char *pname = NULL;
+ 		struct smem_ptn *p = &smem_ptable.parts[i];
+diff --git a/target/mdm9615/atags.c b/target/mdm9615/atags.c
+old mode 100755
+new mode 100644
+index 59dc1f0..a1e9568
+--- a/target/mdm9615/atags.c
++++ b/target/mdm9615/atags.c
+@@ -31,6 +31,11 @@
+ #include <smem.h>
+ #include <stdint.h>
+ #include <lib/ptable.h>
++/* SWISTART */
++#ifdef SIERRA
++#include <dev/flash.h>
++#endif /* SIERRA */
++/* SWISTOP */
+ 
+ #define SIZE_1M     (1024 * 1024)
+ #define SIZE_8M     (8 * SIZE_1M)
+@@ -38,6 +43,15 @@
+ #define SIZE_17M    (17 * SIZE_1M)
+ #define SIZE_23M    (23 * SIZE_1M)
+ #define SIZE_88M    (11 * SIZE_8M)
++/* SWISTART */
++#ifdef SIERRA
++#define SIZE_128M   (128 * SIZE_1M)
++#define SIZE_92M    (92  * SIZE_1M)
++#define SIZE_19M    (19  * SIZE_1M)
++#define SIZE_90M    (90  * SIZE_1M)
++#define SIZE_21M    (21  * SIZE_1M)
++#endif /* SIERRA */
++/* SWISTOP */
+ 
+ unsigned *target_atag_mem(unsigned *ptr)
+ {
+@@ -61,12 +75,33 @@ unsigned *target_atag_mem(unsigned *ptr)
+ 
+ 				*ptr++ = 4;
+ 				*ptr++ = 0x54410002;
++/* SWISTART */
++#ifndef SIERRA
+ 				*ptr++ = SIZE_23M;
+ 				*ptr++ = ram_ptable.parts[i].start + SIZE_88M;
+-
++#else
++				{
++					struct flash_info * curr_flash_info;
++					curr_flash_info = flash_get_info();
++			  	    if ((curr_flash_info->block_size == 0x00040000) &&
++							(curr_flash_info->num_blocks == 0x0800))
++                    {
++                        *ptr++ = SIZE_19M;
++                        *ptr++ = ram_ptable.parts[i].start + SIZE_92M;
++                    }
++                    else
++                    {                       
++						*ptr++ = SIZE_23M;
++						*ptr++ = ram_ptable.parts[i].start + SIZE_88M;
++                    }
++				}
++#endif
++/* SWISTOP */
+ 				nand_ptable = flash_get_ptable();
+ 				dsp3_ptn = ptable_find(nand_ptable, "dsp3");
+-
++				
++/* SWISTART */
++#ifndef SIERRA
+ 				/* Check for DSP3 partition and its size */
+ 				if(dsp3_ptn != NULL){
+ 					size = dsp3_ptn->start;
+@@ -80,6 +115,49 @@ unsigned *target_atag_mem(unsigned *ptr)
+ 				*ptr++ = 0x54410002;
+ 				*ptr++ = SIZE_17M;
+ 				*ptr++ = ram_ptable.parts[i].start + SIZE_88M + SIZE_23M;
++#else
++				if(dsp3_ptn != NULL)
++				{
++					size = dsp3_ptn->start;
++					size += dsp3_ptn->length;
++					if(size == dsp3_ptn->start)
++					{
++						/*Add additional atag to pass DSP3 memory to kernel*/
++						*ptr++ = 4;
++						*ptr++ = 0x54410002;
++						*ptr++ = SIZE_17M;
++						*ptr++ = ram_ptable.parts[i].start + SIZE_88M + SIZE_23M;
++					}
++				}else
++				{
++					/*Add additional atag to pass DSP3 memory to kernel*/
++					*ptr++ = 4;
++					*ptr++ = 0x54410002;
++					*ptr++ = SIZE_17M;
++					*ptr++ = ram_ptable.parts[i].start + SIZE_88M + SIZE_23M;					
++				}
++
++#endif
++/* SWISTOP */
++
++/* SWISTART */
++#ifdef SIERRA
++				{
++					struct flash_info * curr_flash_info;
++					curr_flash_info = flash_get_info();
++	 				/* If we have a 512MB flash (i.e. 4Gb), we will assume a 256MB DDR and
++						 allocate the addition 128MB to Linux */
++					if ((curr_flash_info->block_size == 0x00040000) &&
++							(curr_flash_info->num_blocks == 0x0800))
++					{
++						*ptr++ = 4;
++						*ptr++ = 0x54410002;
++						*ptr++ = SIZE_128M;
++						*ptr++ = ram_ptable.parts[i].start + SIZE_128M;
++					}
++				}
++#endif /* SIERRA */
++/* SWISTOP */
+ 
+ 			}
+ 		}
+@@ -98,5 +176,21 @@ void *target_get_scratch_address(void)
+ 
+ unsigned target_get_max_flash_size(void)
+ {
++#ifndef SIERRA	
+ 	return (SIZE_23M);
++#else
++
++  struct flash_info * curr_flash_info;
++  curr_flash_info = flash_get_info();
++  if ((curr_flash_info->block_size == 0x00040000) &&
++          (curr_flash_info->num_blocks == 0x0800))
++  {
++    return (SIZE_19M);
++  }
++  else
++  {
++  	return (SIZE_21M);
++  }
++
++#endif
+ }
+diff --git a/target/mdm9615/init.c b/target/mdm9615/init.c
+index d68a408..b32af73 100644
+--- a/target/mdm9615/init.c
++++ b/target/mdm9615/init.c
+@@ -49,7 +49,7 @@
+ 
+ #define RECOVERY_MODE	0x77665502
+ #define FOTA_COOKIE	0x64645343
+-#define FOTA_PARTITION    5
++#define FOTA_PARTITION  5
+ #define DSP3_PARTITION    5
+ 
+ static struct ptable flash_ptable;
+@@ -58,13 +58,40 @@ unsigned target_msm_id = 0;
+ 
+ /* Partition names for fastboot flash */
+ static char *apps_ptn_names[] = { "aboot", "boot", "cache", "misc", "recovery", "fota",
++/* SWISTART */
++#ifndef SIERRA
+ 	"recoveryfs", "system", "userdata" };
++#else
++	"recoveryfs", "system", "userdata"
++	, "hdata", "userrw"
++	                                   };
++#endif
++/* SWISTOP */
+ 
+ /* Partitions should be in this order */
+ static char *ptable_ptn_names[] = { "APPSBL", "APPS", "CACHE", "MISC", "RECOVERY",
++/* SWISTART */
++#ifndef SIERRA
+ 	"FOTA", "RECOVERYFS", "SYSTEM", "USERDATA" };
+-
++#else
++	"FOTA", "RECOVERYFS", "SYSTEM", "USERDATA"
++	, "HDATA", "USERRW" 
++	                                           };
++#endif
++/* SWISTOP */
++
++/* SWISTART */
++#ifndef SIERRA
+ static unsigned ptn_name_count = 9;
++#else
++/* 
++ * Make sure that ptable_ptn_names and apps_ptn_names are the same length
++ * there is 1 to 1 correspondence there. 
++ * ( What a piece of software engineering! )
++ */
++unsigned ptn_name_count = sizeof(ptable_ptn_names)/sizeof(ptable_ptn_names[0]);
++#endif
++/* SWISTOP */
+ 
+ /* Apps partition flags to detect the presence of FOTA partitions.
+  * Initially, assume that the FOTA partitions are absent.
+@@ -77,7 +104,11 @@ static unsigned int apps_ptn_flag[] = {1, 1, 0, 0, 0, 0, 0, 1, 1};
+  */
+ static unsigned int modem_ptn_flag[] = {1, 1, 1, 1, 1, 0, 1};
+ 
++/* SWISTART */
++#ifndef SIERRA
+ static unsigned modem_ptn_count = 7;
++#endif /* SIERRA */
++/* SWISTOP */
+ 
+ static const uint8_t uart_gsbi_id = GSBI_ID_4;
+ 
+@@ -122,7 +153,7 @@ void target_init(void)
+ 	/* Reorder the partition table */
+ 	update_ptable_reorder();
+ 
+-	flash_set_ptable( &flash_ptable);
++	flash_set_ptable(&flash_ptable);
+ }
+ 
+ 
+@@ -246,8 +277,32 @@ unsigned board_machtype(void)
+ 
+ void reboot_device(unsigned reboot_reason)
+ {
++/* SWISTART */
++#ifdef SIERRA
++#define DLOAD_MAGIC_NUM_1     0xE47B337D
++#define DLOAD_MAGIC_NUM_2     0xCE14091A
++
++#define DLOAD_ID_ADDR (MSM_SHARED_IMEM_BASE + 0)
++ 
++	if(reboot_reason == DLOAD_MAGIC_NUM_1)
++	{
++	  /* write DLOAD magic for SBL2 boot & hold */
++	  writel(reboot_reason, DLOAD_ID_ADDR);
++	  writel(DLOAD_MAGIC_NUM_2, DLOAD_ID_ADDR + 4);
++
++	  /* write 'normal' to appsbl reboot reason */
++	  writel(0, RESTART_REASON_ADDR);
++	}
++	else
++	{  
++	  /* Write reboot reason */
++	  writel(reboot_reason, RESTART_REASON_ADDR);
++	}
++#else /* SIERRA */
+ 	/* Write reboot reason */
+ 	writel(reboot_reason, RESTART_REASON_ADDR);
++#endif /* SIERRA */
++/* SWISTOP */
+ 
+ 	/* Actually reset the chip */
+ 	pm8921_config_reset_pwr_off(1);
+@@ -288,16 +343,26 @@ void update_ptable_modem_partitions(void)
+ 		if (dsp3_ptn->length > 0)
+ 			modem_ptn_flag[DSP3_PARTITION] = 1;
+ 
++/* SWISTART */
++#ifndef SIERRA
+ 	for (ptn_index = 0; ptn_index < modem_ptn_count; ptn_index++)
+ 	{
+ 		if (!modem_ptn_flag[ptn_index])
++#else
++	for (ptn_index = 0; ptn_index < flash_ptable.count; ptn_index++)
++	{
++		/*If partition table defines DSP3 partition, but no presence of DSP3 partition, don't convert name to low case */
++		if((!strcmp(ptentry_ptr[ptn_index].name, "DSP3"))&&(!modem_ptn_flag[DSP3_PARTITION]))
++#endif
++/* SWISTOP */
++
+ 			continue;
+ 
+ 		name_size = strlen(ptentry_ptr[ptn_index].name);
+ 		for (i = 0; i < name_size; i++)
+ 		{
+ 			ptentry_ptr[ptn_index].name[i] =
+-		    tolower(ptentry_ptr[ptn_index].name[i]);
++			    tolower(ptentry_ptr[ptn_index].name[i]);
+ 		}
+         ptentry_ptr[ptn_index].type = TYPE_APPS_PARTITION;
+ 	}
+@@ -328,6 +393,15 @@ void update_ptable_apps_partitions(void)
+ 	}
+ 
+ 	for (ptn_index = 0; ptentry_ptr[ptn_index].start != end; ptn_index++) {
++/* SWISTART */
++#ifdef SIERRA
++		if (ptn_index >= flash_ptable.count)
++		{
++		  break;
++		}
++#endif /* SIERRA */
++/* SWISTOP */
++
+ 		if (!(strncmp(ptentry_ptr[ptn_index].name,
+ 			      ptable_ptn_names[name_index], name_size))) {
+ 			name_size = strlen(apps_ptn_names[name_index]);
+diff --git a/target/mdm9615/rules.mk b/target/mdm9615/rules.mk
+index 960894a..619d1fb 100644
+--- a/target/mdm9615/rules.mk
++++ b/target/mdm9615/rules.mk
+@@ -8,7 +8,13 @@ MEMBASE := 0x41700000
+ MEMSIZE := 0x00100000 # 1MB
+ 
+ BASE_ADDR        := 0x40800000
++# SWISTART
++ifeq ($(SIERRA),true)
++SCRATCH_ADDR     := BASE_ADDR+0x05400000
++else
+ SCRATCH_ADDR     := BASE_ADDR+0x05000000
++endif
++# SWISTOP
+ 
+ DEFINES += NO_KEYPAD_DRIVER=1
+ 
+diff --git a/target/msm8660_surf/rules.mk b/target/msm8660_surf/rules.mk
+old mode 100644
+new mode 100755
+diff --git a/target/msm8660_surf/tools/makefile b/target/msm8660_surf/tools/makefile
+old mode 100644
+new mode 100755
+diff --git a/target/msm8660_surf/tools/mkheader.c b/target/msm8660_surf/tools/mkheader.c
+old mode 100644
+new mode 100755
+diff --git a/target/msm8960/keypad.c b/target/msm8960/keypad.c
+old mode 100644
+new mode 100755
+-- 
+2.2.2
+

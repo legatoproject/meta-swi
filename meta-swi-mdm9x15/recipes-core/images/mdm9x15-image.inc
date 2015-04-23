@@ -1,7 +1,9 @@
 DEPENDS += " \
         virtual/lk \
-        mkbootimg-native \
-        yaffs2-utils-native"
+        yaffs2-utils-native \
+        mtd-utils-native"
+
+SRC_URI += "file://ubinize.cfg"
 
 INC_PR = "r0"
 
@@ -16,22 +18,92 @@ IMAGE_INSTALL += "reboot-daemon"
 IMAGE_INSTALL += "procps"
 IMAGE_INSTALL += "mtd-utils"
 IMAGE_INSTALL += "mtd-utils-ubifs"
+IMAGE_INSTALL += "libopencore-amr"
+IMAGE_INSTALL += "iperf"
+IMAGE_INSTALL += "iproute2-tc"
 
-# Make the bootimg image file using the information available in the sysroot...
-createimg() {
-    ver=`cat ${STAGING_KERNEL_DIR}/kernel-abiversion`
-    kernelsize=`awk --non-decimal-data '/ _end/ {end="0x" $1} /_stext/ {beg="0x" $1} END {size1=end-beg+4096; size=and(size1,compl(4095)); printf("%#x",size)}' ${STAGING_DIR_TARGET}/usr/src/kernel/System.map-${ver}`
+# Required to provide some extended privileges
+# to non-root processes
+IMAGE_INSTALL += "libcap-ng"
 
-    ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg --kernel ${STAGING_DIR_TARGET}/usr/src/kernel/Image \
-        --ramdisk /dev/null \
-        --cmdline "${KERNEL_BOOT_OPTIONS}" \
-        --base 0x40800000 \
-        ${MKBOOTIMG_IMAGE_FLAGS_4K} \
-        --ramdisk_offset $kernelsize \
-        --output ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x15.img
+# Install busybox mdev instead of udev. This is
+# here just as a reminder, because we are doing
+# manual installation of mdev.
+# IMAGE_INSTALL += "busybox-mdev"
 
-    rm -f ${DEPLOY_DIR_IMAGE}/kernel
-    ln -s ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x15.img ${DEPLOY_DIR_IMAGE}/kernel
+# Create UBI image (for a specific page size)
+prepare_ubi_ps() {
+    local page_size=$1
+    local cimg=${DEPLOY_DIR_IMAGE}/ubinize.cfg
+
+    local image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs"
+
+    local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.ubi"
+    local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${page_size}.ubi"
+
+    if ! [ -e "$image_path" ]; then
+        echo "${IMAGE_NAME} doesn't exist"
+        exit 1
+    fi
+
+    echo "Using image: '$image_path'"
+
+    cp -af ${WORKDIR}/ubinize.cfg ${cimg}
+    sed -i -e "s|@@IMAGE_PATH@@|$image_path|g" ${cimg}
+
+    local ubinize_args=''
+
+    case $page_size in
+    2k)
+        ubinize_args='-m 2048 -p 128KiB -s 2048'
+        ;;
+    4k)
+        ubinize_args='-m 4096 -p 256KiB -s 4096'
+        ;;
+    *)
+        exit 1
+        ;;
+    esac
+
+    ${STAGING_DIR_NATIVE}/usr/sbin/ubinize -o $ubi_path $ubinize_args ${DEPLOY_DIR_IMAGE}/ubinize.cfg
+
+    rm -f $ubi_link_path
+    ln -s $(basename $ubi_path) $ubi_link_path
+
+    # Default image (no bs suffix) to 4k
+    if [[ "$page_size" == "4k" ]]; then
+        ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
+        rm -f $ubi_link_path
+        ln -s $(basename $ubi_path) $ubi_link_path
+    fi
 }
 
-ROOTFS_POSTPROCESS_COMMAND += "createimg;"
+# Create UBI images
+prepare_ubi() {
+    prepare_ubi_ps '2k'
+    prepare_ubi_ps '4k'
+}
+
+default_rootfs_ps() {
+    # Default to 4k
+    ln -sf ${IMAGE_NAME}.rootfs.4k.yaffs2 ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.yaffs2
+}
+
+do_rootfs[postfuncs] += "prepare_ubi"
+do_rootfs[postfuncs] += "default_rootfs_ps"
+
+# Re-enable fetch & unpack tasks, because of bug(s) in Yocto 1.6 .
+do_fetch2[dirs] = "${DL_DIR}"
+python do_fetch2() {
+    bb.build.exec_func('base_do_fetch', d)
+}
+
+addtask fetch2
+
+do_unpack2[dirs] = "${WORKDIR}"
+python do_unpack2() {
+    bb.build.exec_func('base_do_unpack', d)
+}
+
+addtask unpack2 before do_rootfs
+

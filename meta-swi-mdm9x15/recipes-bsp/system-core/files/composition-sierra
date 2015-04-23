@@ -1,0 +1,93 @@
+#!/bin/sh
+# Starts the Sierra USB/HSIC Android Gadget.
+
+if [ "$1" = "y" ]; then
+    num="1"
+    mode="hsic"
+else
+    num="0"
+    mode="hsusb"
+fi
+
+echo $mode > /sys/bus/platform/devices/usb_bam/enable
+echo 0 > /sys/class/android_usb/android$num/enable
+/usr/bin/ud_getusbinfo VID > /sys/class/android_usb/android$num/idVendor
+/usr/bin/ud_getusbinfo PID > /sys/class/android_usb/android$num/idProduct
+/usr/bin/ud_getusbinfo REL > /sys/class/android_usb/android$num/bcdDevice
+/usr/bin/ud_getusbinfo DEVC > /sys/class/android_usb/android$num/bDeviceClass
+/usr/bin/ud_getusbinfo DEVS > /sys/class/android_usb/android$num/bDeviceSubClass
+/usr/bin/ud_getusbinfo DEVP > /sys/class/android_usb/android$num/bDeviceProtocol
+
+/usr/bin/ud_getusbinfo MANU > /sys/class/android_usb/android$num/iManufacturer
+/usr/bin/ud_getusbinfo NAME > /sys/class/android_usb/android$num/iProduct
+/usr/bin/ud_getusbinfo SER > /sys/class/android_usb/android$num/iSerial
+/usr/bin/ud_getusbinfo PRINUM > /sys/class/android_usb/android$num/iPriNumber
+/usr/bin/ud_getusbinfo PRIREV > /sys/class/android_usb/android$num/iPriRevision
+/usr/bin/ud_getusbinfo IMEI > /sys/class/android_usb/android$num/iImei
+
+/usr/bin/ud_getusbinfo DIAGSTR > /sys/class/android_usb/android0/f_diag/clients
+/usr/bin/ud_getusbinfo SERIALSTR > /sys/class/android_usb/android0/f_serial/transports
+/usr/bin/ud_getusbinfo RMNETSTR > /sys/class/android_usb/android0/f_rmnet/transports
+
+if [ $mode = "hsusb" ]; then
+    # If a custom usb mode is set then execute that instead
+    if [ -s /etc/legato/usbmode ]
+    then
+        /etc/legato/usbsetup
+    else
+        CFG2=`/usr/bin/ud_getusbinfo COMP 2`
+        if [ $CFG2 -ne 0 ]; then
+            # Need Both Configurations 1 and 2
+            # echo "`/usr/bin/ud_getusbinfo COMPSTR 1`:`/usr/bin/ud_getusbinfo COMPSTR 2`" > /sys/class/android_usb/android0/functions
+            echo "`/usr/bin/ud_getusbinfo COMPSTR 1`:usb_mbim" > /sys/class/android_usb/android0/functions
+        else
+            # Only need Configuration 1
+            /usr/bin/ud_getusbinfo COMPSTR 1 > /sys/class/android_usb/android0/functions
+        fi
+    fi
+else
+    # Only serial is yet supported on HSIC
+    echo serial > /sys/class/android_usb/android$num/functions
+fi
+
+ECM_MAC_FILE="/etc/network/android${num}_ecm_mac"
+
+# Restore ECM MAC address if possible
+if grep ecm /sys/class/android_usb/android$num/functions > /dev/null; then
+    if [ -r "$ECM_MAC_FILE" ]; then
+        ECM_MAC_ADDR=`cat $ECM_MAC_FILE`
+        echo "android$num: Restoring ECM Host MAC '$ECM_MAC_ADDR'"
+        echo $ECM_MAC_ADDR > /sys/module/g_android/parameters/host_addr
+    fi
+fi
+
+/usr/bin/ud_getusbinfo REM > /sys/class/android_usb/android$num/remote_wakeup
+/usr/bin/ud_getusbinfo SELF > /sys/class/android_usb/android$num/self_powered
+echo 1 > /sys/class/android_usb/android$num/enable
+
+# Store ECM MAC address if not already stored
+if grep ecm /sys/class/android_usb/android$num/functions > /dev/null; then
+    if ! [ -r "$ECM_MAC_FILE" ]; then
+        ECM_MAC_ADDR=`cat /sys/class/android_usb/android0/f_ecm/native_ethaddr`
+        echo "android$num: Storing ECM Host MAC '$ECM_MAC_ADDR'"
+        echo $ECM_MAC_ADDR > $ECM_MAC_FILE
+    fi
+fi
+
+TYPE=`bsinfo -st`
+if [ t${TYPE} = 't08' ];
+then
+    # Grady detected
+    echo /mnt/swoc/TRU-Install.iso > /sys/class/android_usb/android0/f_mass_storage/cdlun/file
+fi
+if [ t${TYPE} = 't02' ];
+then
+    # Hansel detected
+    echo /mnt/swoc/TRU-Install.iso > /sys/class/android_usb/android0/f_mass_storage/cdlun/file
+fi
+
+PC=`bsinfo -sp`
+#echo $PC > /sys/class/android_usb/android0/usb_det
+# Updated for low power mode
+echo $PC > /sys/devices/platform/msm_otg/otg_pc
+

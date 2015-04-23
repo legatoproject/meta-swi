@@ -1,0 +1,164 @@
+diff -ur a/libalsa-intf/aplay.c b/libalsa-intf/aplay.c
+--- a/libalsa-intf/aplay.c	2014-12-30 05:40:37.888715200 +0800
++++ b/libalsa-intf/aplay.c	2015-01-15 00:18:09.179008067 +0800
+
+@@ -63,6 +63,7 @@
+ #ifdef SOLIB_APLAY
+ #define MAX_DEVICE 5
+ static int *spForceStop[MAX_DEVICE] = {NULL};
++static int sPcmOpenSuccess = 0;
+ #endif
+ #endif
+ /* SWISTOP */
+@@ -216,6 +217,12 @@
+     pcm = pcm_open(flags, device);
+     if (pcm < 0)
+         return pcm;
++#ifdef SIERRA
++#ifdef SOLIB_APLAY
++    else
++        sPcmOpenSuccess = 1;
++#endif
++#endif
+ 
+     if (!pcm_ready(pcm)) {
+         pcm_close(pcm);
+@@ -280,7 +287,6 @@
+          if (*spForceStop[thisid] == 1)
+          {
+            pcm_close(pcm);
+-           *spForceStop[thisid] = 0;
+            return 0;
+          }
+ #endif
+@@ -387,7 +393,6 @@
+ #ifdef SOLIB_APLAY
+              if (*spForceStop[thisid] == 1)
+              {
+-                 *spForceStop[thisid] = 0;
+                 break;
+              }
+ #endif
+@@ -490,7 +495,6 @@
+ #ifdef SOLIB_APLAY
+             if (*spForceStop[thisid] == 1)
+             {
+-                *spForceStop[thisid] = 0;
+                 break;
+             }
+ #endif
+@@ -959,6 +963,16 @@
+     
+     pthread_create(&tid, NULL, exec_playing_thread, spInputParam[freeid]);
+ 
++    int iloop = 0; //should wait for PCM ready.
++    while ((iloop < 50) && (sPcmOpenSuccess == 0))
++    {
++        iloop++;
++        usleep(1000*10);
++    }
++    if (sPcmOpenSuccess == 0)  //return fail if PCM is not ready
++        return -1;
++
++    sPcmOpenSuccess = 0;
+     return 0;
+     
+ }
+@@ -986,9 +1000,14 @@
+     int thisid = getMatchDeviceIndex(ptAplayParam->device);
+     printf("APLAY: GET STOP, thisid: %d\n", thisid);
+     if (thisid < 0)
+-        return -1;
++        return 0; //should return 0, it is normal case
++
++    *spForceStop[thisid] = 1; //should wait for stop finish
++    while (*spForceStop[thisid] == 1)
++        usleep(1000*10);
++
++    usleep(1000*10);
+     
+-    *spForceStop[thisid] = 1;
+     return 0;
+ }
+ 
+diff -ur a/libalsa-intf/arec.c b/libalsa-intf/arec.c
+--- a/libalsa-intf/arec.c	2014-12-30 05:40:37.888715200 +0800
++++ b/libalsa-intf/arec.c	2015-01-15 00:19:52.895656675 +0800
+@@ -70,6 +70,7 @@
+ #ifdef SOLIB_AREC
+ #define MAX_DEVICE 5
+ static int *spForceStop[MAX_DEVICE] = {NULL};
++static int sPcmOpenSuccess = 0;
+ #endif
+ #endif  
+ /* SWISTOP */ 
+@@ -232,6 +233,13 @@
+         pcm_close(pcm);
+         goto fail;
+     }
++#ifdef SIERRA
++#ifdef SOLIB_AREC
++    else
++        sPcmOpenSuccess = 1;
++#endif
++#endif
++
+     pcm->channels = channels;
+     pcm->rate = rate;
+     pcm->flags = flags;
+@@ -263,7 +271,6 @@
+ #ifdef SOLIB_AREC
+       if (*spForceStop[thisid] == 1)
+       {
+-        *spForceStop[thisid] = 0;
+         pcm_close(pcm);
+         return 0;
+       }
+@@ -333,7 +340,6 @@
+ #ifdef SOLIB_AREC
+             if (*spForceStop[thisid] == 1)
+             {
+-              *spForceStop[thisid] = 0;
+               break;
+             }
+ #endif
+@@ -451,7 +457,6 @@
+             if (*spForceStop[thisid] == 1)
+             {
+               printf("ffff get arec stop & end!\n");
+-              *spForceStop[thisid] = 0;
+               break;
+             }
+ #endif
+@@ -964,6 +969,16 @@
+     
+     pthread_create(&tid, NULL, exec_playing_thread, spInputParam[freeid]);
+ 
++    int iloop = 0; //should wait for PCM ready
++    while ((iloop < 50) && (sPcmOpenSuccess == 0))
++    {
++        iloop++;
++        usleep(1000*10);
++    }
++    if (sPcmOpenSuccess == 0)
++        return -1;
++
++    sPcmOpenSuccess = 0;
+     return 0;
+     
+ }
+@@ -989,9 +1004,13 @@
+     int thisid = getArecMatchDeviceIndex(ptArecParam->device);
+     printf("AREC: GET STOP, thisid: %d\n", thisid);
+     if (thisid < 0)
+-        return -1;
++        return 0; //should return 0, it is normal case
+     
+     *spForceStop[thisid] = 1;
++    while (*spForceStop[thisid] == 1) //should wait for stop ready
++        usleep(1000*10);
++
++    usleep(1000*10);
+     return 0;
+ }
+ 

@@ -10,11 +10,20 @@ PROVIDES = "mkbootimg-native"
 
 DEPENDS = "libmincrypt-native"
 
-PR = "r0"
+PR = "r1"
 
-SRC_URI = "file://mkbootimg.tar.bz2"
+SRC_URI  = "git://codeaurora.org/platform/system/core;tag=M9615AAAARNLZA1611263;branch=penguin"
+SRC_URI += "file://Makefile"
+
+S = "${WORKDIR}/git/mkbootimg"
 
 EXTRA_OEMAKE = "INCLUDES='-Imincrypt' LIBS='${libdir}/mincrypt/libmincrypt.a'"
+
+copy_makefile() {
+    cp ${WORKDIR}/Makefile ${S}
+}
+
+do_patch[postfuncs] += "copy_makefile"
 
 do_install() {
 	install -d ${D}${bindir}

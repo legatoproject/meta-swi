@@ -1,0 +1,25 @@
+From 33551c4e7b0a702909056ba8edd78871afe322ca Mon Sep 17 00:00:00 2001
+From: Bertrand Roussel <broussel@sierrawireless.com>
+Date: Fri, 30 Jan 2015 16:49:31 -0800
+Subject: [PATCH 1/2] Fix libmincrypt include path
+
+---
+ libmincrypt/Makefile.am | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/libmincrypt/Makefile.am b/libmincrypt/Makefile.am
+index d157a3d..4bbcbee 100644
+--- a/libmincrypt/Makefile.am
++++ b/libmincrypt/Makefile.am
+@@ -8,7 +8,7 @@ AM_CFLAGS := -Wundef \
+ 
+ AM_CPPFLAGS := \
+               -I. \
+-              -I$(WORKSPACE)/system/core/include
++              -I../include
+ 
+ AM_LDFLAGS := -shared -version-info 1:0:0
+ c_sources := rsa.c sha.c
+-- 
+2.2.2
+
