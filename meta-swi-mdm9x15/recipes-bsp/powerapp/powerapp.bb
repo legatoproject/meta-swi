@@ -28,7 +28,7 @@ inherit autotools
 S = "${WORKDIR}/git/powerapp"
 
 do_install() {
-        install -m 0755 ${S}/powerapp -D ${D}/sbin/powerapp
+        install -m 0755 ${WORKDIR}/build/powerapp -D ${D}/sbin/powerapp
         install -m 0755 ${S}/reboot -D ${D}${sysconfdir}/init.d/reboot
         install -m 0755 ${S}/reboot-bootloader -D ${D}/sbin/reboot-bootloader
         install -m 0755 ${S}/reboot-recovery -D ${D}/sbin/reboot-recovery
