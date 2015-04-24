@@ -15,15 +15,19 @@ SRC_URI += "file://0004-SBM-15385-GPIO-cooperation-mode-support.patch"
 SRC_URI += "file://0005-SBM-15691-support-squashfs-download.patch"
 SRC_URI += "file://0006-SBM-17249-support-ubi-download.patch"
 SRC_URI += "file://0007-TRAC-2357-LK-version.patch"
-
-# Verbose bootloader
-#SRC_URI += "file://0001-TRAC-1223-lk-verbose-logging.patch"
+SRC_URI += "file://0008-SBM-16707-lk-debug-msg-on-uart.patch"
 
 S = "${WORKDIR}/git"
 
 MY_TARGET = "mdm9615"
 
-EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' ${MY_TARGET}"
+# Debug levels you could have. Default is critical.
+# 0 - CRITICAL
+# 1 - INFO
+# 2 - SPEW
+MY_DEBUG = "0"
+
+EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' ${MY_TARGET} DEBUG=${MY_DEBUG}"
 
 do_tag_lk() {
 	# We remove the sierra_lkversion.h to avoid this file to be counted in sha1

@@ -1,0 +1,273 @@
+diff -aNruZ a/app/aboot/sierra_bl.c b/app/aboot/sierra_bl.c
+--- a/app/aboot/sierra_bl.c	2014-09-26 14:34:49.035864000 +0800
++++ b/app/aboot/sierra_bl.c	2015-03-31 13:26:17.000440790 +0800
+@@ -19,9 +19,9 @@
+ #include <platform.h>
+ #include <platform/iomap.h>
+ #include <arch/ops.h>
+-
+ #include "sierra_bludefs.h"
+ 
++#define UART_NUM_MAX (1)
+ /*
+  *  externs
+  */
+@@ -194,8 +194,7 @@
+  * Notes:    none
+  *
+  ************/
+-void sierra_bl_flash_pending_linux_images(
+-  void)
++void sierra_bl_flash_pending_linux_images(void)
+ {
+   struct blspkgcbs *blpkgcbp = blpkggcb();
+   struct blimagecb* entryp;
+@@ -333,6 +332,77 @@
+       /* need reboot */
+       reboot_device(0);
+     }
+-
+   } /* end if valid fw update cb */
+ }
++
++/************
++ *
++ * Name:     bl_check_cowork_msg_msk()
++ *
++ * Purpose:  Use to check the cooperative mode message mask
++ *
++ * Parms:    none
++ *
++ * Return:   true: the start and end mask is valid
++ *           false: the start or end mask is invalid
++ *
++ * Abort:    none
++ *
++ * Notes:
++ *
++ ************/
++bool bl_check_cowork_msg_msk(void)
++{
++  volatile struct bl_cowork_msg *mp = (volatile struct bl_cowork_msg *)BL_COWORK_MSG_START;
++  bool ret = false;
++
++  if ((mp->blstartmarker == BL_VALID_COWORK_MSG_MARKER) &&
++      (mp->blendmarker == BL_VALID_COWORK_MSG_MARKER))
++  {
++    ret = true;
++  }
++  else
++  {
++    dprintf(INFO,"Cooperative mode message marker is invalid\n");
++  }
++  return ret;
++}
++
++/************
++ *
++ * Name:     bl_get_uart_fun()
++ *
++ * Purpose:  Provide to get UARTs function seting
++ *
++ * Parms:    uart Number
++ *
++ * Return:   UART function
++ *
++ * Abort:    none
++ *
++ * Notes:
++ *
++ ************/
++int8_t bl_get_uart_fun(uint uart_num )
++{
++  volatile struct bl_cowork_msg *mp = (volatile struct bl_cowork_msg *)BL_COWORK_MSG_START;
++  int8_t ret = -1;
++
++  if (uart_num > UART_NUM_MAX)
++  {
++    dprintf(INFO,"uart_num is Invalid! \n");
++  }
++  else
++  {
++    if (bl_check_cowork_msg_msk() == true)
++    {
++      ret = (int8_t)mp->bluartfun[uart_num];
++    }
++    else
++    {
++      dprintf(INFO,"Cooperative mode message read procedure failed\n");
++    }
++  }
++  return ret;
++}
++
+diff -aNruZ a/app/aboot/sierra_bludefs.h b/app/aboot/sierra_bludefs.h
+--- a/app/aboot/sierra_bludefs.h	2014-09-26 14:34:49.785864000 +0800
++++ b/app/aboot/sierra_bludefs.h	2015-03-31 13:30:30.153054337 +0800
+@@ -24,6 +24,7 @@
+ #define BCBOOTAPPFLAG_UPDATE_PENDING_M     0x00000001
+ #define BCBOOTAPPFLAG_ADB_ENABLE_M         0x00000004
+ 
++#define BL_VALID_COWORK_MSG_MARKER         0xCD3AE0B5U  /*cooperation mode message start & end marker*/
+ #define BC_PKGDESC_MAXSIZE          1536
+ 
+ #define BL_DLOAD_BASE               0x41800000
+@@ -49,10 +50,9 @@
+ #define DLOAD_MAGIC_NUM_2           0xCE14091A
+ 
+ /* Cooperative mode mssage */
+-#define BS_COWORK_MSG_START         (MSM_SHARED_BASE + 0x100000 - 0xAEAC)
+-#define BS_COWORK_MSG_STARTMARKER   BS_COWORK_MSG_START
+-#define BS_COWORK_MSG_ENDMARKER     (BS_COWORK_MSG_START + 63)
+-
++#define BL_COWORK_MSG_START         (MSM_SHARED_BASE + 0x100000 - 0xAEAC)
++#define BL_COWORK_MSG_STARTMARKER   BL_COWORK_MSG_START
++#define BL_COWORK_MSG_ENDMARKER     (BL_COWORK_MSG_START + 63)
+ 
+ /* structures */
+ 
+@@ -125,9 +125,60 @@
+   uint32_t                imgcb_magic_2;
+ };
+ 
++/************
++ *
++ * Name:     bsuartfunc
++ *
++ * Purpose:  Enumerated list of different functions supported by App processor
++ *
++ * Members:  BSUARTFUNC_INVALID  - UART unavilable for APP
++ *           BSUARTFUNC_DM - UART reserved for DM service
++ *           BSUARTFUNC_CONSOLE - UART reserved for CONSOLE service
++ *           BSUARTFUNC_APP - UART open for all application usage
++ *
++ * Notes:    None
++ *
++ ************/
++enum bsuartfunc
++{
++  BSUARTFUNC_INVALID = 0,
++  BSUARTFUNC_DM      = 2,
++  BSUARTFUNC_CONSOLE = 16,
++  BSUARTFUNC_APP     = 17,
++};
++
++/*************
++ *
++ * Name:     bl_cowork_msg - Coopertive work message structure
++ *
++ * Purpose:  To provide a structure to share the resoure assigned state.
++ *
++ * Members:
++ *           blstartmarker - marker indicating the start of this structure
++ *           blgpioflag    - external gpio owner flag.
++ *           bluartfun     - UART1 and UART2 function
++ *           blendmarker   - marker indicating the end of this structure
++ *
++ * Note:     1. Both markers must contain BC_VALID_BOOT_MSG_MARKER for the
++ *              contents to be considered valid.
++ *              Otherwise, the structure's contents are undefined.
++ *           2. The total size of this structure is small and must reside in
++ *              RAM that is never initialized by boot loader at startup.
++ *
++ *************/
++struct __PACKED bl_cowork_msg
++{
++  uint32_t blstartmarker;    /* indicates start of structure */
++  uint16_t blgpioflag;       /* external gpio owner flag. */
++  uint8_t  bluartfun[2];     /* UART1 and UART2 function */
++  uint32_t blreserved[13];   /* The unused memory */
++  uint32_t blendmarker;      /* indicates end of structure */
++};
++
+ extern void sierra_bl_flash_pending_linux_images(void);
+ extern bool sierra_is_infastboot(void);
+ extern bool sierra_is_fastboot_disabled(void);
+ extern uint32_t sierra_crcrc32(uint8_t *address, uint32_t size);
++extern int8_t bl_get_uart_fun(uint uart_num );
+ 
+ #endif /* bludefs_h */
+diff -aNruZ a/platform/mdm9x15/gpio.c b/platform/mdm9x15/gpio.c
+--- a/platform/mdm9x15/gpio.c	2013-08-15 18:13:39.000000000 +0800
++++ b/platform/mdm9x15/gpio.c	2014-09-29 12:52:24.318083400 +0800
+@@ -67,6 +67,19 @@
+ 		gpio_tlmm_config(15, 1, GPIO_OUTPUT, GPIO_NO_PULL,
+ 						GPIO_8MA, GPIO_DISABLE);
+ 		break;
++/* SWISTART */
++#ifdef SIERRA
++    case GSBI_ID_5:
++		/* Enable GSBI5 through gpio */
++		/* configure rx gpio -- gsbi5(2) */
++		gpio_tlmm_config(18, 1, GPIO_INPUT, GPIO_NO_PULL,
++						GPIO_8MA, GPIO_DISABLE);
++		/* configure tx gpio -- gsbi5(3) */
++		gpio_tlmm_config(19, 1, GPIO_OUTPUT, GPIO_NO_PULL,
++						GPIO_8MA, GPIO_DISABLE);
++		break;
++#endif /* SIERRA */
++/* SWISTOP */
+ 	default:
+ 		ASSERT(0);
+ 	}
+diff -aNruZ a/platform/mdm9x15/platform.c b/platform/mdm9x15/platform.c
+--- a/platform/mdm9x15/platform.c	2014-09-26 14:34:49.035864000 +0800
++++ b/platform/mdm9x15/platform.c	2015-03-30 10:51:55.954343200 +0800
+@@ -38,7 +38,14 @@
+ #include <platform/iomap.h>
+ #include <smem.h>
+ #include <qgic.h>
++/* SWISTART */
++#ifdef SIERRA
++#include "sierra_bludefs.h"
++#include "gsbi.h"
+ 
++static int8_t uart_func[2];
++#endif /* SIERRA */
++/* SWISTOP */
+ static uint32_t ticks_per_sec = 0;
+ 
+ extern void platform_uninit_timer(void);
+@@ -50,11 +57,28 @@
+ 	uint8_t cfg_bid = 0x1;
+ 	uint8_t cfg_pid = 0x1;
+ /* SWISTART */
+-/* We don't need init UART1 in APP here */
+ #ifndef SIERRA
+ 	uint8_t gsbi_id = target_uart_gsbi();
+ 
+ 	uart_dm_init(gsbi_id, GSBI_BASE(gsbi_id), GSBI_UART_DM_BASE(gsbi_id));
++#else  /* !SIERRA */
++	uint8_t gsbi_id = 0;
++	uart_func[0] = bl_get_uart_fun(0);
++	uart_func[1] = bl_get_uart_fun(1);
++
++	if(uart_func[0] == BSUARTFUNC_CONSOLE)
++	{
++		gsbi_id = GSBI_ID_4;
++	}
++	else if((uart_func[1] == BSUARTFUNC_INVALID) ||
++			(uart_func[1] == BSUARTFUNC_CONSOLE))
++	{
++		gsbi_id = GSBI_ID_5;
++	}
++	if(gsbi_id != 0)
++	{
++		uart_dm_init(gsbi_id, GSBI_BASE(gsbi_id), GSBI_UART_DM_BASE(gsbi_id));
++	}
+ #endif /* !SIERRA */
+ /* SWISTOP */
+ 	/* Timers - QGIC Config */
+diff -aNruZ a/platform/mdm9x15/rules.mk b/platform/mdm9x15/rules.mk
+--- a/platform/mdm9x15/rules.mk	2013-08-15 18:13:39.000000000 +0800
++++ b/platform/mdm9x15/rules.mk	2014-10-09 10:10:55.866748700 +0800
+@@ -8,6 +8,9 @@
+ DEFINES += ARM_CPU_CORE_A5
+ 
+ INCLUDES += -I$(LOCAL_DIR)/include -I$(LK_TOP_DIR)/platform/msm_shared/include
++# SWISTART
++INCLUDES += -I$(LOCAL_DIR)/include -I$(LK_TOP_DIR)/app/aboot
++# SWISTOP
+ 
+ OBJS += \
+ 	$(LOCAL_DIR)/platform.o \
