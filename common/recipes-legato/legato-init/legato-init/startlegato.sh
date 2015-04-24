@@ -3,6 +3,7 @@
 #
 # Provides a hook for legato into the init scripts
 
+beginswith() { case $2 in $1*) true;; *) false;; esac; }
 
 STARTUP_DIR=/mnt/flash/startup
 STOP_FILE1=".STOPLEGATO"
@@ -38,27 +39,24 @@ case "$1" in
           echo "stop file not present ... continuing"
         fi
 
-        fgfiles=`echo $files | grep fg_`
-        bgfiles=`echo $files | grep -v fg_`
+        # List the files in the order of their numeric id
+        # Assumes fg_xx_script, or bg_xx_script where
+        # xx identifies the start order
 
-        for file in $fgfiles
+        files=`ls -1 | sort -k2 -t"_"`
+
+        for file in $files
         do
-          # Execute these files in the foreground
+          # Execute the files in order
           if [ -x $file -a -f $file -a -O $file ]
           then
-            echo "Executing $file"
-            ./${file}
-          fi
-        done
-
-        # Now handle the background ones
-        for file in $bgfiles
-        do
-          # Execute these files in the foreground
-          if [ -x $file -a -f $file -a -O $file ]
-          then
-            echo "Executing $file in the background"
-            ./${file} &
+            if beginswith fg_ "$file"; then
+              echo "Executing $file in foreground"
+              ./${file}
+            elif beginswith bg_ "$file"; then
+              echo "Executing $file in background"  
+              ./${file}&
+            fi
           fi
         done
 
@@ -83,5 +81,5 @@ case "$1" in
 
 esac
 
-echo Finished Legato Sequence
+echo Finished Legato Start/Stop Sequence
 
