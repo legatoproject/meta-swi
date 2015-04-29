@@ -7,6 +7,8 @@ PROVIDES = "virtual/lk"
 
 PR = "r1"
 
+DEPENDS += "libgcc"
+
 SRC_URI  = "git://codeaurora.org/kernel/lk;tag=M9615AAAARNLZA1713041;branch=ics_strawberry"
 SRC_URI += "file://0000-mdm9x15-Import-SWI-changes.patch"
 SRC_URI += "file://0002-TRAC-1223-lk-make_sure_that_Yocto_kernel_receives_correct_atag_MTD_partition_information_from_bootloader.patch"
@@ -56,3 +58,4 @@ do_deploy[dirs] = "${S}"
 addtask deploy before do_package_stage after do_compile
 
 PACKAGE_STRIP = "no"
+
