@@ -1,0 +1,30 @@
+From a8e9d93e7dfdab711d5fa4a0de89cc2cb039decc Mon Sep 17 00:00:00 2001
+From: Bertrand Roussel <broussel@sierrawireless.com>
+Date: Thu, 30 Apr 2015 10:58:21 -0700
+Subject: [PATCH] TRAC 2623 Provide sysroot to gcc and ld
+
+---
+ makefile |    7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/makefile b/makefile
+index 70e78df..b3da168 100644
+--- a/makefile
++++ b/makefile
+@@ -71,6 +71,13 @@ LDFLAGS :=
+ CFLAGS += -ffunction-sections -fdata-sections
+ LDFLAGS += -gc-sections
+ 
++# Provide sysroot option to compilers/linker
++ifdef $(PKG_CONFIG_SYSROOT_DIR)
++  CFLAGS += --sysroot=$(PKG_CONFIG_SYSROOT_DIR)
++  CPPFLAGS += --sysroot=$(PKG_CONFIG_SYSROOT_DIR)
++  LDFLAGS += --sysroot=$(PKG_CONFIG_SYSROOT_DIR)
++endif
++
+ # top level rule
+ all:: $(OUTBIN) $(OUTELF).lst $(OUTELF).debug.lst $(OUTELF).sym $(OUTELF).size APPSBOOTHEADER
+ 
+-- 
+1.7.10.4
+
