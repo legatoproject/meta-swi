@@ -26,6 +26,8 @@ INITSCRIPT_PARAMS_${PN}-usb = "start 41 S ."
 
 inherit update-rc.d
 
+EXTRA_OEMAKE = "INCLUDES='-I${S}/include'"
+
 do_install_append() {
    install -m 0755 -d ${D}${includedir}/cutils
    install -m 0644  ${S}/include/cutils/* ${D}${includedir}/cutils
@@ -37,7 +39,7 @@ do_install_append() {
 
    # Prefer adbd to be located in /sbin for historical reasons
    rm ${D}${bindir}/adbd
-   install -m 0755 ${S}/adb/adbd -D ${D}/sbin/adbd
+   install -m 0755 ${S}/../build/adb/adbd -D ${D}/sbin/adbd
    install -m 0755 ${S}/adb/start_adbd -D ${D}${sysconfdir}/init.d/adbd
    install -m 0755 ${S}/usb/start_usb -D ${D}${sysconfdir}/init.d/usb
    install -m 0755 ${S}/usb/usb_composition -D ${D}${bindir}/
