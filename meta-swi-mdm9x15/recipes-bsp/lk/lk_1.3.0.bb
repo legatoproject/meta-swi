@@ -7,8 +7,6 @@ PROVIDES = "virtual/lk"
 
 PR = "r1"
 
-DEPENDS += "libgcc"
-
 SRC_URI  = "git://codeaurora.org/kernel/lk;tag=M9615AAAARNLZA1713041;branch=ics_strawberry"
 SRC_URI += "file://0000-mdm9x15-Import-SWI-changes.patch"
 SRC_URI += "file://0002-TRAC-1223-lk-make_sure_that_Yocto_kernel_receives_correct_atag_MTD_partition_information_from_bootloader.patch"
@@ -18,6 +16,7 @@ SRC_URI += "file://0005-SBM-15691-support-squashfs-download.patch"
 SRC_URI += "file://0006-SBM-17249-support-ubi-download.patch"
 SRC_URI += "file://0007-TRAC-2357-LK-version.patch"
 SRC_URI += "file://0008-SBM-16707-lk-debug-msg-on-uart.patch"
+SRC_URI += "file://0009-TRAC-2623-Provide-sysroot-to-gcc-and-ld.patch"
 
 S = "${WORKDIR}/git"
 
