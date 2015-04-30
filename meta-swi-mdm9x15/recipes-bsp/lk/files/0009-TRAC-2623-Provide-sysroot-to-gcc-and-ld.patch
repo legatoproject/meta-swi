@@ -16,7 +16,7 @@ index 70e78df..b3da168 100644
  LDFLAGS += -gc-sections
  
 +# Provide sysroot option to compilers/linker
-+ifdef $(PKG_CONFIG_SYSROOT_DIR)
++ifneq ($(PKG_CONFIG_SYSROOT_DIR),)
 +  CFLAGS += --sysroot=$(PKG_CONFIG_SYSROOT_DIR)
 +  CPPFLAGS += --sysroot=$(PKG_CONFIG_SYSROOT_DIR)
 +  LDFLAGS += --sysroot=$(PKG_CONFIG_SYSROOT_DIR)
