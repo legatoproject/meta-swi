@@ -1,4 +1,4 @@
-inherit autotools
+inherit autotools pkgconfig
 
 DESCRIPTION = "ALSA Framework Library"
 LICENSE = "Apache-2.0"
