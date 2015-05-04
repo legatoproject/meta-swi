@@ -52,8 +52,18 @@ fi
 
 ECM_MAC_FILE="/etc/network/android${num}_ecm_mac"
 
+# Check if ECM (or EEM) is enabled
+check_ecm() {
+    if grep ecm /sys/class/android_usb/android$num/functions > /dev/null; then
+        return 0
+    elif grep eem /sys/class/android_usb/android$num/functions > /dev/null; then
+        return 0
+    fi
+    return 1
+}
+
 # Restore ECM MAC address if possible
-if grep ecm /sys/class/android_usb/android$num/functions > /dev/null; then
+if check_ecm; then
     if [ -r "$ECM_MAC_FILE" ]; then
         ECM_MAC_ADDR=`cat $ECM_MAC_FILE`
         echo "android$num: Restoring ECM Host MAC '$ECM_MAC_ADDR'"
@@ -66,7 +76,7 @@ fi
 echo 1 > /sys/class/android_usb/android$num/enable
 
 # Store ECM MAC address if not already stored
-if grep ecm /sys/class/android_usb/android$num/functions > /dev/null; then
+if check_ecm; then
     if ! [ -r "$ECM_MAC_FILE" ]; then
         ECM_MAC_ADDR=`cat /sys/class/android_usb/android0/f_ecm/native_ethaddr`
         echo "android$num: Storing ECM Host MAC '$ECM_MAC_ADDR'"
