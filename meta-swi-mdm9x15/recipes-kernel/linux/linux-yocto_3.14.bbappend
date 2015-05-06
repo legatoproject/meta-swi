@@ -9,7 +9,7 @@ KBRANCH_DEFAULT = "standard/swi-mdm9x15-yocto-1.7"
 KBRANCH = "${KBRANCH_DEFAULT}"
 KMETA="meta-yocto-1.7"
 
-KSRC_linux_yocto_3_14 := "${THISDIR}/../../../../linux-yocto-3.14"
+KSRC_linux_yocto_3_14 := "${LINUX_REPO_DIR}"
 SRC_URI = "git://${KSRC_linux_yocto_3_14};protocol=file;branch=${KBRANCH},${KMETA};name=machine,meta"
 
 COMPATIBLE_MACHINE_swi-mdm9x15 = "(swi-mdm9x15)"
