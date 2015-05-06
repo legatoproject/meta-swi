@@ -24,7 +24,7 @@ IMAGE_INSTALL += "iproute2-tc"
 
 # Required to provide some extended privileges
 # to non-root processes
-IMAGE_INSTALL += "libcap-ng"
+IMAGE_INSTALL += "libcap"
 
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
