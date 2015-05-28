@@ -22,6 +22,7 @@ IMAGE_INSTALL += "libopencore-amr"
 IMAGE_INSTALL += "iperf"
 IMAGE_INSTALL += "iproute2-tc"
 IMAGE_INSTALL += "i2cgpioctl"
+IMAGE_INSTALL += "libvo-amrwbenc"
 
 # Required to provide some extended privileges
 # to non-root processes
