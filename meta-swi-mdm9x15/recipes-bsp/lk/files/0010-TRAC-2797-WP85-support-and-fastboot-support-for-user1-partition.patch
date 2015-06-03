@@ -1,0 +1,854 @@
+diff --git a/app/aboot/aboot.c b/app/aboot/aboot.c
+index 1a6402f..ee8f143 100644
+--- a/app/aboot/aboot.c
++++ b/app/aboot/aboot.c
+@@ -59,12 +59,10 @@
+ 
+ #include "scm.h"
+ 
+-/* SWISTART */
+ #ifdef SIERRA
+ #include "sierra_bludefs.h"
+ #include "sierra_lkversion.h"
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ #define EXPAND(NAME) #NAME
+ #define TARGET(NAME) EXPAND(NAME)
+@@ -85,13 +83,11 @@
+ #define RECOVERY_MODE   0x77665502
+ #define FASTBOOT_MODE   0x77665500
+ 
+-/* SWISTART */
+ #ifdef SIERRA
+ #define SQUASHFS_MAGIC_NUM 0x73717368
+ /* magic number to identify UBI erase count header */
+ #define UBI_MAGIC_NUM      0x23494255
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ static const char *emmc_cmdline = " androidboot.emmc=true";
+ static const char *usb_sn_cmdline = " androidboot.serialno=";
+@@ -105,11 +101,9 @@ static const char *baseband_svlte2a = " androidboot.baseband=svlte2a";
+ static const char *baseband_mdm     = " androidboot.baseband=mdm";
+ static const char *baseband_sglte   = " androidboot.baseband=sglte";
+ 
+-/* SWISTART */
+ #ifdef SIERRA
+ static const char *lkversion        = " lkversion=" LKVERSION;
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ /* Assuming unauthorized kernel image by default */
+ static int auth_kernel_img = 0;
+@@ -211,11 +205,9 @@ void boot_linux(void *kernel, unsigned *tags,
+ 		cmdline_len += strlen(auth_kernel);
+ 	}
+ 
+-/* SWISTART */
+ #ifdef SIERRA
+ 	cmdline_len += strlen(lkversion);
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ 	/* Determine correct androidboot.baseband to use */
+ 	switch(target_baseband())
+@@ -288,7 +280,6 @@ void boot_linux(void *kernel, unsigned *tags,
+ 			while ((*dst++ = *src++));
+ 		}
+ 
+-/* SWISTART */
+ #ifdef SIERRA
+ 		{
+ 		int l = strlen(lkversion);
+@@ -297,7 +288,6 @@ void boot_linux(void *kernel, unsigned *tags,
+ 		while ((*dst++ = *src++) && l--);
+ 		}
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ 		switch(target_baseband())
+ 		{
+@@ -446,13 +436,11 @@ int boot_linux_from_mmc(void)
+ 		goto unified_boot;
+ 	}
+ 	if (!boot_into_recovery) { 
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 		index = partition_get_index("kernel");
+ #else
+ 		index = partition_get_index("boot"); 
+ #endif
+-/* SWISTOP */
+ 		ptn = partition_get_offset(index);
+ 		if(ptn == 0) {
+ 			dprintf(CRITICAL, "ERROR: No boot partition found\n");
+@@ -628,13 +616,11 @@ int boot_linux_from_flash(void)
+ 
+ 	if(!boot_into_recovery)
+ 	{
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 			ptn = ptable_find(ptable, "kernel");
+ #else
+ 			ptn = ptable_find(ptable, "boot");
+ #endif
+-/* SWISTOP */
+ 	        if (ptn == NULL) {
+ 		        dprintf(CRITICAL, "ERROR: No boot partition found\n");
+ 		        return -1;
+@@ -766,13 +752,11 @@ void write_device_info_mmc(device_info *dev)
+ 	unsigned long long size;
+ 	int index = INVALID_PTN;
+ 
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 	index = partition_get_index("bootloader");
+ #else
+ 	index = partition_get_index("aboot");
+ #endif
+-/* SWISTOP */
+ 	ptn = partition_get_offset(index);
+ 	if(ptn == 0)
+ 	{
+@@ -797,13 +781,11 @@ void read_device_info_mmc(device_info *dev)
+ 	unsigned long long size;
+ 	int index = INVALID_PTN;
+ 
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 	index = partition_get_index("bootloader");
+ #else
+ 	index = partition_get_index("aboot");
+ #endif
+-/* SWISTOP */
+ 	ptn = partition_get_offset(index);
+ 	if(ptn == 0)
+ 	{
+@@ -1066,13 +1048,11 @@ void cmd_flash_mmc_img(const char *arg, void *data, unsigned sz)
+ 			return;
+ 		}
+ 
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 		if (!strcmp(arg, "kernel") || !strcmp(arg, "recovery")) {
+-#else		
++#else
+ 		if (!strcmp(arg, "boot") || !strcmp(arg, "recovery")) {
+ #endif
+-/* SWISTOP */		
+ 			if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
+ 				fastboot_fail("image is not a boot image");
+ 				return;
+@@ -1250,27 +1230,22 @@ void cmd_flash_mmc(const char *arg, void *data, unsigned sz)
+ 	return;
+ }
+ 
+-/* SWISTART */
+ #ifndef SIERRA
+ void cmd_flash(const char *arg, void *data, unsigned sz)
+ #else /* SIERRA */
+ bool cmd_flash(const char *arg, void *data, unsigned sz)
+ #endif /* SIERRA */
+-/* SWISTOP */
+ {
+ 	struct ptentry *ptn;
+ 	struct ptable *ptable;
+ 	unsigned extra = 0;
+ 
+-/* SWISTART */
+ #ifdef SIERRA
+ 	unsigned fs_magic_num = 0;
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ 	ptable = flash_get_ptable();
+ 	if (ptable == NULL) {
+-/* SWISTART */
+ #ifndef SIERRA
+ 		fastboot_fail("partition table doesn't exist");
+ 		return;
+@@ -1285,12 +1260,10 @@ bool cmd_flash(const char *arg, void *data, unsigned sz)
+ 		}
+ 		return false;
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 	}
+ 
+ 	ptn = ptable_find(ptable, arg);
+ 	if (ptn == NULL) {
+-/* SWISTART */
+ #ifndef SIERRA
+ 		fastboot_fail("unknown partition name");
+ 		return;
+@@ -1305,10 +1278,8 @@ bool cmd_flash(const char *arg, void *data, unsigned sz)
+ 		}
+ 		return false;
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 	}
+ 
+-/* SWISTART */
+ #ifdef SIERRA
+     /* Sierra non-fastboot mode update, erase partition before write */
+     if(!sierra_is_infastboot())
+@@ -1320,17 +1291,13 @@ bool cmd_flash(const char *arg, void *data, unsigned sz)
+       }
+     }
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 	if (!strcmp(ptn->name, "kernel") || !strcmp(ptn->name, "recovery")) {
+-#else	
++#else
+ 	if (!strcmp(ptn->name, "boot") || !strcmp(ptn->name, "recovery")) {
+ #endif
+-/* SWISTOP */	
+ 		if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
+-/* SWISTART */
+ #ifndef SIERRA
+ 			fastboot_fail("image is not a boot image");
+ 			return;
+@@ -1345,28 +1312,24 @@ bool cmd_flash(const char *arg, void *data, unsigned sz)
+ 			}
+ 			return false;
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 		}
+ 	}
+ 
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 	if (!strcmp(ptn->name, "rootfs")
+ 		|| !strcmp(ptn->name, "user0")
++		|| !strcmp(ptn->name, "user1")
+ 		|| !strcmp(ptn->name, "user3")
+-#else		
++#else
+ 	if (!strcmp(ptn->name, "system")
+ 		|| !strcmp(ptn->name, "userdata")
+ 		|| !strcmp(ptn->name, "persist")
+ #endif
+-/* SWISTOP */		
+-/* SWISTART */
+ #ifdef SIERRA
+ 		|| !strcmp(ptn->name, "hdata")
+ #endif
+-/* SWISTOP */
+ 		|| !strcmp(ptn->name, "recoveryfs")) {
+-/* SWISTART */
++
+ /* Add download support for Squash FS and UBI image types */
+ #ifdef SIERRA
+ 		/* get magic number from image */
+@@ -1380,23 +1343,19 @@ bool cmd_flash(const char *arg, void *data, unsigned sz)
+ 		else
+ 		{
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 		if (flash_ecc_bch_enabled())
+ 			/* Spare data bytes for 8 bit ECC increased by 4 */
+ 			extra = ((page_size >> 9) * 20);
+ 		else
+ 			extra = ((page_size >> 9) * 16);
+-/* SWISTART */
+ #ifdef SIERRA
+ 		}
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 	} else
+ 		sz = ROUND_TO_PAGE(sz, page_mask);
+ 
+ 	dprintf(INFO, "writing %d bytes to '%s'\n", sz, ptn->name);
+ 	if (flash_write(ptn, extra, data, sz)) {
+-/* SWISTART */
+ #ifdef SIERRA
+ 		fastboot_fail("flash write failure");
+ 		return;
+@@ -1411,10 +1370,8 @@ bool cmd_flash(const char *arg, void *data, unsigned sz)
+ 		}
+ 		return false;
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 	}
+ 	dprintf(INFO, "partition '%s' updated\n", ptn->name);
+-/* SWISTART */
+ #ifndef SIERRA
+ 	fastboot_okay("");
+ #else /* SIERRA */
+@@ -1424,7 +1381,6 @@ bool cmd_flash(const char *arg, void *data, unsigned sz)
+ 	}
+ 	return true;
+ #endif /* SIERRA */
+-/* SWISTOP */
+ }
+ 
+ void cmd_continue(const char *arg, void *data, unsigned sz)
+@@ -1535,12 +1491,10 @@ void aboot_init(const struct app_descriptor *app)
+ 	dprintf(SPEW,"serial number: %s\n",sn_buf);
+ 	surf_udc_device.serialno = sn_buf;
+ 
+-/* SWISTART */
+ #ifdef SIERRA
+ 	/* write pending Linux images downloaded by SBL2 */
+ 	sierra_bl_flash_pending_linux_images();
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ 	/* Check if we should do something other than booting up */
+ 	if (keys_get_state(KEY_HOME) != 0)
+@@ -1554,14 +1508,13 @@ void aboot_init(const struct app_descriptor *app)
+ 		if (keys_get_state(KEY_VOLUMEDOWN) != 0)
+ 			goto fastboot;
+ 	}
+-/* SWISTART - not go to fastboot mode based GPIO or DIP switch */
++/* Do not go to fastboot mode based GPIO or DIP switch */
+ #ifndef SIERRA
+ 	#if NO_KEYPAD_DRIVER
+ 	if (fastboot_trigger())
+ 		goto fastboot;
+ 	#endif
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 	reboot_mode = check_reboot_mode();
+ 	if (reboot_mode == RECOVERY_MODE) {
+ 		boot_into_recovery = 1;
+@@ -1601,7 +1554,6 @@ void aboot_init(const struct app_descriptor *app)
+ 
+ fastboot:
+ 
+-/* SWISTART */
+ #ifdef SIERRA
+ 	/* if fastboot is disabled, set DLOAD flag and reboot to SBL2 */
+ 	if(sierra_is_fastboot_disabled())
+@@ -1612,7 +1564,6 @@ fastboot:
+ 	  return;
+ 	}
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ 	target_fastboot_init();
+ 
+diff --git a/app/aboot/sierra_bl.c b/app/aboot/sierra_bl.c
+index 38e7687..c95d9cc 100644
+--- a/app/aboot/sierra_bl.c
++++ b/app/aboot/sierra_bl.c
+@@ -246,7 +246,7 @@ void sierra_bl_flash_pending_linux_images(void)
+         if(!strncmp((char *)entryp->part, "APPS", BL_SIMG_CB_MAX_PART_SIZE))
+         {
+           /* write Linux kernel */
+-#ifdef FEATURE_M2M_AR7
++#if defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+           strcpy(partname, "kernel");
+ #else
+           strcpy(partname, "boot");
+@@ -256,7 +256,7 @@ void sierra_bl_flash_pending_linux_images(void)
+         else if(!strncmp((char *)entryp->part, "SYSTEM", BL_SIMG_CB_MAX_PART_SIZE))
+         {
+           /* write Linux root fs */
+-#ifdef FEATURE_M2M_AR7
++#if defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+           strcpy(partname, "rootfs");
+ #else
+           strcpy(partname, "system");
+@@ -267,11 +267,21 @@ void sierra_bl_flash_pending_linux_images(void)
+         else if(!strncmp((char *)entryp->part, "USERDATA", BL_SIMG_CB_MAX_PART_SIZE))
+         {
+           /* write Linux partition */
+-#ifdef FEATURE_M2M_AR7
++#if defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+           strcpy(partname, "user0");
+ #else
+           strcpy(partname, "userdata");
+-#endif	  
++#endif
++          need_update = true;
++        }
++        else if(!strncmp((char *)entryp->part, "USERAPP", BL_SIMG_CB_MAX_PART_SIZE))
++        {
++          /* write Linux partition */
++#if defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
++          strcpy(partname, "user1");
++#else
++          strcpy(partname, "userrw"); //todo: check it
++#endif
+           need_update = true;
+         }
+         else if(!strncmp((char *)entryp->part, "HDATA", BL_SIMG_CB_MAX_PART_SIZE))
+diff --git a/app/nandwrite/nandwrite.c b/app/nandwrite/nandwrite.c
+index 196635a..429ba0e 100644
+--- a/app/nandwrite/nandwrite.c
++++ b/app/nandwrite/nandwrite.c
+@@ -105,13 +105,11 @@ void handle_flash(const char *name, unsigned addr, unsigned sz)
+ 		return;
+ 	}
+ 
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 	if (!strcmp(ptn->name, "kernel") || !strcmp(ptn->name, "recovery")) {
+ #else	
+ 	if (!strcmp(ptn->name, "boot") || !strcmp(ptn->name, "recovery")) { 
+ #endif
+-/* SWISTOP */	
+ 		if (memcmp((void *)data, BOOT_MAGIC, BOOT_MAGIC_SIZE)) {
+ 			jtag_fail("image is not a boot image");
+ 			return;
+diff --git a/makefile b/makefile
+index a5c9304..29ebe36 100644
+--- a/makefile
++++ b/makefile
+@@ -111,7 +111,8 @@ SIERRA := yes
+ DEFINES += \
+ 	SIERRA
+ DEFINES += \
+-	FEATURE_M2M_AR7
++	FEATURE_SIERRA_MPSS_RAM_EXTENSION \
++	FEATURE_SIERRA_LEGATO_PARTITIONS
+ # SWISTOP 
+ 
+ # any rules you put here will also be built by the system before considered being complete
+diff --git a/platform/msm_shared/partition_parser.c b/platform/msm_shared/partition_parser.c
+index 9d2b61e..128e263 100644
+--- a/platform/msm_shared/partition_parser.c
++++ b/platform/msm_shared/partition_parser.c
+@@ -32,13 +32,11 @@
+ #include "partition_parser.h"
+ 
+ char *ext3_partitions[] =
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
+-    { "rootfs", "user0", "user3", "cache", "tombstones" };
+-#else	
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
++    { "rootfs", "user0", "user1", "user3", "cache", "tombstones" };
++#else
+     { "system", "userdata", "persist", "cache", "tombstones" };
+ #endif
+-/* SWISTOP */	
+ char *vfat_partitions[] = { "modem", "mdm", "NONE" };
+ 
+ unsigned int ext3_count = 0;
+@@ -776,23 +774,19 @@ mbr_fill_name(struct partition_entry *partition_ent, unsigned int type)
+ #if PLATFORM_MSM7X27A
+ 		memcpy(partition_ent->name, "FOTA", 4);
+ #else
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 		memcpy(partition_ent->name, "bootloader", 10);
+-#else		
++#else
+ 		memcpy(partition_ent->name, "aboot", 5);
+ #endif
+-/* SWISTOP */		
+ #endif
+ 		break;
+ 	case MBR_BOOT_TYPE:
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)	
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 		memcpy(partition_ent->name, "kernel", 6);
+-#else		
++#else
+ 		memcpy(partition_ent->name, "boot", 4);
+ #endif
+-/* SWISTOP */		
+ 		break;
+ 	case MBR_MODEM_ST1_TYPE:
+ 		memcpy(partition_ent->name, "modem_st1", 9);
+diff --git a/target/mdm9615/atags.c b/target/mdm9615/atags.c
+index 7c387db..f5d560a 100644
+--- a/target/mdm9615/atags.c
++++ b/target/mdm9615/atags.c
+@@ -43,16 +43,41 @@
+ #define SIZE_17M    (17 * SIZE_1M)
+ #define SIZE_23M    (23 * SIZE_1M)
+ #define SIZE_88M    (11 * SIZE_8M)
+-/* SWISTART */
+ #ifdef SIERRA
+-#define SIZE_160M   (160 * SIZE_1M)
++#define SIZE_256M   (256 * SIZE_1M)
+ #define SIZE_128M   (128 * SIZE_1M)
+ #define SIZE_92M    (92  * SIZE_1M)
+ #define SIZE_19M    (19  * SIZE_1M)
+-#define SIZE_90M    (90  * SIZE_1M)
+-#define SIZE_21M    (21  * SIZE_1M)
++#define SIZE_4M     (4  *  SIZE_1M)
++
++
++/************
++ *
++ * Name:     target_swi_large_mpss
++ *
++ * Purpose:  Determine the RAM used for MPSS
++ *
++ * Parms:    none
++ *
++ * Return:   TRUE -  MPSS RAM = 68MB
++ *           FALSE - MPSS RAM = 64MB
++ *
++ * Abort:    none
++ *
++ * Notes:    Sierra variants currently use either 64MB or 68MB for MPSS
++ *           RAM allocation.  Function may need to be updated to support
++ *           other variations
++ *
++ ************/
++bool target_swi_large_mpss()
++{
++#if defined(FEATURE_SIERRA_MPSS_RAM_EXTENSION)
++	return true;
++#else
++	return false;
++#endif /* FEATURE_SIERRA_MPSS_RAM_EXTENSION */
++}
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ unsigned *target_atag_mem(unsigned *ptr)
+ {
+@@ -76,36 +101,39 @@ unsigned *target_atag_mem(unsigned *ptr)
+ 
+ 				*ptr++ = 4;
+ 				*ptr++ = 0x54410002;
+-/* SWISTART */
++/* MPSS is given an extra 4MB RAM in some cases. Where applicable, that change
++ * in MPSS allocation requires giving up 4MB in this atag */
+ #ifndef SIERRA
+ 				*ptr++ = SIZE_23M;
+ 				*ptr++ = ram_ptable.parts[i].start + SIZE_88M;
+-#else
++#else /* SIERRA */
++				if (target_swi_large_mpss())
+ 				{
+-					struct flash_info * curr_flash_info;
+-					curr_flash_info = flash_get_info();
+-			  	    if ((curr_flash_info->block_size == 0x00040000) &&
+-							(curr_flash_info->num_blocks == 0x0800))
+-                    {
+-                        *ptr++ = SIZE_19M;
+-                        *ptr++ = ram_ptable.parts[i].start + SIZE_92M;
+-                    }
+-                    else
+-                    { 
+-/* use same RAM size for APP as 2G-4G memory */
+-#ifdef FEATURE_M2M_AR7
+-						*ptr++ = SIZE_19M;
+-						*ptr++ = ram_ptable.parts[i].start + SIZE_92M;					
+-#else                     
+-						*ptr++ = SIZE_23M;
+-						*ptr++ = ram_ptable.parts[i].start + SIZE_88M;
+-#endif	
+-                    }
++					*ptr++ = (SIZE_23M - SIZE_4M);
++					*ptr++ = ram_ptable.parts[i].start + (SIZE_88M + SIZE_4M);
+ 				}
+-#endif
+-/* SWISTOP */
+-/* SWISTART */
+-/* DSP3 exists for all 4.7 products, we don't need check here */
++				else
++				{
++					*ptr++ = SIZE_23M;
++					*ptr++ = ram_ptable.parts[i].start + SIZE_88M;
++				}
++#endif /* SIERRA */
++
++/* For larger RAM, allocate an extra 128MB to APSS */
++#ifdef SIERRA
++				if (ram_ptable.parts[i].size >= SIZE_256M)
++				{
++					*ptr++ = 4;
++					*ptr++ = 0x54410002;
++					*ptr++ = SIZE_128M;
++					*ptr++ = ram_ptable.parts[i].start + SIZE_128M;
++				}
++#endif /* SIERRA */
++
++/* DSP3 exists for all products in this repository, we don't need to check */
++/* NOTE: If re-enabled, this must be last, or any further ATAGs are skipped
++ *       if dsp3 is not present due to "continue"
++ */
+ #ifndef SIERRA
+ 				nand_ptable = flash_get_ptable();
+ 				dsp3_ptn = ptable_find(nand_ptable, "dsp3");
+@@ -123,28 +151,7 @@ unsigned *target_atag_mem(unsigned *ptr)
+ 				*ptr++ = 0x54410002;
+ 				*ptr++ = SIZE_17M;
+ 				*ptr++ = ram_ptable.parts[i].start + SIZE_88M + SIZE_23M;
+-#endif
+-/* SWISTOP */
+-
+-/* SWISTART */
+-#ifdef SIERRA
+-				{
+-					struct flash_info * curr_flash_info;
+-					curr_flash_info = flash_get_info();
+-	 				/* If we have a 512MB flash (i.e. 4Gb), we will assume a 256MB DDR and
+-						 allocate the addition 128MB to Linux */
+-					if ((curr_flash_info->block_size == 0x00040000) &&
+-							(curr_flash_info->num_blocks == 0x0800))
+-					{
+-						*ptr++ = 4;
+-						*ptr++ = 0x54410002;
+-						*ptr++ = SIZE_128M;
+-						*ptr++ = ram_ptable.parts[i].start + SIZE_128M;
+-					}
+-				}
+ #endif /* SIERRA */
+-/* SWISTOP */
+-
+ 			}
+ 		}
+ 	} else {
+@@ -162,21 +169,40 @@ void *target_get_scratch_address(void)
+ 
+ unsigned target_get_max_flash_size(void)
+ {
+-#ifndef SIERRA	
++#ifndef SIERRA
+ 	return (SIZE_23M);
+-#else
++#else /* SIERRA */
++	struct smem_ram_ptable ram_ptable;
++	unsigned size = 0;
++	uint8_t i = 0;
++
++	/* Use all of the contiguous memory starting from the scratch address, which
++	 * includes the DSP3 partition which is not needed by LPASS during fastboot 
++	 */
++
++	/* First mem region after SCRATCH_ADDR always belongs to APSS */
++	size += SIZE_19M;
++
++	/* LPASS memory is used during fastboot */
++	size += SIZE_17M;
++
++	/* Determine if this is a large RAM (>= 2Gb) */
++	if (smem_ram_ptable_init(&ram_ptable))
++	{
++		for (i = 0; i < ram_ptable.len; i++)
++		{
++			if (ram_ptable.parts[i].category == SDRAM &&
++			    ram_ptable.parts[i].type == SYS_MEMORY &&
++			    ram_ptable.parts[i].start == 0x40000000 &&
++			    ram_ptable.parts[i].size >= SIZE_256M)
++			{
++				/* Use all of the remaining memory */
++				size += SIZE_128M;
++				break;
++			}
++		}
++	}
+ 
+-  struct flash_info * curr_flash_info;
+-  curr_flash_info = flash_get_info();
+-  if ((curr_flash_info->block_size == 0x00040000) &&
+-          (curr_flash_info->num_blocks == 0x0800))
+-  {
+-    return (SIZE_160M);
+-  }
+-  else
+-  {
+-  	return (SIZE_21M);
+-  }
+-
+-#endif
++	return size;
++#endif /* SIERRA */
+ }
+diff --git a/target/mdm9615/init.c b/target/mdm9615/init.c
+index 4a5cb4d..a7f310a 100644
+--- a/target/mdm9615/init.c
++++ b/target/mdm9615/init.c
+@@ -57,40 +57,33 @@ unsigned hw_platform = 0;
+ unsigned target_msm_id = 0;
+ 
+ /* Partition names for fastboot flash */
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ static char *apps_ptn_names[] = { "bootloader", "kernel", "cache", "misc", "recovery", "fota",
+ #else
+ static char *apps_ptn_names[] = { "aboot", "boot", "cache", "misc", "recovery", "fota",
+ #endif
+-/* SWISTOP */
+-/* SWISTART */
+ #ifndef SIERRA
+ 	"recoveryfs", "system", "userdata" };
+-#elif defined(FEATURE_M2M_AR7) 
++#elif defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 	"recoveryfs", "rootfs", "user0"
+ 	, "hdata", "user1", "user2", "user3" };
+-#else	
++#else
+ 	"recoveryfs", "system", "userdata"
+ 	, "hdata", "userrw" };
+ #endif
+-/* SWISTOP */
+ 
+ /* Partitions should be in this order */
+ static char *ptable_ptn_names[] = { "APPSBL", "APPS", "CACHE", "MISC", "RECOVERY",
+-/* SWISTART */
+ #ifndef SIERRA
+ 	"FOTA", "RECOVERYFS", "SYSTEM", "USERDATA" };
+-#elif defined(FEATURE_M2M_AR7) 
++#elif defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 	"FOTA", "RECOVERYFS", "SYSTEM", "USERDATA"
+ 	, "HDATA", "USERAPP", "USERRW", "PERSIST" };
+ #else
+ 	"FOTA", "RECOVERYFS", "SYSTEM", "USERDATA"
+ 	, "HDATA", "USERRW" };
+ #endif
+-/* SWISTOP */
+ 
+-/* SWISTART */
+ #ifndef SIERRA
+ static unsigned ptn_name_count = 9;
+ #else
+@@ -101,18 +94,15 @@ static unsigned ptn_name_count = 9;
+  */
+ unsigned ptn_name_count = sizeof(ptable_ptn_names)/sizeof(ptable_ptn_names[0]);
+ #endif
+-/* SWISTOP */
+ 
+ /* Apps partition flags to detect the presence of FOTA partitions.
+  * Initially, assume that the FOTA partitions are absent.
+  */
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7) 
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ static unsigned int apps_ptn_flag[] = {1, 1, 0, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1};
+ #else
+ static unsigned int apps_ptn_flag[] = {1, 1, 0, 0, 0, 0, 0, 1, 1};
+ #endif
+-/* SWISTOP */
+ /* Modem partition flags to detect the presence of DSP3 partitions.
+  * Initially, assume that the DSP3 partition is absent.
+  * The order of modem partiotions -
+@@ -120,11 +110,9 @@ static unsigned int apps_ptn_flag[] = {1, 1, 0, 0, 0, 0, 0, 1, 1};
+  */
+ static unsigned int modem_ptn_flag[] = {1, 1, 1, 1, 1, 0, 1};
+ 
+-/* SWISTART */
+ #ifndef SIERRA
+ static unsigned modem_ptn_count = 7;
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ static const uint8_t uart_gsbi_id = GSBI_ID_4;
+ 
+@@ -293,7 +281,6 @@ unsigned board_machtype(void)
+ 
+ void reboot_device(unsigned reboot_reason)
+ {
+-/* SWISTART */
+ #ifdef SIERRA
+ #define DLOAD_MAGIC_NUM_1     0xE47B337D
+ #define DLOAD_MAGIC_NUM_2     0xCE14091A
+@@ -318,7 +305,6 @@ void reboot_device(unsigned reboot_reason)
+ 	/* Write reboot reason */
+ 	writel(reboot_reason, RESTART_REASON_ADDR);
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ 	/* Actually reset the chip */
+ 	pm8921_config_reset_pwr_off(1);
+@@ -347,8 +333,7 @@ int fastboot_trigger(void)
+ 
+ void update_ptable_modem_partitions(void)
+ {
+-/* SWISTART */
+-#ifndef FEATURE_M2M_AR7
++#if !defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ 	uint32_t ptn_index, i = 0;
+ 	uint32_t name_size;
+ 	struct ptentry *ptentry_ptr = flash_ptable.parts;
+@@ -361,7 +346,6 @@ void update_ptable_modem_partitions(void)
+ 		if (dsp3_ptn->length > 0)
+ 			modem_ptn_flag[DSP3_PARTITION] = 1;
+ 
+-/* SWISTART */
+ #ifndef SIERRA
+ 	for (ptn_index = 0; ptn_index < modem_ptn_count; ptn_index++)
+ 	{
+@@ -372,7 +356,6 @@ void update_ptable_modem_partitions(void)
+ 		/*If partition table defines DSP3 partition, but no presence of DSP3 partition, don't convert name to low case */
+ 		if((!strcmp(ptentry_ptr[ptn_index].name, "DSP3"))&&(!modem_ptn_flag[DSP3_PARTITION]))
+ #endif
+-/* SWISTOP */
+ 
+ 			continue;
+ 
+@@ -385,7 +368,6 @@ void update_ptable_modem_partitions(void)
+         ptentry_ptr[ptn_index].type = TYPE_APPS_PARTITION;
+ 	}
+ #endif
+-/* SWISTOP */
+ }
+ 
+ void update_ptable_apps_partitions(void)
+@@ -413,14 +395,12 @@ void update_ptable_apps_partitions(void)
+ 	}
+ 
+ 	for (ptn_index = 0; ptentry_ptr[ptn_index].start != end; ptn_index++) {
+-/* SWISTART */
+ #ifdef SIERRA
+ 		if (ptn_index >= flash_ptable.count)
+ 		{
+ 		  break;
+ 		}
+ #endif /* SIERRA */
+-/* SWISTOP */
+ 
+ 		if (!(strncmp(ptentry_ptr[ptn_index].name,
+ 			      ptable_ptn_names[name_index], name_size))) {
+@@ -464,8 +444,7 @@ ptn_name_update_done:
+ 		    ptentry_ptr[ptn_index].start;
+ }
+ 
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+ void update_ptable_swap_index(int new_inde, const char * par_name)
+ {
+ 	int boot_index;
+@@ -481,12 +460,10 @@ void update_ptable_swap_index(int new_inde, const char * par_name)
+ 	flash_ptable.parts[new_inde] = boot_ptn;
+ }
+ #endif
+-/* SWISTOP */
+ 
+ void update_ptable_reorder(void)
+ {
+-/* SWISTART */
+-#if defined(SIERRA) && defined(FEATURE_M2M_AR7)
++#if defined(SIERRA) && defined(FEATURE_SIERRA_LEGATO_PARTITIONS)
+   update_ptable_swap_index(0, "bootloader");
+   update_ptable_swap_index(1, "kernel");
+   update_ptable_swap_index(2, "rootfs");
+@@ -494,7 +471,7 @@ void update_ptable_reorder(void)
+   update_ptable_swap_index(4, "user1");
+   update_ptable_swap_index(5, "user2");
+   update_ptable_swap_index(6, "user3");
+-	flash_ptable.count = 7;
++  flash_ptable.count = 7;
+ 
+ #else	
+ 
+@@ -510,5 +487,4 @@ void update_ptable_reorder(void)
+ 	flash_ptable.parts[boot_index] = flash_ptable.parts[0];
+ 	flash_ptable.parts[0] = boot_ptn;
+ #endif
+-/* SWISTOP */
+ }
