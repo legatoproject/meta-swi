@@ -13,9 +13,9 @@ SRC_URI = "file://${BPN}-${PV}/"
 
 do_compile () {
         ${CC} -o spidev_test  spidev_test.c
-        ${CC} -I ${STAGING_DIR_HOST}/usr/src/kernel/include -o sierra_spidev_test  sierra_spidev_test.c
+        ${CC} -o sierra_spidev_test  sierra_spidev_test.c
         ${CC} -o i2cdev_test  i2cdev_test.c
-        ${CC} -I ${STAGING_DIR_HOST}/usr/src/kernel/include -o sierra_i2cdev_test  sierra_i2cdev_test.c
+        ${CC} -o sierra_i2cdev_test  sierra_i2cdev_test.c
         ${CC} -o keypad_test  keypad_test.c
         ${CC} -g -o hello     hello.c
         ${CC} -o mem_leak     mem_leak.c

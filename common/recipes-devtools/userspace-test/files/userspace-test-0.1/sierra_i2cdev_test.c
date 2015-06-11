@@ -19,7 +19,8 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <linux/types.h>
-#include <linux/i2c/sierra_i2c.h>
+#include <linux/i2c.h>
+#include <linux/sierra_i2cdev.h>
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 
