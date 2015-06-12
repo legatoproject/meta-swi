@@ -10,11 +10,22 @@ KBRANCH_swi-mdm9x15 = "standard/swi-mdm9x15-yocto-1.6-swi"
 KMETA = "meta-yocto-1.6-swi"
 
 KSRC_linux_yocto_3_4 := "${LINUX_REPO_DIR}"
+
 SRC_URI = "git://${KSRC_linux_yocto_3_4};protocol=file;branch=${KBRANCH},${KMETA};name=machine,meta"
 
 # Use latest commits from KBRANCH & KMETA
 SRCREV_machine_swi-mdm9x15 = "${AUTOREV}"
 SRCREV_meta_swi-mdm9x15 = "${AUTOREV}"
+
+# Initramfs. System needs complete packages bellow, before kernel build starts.
+do_unpack[depends] += "busybox:do_package_write_ipk"
+do_unpack[depends] += "eglibc:do_package_write_ipk"
+
+export BB_HOST_PATH="`cat ${TOPDIR}/tmp/busybox.loc`/bin"
+export LIBC_HOST_PATH="`cat ${TOPDIR}/tmp/libc.loc`/lib"
+export LD_HOST_PATH="`cat ${TOPDIR}/tmp/ld.loc`/lib"
+export INIT_HOST_PATH="${S}/usr"
+export INITRAMFS_CONFIGURATION_FILE="${S}/usr/initramfs_list.txt"
 
 # Make the bootimg image file using the information available in the sysroot...
 do_bootimg[depends] += "mkbootimg-native:do_populate_sysroot"

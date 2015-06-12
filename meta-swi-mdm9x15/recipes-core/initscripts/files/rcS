@@ -16,25 +16,6 @@ this_e=$( basename $0 )
 # Helper functions
 #
 
-#
-# Mount essential file systems
-#
-mount_essential_fs()
-{
-    local ret=0
-
-    # Mount proc file system
-    mount -t proc proc /proc -o smackfsdef=_
-
-    # Mount sysfs file system
-    mount -t sysfs sysfs /sys
-
-    # mount debugfs
-    mount -t debugfs debugfs /sys/kernel/debug
-
-    return ${ret}
-}
-
 simple_network()
 {
     local ret=0
@@ -75,7 +56,6 @@ rcS_main()
 
     # list of methods to execute
     local method_list="
-                       mount_essential_fs
                        simple_network
                        run_S_scripts
                       "
