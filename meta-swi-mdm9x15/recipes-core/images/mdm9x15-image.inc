@@ -27,6 +27,7 @@ IMAGE_INSTALL += "libvo-amrwbenc"
 # Required to provide some extended privileges
 # to non-root processes
 IMAGE_INSTALL += "libcap"
+IMAGE_INSTALL += "libcap-bin"
 
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
