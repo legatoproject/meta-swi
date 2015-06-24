@@ -9,3 +9,4 @@ remove_bash() {
 }
 
 do_patch[postfuncs] += "remove_bash"
+
