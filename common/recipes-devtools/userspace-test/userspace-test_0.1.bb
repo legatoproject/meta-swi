@@ -6,7 +6,7 @@ LICENSE = "GPLv2+"
 PR = "r0"
 PV = "0.1"
 
-DEPENDS = "i2c-tools"
+DEPENDS = "gdb-cross-arm i2c-tools"
 
 SRC_URI = "file://${BPN}-${PV}/"
 
