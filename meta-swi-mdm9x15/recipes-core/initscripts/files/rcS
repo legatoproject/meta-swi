@@ -23,6 +23,10 @@ mount_essential_fs()
 {
     local ret=0
 
+    if ! grep 'root=' /proc/cmdline > /dev/null; then
+        return ${ret}
+    fi
+
     # Mount proc file system
     mount -t proc proc /proc -o smackfsdef=_
 
