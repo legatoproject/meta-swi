@@ -4,16 +4,16 @@
 ROOTFS_MNTPT="/mnt/rootfs"
 
 # Default boot device
-BOOTDEV="/dev/mtdblock2"
+BOOTDEV=""
 
 # Do not check & wait for boot device by default
 BOOTWAIT=0
 
 # Default partition type
-BOOTTYPE="yaffs2"
+BOOTTYPE="squashfs"
 
 # Default options
-BOOTOPTS="rw,tags-ecc-off"
+BOOTOPTS="ro"
 
 # Max size of /dev directory
 DEVDIR_SIZE=262144
@@ -62,6 +62,10 @@ set_boot_dev()
         if [ -n "$boot_opt" ]; then
             BOOTOPTS=$boot_opt
         fi
+    else
+        if [ "$BOOTTYPE" == "yaffs2" ]; then
+            BOOTOPTS="rw,tags-ecc-off"
+        fi
     fi
 
     if grep 'rootfs.wait=true' /proc/cmdline > /dev/null; then
@@ -96,7 +100,6 @@ set_boot_dev()
             return ${ret}
         fi
     fi
-
     return ${ret}
 }
 
@@ -123,7 +126,7 @@ checkpoint_rootfs()
     export mnt_time=$( time mount -t ${BOOTTYPE} ${BOOTDEV} ${ROOTFS_MNTPT} -o ${BOOTOPTS} 2>&1 | \
                        grep real | awk '{ print $3 }' | grep -oe '\([0-9.]*\)' )
 
-    if [ $? -ne 0 ]; then
+    if ! [ -e "${ROOTFS_MNTPT}/bin" ]; then
         echo "rootfs: mount failed"
         return 1
     fi
@@ -131,11 +134,13 @@ checkpoint_rootfs()
     mnt_time_ms=$( awk 'BEGIN{print ENVIRON["mnt_time"] * 1000}' )
     echo "rootfs: mounting took ${mnt_time_ms}ms"
 
-    # If mount time takes longer than 500ms, force check-pointing.
-    if [ ${mnt_time_ms} -gt 500 ] ; then
+    if [ "$BOOTTYPE" == "yaffs2" ]; then
+        # If mount time takes longer than 500ms, force check-pointing.
+        if [ ${mnt_time_ms} -gt 500 ] ; then
 
-        # This makes file system check pointed.
-        sync
+            # This makes file system check pointed.
+            sync
+        fi
     fi
 
     return ${ret}
@@ -145,6 +150,10 @@ checkpoint_rootfs()
 remount_rootfs_ro()
 {
     local ret=0
+
+    if grep "rootfs ro" /proc/mounts > /dev/null; then
+        return ${ret}
+    fi
 
     if grep "rootfs_ro=true" /proc/cmdline > /dev/null; then
         # echo "rootfs will be read-only."
