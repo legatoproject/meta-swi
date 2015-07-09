@@ -1,6 +1,6 @@
 DESCRIPTION = "An image with only the bare minimum to accelerate the boot process."
 
-PACKAGE_INSTALL = "initramfs-mdminit busybox"
+PACKAGE_INSTALL = "initramfs-mdminit busybox mtd-utils-ubifs"
 
 # Do not pollute the initrd image with rootfs features
 IMAGE_FEATURES = ""
@@ -32,7 +32,7 @@ fakeroot do_filter_rootfs () {
     for file in $(find); do
         if [[ "$file" == "./sbin/ldconfig" ]]; then
             remove_entity $file
-        elif [[ "$file" == "./usr/lib/opkg" ]]; then
+        elif echo "$file" | grep "./usr/lib/"; then
             remove_entity $file
         elif [[ "$file" == "./usr/bin/update-alternatives" ]]; then
             remove_entity $file
@@ -47,6 +47,10 @@ fakeroot do_filter_rootfs () {
                 */libc-*) ;;
                 *) remove_entity $file ;;
             esac
+        elif echo $file | grep -e "./usr/sbin/.*ubi"; then
+            if [[ "$file" != "./usr/sbin/ubiattach" ]] && [[ "$file" != "./usr/sbin/ubiblkvol" ]]; then
+                remove_entity $file
+            fi
         fi
     done
 
