@@ -7,6 +7,8 @@ SRC_URI += "file://ubinize.cfg"
 
 INC_PR = "r0"
 
+inherit ubi-image
+
 IMAGE_INSTALL += "dnsmasq"
 IMAGE_INSTALL += "powerapp"
 IMAGE_INSTALL += "powerapp-powerconfig"
@@ -33,62 +35,35 @@ IMAGE_INSTALL += "libcap"
 # manual installation of mdev.
 # IMAGE_INSTALL += "busybox-mdev"
 
-# Create UBI image (for a specific page size)
 prepare_ubi_ps() {
     local page_size=$1
-    local cimg=${DEPLOY_DIR_IMAGE}/ubinize.cfg
 
     local image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs"
-
     local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.ubi"
     local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${page_size}.ubi"
 
-    if ! [ -e "$image_path" ]; then
-        echo "${IMAGE_NAME} doesn't exist"
-        exit 1
-    fi
-
-    echo "Using image: '$image_path'"
-
-    cp -af ${WORKDIR}/ubinize.cfg ${cimg}
-    sed -i -e "s|@@IMAGE_PATH@@|$image_path|g" ${cimg}
-
-    local ubinize_args=''
-
-    case $page_size in
-    2k)
-        ubinize_args='-m 2048 -p 128KiB -s 2048'
-        ;;
-    4k)
-        ubinize_args='-m 4096 -p 256KiB -s 4096'
-        ;;
-    *)
-        exit 1
-        ;;
-    esac
-
-    ${STAGING_DIR_NATIVE}/usr/sbin/ubinize -o $ubi_path $ubinize_args ${DEPLOY_DIR_IMAGE}/ubinize.cfg
-
-    rm -f $ubi_link_path
-    ln -s $(basename $ubi_path) $ubi_link_path
-
-    # Default image (no bs suffix) to 4k
-    if [[ "$page_size" == "4k" ]]; then
-        ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
-        rm -f $ubi_link_path
-        ln -s $(basename $ubi_path) $ubi_link_path
-    fi
+    create_ubi_image $page_size ${WORKDIR}/ubinize.cfg $image_path $ubi_path $ubi_link_path
 }
 
 # Create UBI images
 prepare_ubi() {
     prepare_ubi_ps '2k'
     prepare_ubi_ps '4k'
+
+    # Default image (no bs suffix) to 4k
+    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.ubi"
+    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
+    rm -f $ubi_link_path
+    ln -s $(basename $ubi_link_path_def) $ubi_link_path
 }
 
 default_rootfs_ps() {
-    # Default to 4k
+    # Default yaffs2 image to 4k
     ln -sf ${IMAGE_NAME}.rootfs.4k.yaffs2 ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.yaffs2
+
+    # Default rootfs to ubi
+    ln -sf ${IMAGE_LINK_NAME}.2k.ubi ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.default
+    ln -sf ${IMAGE_LINK_NAME}.4k.ubi ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
 }
 
 do_rootfs[postfuncs] += "prepare_ubi"
