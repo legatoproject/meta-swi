@@ -7,11 +7,47 @@ DEPENDS += "squashfs-tools"
 DEPENDS += "mtd-utils"
 
 inherit legato
-inherit ubi-image
 
 INHIBIT_DEFAULT_DEPS = "1"
 
-SRC_URI += "file://ubinize-legato.cfg"
+gen_version() {
+    export VERSION="$(cat ${LEGATO_STAGING_DIR}/$LEGATO_TARGET/opt/legato/version) $(hostname) $(date +'%Y/%m/%d %H:%M:%S')"
+
+    echo $VERSION > ${DEPLOY_DIR_IMAGE}/${PN}.version
+}
+
+copy_image() {
+    IMG_FULLNAME=$(basename $file)
+    IMG_NAME="${IMG_FULLNAME%.*}"
+    IMG_EXT="${IMG_FULLNAME##*.}"
+
+    DST_NAME="${PN}.$LEGATO_TARGET.$IMG_EXT"
+
+    echo "Copying $file to $DST_NAME"
+    cp $file ${DEPLOY_DIR_IMAGE}/$DST_NAME
+}
+
+generate_images_mklegatoimg() {
+    IMG_DIR="${WORKDIR}/images-${LEGATO_TARGET}"
+
+    gen_version
+
+    rm -rf $IMG_DIR
+    mkdir -p $IMG_DIR
+    mklegatoimg -t $LEGATO_TARGET -d "${LEGATO_STAGING_DIR}/$LEGATO_TARGET" -o $IMG_DIR -v $VERSION
+
+    # Copy
+    cd $IMG_DIR
+    for file in $(ls -1 | grep -v cwe); do
+        if [ -f "$file" ]; then
+            copy_image $file
+        fi
+    done
+
+    for file in $(ls -1 | grep -e "legato[z]*.cwe"); do
+        copy_image $file
+    done
+}
 
 generate_image_yaffs2() {
     yaffs2_opts="-c 4096 -s 160"
@@ -24,32 +60,14 @@ generate_image_yaffs2() {
     mkyaffs2image $yaffs2_opts "${LEGATO_STAGING_DIR}/$LEGATO_TARGET" "${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.yaffs2"
 }
 
-generate_image_squashfs() {
-
-    # Generate the framework image
-    mksquashfs "${LEGATO_STAGING_DIR}/$LEGATO_TARGET" "${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.squashfs" -noappend
-}
-
-generate_image_ubi() {
-    page_size=4k
-
-    if [[ "$LEGATO_TARGET" == "wp85" ]]; then
-        page_size=2k
-    fi
-
-    local image_path="${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.squashfs"
-    local ubi_path="${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.ubi"
-
-    create_ubi_image $page_size ${WORKDIR}/ubinize-legato.cfg $image_path $ubi_path
-}
-
 compile_target() {
-    generate_image_yaffs2
-    generate_image_squashfs
-    generate_image_ubi
-
-    # Default to ubi
-    ln -sf "${PN}.$LEGATO_TARGET.ubi" "${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.default"
+    # Check if legato version is recent enough to use mklegatoimg
+    if grep BASH_SOURCE $(which mklegatoimg); then
+        generate_images_mklegatoimg
+    else
+        generate_image_yaffs2
+        ln -sf "${PN}.$LEGATO_TARGET.yaffs2" "${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.default"
+    fi
 }
 
 do_compile[deptask] = "do_install_image"
