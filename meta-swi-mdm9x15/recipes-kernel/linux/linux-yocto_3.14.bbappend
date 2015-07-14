@@ -5,9 +5,9 @@ LINUX_VERSION = "3.14.29"
 PR := "${PR}.1"
 
 COMPATIBLE_MACHINE_swi-mdm9x15 = "swi-mdm9x15"
-KBRANCH_DEFAULT = "standard/swi-mdm9x15-yocto-1.7-swi"
+KBRANCH_DEFAULT = "standard/shz/swi-mdm9x15-yocto-1.7-swi-le55"
 KBRANCH = "${KBRANCH_DEFAULT}"
-KMETA="meta-yocto-1.7-swi"
+KMETA="shz/meta-yocto-1.7-swi-le55"
 
 KSRC_linux_yocto_3_14 := "${LINUX_REPO_DIR}"
 SRC_URI = "git://${KSRC_linux_yocto_3_14};protocol=file;branch=${KBRANCH},${KMETA};name=machine,meta"
