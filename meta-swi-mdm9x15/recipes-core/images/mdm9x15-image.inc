@@ -7,6 +7,7 @@ SRC_URI += "file://ubinize.cfg"
 
 INC_PR = "r0"
 
+IMAGE_INSTALL += "shadow"
 IMAGE_INSTALL += "dnsmasq"
 IMAGE_INSTALL += "powerapp"
 IMAGE_INSTALL += "powerapp-powerconfig"
