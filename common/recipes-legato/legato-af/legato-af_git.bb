@@ -18,6 +18,15 @@ TARGET_LDFLAGS = ""
 
 do_configure[noexec] = "1"
 
+do_generate_version() {
+    make build_version
+
+    # Remove phony from 'build_version' target
+    sed -i 's/.PHONY: build_version//g' ${S}/Makefile
+}
+
+addtask generate_version before do_compile after do_unpack
+
 do_prepare_tools[depends] = "legato-tools:do_populate_sysroot"
 do_prepare_tools() {
     # Remove 'tools' target
@@ -43,7 +52,7 @@ do_prepare_tools() {
     ln -sf ${S}/framework/tools/ifgen/ifgen ifgen
 }
 
-addtask prepare_tools before do_compile after do_unpack
+addtask prepare_tools before do_compile after do_generate_version
 
 compile_target() {
     make $LEGATO_TARGET
@@ -56,6 +65,11 @@ do_compile_prepend() {
     then
         git submodule init
         git submodule update
+    fi
+
+    # If there is some unexpected pending changes, regenerate version file
+    if git status -s | grep -ve '\(Makefile\|proprietary.*\|tools\)'; then
+        do_generate_version
     fi
 }
 
