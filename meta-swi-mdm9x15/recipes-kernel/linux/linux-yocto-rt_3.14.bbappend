@@ -28,9 +28,10 @@ do_patch_prepend(){
 
 # Make the bootimg image file using the information available in the sysroot...
 do_bootimg[depends] += "mkbootimg-native:do_populate_sysroot"
+do_bootimg[depends] += "mdm9x15-image-initramfs:do_rootfs"
 
-BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x15-${DATETIME}.2k.img"
-BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x15-${DATETIME}.4k.img"
+BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x15-${DATETIME}.2k"
+BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x15-${DATETIME}.4k"
 
 gen_bootimg() {
     image_flags=$1
@@ -38,38 +39,86 @@ gen_bootimg() {
     image_link=$3
     page_size=$4
 
-    page_size2=$(expr $page_size - 1)
-    kernel_size=$(awk --non-decimal-data '/ _end/ {end="0x" $1} /_stext/ {beg="0x" $1} END {size1=end-beg+'$page_size'; size=and(size1,compl('$page_size2')); printf("%#x",size)}' ${B}/System.map)
-    kernel_img=${B}/arch/arm/boot/${KERNEL_IMAGETYPE}
+    set -xe
 
+    page_size2=$(expr $page_size - 1)
+
+    system_map_path="${SYSROOT_DESTDIR}${KERNEL_SRC_PATH}/System.map-${KERNEL_VERSION}"
+    if [[ "${KERNEL_VERSION}" == "None" ]]; then
+        system_map_path=$(ls -1t "${SYSROOT_DESTDIR}${KERNEL_SRC_PATH}/System.map-*" | head -1)
+    fi
+
+    kernel_size=$(awk --non-decimal-data '/ _end/ {end="0x" $1} /_stext/ {beg="0x" $1} END {size1=end-beg+'$page_size'; size=and(size1,compl('$page_size2')); printf("%#x",size)}' $system_map_path)
+    kernel_img=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}
+    kernel_img=$(readlink -f $kernel_img)
     ls -al $kernel_img
 
     if ! [ -e "${DEPLOY_DIR_IMAGE}" ]; then
         mkdir -p ${DEPLOY_DIR_IMAGE}
     fi
 
-    ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg --kernel $kernel_img \
-        --ramdisk /dev/null \
-        --cmdline "${KERNEL_BOOT_OPTIONS}" \
-        --base 0x40800000 \
-        $image_flags \
-        --ramdisk_offset $kernel_size \
-        --output ${DEPLOY_DIR_IMAGE}/$image_name
+    if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
+        kernel_img_initramfs=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
+        kernel_img_initramfs=$(readlink -f $kernel_img_initramfs)
+        ls -al $kernel_img_initramfs
 
-    ln -sf $image_name ${DEPLOY_DIR_IMAGE}/$image_link
+        # Initramfs
+        ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg \
+            --kernel $kernel_img_initramfs \
+            --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
+            --base 0x40800000 \
+            $image_flags \
+            --ramdisk "NONE" \
+            --ramdisk_offset $kernel_size \
+            --output ${DEPLOY_DIR_IMAGE}/${image_name}.initramfs.img
+
+        ln -sf ${image_name}.initramfs.img ${DEPLOY_DIR_IMAGE}/${image_link}.initramfs.img
+
+        # Default to initramfs
+        ln -sf ${image_name}.initramfs.img ${DEPLOY_DIR_IMAGE}/${image_name}.img
+        ln -sf ${image_name}.img ${DEPLOY_DIR_IMAGE}/${image_link}.img
+    else
+        # No ramdisk
+        ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg \
+            --kernel $kernel_img \
+            --cmdline "${KERNEL_BOOT_OPTIONS}" \
+            --base 0x40800000 \
+            $image_flags \
+            --ramdisk "NONE" \
+            --ramdisk_offset $kernel_size \
+            --output ${DEPLOY_DIR_IMAGE}/${image_name}.noramdisk.img
+
+        ln -sf ${image_name}.noramdisk.img ${DEPLOY_DIR_IMAGE}/${image_link}.noramdisk.img
+
+        # With ramdisk
+        ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg \
+            --kernel $kernel_img \
+            --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
+            --base 0x40800000 \
+            $image_flags \
+            --ramdisk ${DEPLOY_DIR_IMAGE}/mdm9x15-image-initramfs-swi-mdm9x15.cpio.gz \
+            --ramdisk_offset $kernel_size \
+            --output ${DEPLOY_DIR_IMAGE}/${image_name}.ramdisk.img
+
+        ln -sf ${image_name}.ramdisk.img ${DEPLOY_DIR_IMAGE}/${image_link}.ramdisk.img
+
+        # Default to ramdisk
+        ln -sf ${image_name}.ramdisk.img ${DEPLOY_DIR_IMAGE}/${image_name}.img
+        ln -sf ${image_name}.img ${DEPLOY_DIR_IMAGE}/${image_link}.img
+    fi
 }
 
 do_bootimg() {
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x15.2k.img 2048
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x15.4k.img 4096
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x15.2k 2048
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x15.4k 4096
 
     # Default to 4k
     cd ${DEPLOY_DIR_IMAGE}
-    ln -sf ${BOOTIMG_NAME_4k} boot-yocto-mdm9x15.img
+    ln -sf boot-yocto-mdm9x15.4k.img boot-yocto-mdm9x15.img
     ln -sf boot-yocto-mdm9x15.img kernel
 }
 
-addtask bootimg after do_compile before do_build
+addtask bootimg after do_deploy before do_build
 
 do_tag_config() {
     sed -i '/LOCALVERSION/s/=".*+/="-/' .config
