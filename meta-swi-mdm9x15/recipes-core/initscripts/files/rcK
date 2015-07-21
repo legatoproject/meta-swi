@@ -103,7 +103,13 @@ rcK_main()
 #
 # The execution starts here.
 #
+# Force a filesystem sync
+# Do this before and after the shutdown sequence to make sure
+# all buffers have been flushed.
+#
+sync
 rcK_main
+sync
 if [ $? -ne 0 ] ; then
     echo "System error! "
     exit 1
