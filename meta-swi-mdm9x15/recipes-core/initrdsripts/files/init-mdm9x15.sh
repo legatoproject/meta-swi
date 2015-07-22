@@ -81,24 +81,24 @@ set_boot_dev()
 
     mtd_dev_num=$( cat /proc/mtd | \
                    grep ${mtd_part_name} | \
-                   awk '{print $1}' | \
-                   sed 's/://g' | \
-                   grep -o "[0-9]*" )
+                   sed 's/mtd\([0-9]*\):.*/\1/' )
 
     BOOTDEV="/dev/mtdblock${mtd_dev_num}"
 
     if [ "$BOOTTYPE" != "yaffs2" ]; then
-        ubiattach -m ${mtd_dev_num} -d 0
-        
+
+        # Detect ubi partition
+        if dd if=/dev/mtd${mtd_dev_num} count=4 bs=1 2>/dev/null | grep 'UBI#' > /dev/null; then
+            ubiattach -m ${mtd_dev_num} -d 0
+            ubiblkvol --attach /dev/ubi0_0
+            BOOTDEV="/dev/ubiblock0_0"
+
         # Fallback on yaffs2
-        if [ $? -ne 0 ]; then
+        else
             BOOTTYPE="yaffs2"
             BOOTOPTS="rw,tags-ecc-off"
             return ${ret}
         fi
-
-        ubiblkvol --attach /dev/ubi0_0
-        BOOTDEV="/dev/ubiblock0_0"
     fi
 
     return ${ret}
