@@ -1,4 +1,4 @@
-INITSCRIPT_PARAMS = "start 84 S . stop 16 S ."
+INITSCRIPT_PARAMS = "start 97 S . stop 3 S ."
 
 # Look for files in the layer first
 FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
