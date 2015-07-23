@@ -6,8 +6,12 @@ LINUX_VERSION_EXTENSION = "${PV}"
 PR := "${PR}.1"
 
 COMPATIBLE_MACHINE_swi-mdm9x15 = "swi-mdm9x15"
-KBRANCH_swi-mdm9x15 = "standard/swi-mdm9x15-yocto-1.6-swi"
-KMETA = "meta-yocto-1.6-swi"
+
+KBRANCH_DEFAULT_MDM9X15 ?= "standard/swi-mdm9x15-yocto-1.6-swi"
+KBRANCH_swi-mdm9x15 = "${KBRANCH_DEFAULT_MDM9X15}"
+
+KMETA_DEFAULT_MDM9X15 ?= "meta-yocto-1.6-swi"
+KMETA = "${KMETA_DEFAULT_MDM9X15}"
 
 KSRC_linux_yocto_3_4 := "${LINUX_REPO_DIR}"
 SRC_URI = "git://${KSRC_linux_yocto_3_4};protocol=file;branch=${KBRANCH},${KMETA};name=machine,meta"
