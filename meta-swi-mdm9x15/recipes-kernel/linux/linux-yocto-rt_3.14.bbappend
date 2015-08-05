@@ -5,9 +5,12 @@ LINUX_VERSION = "3.14.29"
 PR := "${PR}.1"
 
 COMPATIBLE_MACHINE_swi-mdm9x15 = "swi-mdm9x15"
-KBRANCH_DEFAULT = "standard/swi-mdm9x15-yocto-1.7-swi-le55"
-KBRANCH = "${KBRANCH_DEFAULT}"
-KMETA="meta-yocto-1.7-swi-le55"
+
+KBRANCH_DEFAULT_MDM9X15 ?= "standard/swi-mdm9x15-yocto-1.7-swi-le55"
+KBRANCH_swi-mdm9x15 = "${KBRANCH_DEFAULT_MDM9X15}"
+
+KMETA_DEFAULT_MDM9X15 ?= "meta-yocto-1.7-swi-le55"
+KMETA = "${KMETA_DEFAULT_MDM9X15}"
 
 KSRC_linux_yocto_3_14 := "${LINUX_REPO_DIR}"
 SRC_URI = "git://${KSRC_linux_yocto_3_14};protocol=file;branch=${KBRANCH},${KMETA};name=machine,meta"
@@ -21,9 +24,9 @@ SRCREV_machine_pn-linux-yocto-rt_swi-mdm9x15 ?= "${AUTOREV}"
 SRCREV_meta_pn-linux-yocto-rt_swi-mdm9x15 ?= "${AUTOREV}"
 
 do_patch_prepend(){
-	if [ "${KBRANCH}" != "standard/base" ]; then
-		updateme_flags="--branch ${KBRANCH}"
-	fi
+    if [ "${KBRANCH}" != "standard/base" ]; then
+        updateme_flags="--branch ${KBRANCH}"
+    fi
 }
 
 # Make the bootimg image file using the information available in the sysroot...
