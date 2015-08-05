@@ -19,9 +19,11 @@ TARGET_LDFLAGS = ""
 do_configure[noexec] = "1"
 
 do_generate_version() {
-    make build_version
+    make version
 
-    # Remove phony from 'build_version' target
+    # Remove phony from 'build_version' or 'version' targets to make sure
+    # that the version will not change
+    sed -i 's/.PHONY: version//g' ${S}/Makefile
     sed -i 's/.PHONY: build_version//g' ${S}/Makefile
 }
 
