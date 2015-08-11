@@ -1,0 +1,82 @@
+--- a/app/aboot/aboot.c	2015-09-17 12:45:19.165611771 +0200
++++ b/app/aboot/aboot.c	2015-09-17 12:16:57.497678125 +0200
+@@ -103,6 +103,7 @@
+ 
+ #ifdef SIERRA
+ static const char *lkversion        = " lkversion=" LKVERSION;
++static const char *lkquiet          = " quiet";
+ #endif /* SIERRA */
+ 
+ /* Assuming unauthorized kernel image by default */
+@@ -207,6 +208,9 @@
+ 
+ #ifdef SIERRA
+ 	cmdline_len += strlen(lkversion);
++	if( sierra_is_bootquiet_enabled() ) {
++		cmdline_len += strlen(lkquiet);
++	}
+ #endif /* SIERRA */
+ 
+ 	/* Determine correct androidboot.baseband to use */
+@@ -287,6 +291,12 @@
+ 		if (have_cmdline) --dst;
+ 		while ((*dst++ = *src++) && l--);
+ 		}
++		if( sierra_is_bootquiet_enabled() ) {
++			int l = strlen(lkquiet);
++			src = lkquiet;
++			if (have_cmdline) --dst;
++			while ((*dst++ = *src++) && l--);
++		}
+ #endif /* SIERRA */
+ 
+ 		switch(target_baseband())
+--- a/app/aboot/sierra_bl.c	2015-09-17 12:45:19.165611771 +0200
++++ b/app/aboot/sierra_bl.c	2015-09-17 12:47:44.733606094 +0200
+@@ -115,6 +115,28 @@
+ 
+ /************
+  *
++ * Name:     sierra_is_bootquiet_enabled
++ *
++ * Purpose:  check if bootquiet enabled
++ *
++ * Parms:    none
++ *
++ * Return:   TRUE - if enabled
++ *           FALSE - otherwise
++ *
++ * Abort:    none
++ *
++ * Notes:    none
++ *
++ ************/
++bool sierra_is_bootquiet_enabled(
++  void)
++{
++  return (sierra_b2aflags & BCBOOTAPPFLAG_BOOTQUIET_ENABLE_M) ? true : false;
++}
++
++/************
++ *
+  * Name:     sierra_set_b2aflags
+  *
+  * Purpose:  set local copy of b2aflags
+--- a/app/aboot/sierra_bludefs.h	2015-09-17 12:45:19.041611776 +0200
++++ b/app/aboot/sierra_bludefs.h	2015-09-17 09:55:38.858008748 +0200
+@@ -23,6 +23,7 @@
+ #define BC_MSG_MARKER_M                    0xFFFF0000U
+ #define BCBOOTAPPFLAG_UPDATE_PENDING_M     0x00000001
+ #define BCBOOTAPPFLAG_ADB_ENABLE_M         0x00000004
++#define BCBOOTAPPFLAG_BOOTQUIET_ENABLE_M   0x00004000
+ 
+ #define BL_VALID_COWORK_MSG_MARKER         0xCD3AE0B5U  /*cooperation mode message start & end marker*/
+ #define BC_PKGDESC_MAXSIZE          1536
+@@ -178,6 +179,7 @@
+ extern void sierra_bl_flash_pending_linux_images(void);
+ extern bool sierra_is_infastboot(void);
+ extern bool sierra_is_fastboot_disabled(void);
++extern bool sierra_is_bootquiet_enabled(void);
+ extern uint32_t sierra_crcrc32(uint8_t *address, uint32_t size);
+ extern int8_t bl_get_uart_fun(uint uart_num );
+ 

@@ -20,6 +20,7 @@ SRC_URI += "file://0007-TRAC-2357-LK-version.patch"
 SRC_URI += "file://0008-SBM-16707-lk-debug-msg-on-uart.patch"
 SRC_URI += "file://0009-TRAC-2623-Provide-sysroot-to-gcc-and-ld.patch"
 SRC_URI += "file://0010-TRAC-2797-WP85-support-and-fastboot-support-for-user1-partition.patch"
+SRC_URI += "file://0011-TRAC-3105-LK-set-quiet-option.patch"
 
 S = "${WORKDIR}/git"
 
