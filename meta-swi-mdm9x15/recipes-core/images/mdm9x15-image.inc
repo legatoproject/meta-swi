@@ -24,7 +24,6 @@ IMAGE_INSTALL += "mtd-utils-ubifs"
 IMAGE_INSTALL += "libopencore-amr"
 IMAGE_INSTALL += "iperf"
 IMAGE_INSTALL += "iproute2-tc"
-IMAGE_INSTALL += "i2cgpioctl"
 IMAGE_INSTALL += "libvo-amrwbenc"
 
 # Required to provide some extended privileges
@@ -36,6 +35,10 @@ IMAGE_INSTALL += "libcap-bin"
 # here just as a reminder, because we are doing
 # manual installation of mdev.
 # IMAGE_INSTALL += "busybox-mdev"
+
+# Tools and helpers for i2c development
+IMAGE_INSTALL += "i2cgpioctl"
+IMAGE_INSTALL += "i2c-tools"
 
 prepare_ubi_ps() {
     local page_size=$1
