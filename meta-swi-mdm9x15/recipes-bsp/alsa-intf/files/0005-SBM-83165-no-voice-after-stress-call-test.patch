@@ -1,0 +1,158 @@
+diff -uprN a/libalsa-intf/aplay.c b/libalsa-intf/aplay.c
+--- a/libalsa-intf/aplay.c	2015-08-18 00:53:49.141902700 +0000
++++ b/libalsa-intf/aplay.c	2015-08-21 10:42:12.090973930 +0000
+@@ -30,6 +30,8 @@
+ #include <semaphore.h>
+ #include <sys/types.h>
+ #include <sys/shm.h>
++#include <error.h>
++#include <pthread.h>
+ #endif
+ /* SWISTOP */
+ #include <sound/asound.h>
+@@ -783,6 +785,7 @@ typedef struct tagShmData{
+ static T_AplayParam *spInputParam[MAX_DEVICE] = {NULL};
+ static int *spPlayingFlag[MAX_DEVICE] = {NULL};
+ static int sNoFinishCallbackFlag = 0;
++static int aplay_shm_init_flag = 0;
+ 
+ #define APLAY_SHM_KEY 0xFEFE3355
+ 
+@@ -911,17 +914,25 @@ static void* exec_playing_thread(void* p
+ 
+ int APlay_Start(const T_AplayParam *ptAplayParam)
+ {
+-    int res;
++    int ret;
+     int shmid;
+     t_ShmData *ptShmdata= NULL;
+     pthread_t tid;
+     int loop;
+     int matchid, freeid;
++    pthread_attr_t aplay_thread_attr;
+     
+     if (spInputParam[0] == NULL)
+     {
+         shmid = shmget(APLAY_SHM_KEY, sizeof(t_ShmData),IPC_CREAT);
+         ptShmdata=(t_ShmData *)shmat(shmid, NULL, 0);
++
++        if (aplay_shm_init_flag == 0)
++        {
++            memset(ptShmdata, 0x00, sizeof(t_ShmData));
++            aplay_shm_init_flag = 1;
++        }
++
+         for (loop = 0; loop < MAX_DEVICE; loop++)
+         {
+             spInputParam[loop] = &ptShmdata->sInputParam[loop];
+@@ -960,8 +971,15 @@ int APlay_Start(const T_AplayParam *ptAp
+     
+     *spForceStop[freeid] = 0;
+     *spPlayingFlag[freeid] = 1;
+-    
+-    pthread_create(&tid, NULL, exec_playing_thread, spInputParam[freeid]);
++
++    pthread_attr_init(&aplay_thread_attr);
++    pthread_attr_setdetachstate(&aplay_thread_attr, PTHREAD_CREATE_DETACHED);
++    ret = pthread_create(&tid, &aplay_thread_attr, exec_playing_thread, spInputParam[freeid]);
++    if (ret != 0)
++    {
++        printf("%s: can't create thread: %s\n", __func__, strerror(errno));
++        return -1;
++    }
+ 
+     int iloop = 0; //should wait for PCM ready.
+     while ((iloop < 50) && (sPcmOpenSuccess == 0))
+@@ -988,6 +1006,13 @@ int Aplay_Stop(const T_AplayParam *ptApl
+     {
+         shmid = shmget(APLAY_SHM_KEY, sizeof(t_ShmData),IPC_CREAT);
+         ptShmdata=(t_ShmData *)shmat(shmid, NULL, 0);
++
++        if (aplay_shm_init_flag == 0)
++        {
++            memset(ptShmdata, 0x00, sizeof(t_ShmData));
++            aplay_shm_init_flag = 1;
++        }
++
+         for (loop = 0; loop < MAX_DEVICE; loop++)
+         {
+             spInputParam[loop] = &ptShmdata->sInputParam[loop];
+diff -uprN a/libalsa-intf/arec.c b/libalsa-intf/arec.c
+--- a/libalsa-intf/arec.c	2015-08-18 00:53:49.141902700 +0000
++++ b/libalsa-intf/arec.c	2015-08-21 10:42:47.635348452 +0000
+@@ -31,6 +31,8 @@
+ #ifdef SIERRA
+ #include <sys/types.h>
+ #include <sys/shm.h>
++#include <error.h>
++#include <pthread.h>
+ #endif  
+ /* SWISTOP */ 
+ #include "alsa_audio.h"
+@@ -796,6 +798,7 @@ typedef struct tagArecShmData{
+ #define AREC_SHM_KEY 0xFEFE3366
+ static T_ArecParam *spInputParam[MAX_DEVICE] = {NULL};
+ static int *spRecingFlag[MAX_DEVICE] = {NULL};
++static int arec_shm_init_flag = 0;
+ 
+ static int getArecMatchDeviceIndex(const char* pdevice)
+ {
+@@ -921,17 +924,25 @@ static void* exec_playing_thread(void* p
+ 
+ int ARec_Start(const T_ArecParam *ptArecParam)
+ {
+-    int res;
++    int ret;
+     int shmid;
+     t_ArecShmData *ptShmdata= NULL;
+     pthread_t tid;
+     int loop;
+     int matchid, freeid;
++    pthread_attr_t arec_thread_attr;
+     
+     if (spInputParam[0] == NULL)
+     {
+         shmid = shmget(AREC_SHM_KEY, sizeof(t_ArecShmData),IPC_CREAT);
+         ptShmdata=(t_ArecShmData *)shmat(shmid, NULL, 0);
++
++        if (arec_shm_init_flag == 0)
++        {
++            memset(ptShmdata, 0x00, sizeof(t_ArecShmData));
++            arec_shm_init_flag = 1;
++        }
++
+         for (loop = 0; loop < MAX_DEVICE; loop++)
+         {
+             spInputParam[loop] = &ptShmdata->sInputParam[loop];
+@@ -966,8 +977,15 @@ int ARec_Start(const T_ArecParam *ptArec
+     }
+     *spForceStop[freeid] = 0;
+     *spRecingFlag[freeid] = 1;
+-    
+-    pthread_create(&tid, NULL, exec_playing_thread, spInputParam[freeid]);
++
++    pthread_attr_init(&arec_thread_attr);
++    pthread_attr_setdetachstate(&arec_thread_attr, PTHREAD_CREATE_DETACHED);
++    ret = pthread_create(&tid, &arec_thread_attr, exec_playing_thread, spInputParam[freeid]);
++    if (ret != 0)
++    {
++        printf("%s: can't create thread: %s\n", __func__, strerror(errno));
++        return -1;
++    }
+ 
+     int iloop = 0; //should wait for PCM ready
+     while ((iloop < 50) && (sPcmOpenSuccess == 0))
+@@ -993,6 +1011,13 @@ int Arec_Stop(const T_ArecParam *ptArecP
+     {
+         shmid = shmget(AREC_SHM_KEY, sizeof(t_ArecShmData),IPC_CREAT);
+         ptShmdata=(t_ArecShmData *)shmat(shmid, NULL, 0);
++
++        if (arec_shm_init_flag == 0)
++        {
++            memset(ptShmdata, 0x00, sizeof(t_ArecShmData));
++            arec_shm_init_flag = 1;
++        }
++
+         for (loop = 0; loop < MAX_DEVICE; loop++)
+         {
+             spInputParam[loop] = &ptShmdata->sInputParam[loop];
