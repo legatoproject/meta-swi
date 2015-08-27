@@ -5,7 +5,9 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5
 
 PR = "r1"
 
-SRC_URI = "git://codeaurora.org/platform/system/core;tag=M9615AAAARNLZA1611263;branch=penguin \
+# Tag M9615AAAARNLZA1611263
+SRCREV = "7b371cbcfc38e1485f31f8e3087a6a33211e7da2"
+SRC_URI = "git://codeaurora.org/platform/system/core;branch=penguin \
            file://50-log.rules \
            file://composition-sierra \
            file://0001-Fix-libmincrypt-include-path.patch \

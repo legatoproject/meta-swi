@@ -12,7 +12,9 @@ ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 PR = "r0"
 
-SRC_URI = "git://codeaurora.org/platform/system/core;tag=M9615AAAARNLZA1611263;branch=penguin \
+# Tag M9615AAAARNLZA1611263
+SRCREV = "7b371cbcfc38e1485f31f8e3087a6a33211e7da2"
+SRC_URI = "git://codeaurora.org/platform/system/core;branch=penguin \
            file://0001-mdm9x15-Remove-startup-errors.patch;striplevel=2 \
            file://0002-trac-1219-Switch-sysV-init-to-busybox-style-init.patch"
 

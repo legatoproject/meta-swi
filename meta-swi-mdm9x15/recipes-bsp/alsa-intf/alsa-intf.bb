@@ -7,7 +7,9 @@ HOMEPAGE = "https://www.codeaurora.org/cgit/quic/la/platform/vendor/qcom-opensou
 DEPENDS = "virtual/kernel acdbloader glib-2.0"
 PR = "r1"
 
-SRC_URI  = "git://codeaurora.org/platform/vendor/qcom-opensource/kernel-tests/mm-audio;tag=M9615AAAARNLZA1713006;branch=ics_strawberry"
+# Tag M9615AAAARNLZA1713006
+SRCREV = "e9a91a6cbea03dcd8cbd97cf50844ea3e557790a"
+SRC_URI  = "git://codeaurora.org/platform/vendor/qcom-opensource/kernel-tests/mm-audio;branch=ics_strawberry"
 SRC_URI += "file://0001-SBM-16534-12181-aplay-arec-amix-consume-too-much-CPU-resource.patch"
 SRC_URI += "file://0002-SBM-17175-optimize-aplay-arec.patch"
 SRC_URI += "file://0003-SBM-17419-audio-not-work-with-i2s.patch"

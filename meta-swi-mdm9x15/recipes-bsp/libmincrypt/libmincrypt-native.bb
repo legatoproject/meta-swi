@@ -9,7 +9,9 @@ DESCRIPTION = "Minimalistic encryption library from Android"
 LICENSE = "BSD"
 LIC_FILES_CHKSUM = "file://NOTICE;md5=c19179f3430fd533888100ab6616e114"
 
-SRC_URI  = "git://codeaurora.org/platform/system/core;tag=M9615AAAARNLZA1611263;branch=penguin"
+# Tag M9615AAAARNLZA1611263
+SRCREV = "7b371cbcfc38e1485f31f8e3087a6a33211e7da2"
+SRC_URI  = "git://codeaurora.org/platform/system/core;branch=penguin"
 SRC_URI += "file://Makefile"
 
 EXTRA_OEMAKE = "INCLUDES='-I${WORKDIR}/git/include'"

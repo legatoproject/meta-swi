@@ -5,7 +5,9 @@ HOMEPAGE = "https://www.codeaurora.org/cgit/quic/le/mdm/reboot-daemon/"
 
 PR = "r0"
 
-SRC_URI = "git://codeaurora.org/quic/le/mdm/reboot-daemon;tag=M9615AAAARNLZA1713041"
+# Tag M9615AAAARNLZA1713041
+SRCREV = "a88717ab8a5ae77f5358b9af539ccf0574acc70c"
+SRC_URI = "git://codeaurora.org/quic/le/mdm/reboot-daemon"
 
 inherit autotools
 

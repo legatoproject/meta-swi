@@ -11,7 +11,9 @@ PV = "0.0+git${SRCPV}"
 
 DEPENDS = "mtd-utils"
 
-SRC_URI = "git://codeaurora.org/platform/external/yaffs2;tag=M9615AAAARNLZA1611263;branch=penguin \
+# Tag M9615AAAARNLZA1611263
+SRCREV = "1ac90c1449ec5ba35aab51203819cc003586990c"
+SRC_URI = "git://codeaurora.org/platform/external/yaffs2;protocol=git;branch=penguin \
            file://0001-Dummy-required-android_filesystem_config.h.patch"
 S = "${WORKDIR}/git/yaffs2"
 
