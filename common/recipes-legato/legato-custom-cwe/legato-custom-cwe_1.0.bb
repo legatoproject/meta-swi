@@ -74,7 +74,7 @@ fakeroot do_generate_custom_cwe() {
 
         # Need "root" access to extract the tarball
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -n \
-            root@${TARGET_IP} "bsdtar -C /mnt/flash -cf - opt startup startupDefaults" | \
+            root@${TARGET_IP} "bsdtar -C /mnt/flash -cf - opt startup startupDefaults ufs/etc/passwd ufs/etc/group" | \
             tar -C tmp_${target} -xp
         ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -n \
             root@${TARGET_IP} "bsdtar -C / -cf - usr/local" | \
