@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
 	}
 
 
-	if (ioctl(fd, SWI_IOCTL_I2C_FREQ_CONFIG, freq) < 0) {
+	if (ioctl(fd, SWI_IOCTL_I2C_FREQ_CONFIG, &freq) < 0) {
 		printf("Failed to acquire bus access and/or talk to slave.\n");
 		/* ERROR HANDLING; you can check errno to see what went wrong */
 		exit(1);
