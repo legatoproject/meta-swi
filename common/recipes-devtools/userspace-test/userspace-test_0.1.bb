@@ -10,6 +10,7 @@ DEPENDS = "gdb-cross-arm i2c-tools"
 
 SRC_URI = "file://${BPN}-${PV}/"
 
+CC += " -I${STAGING_DIR_TARGET}/usr/src/kernel/{include/uapi,tools/include} "
 
 do_compile () {
         ${CC} -o spidev_test  spidev_test.c
