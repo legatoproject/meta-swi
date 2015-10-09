@@ -1,0 +1,14 @@
+sandboxed: false
+
+executables:
+{
+    startupGpio = ( startupGpioComponent )
+}
+
+processes:
+{
+    run:
+    {
+        ( startupGpio )
+    }
+}
