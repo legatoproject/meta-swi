@@ -1,0 +1,51 @@
+--- a/miscutils/microcom.c	2015-04-07 10:33:14.591810019 +0200
++++ b/miscutils/microcom.c	2015-04-07 15:38:40.400189290 +0200
+@@ -9,7 +9,7 @@
+  */
+ 
+ //usage:#define microcom_trivial_usage
+-//usage:       "[-d DELAY] [-t TIMEOUT] [-s SPEED] [-X] TTY"
++//usage:       "[-d DELAY] [-t TIMEOUT] [-s SPEED] [-X] [-E] TTY"
+ //usage:#define microcom_full_usage "\n\n"
+ //usage:       "Copy bytes for stdin to TTY and from TTY to stdout\n"
+ //usage:     "\n	-d	Wait up to DELAY ms for TTY output before sending every"
+@@ -17,6 +17,7 @@
+ //usage:     "\n	-t	Exit if both stdin and TTY are silent for TIMEOUT ms"
+ //usage:     "\n	-s	Set serial line to SPEED"
+ //usage:     "\n	-X	Disable special meaning of NUL and Ctrl-X from stdin"
++//usage:     "\n        -E      Enable local echo and use ASCII code (08) for BACKSPACE char"
+ 
+ #include "libbb.h"
+ 
+@@ -56,6 +57,7 @@
+ 		OPT_s = 1 << 1, // baudrate
+ 		OPT_d = 1 << 2, // wait for device response, ms
+ 		OPT_t = 1 << 3, // timeout, ms
++		OPT_E = 1 << 4, // local echo and ASCII backspace char 
+ 	};
+ 	speed_t speed = 9600;
+ 	int delay = -1;
+@@ -64,7 +66,7 @@
+ 
+ 	// fetch options
+ 	opt_complementary = "=1:s+:d+:t+"; // exactly one arg, numeric options
+-	opts = getopt32(argv, "Xs:d:t:", &speed, &delay, &timeout);
++	opts = getopt32(argv, "Xs:d:t:E", &speed, &delay, &timeout);
+ //	argc -= optind;
+ 	argv += optind;
+ 
+@@ -149,6 +151,14 @@
+ 				if (24 == c)
+ 					break;
+ 			}
++			if (opts & OPT_E) {
++				// local echo
++				write(STDOUT_FILENO, &c, 1);
++				// correct BACKSPACE char	
++				if (127 == c) {
++					c=8;
++				}
++			}
+ 			write(sfd, &c, 1);
+ 			if (delay >= 0)
+ 				safe_poll(pfd, 1, delay);
