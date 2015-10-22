@@ -81,6 +81,8 @@ do_install() {
     # version file
     install ${S}/version ${D}/opt/legato/
     LEGATO_VERSION=$(cat ${S}/version)
+    install -d ${D}/usr/share/legato/
+    install ${S}/version ${D}/usr/share/legato/
 
     # start-up scripts
     install -d ${D}/opt/legato/startupDefaults
