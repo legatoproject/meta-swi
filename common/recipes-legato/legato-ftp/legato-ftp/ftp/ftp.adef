@@ -1,0 +1,22 @@
+executables:
+{
+    ftp = ( ftpComponent )
+}
+
+sandboxed: false
+start: manual
+
+processes:
+{
+    envVars:
+    {
+        LE_LOG_LEVEL = DEBUG
+    }
+}
+
+bindings:
+{
+    ftp.ftpComponent.le_data -> dataConnectionService.le_data
+}
+
+ 
