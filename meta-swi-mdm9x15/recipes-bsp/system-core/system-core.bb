@@ -1,5 +1,5 @@
 DESCRIPTION = "Android system/core components"
-HOMEPAGE = "https://www.codeaurora.org/cgit/external/gigabyte/platform/system/core/"
+HOMEPAGE = "https://www.codeaurora.org/cgit/quic/la/platform/system/core/"
 LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
