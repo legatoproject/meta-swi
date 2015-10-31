@@ -25,6 +25,7 @@ IMAGE_INSTALL += "libopencore-amr"
 IMAGE_INSTALL += "iperf"
 IMAGE_INSTALL += "iproute2-tc"
 IMAGE_INSTALL += "libvo-amrwbenc"
+IMAGE_INSTALL += "tcpdump"
 
 # Required to provide some extended privileges
 # to non-root processes
