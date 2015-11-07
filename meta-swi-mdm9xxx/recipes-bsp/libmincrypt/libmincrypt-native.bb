@@ -11,7 +11,9 @@ LIC_FILES_CHKSUM = "file://NOTICE;md5=c19179f3430fd533888100ab6616e114"
 
 # Tag M9615AAAARNLZA1611263
 SRCREV = "7b371cbcfc38e1485f31f8e3087a6a33211e7da2"
-SRC_URI  = "git://codeaurora.org/platform/system/core;branch=penguin"
+LIBMINCRYPT_REPO = "git://codeaurora.org/platform/system/core;branch=penguin"
+
+SRC_URI  = "${LIBMINCRYPT_REPO}"
 SRC_URI += "file://Makefile"
 
 EXTRA_OEMAKE = "INCLUDES='-I${WORKDIR}/git/include'"
@@ -25,9 +27,7 @@ copy_makefile() {
 do_patch[postfuncs] += "copy_makefile"
 
 do_install() {
-	install -d ${D}${includedir}/${MY_PN} ${D}${libdir}/${MY_PN}
-	install ${WORKDIR}/git/include/${MY_PN}/*.h ${D}${includedir}/${MY_PN}
-	install ${MY_LPN}.a ${D}${libdir}/${MY_PN}
+    install -d ${D}${includedir}/${MY_PN} ${D}${libdir}/${MY_PN}
+    install ${WORKDIR}/git/include/${MY_PN}/*.h ${D}${includedir}/${MY_PN}
+    install ${MY_LPN}.a ${D}${libdir}/${MY_PN}
 }
-
-NATIVE_INSTALL_WORKS = "1"
