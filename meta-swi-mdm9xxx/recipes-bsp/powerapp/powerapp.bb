@@ -14,7 +14,9 @@ PR = "r0"
 
 # Tag M9615AAAARNLZA1611263
 SRCREV = "7b371cbcfc38e1485f31f8e3087a6a33211e7da2"
-SRC_URI = "${POWERAPP_REPO}"
+SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=penguin"
+
+SRC_URI = "${SYSTEMCORE_REPO}"
 
 PACKAGES =+ "${PN}-reboot ${PN}-shutdown ${PN}-powerconfig"
 FILES_${PN}-reboot = "${sysconfdir}/init.d/reboot"

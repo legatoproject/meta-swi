@@ -1,6 +1,5 @@
 DEPENDS += " \
         virtual/lk \
-        yaffs2-utils-native \
         mtd-utils-native"
 
 SRC_URI += "file://ubinize.cfg"
@@ -86,4 +85,3 @@ python do_unpack2() {
 }
 
 addtask unpack2 before do_rootfs
-

@@ -33,4 +33,3 @@ do_install() {
 	install -d ${D}${bindir}
 	install ${MY_PN} ${D}${bindir}
 }
-

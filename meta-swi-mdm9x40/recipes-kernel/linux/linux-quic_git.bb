@@ -4,7 +4,6 @@ DESCRIPTION = "QuIC Linux Kernel"
 LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 COMPATIBLE_MACHINE = "(swi-mdm9x40)"
-BASEMACHINE = "${@d.getVar('MACHINE', True).replace('-perf', '')}"
 
 
 # Provide a config baseline for things so the kernel will build...
@@ -39,20 +38,16 @@ PACKAGES =+ "kernel-image"
 FILES_kernel-image = "/boot/${KERNEL_IMAGETYPE}*"
 
 PACKAGES =+ "kernel-dev"
-FILES_kernel-dev = "/boot/System.map* /boot/Module.symvers* /boot/config*"
+FILES_kernel-dev = "/boot/System.map* /boot/Module.symvers* /boot/config* ${KDIR}/include ${KDIR}/usr/include ${KDIR}/arch/arm/include"
 
 PACKAGES =+ "kernel-vmlinux"
 FILES_kernel-vmlinux = "/boot/vmlinux*"
 
-PACKAGES =+ "kernel-headers"
-FILES_kernel-headers = "${KDIR}/usr/include"
-
-PACKAGES =+ "kernel-modbuild"
-FILES_kernel-modbuild = "${KDIR}"
-INSANE_SKIP_kernel-modbuild = "arch"
-
 PACKAGES =+ "kernel-modules"
 FILES_kernel-modules = "/lib/modules"
+
+#PACKAGES =+ "kernel-other"
+#FILES_other = "${KDIR}"
 
 RDEPENDS_kernel-base ?= "kernel-image"
 RPROVIDES_kernel-base += "kernel-${KERNEL_VERSION}"
@@ -184,7 +179,7 @@ do_deploy() {
        __cmdparams+=' maxcpus=1'
     fi
 
-    if [ "${BASEMACHINE}" != "mdm9640" ]; then
+    if [ "${BASEMACHINE_QCOM}" != "mdm9640" ]; then
         __cmdparams+=' rootfstype=yaffs2'
     fi
 

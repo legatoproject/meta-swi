@@ -11,9 +11,9 @@ LIC_FILES_CHKSUM = "file://NOTICE;md5=c19179f3430fd533888100ab6616e114"
 
 # Tag M9615AAAARNLZA1611263
 SRCREV = "7b371cbcfc38e1485f31f8e3087a6a33211e7da2"
-LIBMINCRYPT_REPO = "git://codeaurora.org/platform/system/core;branch=penguin"
+SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=penguin"
 
-SRC_URI  = "${LIBMINCRYPT_REPO}"
+SRC_URI  = "${SYSTEMCORE_REPO}"
 SRC_URI += "file://Makefile"
 
 EXTRA_OEMAKE = "INCLUDES='-I${WORKDIR}/git/include'"
