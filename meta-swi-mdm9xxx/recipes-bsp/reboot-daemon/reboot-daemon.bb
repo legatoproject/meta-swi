@@ -7,7 +7,9 @@ PR = "r0"
 
 # Tag M9615AAAARNLZA1713041
 SRCREV = "a88717ab8a5ae77f5358b9af539ccf0574acc70c"
-SRC_URI = "git://codeaurora.org/quic/le/mdm/reboot-daemon"
+REBOOTD_REPO = "git://codeaurora.org/quic/le/mdm/reboot-daemon"
+
+SRC_URI = "${REBOOTD_REPO}"
 
 inherit autotools
 

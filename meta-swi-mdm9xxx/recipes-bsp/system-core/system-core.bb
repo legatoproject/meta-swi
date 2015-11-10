@@ -7,11 +7,11 @@ PR = "r1"
 
 # Tag M9615AAAARNLZA1611263
 SRCREV = "7b371cbcfc38e1485f31f8e3087a6a33211e7da2"
-SRC_URI = "git://codeaurora.org/platform/system/core;branch=penguin \
-           file://50-log.rules \
-           file://composition-sierra \
-           file://0001-Fix-libmincrypt-include-path.patch \
-           "
+SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=penguin"
+
+SRC_URI  = "${SYSTEMCORE_REPO}"
+SRC_URI += "file://50-log.rules"
+SRC_URI += "file://0001-Fix-libmincrypt-include-path.patch"
 
 inherit autotools
 
@@ -28,6 +28,7 @@ INITSCRIPT_PARAMS_${PN}-usb = "start 09 S ."
 
 inherit update-rc.d
 
+EXTRA_OECONF_append += "--with-sanitized-headers=${STAGING_KERNEL_DIR}/usr/include"
 EXTRA_OEMAKE = "INCLUDES='-I${S}/include'"
 
 do_install_append() {
@@ -47,9 +48,12 @@ do_install_append() {
    install -m 0755 ${S}/usb/usb_composition -D ${D}${bindir}/
    install -d ${D}${bindir}/usb/compositions/
    install -m 0755 ${S}/usb/compositions/* -D ${D}${bindir}/usb/compositions/
-   install -m 0755 ${WORKDIR}/composition-sierra -D ${D}${bindir}/usb/compositions/sierra
-   ln -s /usr/bin/usb/compositions/sierra ${D}${bindir}/usb/boot_hsusb_composition
-   ln -s /usr/bin/usb/compositions/sierra ${D}${bindir}/usb/boot_hsic_composition
+
+   if [ -e "${WORKDIR}/composition-sierra" ]; then
+      install -m 0755 ${WORKDIR}/composition-sierra -D ${D}${bindir}/usb/compositions/sierra
+      ln -s /usr/bin/usb/compositions/sierra ${D}${bindir}/usb/boot_hsusb_composition
+      ln -s /usr/bin/usb/compositions/sierra ${D}${bindir}/usb/boot_hsic_composition
+   fi
 }
 
 PACKAGES =+ "${PN}-libmincrypt-dev ${PN}-libmincrypt-staticdev"

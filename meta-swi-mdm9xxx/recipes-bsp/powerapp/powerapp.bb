@@ -14,9 +14,7 @@ PR = "r0"
 
 # Tag M9615AAAARNLZA1611263
 SRCREV = "7b371cbcfc38e1485f31f8e3087a6a33211e7da2"
-SRC_URI = "git://codeaurora.org/platform/system/core;branch=penguin \
-           file://0001-mdm9x15-Remove-startup-errors.patch;striplevel=2 \
-           file://0002-trac-1219-Switch-sysV-init-to-busybox-style-init.patch"
+SRC_URI = "${POWERAPP_REPO}"
 
 PACKAGES =+ "${PN}-reboot ${PN}-shutdown ${PN}-powerconfig"
 FILES_${PN}-reboot = "${sysconfdir}/init.d/reboot"

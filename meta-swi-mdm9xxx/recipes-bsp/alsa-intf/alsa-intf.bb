@@ -9,11 +9,9 @@ PR = "r1"
 
 # Tag M9615AAAARNLZA1713006
 SRCREV = "e9a91a6cbea03dcd8cbd97cf50844ea3e557790a"
-SRC_URI  = "git://codeaurora.org/platform/vendor/qcom-opensource/kernel-tests/mm-audio;branch=ics_strawberry"
-SRC_URI += "file://0001-SBM-16534-12181-aplay-arec-amix-consume-too-much-CPU-resource.patch"
-SRC_URI += "file://0002-SBM-17175-optimize-aplay-arec.patch"
-SRC_URI += "file://0003-SBM-17419-audio-not-work-with-i2s.patch"
-SRC_URI += "file://0004-Fix-build-without-QC-headers.patch"
+ALSAINTF_REPO = "git://codeaurora.org/platform/vendor/qcom-opensource/kernel-tests/mm-audio;branch=ics_strawberry"
+
+SRC_URI  = "${ALSAINTF_REPO}"
 prefix="/etc"
 
 S = "${WORKDIR}/git"

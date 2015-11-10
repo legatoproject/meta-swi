@@ -1,0 +1,25 @@
+From 0f1b9e369a4a976934b9fe253f12832383dfdebc Mon Sep 17 00:00:00 2001
+From: Bertrand Roussel <broussel@sierrawireless.com>
+Date: Mon, 9 Nov 2015 14:29:42 -0800
+Subject: [PATCH] Fix typo in configure.ac
+
+---
+ configure.ac | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/configure.ac b/configure.ac
+index 35fc307..92b1d18 100755
+--- a/configure.ac
++++ b/configure.ac
+@@ -59,7 +59,7 @@
+   AC_ARG_WITH([host-os],
+           [AS_HELP_STRING([--with-host-os=HOST_OS],[Host OS to build adb host.(default: linux)])],
+           [HOST_OS="$withval"],
+-          [HOST_OS= 'linux'])
++          [HOST_OS='linux'])
+ 
+ 
+   AC_ARG_WITH(sanitized-headers,
+-- 
+2.6.2
+

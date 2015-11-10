@@ -1,0 +1,11 @@
+CommitID 7b740ee7fe0925f6dc9229fac25eb0c85e6bd2e7
+diff -ru a/reset_reboot_cookie b/reset_reboot_cookie
+--- a/reset_reboot_cookie	2013-08-14 15:01:31.000000000 -0700
++++ b/reset_reboot_cookie	2014-12-11 22:22:44.000000000 -0800
+@@ -1,5 +1,5 @@
+ #! /bin/sh
+ # Make /var/log/wtmp point to NULL so logs written to wtmp are not saved
+-rm /var/log/wtmp
++rm -f /var/log/wtmp
+ ln -s /dev/null /var/log/wtmp
+ echo 0 > /etc/reboot-cookie

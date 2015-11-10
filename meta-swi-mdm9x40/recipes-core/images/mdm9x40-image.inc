@@ -37,7 +37,6 @@ IMAGE_INSTALL += "libcap-bin"
 # IMAGE_INSTALL += "busybox-mdev"
 
 # Tools and helpers for i2c development
-IMAGE_INSTALL += "i2cgpioctl"
 IMAGE_INSTALL += "i2c-tools"
 
 prepare_ubi_ps() {
