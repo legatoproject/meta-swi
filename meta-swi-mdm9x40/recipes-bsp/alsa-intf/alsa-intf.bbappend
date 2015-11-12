@@ -6,4 +6,4 @@ ALSAINTF_REPO = "git://codeaurora.org/platform/vendor/qcom-opensource/kernel-tes
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://0001-Fix-build-without-QC-headers.patch"
 
-SANITIZED_HEADERS = "${STAGING_KERNEL_DIR}/usr/include"
+SANITIZED_HEADERS = "${STAGING_KERNEL_DIR}/include"
