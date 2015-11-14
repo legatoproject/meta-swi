@@ -16,8 +16,10 @@ prefix="/etc"
 
 S = "${WORKDIR}/git"
 
+SANITIZED_HEADERS ?= "${STAGING_KERNEL_DIR}/include"
+
 EXTRA_OECONF += "--prefix=/etc \
-                 --with-sanitized-headers=${STAGING_KERNEL_DIR}/include \
+                 --with-sanitized-headers=${SANITIZED_HEADERS} \
                  --with-glib"
 
 FILES_${PN} += "${prefix}/snd_soc_msm/*"
