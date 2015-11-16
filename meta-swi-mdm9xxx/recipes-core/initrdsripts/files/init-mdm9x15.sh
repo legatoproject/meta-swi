@@ -30,9 +30,6 @@ do_essential()
     local ret=0
 
     mount -t devtmpfs devtmpfs /dev
-    exec 0</dev/console
-    exec 1>/dev/console
-    exec 2>/dev/console
 
     mount -t proc proc /proc -o smackfsdef=_
 
