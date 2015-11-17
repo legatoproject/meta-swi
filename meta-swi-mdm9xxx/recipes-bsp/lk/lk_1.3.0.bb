@@ -43,7 +43,7 @@ do_install() {
 
 FILES_${PN} = "/boot"
 
-do_deploy () {
+do_deploy() {
 	install -d ${DEPLOY_DIR_IMAGE}
 	install ${S}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
 	install ${S}/build-${LK_TARGET}/appsboot.raw ${DEPLOY_DIR_IMAGE}

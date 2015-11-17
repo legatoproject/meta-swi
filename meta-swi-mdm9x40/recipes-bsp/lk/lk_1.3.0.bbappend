@@ -10,5 +10,6 @@ do_install() {
 }
 
 do_deploy() {
+    install -d ${DEPLOY_DIR_IMAGE}
     install ${S}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
 }

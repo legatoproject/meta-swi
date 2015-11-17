@@ -28,7 +28,6 @@ INITSCRIPT_PARAMS_${PN}-usb = "start 09 S ."
 
 inherit update-rc.d
 
-EXTRA_OECONF_append += "--with-sanitized-headers=${STAGING_KERNEL_DIR}/usr/include"
 EXTRA_OEMAKE = "INCLUDES='-I${S}/include'"
 
 do_install_append() {
