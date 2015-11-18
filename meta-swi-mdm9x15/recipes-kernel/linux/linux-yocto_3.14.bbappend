@@ -67,7 +67,7 @@ gen_bootimg() {
         ls -al $kernel_img_initramfs
 
         # Initramfs
-        ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg \
+        ${STAGING_BINDIR_NATIVE}/mkbootimg \
             --kernel $kernel_img_initramfs \
             --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
             --base 0x40800000 \
@@ -83,7 +83,7 @@ gen_bootimg() {
         ln -sf ${image_name}.img ${DEPLOY_DIR_IMAGE}/${image_link}.img
     else
         # No ramdisk
-        ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg \
+        ${STAGING_BINDIR_NATIVE}/mkbootimg \
             --kernel $kernel_img \
             --cmdline "${KERNEL_BOOT_OPTIONS}" \
             --base 0x40800000 \
@@ -95,7 +95,7 @@ gen_bootimg() {
         ln -sf ${image_name}.noramdisk.img ${DEPLOY_DIR_IMAGE}/${image_link}.noramdisk.img
 
         # With ramdisk
-        ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg \
+        ${STAGING_BINDIR_NATIVE}/mkbootimg \
             --kernel $kernel_img \
             --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
             --base 0x40800000 \

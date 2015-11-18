@@ -14,12 +14,14 @@ LINUX_VERSION ?= "3.10.49"
 PV = "${LINUX_VERSION}+git${GITSHA}"
 PR = "r1"
 
-uses_modules () {
-    grep -q -i -e '^CONFIG_MODULES=y$' "${O}/.config"
+DEPENDS += "dtbtool-native mkbootimg-native"
+
+do_configure_prepend() {
+    cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
 }
 
-do_configure_prepend () {
-    cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
+do_compile_append() {
+    oe_runmake dtbs
 }
 
 do_install_append() {
@@ -27,40 +29,66 @@ do_install_append() {
     rm -rf ${D}/usr/src/kernel/scripts
 }
 
-# ???
-do_deploy_append_dtb() {
-    KERNEL_VERSION=$(sed -r 's/#define UTS_RELEASE "(.*)"/\1/' ${S}/include/generated/utsrelease.h)
+require linux-dtb.inc
 
-    set -x
+BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x40-${DATETIME}.4k"
 
-    # Make bootimage
-    dtb_files=$(find ${S}/arch/arm/boot/dts -iname *${MACHINE_DTS_NAME}*.dtb | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
+MACHINE_KERNEL_BASE = "0x81800000"
+MACHINE_KERNEL_TAGS_OFFSET = "0x88000000"
+
+gen_bootimg() {
+    image_flags=$1
+    image_name=$2
+    image_link=$3
+    page_size=$4
+
+    set -xe
+
+    if ! [ -e "${DEPLOY_DIR_IMAGE}" ]; then
+        mkdir -p ${DEPLOY_DIR_IMAGE}
+    fi
+
+    kernel_img_initramfs=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
+    kernel_img_initramfs=$(readlink -f $kernel_img_initramfs)
+    ls -al $kernel_img_initramfs
+
+    dtb_files=`find ${B}/arch/arm/boot/dts -iname *${BASEMACHINE_QCOM}*.dtb | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}'`
 
     # Create separate images with dtb appended to zImage for all targets.
     for d in ${dtb_files}; do
-       targets=`echo ${d#${MACHINE_DTS_NAME}-}`
-       cat ${KERNEL_OUTPUT} ${S}/arch/arm/boot/dts/${d}.dtb > ${DEPLOYDIR}/dtb-zImage-${KERNEL_VERSION}-${targets}
+       targets=`echo ${d#${BASEMACHINE_QCOM}-}`
+       cat $kernel_img_initramfs ${B}/arch/arm/boot/dts/${d}.dtb > ${B}/arch/arm/boot/dts/dtb-zImage-${ver}-${targets}
     done
 
-    ${STAGING_BINDIR_NATIVE}/dtbtool ${DEPLOYDIR} -s ${PAGE_SIZE} -o ${DEPLOYDIR}/masterDTB -p ${DEPLOYDIR} -v
+    ${STAGING_BINDIR_NATIVE}/dtbtool \
+        ${B}/arch/arm/boot/dts/ \
+        -s $page_size \
+        -o ${DEPLOYDIR}/masterDTB \
+        -p ${S}/scripts/dtc/ \
+        -v
 
-     __cmdparams='noinitrd  rw console=ttyHSL0,115200,n8 androidboot.hardware=qcom ehci-hcd.park=3 msm_rtb.filter=0x37'
-
-    if [ "${BASEMACHINE_QCOM}" != "mdm9640" ]; then
-        __cmdparams+=' rootfstype=yaffs2'
+    if ! [ -e "${DEPLOYDIR}/masterDTB" ]; then
+        echo "Unable to generate masterDTB"
+        exit 1
     fi
 
-    cmdparams=`echo ${__cmdparams}`
-
-    # Updated base address according to new memory map.
+    # Initramfs
     ${STAGING_BINDIR_NATIVE}/mkbootimg \
-        --kernel ${KERNEL_OUTPUT} \
         --dt ${DEPLOYDIR}/masterDTB \
+        --kernel $kernel_img_initramfs \
         --ramdisk /dev/null \
-        --cmdline "${cmdparams}" \
-        --pagesize ${PAGE_SIZE} \
+        --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
+        --pagesize $page_size \
         --base ${MACHINE_KERNEL_BASE} \
         --tags-addr ${MACHINE_KERNEL_TAGS_OFFSET} \
         --ramdisk_offset 0x0 \
-        --output ${DEPLOYDIR}/${MACHINE}-boot.img
+        --output ${DEPLOY_DIR_IMAGE}/${image_name}.img
+
+    ln -sf ${image_name}.img ${DEPLOY_DIR_IMAGE}/${image_link}.img
 }
+
+do_bootimg() {
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x40 4096
+}
+
+addtask bootimg after do_deploy before do_build
