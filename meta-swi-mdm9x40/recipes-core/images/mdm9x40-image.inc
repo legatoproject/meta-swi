@@ -2,8 +2,6 @@ DEPENDS += " \
         virtual/lk \
         mtd-utils-native"
 
-SRC_URI += "file://ubinize.cfg"
-
 INC_PR = "r0"
 
 inherit ubi-image
@@ -38,37 +36,60 @@ IMAGE_INSTALL += "libcap-bin"
 # Tools and helpers for i2c development
 IMAGE_INSTALL += "i2c-tools"
 
-prepare_ubi_ps() {
-    local page_size=$1
+create_ubinize_config() {
+    local cfg_path=$1
 
-    local image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs"
-    local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.ubi"
-    local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${page_size}.ubi"
+    echo \[sysfs_volume\] > $cfg_path
+    echo mode=ubi >> $cfg_path
+    echo image="${UBI_ROOTFS_PATH}" >> $cfg_path
+    echo vol_id=0 >> $cfg_path
+    echo vol_type=dynamic >> $cfg_path
+    echo vol_name=rootfs >> $cfg_path
+    echo vol_size="${UBI_ROOTFS_SIZE}" >> $cfg_path
 
-    create_ubi_image $page_size ${WORKDIR}/ubinize.cfg $image_path $ubi_path $ubi_link_path
+    echo \[usrfs_volume\] >> $cfg_path
+    echo mode=ubi >> $cfg_path
+    echo image="${UBI_USRFS_PATH}" >> $cfg_path
+    echo vol_id=1 >> $cfg_path
+    echo vol_type=dynamic >> $cfg_path
+    echo vol_name=usrfs >> $cfg_path
+    echo vol_flags=autoresize >> $cfg_path
+
+    echo \[cache_volume\] >> $cfg_path
+    echo mode=ubi >> $cfg_path
+    echo vol_id=2 >> $cfg_path
+    echo vol_type=dynamic >> $cfg_path
+    echo vol_name=cachefs >> $cfg_path
+    echo vol_size=${UBI_CACHE_SIZE} >> $cfg_path
 }
 
-# Create UBI images
+create_usrfs() {
+    rm -rf "${WORKDIR}/usrfs"
+    mkdir -p "${WORKDIR}/usrfs"
+
+    mkfs.ubifs -r "${WORKDIR}/usrfs" -o ${UBI_USRFS_PATH} ${MKUBIFS_ARGS}
+}
+
+do_rootfs[prefuncs] += "create_usrfs"
+
+# Create UBI image
 prepare_ubi() {
-    prepare_ubi_ps '2k'
-    prepare_ubi_ps '4k'
+    local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubi"
+    local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
 
-    # Default image (no bs suffix) to 4k
-    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.ubi"
-    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
-    rm -f $ubi_link_path
-    ln -s $(basename $ubi_link_path_def) $ubi_link_path
-}
+    local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubinize.cfg"
 
-default_rootfs_ps() {
-    # Default yaffs2 image to 4k
-    ln -sf ${IMAGE_NAME}.rootfs.4k.yaffs2 ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.yaffs2
-
-    # Default rootfs to ubi for 4k
-    ln -sf ${IMAGE_LINK_NAME}.4k.ubi ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
+    create_ubinize_config $ubinize_cfg
+    create_ubi_image 2k $ubinize_cfg $ubi_path $ubi_link_path
 }
 
 do_rootfs[postfuncs] += "prepare_ubi"
+
+default_rootfs_ps() {
+    # Default rootfs to ubi
+    ln -sf ${IMAGE_LINK_NAME}.ubi ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
+}
+
 do_rootfs[postfuncs] += "default_rootfs_ps"
 
 # Re-enable fetch & unpack tasks, because of bug(s) in Yocto 1.6 .

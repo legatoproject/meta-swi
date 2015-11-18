@@ -44,11 +44,16 @@ IMAGE_INSTALL += "i2c-tools"
 prepare_ubi_ps() {
     local page_size=$1
 
-    local image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs"
     local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.ubi"
     local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${page_size}.ubi"
 
-    create_ubi_image $page_size ${WORKDIR}/ubinize.cfg $image_path $ubi_path $ubi_link_path
+    local ubinize_cfg=${WORKDIR}/gen_ubinize.cfg
+
+    cp -af ${WORKDIR}/ubinize.cfg $ubinize_cfg
+    sed -i -e "s|@@ROOTFS_PATH@@|${UBI_ROOTFS_PATH}|g" $ubinize_cfg
+    sed -i -e "s|@@ROOTFS_SIZE@@|${UBI_ROOTFS_SIZE}|g" $ubinize_cfg
+
+    create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
 }
 
 # Create UBI images
