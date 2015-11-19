@@ -23,7 +23,7 @@ mount_essential_fs()
 {
     local ret=0
 
-    if ! grep 'root=' /proc/cmdline > /dev/null; then
+    if [ -e /proc/cmdline ]; then
         return ${ret}
     fi
 

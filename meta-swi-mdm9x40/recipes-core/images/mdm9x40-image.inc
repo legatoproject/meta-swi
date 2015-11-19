@@ -46,6 +46,7 @@ create_ubinize_config() {
     echo vol_type=dynamic >> $cfg_path
     echo vol_name=rootfs >> $cfg_path
     echo vol_size="${UBI_ROOTFS_SIZE}" >> $cfg_path
+    echo >> $cfg_path
 
     echo \[usrfs_volume\] >> $cfg_path
     echo mode=ubi >> $cfg_path
@@ -54,6 +55,7 @@ create_ubinize_config() {
     echo vol_type=dynamic >> $cfg_path
     echo vol_name=usrfs >> $cfg_path
     echo vol_flags=autoresize >> $cfg_path
+    echo >> $cfg_path
 
     echo \[cache_volume\] >> $cfg_path
     echo mode=ubi >> $cfg_path
@@ -80,7 +82,7 @@ prepare_ubi() {
     local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubinize.cfg"
 
     create_ubinize_config $ubinize_cfg
-    create_ubi_image 2k $ubinize_cfg $ubi_path $ubi_link_path
+    create_ubi_image 4k $ubinize_cfg $ubi_path $ubi_link_path
 }
 
 do_rootfs[postfuncs] += "prepare_ubi"

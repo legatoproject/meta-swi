@@ -10,7 +10,7 @@ BOOTDEV=""
 BOOTWAIT=0
 
 # Default partition type
-BOOTTYPE="squashfs"
+BOOTTYPE="ubifs"
 
 # Default options
 BOOTOPTS="ro"
@@ -29,9 +29,9 @@ do_essential()
 {
     local ret=0
 
-    mount -t devtmpfs devtmpfs /dev
-
     mount -t proc proc /proc -o smackfsdef=_
+
+    mount -t devtmpfs devtmpfs /dev
 
     mount -t sysfs sysfs /sys
 
@@ -44,7 +44,7 @@ do_essential()
 set_boot_dev()
 {
     local ret=0
-    local mtd_part_name=rootfs
+    local mtd_part_name=system
     local boot_opt=''
 
     if grep 'rootfs.type=' /proc/cmdline > /dev/null; then
@@ -70,14 +70,14 @@ set_boot_dev()
     fi
 
     if grep 'rootfs.dev=' /proc/cmdline > /dev/null; then 
-        BOOTDEV=$(cat /proc/cmdline | sed -e 's/.* rootfs\.dev=\([/a-z0-9]*\) .*/\1/')
+        BOOTDEV=$(cat /proc/cmdline | sed -e 's/.* rootfs\.dev=\([^ ]*\) .*/\1/')
         if [ -n "$BOOTDEV" ]; then
             return ${ret}
         fi
     fi
 
     mtd_dev_num=$( cat /proc/mtd | \
-                   grep ${mtd_part_name} | \
+                   grep "\"${mtd_part_name}\"" | \
                    sed 's/mtd\([0-9]*\):.*/\1/' )
 
     BOOTDEV="/dev/mtdblock${mtd_dev_num}"
@@ -85,9 +85,12 @@ set_boot_dev()
     if [ "$BOOTTYPE" != "yaffs2" ]; then
 
         # Detect ubi partition
-        if dd if=/dev/mtd${mtd_dev_num} count=4 bs=1 2>/dev/null | grep 'UBI#' > /dev/null; then
-            ubiattach -m ${mtd_dev_num} -d 0
-            ubiblkvol --attach /dev/ubi0_0
+        UBI_FLAG=$(dd if=/dev/mtd$mtd_dev_num count=4 bs=1 2>/dev/null)
+        if echo $UBI_FLAG | grep 'UBI#' > /dev/null; then
+            if ! [ -e "/dev/ubiblock0_0" ]; then
+                ubiattach -m ${mtd_dev_num} -d 0
+                ubiblkvol --attach /dev/ubi0_0
+            fi
             BOOTDEV="/dev/ubiblock0_0"
 
         # Fallback on yaffs2
@@ -119,13 +122,18 @@ checkpoint_rootfs()
         echo
     fi
 
-    echo "rootfs: dev ${BOOTDEV}"
+    echo "rootfs: dev '${BOOTDEV}' '${BOOTTYPE}'"
 
     export mnt_time=$( time mount -t ${BOOTTYPE} ${BOOTDEV} ${ROOTFS_MNTPT} -o ${BOOTOPTS} 2>&1 | \
                        grep real | awk '{ print $3 }' | grep -oe '\([0-9.]*\)' )
 
     if ! [ -e "${ROOTFS_MNTPT}/bin" ]; then
         echo "rootfs: mount failed"
+
+        if ! [ -e $BOOTDEV ]; then
+            echo -n "rootfs: dev '${BOOTDEV}' does not exist"
+        fi
+
         return 1
     fi
 

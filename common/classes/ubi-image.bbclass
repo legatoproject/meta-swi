@@ -6,8 +6,8 @@ create_ubi_image() {
 
     local ubinize_cfg=$2
 
-    local ubi_path=$4
-    local ubi_link_path=$5
+    local ubi_path=$3
+    local ubi_link_path=$4
 
     local ubinize_args=''
 

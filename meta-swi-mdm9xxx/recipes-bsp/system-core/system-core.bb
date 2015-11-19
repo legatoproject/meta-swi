@@ -13,7 +13,7 @@ SRC_URI  = "${SYSTEMCORE_REPO}"
 SRC_URI += "file://50-log.rules"
 SRC_URI += "file://0001-Fix-libmincrypt-include-path.patch"
 
-inherit autotools
+inherit autotools pkgconfig
 
 S = "${WORKDIR}/git"
 
@@ -37,11 +37,11 @@ do_install_append() {
    install -m 0644 -D ${S}/include/pixelflinger/format.h ${D}${includedir}/pixelflinger/format.h
    install -m 0644 -D ${S}/include/pixelflinger/pixelflinger.h ${D}${includedir}/pixelflinger/pixelflinger.h
 
-   install -m 0644 -D ${S}/../50-log.rules ${D}${sysconfdir}/udev/rules.d/50-log.rules
+   install -m 0644 -D ${WORKDIR}/50-log.rules ${D}${sysconfdir}/udev/rules.d/50-log.rules
 
    # Prefer adbd to be located in /sbin for historical reasons
    rm ${D}${bindir}/adbd
-   install -m 0755 ${S}/../build/adb/adbd -D ${D}/sbin/adbd
+   install -m 0755 ${B}/adb/adbd -D ${D}/sbin/adbd
    install -m 0755 ${S}/adb/start_adbd -D ${D}${sysconfdir}/init.d/adbd
    install -m 0755 ${S}/usb/start_usb -D ${D}${sysconfdir}/init.d/usb
    install -m 0755 ${S}/usb/usb_composition -D ${D}${bindir}/
@@ -50,8 +50,8 @@ do_install_append() {
 
    if [ -e "${WORKDIR}/composition-sierra" ]; then
       install -m 0755 ${WORKDIR}/composition-sierra -D ${D}${bindir}/usb/compositions/sierra
-      ln -s /usr/bin/usb/compositions/sierra ${D}${bindir}/usb/boot_hsusb_composition
-      ln -s /usr/bin/usb/compositions/sierra ${D}${bindir}/usb/boot_hsic_composition
+      ln -s ${bindir}/usb/compositions/sierra ${D}${bindir}/usb/boot_hsusb_composition
+      ln -s ${bindir}/usb/compositions/sierra ${D}${bindir}/usb/boot_hsic_composition
    fi
 }
 

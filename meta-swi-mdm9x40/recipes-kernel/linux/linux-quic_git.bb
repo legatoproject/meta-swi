@@ -29,35 +29,30 @@ do_install_append() {
     rm -rf ${D}/usr/src/kernel/scripts
 }
 
-require linux-dtb.inc
-
 BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x40-${DATETIME}.4k"
 
 MACHINE_KERNEL_BASE = "0x81800000"
 MACHINE_KERNEL_TAGS_OFFSET = "0x88000000"
 
-gen_bootimg() {
-    image_flags=$1
-    image_name=$2
-    image_link=$3
-    page_size=$4
+do_deploy_append() {
+    page_size=4096
+
+    kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
+    if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
+        kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
+    fi
+    kernel_img=$(readlink -f $kernel_img)
+    ls -al $kernel_img
 
     set -xe
-
-    if ! [ -e "${DEPLOY_DIR_IMAGE}" ]; then
-        mkdir -p ${DEPLOY_DIR_IMAGE}
-    fi
-
-    kernel_img_initramfs=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
-    kernel_img_initramfs=$(readlink -f $kernel_img_initramfs)
-    ls -al $kernel_img_initramfs
-
-    dtb_files=`find ${B}/arch/arm/boot/dts -iname *${BASEMACHINE_QCOM}*.dtb | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}'`
+    
+    ver=$(sed -r 's/#define UTS_RELEASE "(.*)"/\1/' ${B}/include/generated/utsrelease.h)
+    dtb_files=$(find ${B}/arch/arm/boot/dts -iname "*${BASEMACHINE_QCOM}*.dtb" | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
 
     # Create separate images with dtb appended to zImage for all targets.
     for d in ${dtb_files}; do
-       targets=`echo ${d#${BASEMACHINE_QCOM}-}`
-       cat $kernel_img_initramfs ${B}/arch/arm/boot/dts/${d}.dtb > ${B}/arch/arm/boot/dts/dtb-zImage-${ver}-${targets}
+       targets=$(echo ${d#${BASEMACHINE_QCOM}-})
+       cat $kernel_img ${B}/arch/arm/boot/dts/${d}.dtb > ${B}/arch/arm/boot/dts/dtb-zImage-${ver}-${targets}.dtb
     done
 
     ${STAGING_BINDIR_NATIVE}/dtbtool \
@@ -71,11 +66,26 @@ gen_bootimg() {
         echo "Unable to generate masterDTB"
         exit 1
     fi
+}
+
+gen_bootimg() {
+    image_flags=$1
+    image_name=$2
+    image_link=$3
+    page_size=$4
+
+    set -xe
+    kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
+    if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
+        kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
+    fi
+    kernel_img=$(readlink -f $kernel_img)
+    ls -al $kernel_img
 
     # Initramfs
     ${STAGING_BINDIR_NATIVE}/mkbootimg \
         --dt ${DEPLOYDIR}/masterDTB \
-        --kernel $kernel_img_initramfs \
+        --kernel $kernel_img \
         --ramdisk /dev/null \
         --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
         --pagesize $page_size \
