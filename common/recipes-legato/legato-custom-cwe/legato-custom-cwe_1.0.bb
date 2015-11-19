@@ -15,7 +15,6 @@ INC_PR = "r0"
 # If empty, the board is skipped.
 TARGET_ar86 ?= ""
 TARGET_ar7 ?= ""
-TARGET_wp7 ?= ""
 TARGET_wp85 ?= ""
 
 S = "${WORKDIR}"
@@ -46,10 +45,6 @@ fakeroot do_generate_custom_cwe() {
             ar86)
                 TARGET_IP=${TARGET_ar86}
                 PID='A911'
-                ;;
-            wp7)
-                TARGET_IP=${TARGET_wp7}
-                PID='9X15'
                 ;;
             wp85)
                 TARGET_IP=${TARGET_wp85}
