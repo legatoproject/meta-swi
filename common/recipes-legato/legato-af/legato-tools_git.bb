@@ -11,9 +11,9 @@ do_configure[noexec] = "1"
 
 do_compile() {
     if grep 'sdk:' Makefile; then
-        VERBOSE=1 make sdk
+        VERBOSE=1 oe_runmake sdk
     else
-        VERBOSE=1 make tools
+        VERBOSE=1 oe_runmake tools
     fi
 }
 
@@ -43,3 +43,4 @@ do_install() {
         done
     fi
 }
+

@@ -11,7 +11,13 @@ inherit legato
 INHIBIT_DEFAULT_DEPS = "1"
 
 gen_version() {
-    export VERSION="$(cat ${LEGATO_STAGING_DIR}/$LEGATO_TARGET/opt/legato/version) $(hostname) $(date +'%Y/%m/%d %H:%M:%S')"
+    version_file="${LEGATO_STAGING_DIR}/$LEGATO_TARGET/system/version"
+    echo $version_file
+    if ! [ -e "$version_file" ]; then
+        version_file="${LEGATO_STAGING_DIR}/$LEGATO_TARGET/opt/legato/version"
+    fi
+
+    export VERSION="$(cat $version_file) $(hostname) $(date +'%Y/%m/%d %H:%M:%S')"
 
     echo $VERSION > ${DEPLOY_DIR_IMAGE}/${PN}.version
 }
@@ -29,6 +35,8 @@ copy_image() {
 
 generate_images_mklegatoimg() {
     IMG_DIR="${WORKDIR}/images-${LEGATO_TARGET}"
+
+    mkdir -p ${DEPLOY_DIR_IMAGE}
 
     gen_version
 

@@ -9,14 +9,15 @@ do_compile_prepend() {
 do_install_append() {
     mkdir -p ${D}/mnt/legato
 
-    cp -R ${S}/build/${target}/staging/* ${D}/mnt/legato
+    first_target=$(echo ${LEGATO_ROOTFS_TARGETS} | awk '{print $1}')
+    cp -R ${S}/build/$first_target/staging/* ${D}/mnt/legato
 
     mkdir -p ${D}/mnt/flash
 }
 
-FILES_${PN}-dbg += "mnt/legato/usr/local/bin/.debug/*"
-FILES_${PN}-dbg += "mnt/legato/usr/local/lib/.debug/*"
+FILES_${PN}-dbg += "mnt/legato/usr/local/*/.debug/*"
+FILES_${PN}-dbg += "mnt/legato/system/*/.debug/*"
+FILES_${PN}-dbg += "mnt/legato/apps/*/read-only/*/.debug/*"
 FILES_${PN}  = "mnt/legato/*"
 FILES_${PN} += "mnt/flash"
 FILES_${PN} += "opt/*"
-

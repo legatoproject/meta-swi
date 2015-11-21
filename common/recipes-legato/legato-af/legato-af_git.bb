@@ -11,23 +11,10 @@ FILESEXTRAPATHS += "${THISDIR}/files"
 
 LEGATO_ROOT ?= "/mnt/legato"
 
-libdir = "/usr/local/lib"
-
 LDFLAGS = ""
 TARGET_LDFLAGS = ""
 
 do_configure[noexec] = "1"
-
-do_generate_version() {
-    make version
-
-    # Remove phony from 'build_version' or 'version' targets to make sure
-    # that the version will not change
-    sed -i 's/.PHONY: version//g' ${S}/Makefile
-    sed -i 's/.PHONY: build_version//g' ${S}/Makefile
-}
-
-addtask generate_version before do_compile after do_unpack
 
 do_prepare_tools[depends] = "legato-tools:do_populate_sysroot"
 do_prepare_tools() {
@@ -35,6 +22,7 @@ do_prepare_tools() {
     sed -i 's/.PHONY: tools//g' ${S}/Makefile
     sed -i 's/tools:/disabled_tools:/g' ${S}/Makefile
     touch ${S}/tools
+    mkdir -p ${S}/build/tools
 
     # Prepare bin/
     mkdir -p ${S}/bin
@@ -42,6 +30,8 @@ do_prepare_tools() {
 
     realmk=$(which mk)
     echo "mk: $realmk"
+
+    ln -sf $realmk build/tools/mk
 
     cd ${S}/bin
     ln -sf $realmk mk
@@ -60,37 +50,27 @@ compile_target() {
     make $LEGATO_TARGET
 }
 
-do_compile_prepend() {
-    # For some reason this doesn't work in do_unpack_append
-    # Need to grab the airvantage module if it isn't there already
-    if [ ! -f "${S}/airvantage/CMakeLists.txt" ]
-    then
-        git submodule init
-        git submodule update
-    fi
-
-    # If there is some unexpected pending changes, regenerate version file
-    if git status -s | grep -ve '\(Makefile\|proprietary.*\|tools\)'; then
-        do_generate_version
-    fi
-}
-
 do_install() {
+    libdir="/usr/local/lib"
+
     install -d ${D}/opt/legato
 
     # version file
-    install ${S}/version ${D}/opt/legato/
     LEGATO_VERSION=$(cat ${S}/version)
+
+    install ${S}/version ${D}/opt/legato/
     install -d ${D}/usr/share/legato/
     install ${S}/version ${D}/usr/share/legato/
 
-    # start-up scripts
-    install -d ${D}/opt/legato/startupDefaults
-    for target in ${LEGATO_ROOTFS_TARGETS}; do
-        for script in $(find ${S}/build/$target/staging/mnt/flash/startupDefaults -type f); do
-            install $script ${D}/opt/legato/startupDefaults/
+    if [ -d "${S}/build/$target/staging/mnt/flash" ]; then
+        # start-up scripts
+        install -d ${D}/opt/legato/startupDefaults
+        for target in ${LEGATO_ROOTFS_TARGETS}; do
+            for script in $(find ${S}/build/$target/staging/mnt/flash/startupDefaults -type f); do
+                install $script ${D}/opt/legato/startupDefaults/
+            done
         done
-    done
+    fi
 
     # headers
     install -d ${D}${includedir}
@@ -108,7 +88,12 @@ do_install() {
 
     # liblegato
     install -d ${D}${libdir}
-    install ${S}/build/$(echo ${LEGATO_ROOTFS_TARGETS} | awk '{print $1}')/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
+    first_target=$(echo ${LEGATO_ROOTFS_TARGETS} | awk '{print $1}')
+    if [ -e "${S}/staging/$first_target/bin/lib/liblegato.so" ]; then
+        install ${S}/staging/$first_target/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
+    else
+        install ${S}/build/$first_target/staging/system/lib/liblegato.so ${D}${libdir}/liblegato.so
+    fi
 
     # API files
     install -d ${D}/usr/share/legato/interfaces
@@ -131,11 +116,14 @@ do_install_image() {
     done
 }
 
-FILES_${PN}-dbg += "usr/local/bin/.debug/*"
-FILES_${PN}-dbg += "usr/local/lib/.debug/*"
+FILES_${PN}-dbg += "usr/local/*/.debug/*"
+FILES_${PN}-dbg += "*/.debug/*"
 
 FILES_${PN}-dev += "usr/local/lib/libjansson.so"
 FILES_${PN}-dev += "usr/local/lib/libjansson.so.4"
+
+FILES_${PN}-dev += "lib/libjansson.so"
+FILES_${PN}-dev += "lib/libjansson.so.4"
 
 FILES_${PN} += "opt/legato/*"
 FILES_${PN} += "usr/local/*"
