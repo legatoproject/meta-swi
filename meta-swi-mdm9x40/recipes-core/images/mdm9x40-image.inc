@@ -74,15 +74,27 @@ create_usrfs() {
 
 do_rootfs[prefuncs] += "create_usrfs"
 
-# Create UBI image
-prepare_ubi() {
-    local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubi"
-    local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
+prepare_ubi_ps() {
+    local page_size=$1
+
+    local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.ubi"
+    local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${page_size}.ubi"
 
     local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubinize.cfg"
 
-    create_ubinize_config $ubinize_cfg
-    create_ubi_image 4k $ubinize_cfg $ubi_path $ubi_link_path
+    create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
+}
+
+# Create UBI images
+prepare_ubi() {
+    prepare_ubi_ps '2k'
+    prepare_ubi_ps '4k'
+
+    # Default image (no bs suffix) to 4k
+    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.ubi"
+    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
+    rm -f $ubi_link_path
+    ln -s $(basename $ubi_link_path_def) $ubi_link_path
 }
 
 do_rootfs[postfuncs] += "prepare_ubi"
