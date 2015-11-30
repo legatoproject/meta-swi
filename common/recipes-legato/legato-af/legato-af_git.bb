@@ -89,8 +89,8 @@ do_install() {
     # liblegato
     install -d ${D}${libdir}
     first_target=$(echo ${LEGATO_ROOTFS_TARGETS} | awk '{print $1}')
-    if [ -e "${S}/staging/$first_target/bin/lib/liblegato.so" ]; then
-        install ${S}/staging/$first_target/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
+    if [ -e "${S}/build/$first_target/bin/lib/liblegato.so" ]; then
+        install ${S}/build/$first_target/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
     else
         install ${S}/build/$first_target/staging/system/lib/liblegato.so ${D}${libdir}/liblegato.so
     fi
