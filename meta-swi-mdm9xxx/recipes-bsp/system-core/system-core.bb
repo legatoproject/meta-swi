@@ -15,6 +15,8 @@ SRC_URI += "file://0001-Fix-libmincrypt-include-path.patch"
 
 inherit autotools pkgconfig
 
+DEPENDS += "glib-2.0"
+
 S = "${WORKDIR}/git"
 
 ALLOW_EMPTY_${PN} = "1"
