@@ -29,13 +29,15 @@ do_install_append() {
     rm -rf ${D}/usr/src/kernel/scripts
 }
 
+BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x40-${DATETIME}.2k"
 BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x40-${DATETIME}.4k"
 
 MACHINE_KERNEL_BASE = "0x81800000"
 MACHINE_KERNEL_TAGS_OFFSET = "0x88000000"
 
-do_deploy_append() {
-    page_size=4096
+gen_master_dtb() {
+    master_dtb_name=$1
+    page_size=$2
 
     kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
     if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
@@ -45,7 +47,7 @@ do_deploy_append() {
     ls -al $kernel_img
 
     set -xe
-    
+
     ver=$(sed -r 's/#define UTS_RELEASE "(.*)"/\1/' ${B}/include/generated/utsrelease.h)
     dtb_files=$(find ${B}/arch/arm/boot/dts -iname "*${BASEMACHINE_QCOM}*.dtb" | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
 
@@ -58,23 +60,30 @@ do_deploy_append() {
     ${STAGING_BINDIR_NATIVE}/dtbtool \
         ${B}/arch/arm/boot/dts/ \
         -s $page_size \
-        -o ${DEPLOYDIR}/masterDTB \
+        -o ${DEPLOYDIR}/$master_dtb_name \
         -p ${S}/scripts/dtc/ \
         -v
 
-    if ! [ -e "${DEPLOYDIR}/masterDTB" ]; then
-        echo "Unable to generate masterDTB"
+    if ! [ -e "${DEPLOYDIR}/$master_dtb_name" ]; then
+        echo "Unable to generate $master_dtb_name"
         exit 1
     fi
+}
+
+do_deploy_append() {
+    gen_master_dtb masterDTB.2k 2048
+    gen_master_dtb masterDTB.4k 4096
 }
 
 gen_bootimg() {
     image_flags=$1
     image_name=$2
     image_link=$3
-    page_size=$4
+    master_dtb_name=$4
+    page_size=$5
 
     set -xe
+
     kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
     if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
         kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
@@ -84,7 +93,7 @@ gen_bootimg() {
 
     # Initramfs
     ${STAGING_BINDIR_NATIVE}/mkbootimg \
-        --dt ${DEPLOYDIR}/masterDTB \
+        --dt ${DEPLOYDIR}/$master_dtb_name \
         --kernel $kernel_img \
         --ramdisk /dev/null \
         --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
@@ -98,7 +107,11 @@ gen_bootimg() {
 }
 
 do_bootimg() {
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x40 4096
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x40.2k masterDTB.2k 2048
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x40.4k masterDTB.4k 4096
+
+    ln -sf ${BOOTIMG_NAME_2k}.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.img
 }
 
 addtask bootimg after do_deploy before do_build
+
