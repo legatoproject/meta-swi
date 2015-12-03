@@ -6,10 +6,10 @@ LK_TARGET = "mdm9640"
 
 do_install() {
     install -d ${D}/boot
-    install ${S}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
+    install ${B}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
 }
 
 do_deploy() {
     install -d ${DEPLOY_DIR_IMAGE}
-    install ${S}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
+    install ${B}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
 }

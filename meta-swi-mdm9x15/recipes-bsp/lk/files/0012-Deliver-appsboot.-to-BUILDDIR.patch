@@ -1,0 +1,27 @@
+From 0438a3238cd69d2a97d2c3a6a6de42c16bd3c43f Mon Sep 17 00:00:00 2001
+From: Bertrand Roussel <broussel@sierrawireless.com>
+Date: Thu, 3 Dec 2015 15:46:22 -0800
+Subject: [PATCH] Deliver appsboot.* to BUILDDIR
+
+---
+ target/mdm9615/tools/makefile | 4 ----
+ 1 file changed, 4 deletions(-)
+
+diff --git a/target/mdm9615/tools/makefile b/target/mdm9615/tools/makefile
+index aedda70..16edab9 100644
+--- a/target/mdm9615/tools/makefile
++++ b/target/mdm9615/tools/makefile
+@@ -1,10 +1,6 @@
+ #Makefile to generate appsboot.mbn
+ 
+-ifeq ($(BOOTLOADER_OUT),.)
+ APPSBOOTHEADER_DIR  := $(BUILDDIR)
+-else
+-APPSBOOTHEADER_DIR  := $(BOOTLOADER_OUT)/../..
+-endif
+ 
+ SRC_DIR  := target/$(TARGET)/tools
+ COMPILER := gcc
+-- 
+2.1.4
+

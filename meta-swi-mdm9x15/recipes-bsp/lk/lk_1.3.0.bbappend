@@ -13,5 +13,7 @@ SRC_URI += "file://0008-SBM-16707-lk-debug-msg-on-uart.patch"
 SRC_URI += "file://0009-TRAC-2623-Provide-sysroot-to-gcc-and-ld.patch"
 SRC_URI += "file://0010-TRAC-2797-WP85-support-and-fastboot-support-for-user1-partition.patch"
 SRC_URI += "file://0011-TRAC-3105-LK-set-quiet-option.patch"
+SRC_URI += "file://0012-Deliver-appsboot.-to-BUILDDIR.patch"
 
 LK_TARGET = "mdm9615"
+

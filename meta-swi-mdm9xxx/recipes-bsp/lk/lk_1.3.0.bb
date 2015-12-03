@@ -15,6 +15,8 @@ SRC_URI = "${LK_REPO}"
 
 S = "${WORKDIR}/git"
 
+B = "${WORKDIR}/build"
+
 LK_TARGET ?= "mdm9615"
 
 # Debug levels you could have. Default is critical.
@@ -23,7 +25,7 @@ LK_TARGET ?= "mdm9615"
 # 2 - SPEW
 LK_DEBUG ?= "0"
 
-EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' ${LK_TARGET} DEBUG=${LK_DEBUG}"
+EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' ${LK_TARGET} DEBUG=${LK_DEBUG} BOOTLOADER_OUT='${B}'"
 
 do_tag_lk() {
 	# We remove the sierra_lkversion.h to avoid this file to be counted in sha1
@@ -35,18 +37,20 @@ do_tag_lk() {
 
 addtask tag_lk before do_compile after do_configure
 
+do_compile[dirs] = "${S}"
+
 do_install() {
 	install	-d ${D}/boot
-	install ${S}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
-	install ${S}/build-${LK_TARGET}/appsboot.raw ${D}/boot
+	install ${B}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
+	install ${B}/build-${LK_TARGET}/appsboot.raw ${D}/boot
 }
 
 FILES_${PN} = "/boot"
 
 do_deploy() {
 	install -d ${DEPLOY_DIR_IMAGE}
-	install ${S}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
-	install ${S}/build-${LK_TARGET}/appsboot.raw ${DEPLOY_DIR_IMAGE}
+	install ${B}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
+	install ${B}/build-${LK_TARGET}/appsboot.raw ${DEPLOY_DIR_IMAGE}
 }
 
 do_deploy[dirs] = "${S}"
