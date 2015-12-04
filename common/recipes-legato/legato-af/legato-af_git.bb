@@ -101,7 +101,7 @@ do_install() {
     for file in $(find ./interfaces -name "*.api"); do
         dir=$(dirname $file)
         echo "Installing API: $file"
-        if [[ "$dir" != "." ]]; then
+        if [ "$dir" != "." ]; then
             install -d ${D}/usr/share/legato/$dir
         fi
         install $file ${D}/usr/share/legato/$file

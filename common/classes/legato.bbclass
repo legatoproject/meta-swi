@@ -17,10 +17,10 @@ DEPENDS += "${@check_legato_af_dep(d)}"
 legato_toolchain_env() {
     TARGET=$1
 
-    TOOLCHAIN_DIR_ENV="${TARGET^^}_TOOLCHAIN_DIR"
+    TOOLCHAIN_DIR_ENV="`echo ${TARGET} | tr '[:lower:]' '[:upper:]'`_TOOLCHAIN_DIR"
     TOOLCHAIN_DIR=$(dirname $(which $(echo $CC |awk '{print $1}')))
 
-    TOOLCHAIN_PREFIX_ENV="${TARGET^^}_TOOLCHAIN_PREFIX"
+    TOOLCHAIN_PREFIX_ENV="`echo ${TARGET} | tr '[:lower:]' '[:upper:]'`_TOOLCHAIN_PREFIX"
     TOOLCHAIN_PREFIX=$(basename $(echo $CC |awk '{print $1}') | sed 's/gcc//g')
 
     export ${TOOLCHAIN_DIR_ENV}=$TOOLCHAIN_DIR

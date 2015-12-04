@@ -38,10 +38,10 @@ do_install() {
         install -m 0755 ${S}/reset_reboot_cookie -D ${D}${sysconfdir}/init.d/reset_reboot_cookie
         install -m 0755 ${S}/shutdown -D ${D}${sysconfdir}/init.d/shutdown
         install -m 0755 ${S}/start_power_config -D ${D}${sysconfdir}/init.d/power_config
-        pushd ${D}${base_sbindir}
+        cd ${D}${base_sbindir}
         ln -s powerapp sys_reboot
         ln -s powerapp sys_shutdown
-        popd
+        cd -
 }
 
 pkg_postinst_${PN}-reboot () {
