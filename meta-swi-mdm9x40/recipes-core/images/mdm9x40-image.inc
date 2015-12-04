@@ -36,6 +36,9 @@ IMAGE_INSTALL += "libcap-bin"
 # Tools and helpers for i2c development
 IMAGE_INSTALL += "i2c-tools"
 
+# Include legato within image
+IMAGE_INSTALL += "legato-af"
+
 create_ubinize_config() {
     local cfg_path=$1
 
@@ -120,3 +123,4 @@ python do_unpack2() {
 }
 
 addtask unpack2 before do_rootfs
+
