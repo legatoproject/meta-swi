@@ -129,6 +129,6 @@ FILES_${PN} += "opt/legato/*"
 FILES_${PN} += "usr/local/*"
 FILES_${PN} += "mnt/legato/*"
 
-INSANE_SKIP_${PN} = "installed-vs-shipped dev-deps"
+INSANE_SKIP_${PN} = "installed-vs-shipped dev-deps dev-so"
 
 
