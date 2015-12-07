@@ -26,7 +26,7 @@ do_compile_append() {
 
 do_install_append() {
     oe_runmake headers_install O=${D}/usr/src/kernel
-    rm -rf ${D}/usr/src/kernel/scripts
+    oe_runmake -C $kerneldir CC="${KERNEL_CC}" LD="${KERNEL_LD}" clean _mrproper_scripts 
 }
 
 BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x40-${DATETIME}.2k"

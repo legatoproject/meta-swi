@@ -47,6 +47,11 @@ def check_legato_pkg(d):
 
 IMAGE_INSTALL += "${@check_legato_pkg(d)}"
 
+# AR8161
+IMAGE_INSTALL += "pciutils"
+IMAGE_INSTALL += "alx"
+IMAGE_INSTALL += "kernel-module-alx"
+
 create_ubinize_config() {
     local cfg_path=$1
 
