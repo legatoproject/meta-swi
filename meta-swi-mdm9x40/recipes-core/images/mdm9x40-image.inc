@@ -37,7 +37,15 @@ IMAGE_INSTALL += "libcap-bin"
 IMAGE_INSTALL += "i2c-tools"
 
 # Include legato within image
-IMAGE_INSTALL += "legato-af"
+
+# Only add Legato if this is a LEGATO_BUILD
+def check_legato_pkg(d):
+    legato_build = d.getVar('LEGATO_BUILD', True) or "false"
+    if legato_build == "true":
+        return "legato-af"
+    return ""
+
+IMAGE_INSTALL += "${@check_legato_pkg(d)}"
 
 create_ubinize_config() {
     local cfg_path=$1
