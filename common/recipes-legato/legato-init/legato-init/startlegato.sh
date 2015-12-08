@@ -15,7 +15,8 @@ beginswith() { case $2 in $1*) true;; *) false;; esac; }
 LEGATO_START=/mnt/legato/start
 
 # This is where old startup lived. We can try this if we we don't have new startup.
-STARTUP_DIR=/mnt/flash/startup
+COMPAT_STARTUP=/etc/init.d/startlegato-compat.sh
+
 
 case "$1" in
     start)
@@ -24,46 +25,9 @@ case "$1" in
         then
             $LEGATO_START &
         else
-
-            # Check for an old style startup and see if we can make it run.
-            # This code will be removed in a not too distant future rootfs release.
-
-            echo "WARNING: Valid Legato install not found."
-            echo "Checking for legacy version and attempting alternate start up."
-            # Make sure the directory actually exists
-            if [ ! -d $STARTUP_DIR ]
-            then
-              echo "ERROR: Legato install missing, out of date or corrupted."
-              echo "Exiting Legato startup."
-              exit 0
-            fi
-
-            # Check our directory to see if there is anything to run
-            files=`ls $STARTUP_DIR`
-            cd $STARTUP_DIR
-
-            # List the files in the order of their numeric id
-            # Assumes fg_xx_script, or bg_xx_script where
-            # xx identifies the start order
-
-            files=`ls -1 | sort -k2 -t"_"`
-
-            for file in $files
-            do
-              # Execute the files in order
-              if [ -x $file -a -f $file -a -O $file ]
-              then
-                if beginswith fg_ "$file"; then
-                  echo "Executing $file in foreground"
-                  ./${file}
-                elif beginswith bg_ "$file"; then
-                  echo "Executing $file in background"
-                  ./${file}&
-                fi
-              fi
-            done
-
+            $COMPAT_STARTUP start
         fi
+
         ;;
 
     stop)
@@ -73,17 +37,7 @@ case "$1" in
         then
             $LEGATO_START stop
         else
-            # We may have an old style legato install. Try to stop it.
-            # This may not work but might as well try.
-            # This code will be removed in a not too distant future rootfs release.
-            echo "WARNING: Valid Legato install not found."
-            echo "Checking for legacy version and attempting alternate shut down"
-            if [ -f /usr/local/bin/legato ]
-            then
-                /usr/local/bin/legato stop
-            else
-                echo "ERROR: Legato install missing, out of date or corrupted."
-            fi
+            $COMPAT_STARTUP stop
         fi
         ;;
 

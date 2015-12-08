@@ -5,6 +5,7 @@ LIC_FILES_CHKSUM = "file://../startlegato.sh;startline=2;endline=2;md5=0357211a0
 
 SRC_URI = " \
           file://startlegato.sh \
+          file://startlegato-compat.sh \
           "
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
@@ -19,6 +20,7 @@ do_compile() {
 
 do_install_append () {
     install -m 0755 ${WORKDIR}/startlegato.sh -D ${D}${sysconfdir}/init.d/startlegato.sh
+    install -m 0755 ${WORKDIR}/startlegato-compat.sh -D ${D}${sysconfdir}/init.d/startlegato-compat.sh
 
     [ -n "${D}" ] && OPT="-r ${D}" || OPT="-s"
     update-rc.d $OPT -f startlegato.sh remove
