@@ -14,6 +14,11 @@ SRC_URI += "file://0009-TRAC-2623-Provide-sysroot-to-gcc-and-ld.patch"
 SRC_URI += "file://0010-TRAC-2797-WP85-support-and-fastboot-support-for-user1-partition.patch"
 SRC_URI += "file://0011-TRAC-3105-LK-set-quiet-option.patch"
 SRC_URI += "file://0012-Deliver-appsboot.-to-BUILDDIR.patch"
+SRC_URI += "file://0013-trac-3776-Fix-custom-ATAGs-passing-and-processing.patch"
 
 LK_TARGET = "mdm9615"
 
+# Supply mtd parts on kernel command line instead of via ATAGs.
+LK_KERNEL_CMDLINE_MTD_PARTS ?= "1"
+
+EXTRA_OEMAKE += "LK_KERNEL_CMDLINE_MTD_PARTS=${LK_KERNEL_CMDLINE_MTD_PARTS}"

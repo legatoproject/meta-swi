@@ -1,0 +1,176 @@
+From 05cc02155982a95a32c299059e2935a8454ddadd Mon Sep 17 00:00:00 2001
+From: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+Date: Wed, 16 Dec 2015 14:48:18 -0800
+Subject: [PATCH] trac:3776 - Fix custom ATAGs passing and processing
+
+Having custom ATAGs is overall not good idea, because kernel system
+processing is not aware of it (device tree is one good example).
+
+In order to overcome this problem, and let kernel do the work for us,
+we are gonig to pass MTD partition information via kernel command line.
+This way there is no additional work for us on the kernel side, and
+there is no need to worry about upstreaming the changes, once there is
+kernel version change.
+
+Signed-off-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+---
+ app/aboot/aboot.c          |   76 +++++++++++++++++++++++++++++++++++++++++++-
+ makefile                   |    5 +++
+ platform/msm_shared/nand.c |    5 +++
+ 3 files changed, 85 insertions(+), 1 deletion(-)
+
+diff --git a/app/aboot/aboot.c b/app/aboot/aboot.c
+index 64d921b..654cc6c 100644
+--- a/app/aboot/aboot.c
++++ b/app/aboot/aboot.c
+@@ -89,6 +89,15 @@
+ #define UBI_MAGIC_NUM      0x23494255
+ #endif /* SIERRA */
+ 
++/* Custom ATAGs are not good idea, because they are not proceeses by Linux
++   kernel, and represent the problem once device tree is added to the picture.
++   It is much less painful to add MTD parts to command line and pass it
++   to kernel that way. We need about 1.1k bytes for mtd parts, but we allocate
++   2K to round it up (this is temporary buffer anyhow). */
++#if defined(CMDLINE_MTD_PARTS)
++static char mtdparts_cmdline[2048]=" mtdparts=msm_nand:";
++#endif
++
+ static const char *emmc_cmdline = " androidboot.emmc=true";
+ static const char *usb_sn_cmdline = " androidboot.serialno=";
+ static const char *battchg_pause = " androidboot.mode=charger";
+@@ -148,6 +157,31 @@ static void ptentry_to_tag(unsigned **ptr, struct ptentry *ptn)
+ 	*ptr += sizeof(struct atag_ptbl_entry) / sizeof(unsigned);
+ }
+ 
++/* Will change the content of cmdline_in */
++static void ptentry_to_cmdline(char **cmdline_in, struct ptentry *ptn,
++							   unsigned char use_start)
++{
++	char *cmdline = *cmdline_in;
++
++	/* offset */
++	sprintf(cmdline, "0x%08x", ptn->length * flash_get_block_size());
++	cmdline += strlen(cmdline);
++
++	/* start memory location (if required) */
++	if(use_start) {
++		sprintf(cmdline, "@0x%08x", ptn->start * flash_get_block_size());
++		cmdline += strlen(cmdline);
++	}
++
++	*cmdline++ = '(';
++	memcpy(cmdline, ptn->name, strlen(ptn->name));
++	cmdline += strlen(cmdline);
++	*cmdline++ = ')';
++
++	/* Make sure address is updated. */
++	*cmdline_in = cmdline;
++}
++
+ void boot_linux(void *kernel, unsigned *tags,
+ 		const char *cmdline, unsigned machtype,
+ 		void *ramdisk, unsigned ramdisk_size)
+@@ -174,6 +208,35 @@ void boot_linux(void *kernel, unsigned *tags,
+ 
+ 	ptr = target_atag_mem(ptr);
+ 
++#if defined(CMDLINE_MTD_PARTS)
++	if (!target_is_emmc_boot()) {
++		/* Skip NAND partitions for eMMC boot */
++		if ((ptable = flash_get_ptable()) && (ptable->count != 0)) {
++			int i;
++			int flag;
++			char *mtdp = mtdparts_cmdline + strlen(mtdparts_cmdline);
++
++			for (i = 0; i < ptable->count; ++i) {
++
++				if(i == 0)
++				{
++					flag = 1;
++				}
++				else
++				{
++					flag = 0;
++					*mtdp++ = ',';
++				}
++
++				/* Will change address mtdp is pointing to. */
++				ptentry_to_cmdline(&mtdp, ptable_get(ptable, i), flag);
++			}
++			*mtdp = '\0';
++			cmdline_len += strlen(mtdparts_cmdline);
++		}
++	}
++	dprintf(INFO, "cmdline mtdparts: [%s]\n", mtdparts_cmdline);
++#else
+ 	if (!target_is_emmc_boot()) {
+ 		/* Skip NAND partition ATAGS for eMMC boot */
+ 		if ((ptable = flash_get_ptable()) && (ptable->count != 0)) {
+@@ -185,9 +248,10 @@ void boot_linux(void *kernel, unsigned *tags,
+ 				ptentry_to_tag(&ptr, ptable_get(ptable, i));
+ 		}
+ 	}
++#endif
+ 
+ 	if (cmdline && cmdline[0]) {
+-		cmdline_len = strlen(cmdline);
++		cmdline_len += strlen(cmdline);
+ 		have_cmdline = 1;
+ 	}
+ 	if (target_is_emmc_boot()) {
+@@ -256,12 +320,22 @@ void boot_linux(void *kernel, unsigned *tags,
+ 			src = cmdline;
+ 			while ((*dst++ = *src++));
+ 		}
++
+ 		if (target_is_emmc_boot()) {
+ 			src = emmc_cmdline;
+ 			if (have_cmdline) --dst;
+ 			have_cmdline = 1;
+ 			while ((*dst++ = *src++));
+ 		}
++		else
++		{
++#if defined(CMDLINE_MTD_PARTS)
++			src = mtdparts_cmdline;
++			if (have_cmdline) --dst;
++			have_cmdline = 1;
++			while ((*dst++ = *src++));
++#endif
++		}
+ 
+ 		src = usb_sn_cmdline;
+ 		if (have_cmdline) --dst;
+diff --git a/makefile b/makefile
+index 29ebe36..6c38a0c 100644
+--- a/makefile
++++ b/makefile
+@@ -58,6 +58,11 @@ ifeq ($(SIGNED_KERNEL),1)
+   CFLAGS += -D_SIGNED_KERNEL=1
+ endif
+ 
++# Supply mtd parts via command line.
++ifeq ($(LK_KERNEL_CMDLINE_MTD_PARTS),1)
++  CFLAGS += -DCMDLINE_MTD_PARTS
++endif
++
+ # When the host arch is ARM, ensure stack protection code is not emitted since
+ # it's not supported by the bootloader's libc
+ ifneq ($(shell uname -m | grep "arm.*"),)
+diff --git a/platform/msm_shared/nand.c b/platform/msm_shared/nand.c
+index 7ad0375..f673c54 100644
+--- a/platform/msm_shared/nand.c
++++ b/platform/msm_shared/nand.c
+@@ -3602,3 +3602,8 @@ int flash_ecc_bch_enabled()
+ {
+ 	return enable_bch_ecc;
+ }
++
++unsigned flash_get_block_size() {
++	return flash_info.block_size;
++}
++
+-- 
+1.7.9.5
+
