@@ -87,11 +87,11 @@ set_boot_dev()
         # Detect ubi partition
         UBI_FLAG=$(dd if=/dev/mtd$mtd_dev_num count=4 bs=1 2>/dev/null)
         if echo $UBI_FLAG | grep 'UBI#' > /dev/null; then
-            if ! [ -e "/dev/ubiblock0_0" ]; then
+            if ! [ -e "/dev/ubi0_0" ]; then
                 ubiattach -m ${mtd_dev_num} -d 0
-                ubiblkvol --attach /dev/ubi0_0
             fi
-            BOOTDEV="/dev/ubiblock0_0"
+            BOOTDEV="/dev/ubi0_0"
+            BOOTOPTS="bulk_read"
 
         # Fallback on yaffs2
         else

@@ -22,6 +22,8 @@ IMAGE_INSTALL += "libopencore-amr"
 IMAGE_INSTALL += "iperf"
 IMAGE_INSTALL += "iproute2-tc"
 IMAGE_INSTALL += "libvo-amrwbenc"
+IMAGE_INSTALL += "start-scripts-find-partitions"
+IMAGE_INSTALL += "start-scripts-firmware-links"
 
 # Required to provide some extended privileges
 # to non-root processes
