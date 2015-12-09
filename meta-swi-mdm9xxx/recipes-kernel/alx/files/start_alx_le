@@ -34,7 +34,7 @@ case "$1" in
         echo -n "Starting/Loading Ethernet Driver: "
         echo "ALX:start/load" > /dev/kmsg
         insmod $MODULE_BASE/extra/alx.ko
-		ifconfig eth0 up
+        ifup eth0
         echo "done loading ethernet driver"
         ;;
   stop)
