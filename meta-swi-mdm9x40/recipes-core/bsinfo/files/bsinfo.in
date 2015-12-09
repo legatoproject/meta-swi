@@ -1,0 +1,38 @@
+#!/bin/sh
+
+NAME="#NAME"
+ID="#ID"
+REV="#REV"
+
+ACTION="type"
+SILENT=false
+
+while getopts ":strl" opt; do
+    case $opt in
+        s) SILENT=true
+            ;;
+        t) ACTION="type"
+            ;;
+        r) ACTION="rev"
+            ;;
+        l) ACTION="list"
+            ;;
+    esac
+done
+
+if test "$ACTION" = "list"; then
+    echo "$NAME - $ID"
+elif test "$ACTION" = "rev"; then
+    if $SILENT; then
+        echo "$REV"
+    else
+        echo "Hw Rev (02X): $REV"
+    fi
+else
+    if $SILENT; then
+        echo "$ID"
+    else
+        echo "Hw Type (02X): $ID"
+    fi
+fi
+

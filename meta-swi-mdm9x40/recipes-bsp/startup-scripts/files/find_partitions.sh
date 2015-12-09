@@ -46,7 +46,7 @@ FindAndMountUBI () {
             mount -t ubifs /dev/ubi1_0 $dir -o bulk_read
             break
         else
-            sleep 0.010
+            usleep 10
         fi
     done
 }

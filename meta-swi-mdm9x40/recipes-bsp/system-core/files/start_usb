@@ -34,20 +34,30 @@ case "$1" in
         case $KERNEL in
           3.*)
 
-		# boot hsusb composition:
-		if [ -d /sys/class/android_usb/android0 ]
-		then
-			/usr/bin/usb/boot_hsusb_composition n
-		fi
+            # FFS / ADB
+            if [ -d /sys/class/android_usb/android0/f_ffs ]
+            then
+                echo adb > /sys/class/android_usb/android0/f_ffs/aliases
+                mkdir -p /dev/usb-ffs/adb
+                mount -o uid=2000,gid=2000 -t functionfs adb /dev/usb-ffs/adb
+                mount -o remount,gid=5,mode=620 /dev/pts
+                mkdir -p /system/bin
+                ln -s /bin/sh  /system/bin/sh
+            fi
 
+            # boot hsusb composition:
+            if [ -d /sys/class/android_usb/android0 ]
+            then
+                /usr/bin/usb/boot_hsusb_composition n
+            fi
 
-		# boot hsic composition:
-		if [ -d /sys/class/android_usb/android1 ]
-		then
-			/usr/bin/usb/boot_hsic_composition y
-		fi
+            # boot hsic composition:
+            if [ -d /sys/class/android_usb/android1 ]
+            then
+                /usr/bin/usb/boot_hsic_composition y
+            fi
 
-		;;
+            ;;
           2.*)
                 # Nothing to do for 2.x kernels
                 ;;

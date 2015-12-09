@@ -54,6 +54,9 @@ IMAGE_INSTALL += "pciutils"
 IMAGE_INSTALL += "alx"
 IMAGE_INSTALL += "kernel-module-alx"
 
+# Stubs
+IMAGE_INSTALL += "bsinfo"
+
 create_ubinize_config() {
     local cfg_path=$1
 
