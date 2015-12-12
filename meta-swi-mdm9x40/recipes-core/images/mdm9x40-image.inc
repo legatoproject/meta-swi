@@ -38,16 +38,14 @@ IMAGE_INSTALL += "libcap-bin"
 # Tools and helpers for i2c development
 IMAGE_INSTALL += "i2c-tools"
 
-# Include legato within image
-
 # Only add Legato if this is a LEGATO_BUILD
 def check_legato_pkg(d):
     legato_build = d.getVar('LEGATO_BUILD', True) or "false"
     if legato_build == "true":
-        return "legato-af"
+        return "legato-image"
     return ""
 
-IMAGE_INSTALL += "${@check_legato_pkg(d)}"
+DEPENDS += "${@check_legato_pkg(d)}"
 
 # AR8161
 IMAGE_INSTALL += "pciutils"
