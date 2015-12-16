@@ -49,7 +49,13 @@ do_install() {
     for target in ${LEGATO_ROOTFS_TARGETS}; do
         # Deploy app package in directory (for manual deployment)
         install -d ${DEPLOY_DIR}/legato/$target
-        install ${S}/${LEGATO_APP_NAME}.$target ${DEPLOY_DIR}/legato/$target
+        for app in `echo ${LEGATO_APP_NAME}`; do
+            local app_file=${S}/${app}.${target}
+            if [ -e ${S}/${app}.${target}.update ]; then
+                app_file=${S}/${app}.${target}.update
+            fi
+            install ${app_file} ${DEPLOY_DIR}/legato/${target}
+        done
     done
 }
 
@@ -63,7 +69,13 @@ do_install_image() {
         # Deploy app package in image
         echo "Shipping ${PN} in legato-image for $target"
         install -d ${LEGATO_STAGING_DIR}/$target/usr/local/bin/apps
-        install ${S}/${LEGATO_APP_NAME}.$target ${LEGATO_STAGING_DIR}/$target/usr/local/bin/apps
+        for app in `echo ${LEGATO_APP_NAME}`; do
+            local app_file=${S}/${app}.${target}
+            if [ -e ${S}/${app}.$target.update ]; then
+                app_file=${S}/${app}.$target.update
+            fi
+            install ${app_file} ${LEGATO_STAGING_DIR}/${target}/usr/local/bin/apps
+        done
     done
 }
 
