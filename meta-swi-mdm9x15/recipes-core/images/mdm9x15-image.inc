@@ -41,6 +41,12 @@ IMAGE_INSTALL += "libcap-bin"
 IMAGE_INSTALL += "i2cgpioctl"
 IMAGE_INSTALL += "i2c-tools"
 
+# Install kernel modules
+IMAGE_INSTALL += "kernel-modules"
+
+# Install device trees to rootfs (/boot directory is default location).
+IMAGE_INSTALL += "kernel-devicetree"
+
 prepare_ubi_ps() {
     local page_size=$1
 
