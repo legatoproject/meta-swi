@@ -8,7 +8,7 @@ COMPATIBLE_MACHINE = "(swi-mdm9x40)"
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9640_defconfig"
 
-SRC_DIR = "${WORKSPACE}/../../kernel"
+SRC_DIR = "${LINUX_REPO_DIR}/.."
 
 LINUX_VERSION ?= "3.10.49"
 PV = "${LINUX_VERSION}+git${GITSHA}"
