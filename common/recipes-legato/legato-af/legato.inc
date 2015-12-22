@@ -11,18 +11,35 @@ python () {
     d.setVar("BB_STRICT_CHECKSUM", False)
 }
 
-# Determine legato working directory based on origin
-def determine_legato_workdir(d):
+# Determine legato working directory or version based on origin
+def determine_legato_prop(d, prop):
     legatoRepo = d.getVar("LEGATO_REPO", True)
+
+    version = 'git'
+    if prop == 'workdir':
+        workDir = d.getVar("WORKDIR", True) + "/git"
 
     # Release tarball ?
     import re
-    nameMatch = re.match(r'.*\/(legato-.*)\.tar.*', legatoRepo)
-    if nameMatch:
-        return d.getVar("WORKDIR", True) + "/" + nameMatch.group(1)
-    return d.getVar("WORKDIR", True) + "/git"
+    tarballMatch = re.match(r'.*\/(legato-.*)\.tar.*', legatoRepo)
+    if tarballMatch:
+        version = tarballMatch.group(1)
+        if prop == 'workdir':
+            workDir = d.getVar("WORKDIR", True) + "/" + version
+    else:
+        repoMatch = re.match(r'.*;rev=([a-z0-9]{40}).*', legatoRepo)
+        if repoMatch:
+            version = 'git' + repoMatch.group(1)[:10]
 
-LEGATO_WORKDIR ?= "${@determine_legato_workdir(d)}"
+    if prop == 'version':
+        return version
+    if prop == 'workdir':
+        return workDir
+    else:
+        raise "Unknown property: " + prop
+
+PV = "${@determine_legato_prop(d, 'version')}"
+LEGATO_WORKDIR ?= "${@determine_legato_prop(d, 'workdir')}"
 
 SRC_URI = "${LEGATO_REPO}"
 S = "${LEGATO_WORKDIR}"
