@@ -7,7 +7,8 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/GPL-2.0;md5=80
 
 SRCREV = "de2429e25228552c5d0cb21a93707436cb8602f1"
 SRC_URI = "git://git.ti.com/wilink8-wlan/build-utilites.git;protocol=git \
-           file://wl18xx-conf.bin"
+           file://wl18xx-conf.bin \
+           file://0001-wlcore-ELP-timeout.patch"
 
 S = "${WORKDIR}/git"
 
@@ -35,6 +36,7 @@ do_configure() {
     sed -i 's,CROSS_COMPILE=.*$,CROSS_COMPILE='"${TARGET_SYS}-"',' setup-env
     PATH=.:$PATH ./build_wl18xx.sh init
     PATH=.:$PATH CFLAGS= CC= ./build_wl18xx.sh update ${TIWIFI_RELEASE}
+    (cd src/driver; patch -p1 <${WORKDIR}/0001-wlcore-ELP-timeout.patch)
     sed -i 's,-Werror=date-time,-Wnoerror=date-time,' ${STAGING_KERNEL_DIR}/Makefile
     yes | ./verify_kernel_config.sh "${STAGING_KERNEL_DIR}"/.config || true
 }
