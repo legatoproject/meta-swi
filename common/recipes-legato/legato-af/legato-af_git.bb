@@ -95,6 +95,18 @@ do_install() {
         install ${S}/build/$first_target/staging/system/lib/liblegato.so ${D}${libdir}/liblegato.so
     fi
 
+    # Populate liblegato.so in sysroots/
+    for target in $(echo ${LEGATO_ROOTFS_TARGETS}); do
+        install -d ${D}/usr/share/legato/build/$target/framework/lib
+        if [ -e "${S}/build/$target/bin/lib/liblegato.so" ]; then
+            install ${S}/build/$target/bin/lib/liblegato.so \
+                    ${D}/usr/share/legato/build/$target/framework/lib/liblegato.so
+        else
+            install ${S}/build/$target/staging/system/lib/liblegato.so \
+                    ${D}/usr/share/legato/build/$target/framework/lib/liblegato.so
+        fi
+    done
+
     # API files
     install -d ${D}/usr/share/legato/interfaces
     cd ${S}

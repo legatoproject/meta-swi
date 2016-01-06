@@ -37,5 +37,5 @@ compile_target() {
 	cd ${S}/${LEGATO_APP_NAME}
 
 	mkapp -v -t ${LEGATO_TARGET} -i ${LEGATO_ROOT} -i ${LEGATO_ROOT}/interfaces -i ${LEGATO_ROOT}/c/inc -s ${S} ${LEGATO_APP_NAME}.adef --append-to-version=${LEGATO_APP_VER}
-	cp -p ${LEGATO_APP_NAME}.${LEGATO_TARGET} ${S}
+	cp -p ${LEGATO_APP_NAME}.${LEGATO_TARGET}.update ${S}
 }
