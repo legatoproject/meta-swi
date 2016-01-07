@@ -24,6 +24,7 @@ IMAGE_INSTALL += "iproute2-tc"
 IMAGE_INSTALL += "libvo-amrwbenc"
 IMAGE_INSTALL += "start-scripts-find-partitions"
 IMAGE_INSTALL += "start-scripts-firmware-links"
+IMAGE_INSTALL += "conntrack-tools"
 
 # Required to provide some extended privileges
 # to non-root processes
