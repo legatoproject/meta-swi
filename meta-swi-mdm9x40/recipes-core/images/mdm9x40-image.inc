@@ -101,6 +101,7 @@ prepare_ubi_ps() {
 
     local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubinize.cfg"
 
+    create_ubinize_config $ubinize_cfg
     create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
 }
 
@@ -110,7 +111,7 @@ prepare_ubi() {
     prepare_ubi_ps '4k'
 
     # Default image (no bs suffix) to 4k
-    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.ubi"
+    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.ubi"
     ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
     rm -f $ubi_link_path
     ln -s $(basename $ubi_link_path_def) $ubi_link_path
@@ -119,8 +120,8 @@ prepare_ubi() {
 do_rootfs[postfuncs] += "prepare_ubi"
 
 default_rootfs_ps() {
-    # Default rootfs to ubi
-    ln -sf ${IMAGE_LINK_NAME}.ubi ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
+    # Default rootfs to yaffs2
+    ln -sf ${IMAGE_LINK_NAME}.yaffs2 ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
 }
 
 do_rootfs[postfuncs] += "default_rootfs_ps"
