@@ -79,12 +79,33 @@ do_compile() {
         LIBS="-L"${S}"/fs/lib -lnl-genl-3 -lnl-3 -lpthread -lm" NLLIBNAME=libnl-3.0 \
         CC= \
         ./build_wl18xx.sh utils
+    LDFLAGS= \
+        CFLAGS="-DCONFIG_LIBNL32 -I"${S}"/fs/include/libnl3" \
+        LIBS="-L"${S}"/fs/lib -lnl-genl-3 -lnl-3 -lpthread -lm" NLLIBNAME=libnl-3.0 \
+        CC= \
+    ./build_wl18xx.sh openssl
+    PKG_CONFIG_SYSROOT_DIR= \
+        LDFLAGS= \
+        CFLAGS="-DCONFIG_LIBNL32 -I"${S}"/fs/include/libnl3" \
+        LIBS="-L"${S}"/fs/lib -lnl-genl-3 -lnl-3 -lpthread -lm" NLLIBNAME=libnl-3.0 \
+        CC= \
+    ./build_wl18xx.sh crda
+    (cd ${S}/src/wireless_regdb; \
+    PKG_CONFIG_SYSROOT_DIR= \
+        LDFLAGS= \
+        CC= \
+        WHOAMI="sierrawireless" \
+        DESTDIR=${S}"/fs" \
+        make install)
+    install -m 755 -d ${S}/fs/etc/udev/rules.d
+    install -m 644 ${S}/src/crda/udev/85-regulatory.rules ${S}/fs/etc/udev/rules.d/
 }
 
 do_install() {
     install -m 0755 -d ${D}/etc
     install -m 0755 -d ${D}/lib
     install -m 0755 -d ${D}/usr
+    install -m 0755 -d ${D}/usr/lib/crda
     cp -a ${S}/fs/etc ${D}/
     sed -i 's/wlan1/wlan0/' ${D}/etc/hostapd.conf
     sed -i 's/^ssid=.*$/ssid='${TIWIFI_DEFAULT_AP_NAME}'/' ${D}/etc/hostapd.conf
@@ -92,12 +113,17 @@ do_install() {
     cp -a ${S}/fs/lib/firmware ${D}/lib/
     cp -a ${S}/fs/usr/bin ${D}/usr
     cp -a ${S}/fs/usr/sbin ${D}/usr
+    install -m 0644 ${S}/fs/usr/lib/libreg.so ${D}/lib
+    install -m 0644 ${S}/fs/usr/lib/crda/regulatory.bin ${D}/usr/lib/crda/
+    install -m 0644 ${S}/fs/usr/lib/crda/pubkeys/* ${D}/etc/wireless-regdb/pubkeys/
     cp -a ${S}/fs/sbin ${D}/
     cp -a ${S}/fs/usr/local/bin ${D}/
     cp -a ${S}/fs/usr/local/sbin ${D}/
     cp -a ${WORKDIR}/wl18xx-conf.bin ${D}/lib/firmware/ti-connectivity/
 }
 
-FILES_${PN}-dbg += "usr/sbin/wlconf/.debug"
+INSANE_SKIP_${PN} = "dev-deps"
 
-FILES_${PN} += "lib"
+FILES_${PN}-dbg += "usr/sbin/wlconf/.debug usr/lib/crda/.debug"
+
+FILES_${PN} += "lib usr/lib"
