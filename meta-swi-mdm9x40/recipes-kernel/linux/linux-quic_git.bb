@@ -73,6 +73,7 @@ gen_master_dtb() {
 do_deploy_append() {
     gen_master_dtb masterDTB.2k 2048
     gen_master_dtb masterDTB.4k 4096
+    cp ${B}/vmlinux ${DEPLOYDIR}/vmlinux
 }
 
 gen_bootimg() {
