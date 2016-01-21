@@ -50,6 +50,10 @@ IMAGE_INSTALL += "kernel-devicetree"
 # Userland quota support.
 IMAGE_INSTALL += "quota"
 
+# Add curl with https support
+IMAGE_INSTALL += "curl"
+IMAGE_INSTALL += "ca-certificates"
+
 prepare_ubi_ps() {
     local page_size=$1
 
