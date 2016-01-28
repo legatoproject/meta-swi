@@ -58,14 +58,19 @@ IMAGE_INSTALL += "bsinfo"
 
 create_ubinize_config() {
     local cfg_path=$1
+    local rootfs_type=$2
+
+    local rootfs_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.$rootfs_type"
 
     echo \[sysfs_volume\] > $cfg_path
     echo mode=ubi >> $cfg_path
-    echo image="${UBI_ROOTFS_PATH}" >> $cfg_path
+    echo image="$rootfs_path" >> $cfg_path
     echo vol_id=0 >> $cfg_path
     echo vol_type=dynamic >> $cfg_path
     echo vol_name=rootfs >> $cfg_path
-    echo vol_size="${UBI_ROOTFS_SIZE}" >> $cfg_path
+    if [[ "$rootfs_type" != "squashfs" ]]; then
+        echo vol_size="${UBI_ROOTFS_SIZE}" >> $cfg_path
+    fi
     echo >> $cfg_path
 
     echo \[usrfs_volume\] >> $cfg_path
@@ -97,22 +102,29 @@ do_rootfs[prefuncs] += "create_usrfs"
 prepare_ubi_ps() {
     local page_size=$1
 
-    local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.ubi"
-    local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${page_size}.ubi"
-
     local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubinize.cfg"
 
-    create_ubinize_config $ubinize_cfg
-    create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
+    for rootfs_type in ubifs squashfs; do
+        create_ubinize_config $ubinize_cfg $rootfs_type
+
+        local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.${page_size}.ubi"
+        local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${rootfs_type}.${page_size}.ubi"
+
+        create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
+    done
 }
 
 # Create UBI images
 prepare_ubi() {
     prepare_ubi_ps '2k'
-    prepare_ubi_ps '4k'
+    #prepare_ubi_ps '4k'
 
-    # Default image (no bs suffix) to 4k
-    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.ubi"
+    # Default image (no bs suffix) to 2k + squashfs
+    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.squashfs.2k.ubi"
+    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.ubi"
+    rm -f $ubi_link_path
+    ln -s $(basename $ubi_link_path_def) $ubi_link_path
+
     ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
     rm -f $ubi_link_path
     ln -s $(basename $ubi_link_path_def) $ubi_link_path
