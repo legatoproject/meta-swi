@@ -3,7 +3,7 @@
 SRCREV = "eb356a1ff24619faa656985db376e4c8ffbaa2a4"
 SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=LNX.LE.5.1_rb1.6"
 
-DEPENDS += "zlib openssl"
+DEPENDS += "zlib openssl libcap"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://0001-Fix-typo-in-configure-ac.patch"
