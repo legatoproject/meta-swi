@@ -88,10 +88,21 @@ set_boot_dev()
         UBI_FLAG=$(dd if=/dev/mtd$mtd_dev_num count=4 bs=1 2>/dev/null)
         if echo $UBI_FLAG | grep 'UBI#' > /dev/null; then
             if ! [ -e "/dev/ubi0_0" ]; then
+                # UBI partition, attach device
                 ubiattach -m ${mtd_dev_num} -d 0
             fi
-            BOOTDEV="/dev/ubi0_0"
-            BOOTOPTS="bulk_read"
+            SQFS_FLAG=$(dd if=/dev/ubi0_0 count=4 bs=1 2>/dev/null)
+            if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
+                # squashfs volume, create UBI block device
+                if ! [ -e "/dev/ubiblock0_0" ]; then
+                    ubiblkvol --attach /dev/ubi0_0
+                fi
+                BOOTTYPE=squashfs
+                BOOTDEV="/dev/ubiblock0_0"
+            else
+                BOOTDEV="/dev/ubi0_0"
+                BOOTOPTS="bulk_read"
+            fi
 
         # Fallback on yaffs2
         else
