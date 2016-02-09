@@ -47,6 +47,9 @@ IMAGE_INSTALL += "kernel-modules"
 # Install device trees to rootfs (/boot directory is default location).
 IMAGE_INSTALL += "kernel-devicetree"
 
+# Userland quota support.
+IMAGE_INSTALL += "quota"
+
 prepare_ubi_ps() {
     local page_size=$1
 
