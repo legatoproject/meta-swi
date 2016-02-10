@@ -1,8 +1,8 @@
-DESCRIPTION = "A small image just capable of allowing SWI mdm9x15 to boot (modified for performance tests)."
+DESCRIPTION = "A small image just capable of allowing SWI mdm9x40 to boot (modified for performance tests)."
 
 inherit swi-image-minimal
 
-require mdm9x15-image.inc
+require mdm9x40-image.inc
 
 IMAGE_TYPE = "testperf"
 
@@ -14,11 +14,11 @@ IMAGE_INSTALL += "zlib"
 IMAGE_INSTALL += "libgcrypt"
 IMAGE_INSTALL += "iperf"
 IMAGE_INSTALL += "rt-tests"
-IMAGE_INSTALL += "kernel-module-nf-nat-ftp"
-IMAGE_INSTALL += "kernel-module-nf-conntrack-ftp"
+#IMAGE_INSTALL += "kernel-module-nf-nat-ftp"
+#IMAGE_INSTALL += "kernel-module-nf-conntrack-ftp"
 
-do_rootfs[depends] += "mdm9x15-image-initramfs:do_rootfs"
-do_rootfs[depends] += "mdm9x15-image-minimal:do_rootfs"
+do_rootfs[depends] += "mdm9x40-image-initramfs:do_rootfs"
+do_rootfs[depends] += "mdm9x40-image-minimal:do_rootfs"
 
 rootfs_symlink() {
     # Provide minimal image as rootfs symlink
