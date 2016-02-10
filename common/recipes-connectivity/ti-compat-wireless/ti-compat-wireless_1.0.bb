@@ -26,6 +26,7 @@ TIWIFI_DEFAULT_AP_NAME ?= "SierraWP85"
 do_patch() {
     cd ${S}
     sed -i 's,^[ \t][ \t]*build_all,#\t\tbuild_all,' build_wl18xx.sh
+    sed -i 's,\+="-,\+=" -,g;s,\+=-,\+=" "-,g' build_wl18xx.sh
 }
 
 do_configure() {
@@ -56,7 +57,7 @@ do_compile() {
 
     CC= ./build_wl18xx.sh libnl
     LDFLAGS= \
-        LIBS="-L"${S}"/fs/lib -lnl-genl-3 -lnl-3 -lpthread -lm" \
+        LIBS=" -L"${S}"/fs/lib -lnl-genl-3 -lnl-3 -lpthread -lm" \
         NLLIBNAME=libnl-3.0 \
         CC= \
         ./build_wl18xx.sh hostapd
