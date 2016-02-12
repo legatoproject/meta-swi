@@ -5,9 +5,9 @@ HOMEPAGE = "https://www.codeaurora.org/cgit/quic/le/mdm/reboot-daemon/"
 
 PR = "r0"
 
-# Tag M9615AAAARNLZA1713041
-SRCREV = "a88717ab8a5ae77f5358b9af539ccf0574acc70c"
-REBOOTD_REPO = "git://codeaurora.org/quic/le/mdm/reboot-daemon"
+# Tag LNX.LE.2.0.2-61193-9x15
+SRCREV = "d04220ee2b1b46e19369137117bf82cd92e5420a"
+REBOOTD_REPO = "git://codeaurora.org/quic/le/mdm/reboot-daemon;branch=rhea"
 
 SRC_URI = "${REBOOTD_REPO}"
 

@@ -5,9 +5,9 @@ HOMEPAGE = "http://codeaurora.org/"
 LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://MODULE_LICENSE_APACHE2;md5=d41d8cd98f00b204e9800998ecf8427e"
 
-# Tag M9615AAAARNLZA1611263
-SRCREV = "2935a5fc5bfd4b49303ab92463736e64a76266f5"
-LIBHARDWARE_REPO = "git://codeaurora.org/platform/hardware/libhardware;branch=penguin"
+# Tag LNX.LE.2.0.2-61193-9x15
+SRCREV = "267df67ebf6ac7b29bf43fdfe9af41a64aec0036"
+LIBHARDWARE_REPO = "git://codeaurora.org/platform/hardware/libhardware;branch=LNX.LE.2.1"
 PR = "r0"
 
 SRC_URI  = "${LIBHARDWARE_REPO}"

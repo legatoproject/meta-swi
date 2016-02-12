@@ -12,8 +12,8 @@ ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
 PR = "r0"
 
-# Tag M9615AAAARNLZA1611263
-SRCREV = "7b371cbcfc38e1485f31f8e3087a6a33211e7da2"
+# Tag LNX.LE.2.0.2-61193-9x15
+SRCREV = "aef3f6f231d385d616c09a39e18126fd57256ae9"
 SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=penguin"
 
 SRC_URI = "${SYSTEMCORE_REPO}"
