@@ -9,7 +9,7 @@ PR = "r3"
 
 # Tag LNX.LE.5.1-66218-9x40
 SRCREV = "abd3d4f028fae12ac8d9e90fb19b84694e228a31"
-COMPATWIRELESS_REPO = "git://codeaurora.org/platform/external/compat-wireless;branch=LNX.LE.5.1_rb1.6"
+COMPATWIRELESS_REPO = "git://codeaurora.org/platform/external/compat-wireless;branch=LNX.LE.5.1_rb1.10"
 
 SRC_URI  = "${COMPATWIRELESS_REPO}"
 SRC_URI += "file://start_alx_le"

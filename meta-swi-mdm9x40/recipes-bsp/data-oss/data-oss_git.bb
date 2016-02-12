@@ -11,9 +11,9 @@ DEPENDS += "virtual/kernel glib-2.0"
 EXTRA_OECONF = "--with-sanitized-headers=${STAGING_KERNEL_DIR}/usr/include \
                 --with-glib"
 
-# Tag LNX.LE.5.1-66215-9x40
+# Tag LNX.LE.5.1-66221-9x40
 SRCREV = "67be864a70f78cab0f526f50ec4c8d65acbba80e"
-DATAOSS_REPO ?= "git://codeaurora.org/platform/vendor/qcom-opensource/dataservices;branch=LNX.LE.5.1_rb1.6"
+DATAOSS_REPO ?= "git://codeaurora.org/platform/vendor/qcom-opensource/dataservices;branch=LNX.LE.5.1_rb1.10"
 
 SRC_URI = "${DATAOSS_REPO}"
 S = "${WORKDIR}/git"
