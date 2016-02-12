@@ -23,7 +23,7 @@ case "$1" in
 
         if [ -x $LEGATO_START ]
         then
-            $LEGATO_START &
+            $LEGATO_START
         else
             $COMPAT_STARTUP start
         fi
