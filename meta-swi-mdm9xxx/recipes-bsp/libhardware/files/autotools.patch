@@ -1,0 +1,72 @@
+diff --git a/Makefile.am b/Makefile.am
+new file mode 100644
+index 0000000..f674869
+--- /dev/null
++++ b/Makefile.am
+@@ -0,0 +1,4 @@
++lib_LTLIBRARIES = libhardware.la
++libhardware_la_SOURCES = hardware.c
++libhardware_la_CFLAGS = -Iinclude -DLINUX_ENABLED
++libhardware_la_LDFLAGS = -lcutils -llog
+diff --git a/configure.ac b/configure.ac
+new file mode 100644
+index 0000000..9fad39c
+--- /dev/null
++++ b/configure.ac
+@@ -0,0 +1,33 @@
++AC_PREREQ([2.65])
++AC_INIT("libhardware", "0.0.1", "")
++AM_INIT_AUTOMAKE([1.10 no-define foreign])
++AC_CONFIG_SRCDIR([hardware.c])
++AC_CONFIG_HEADERS([config.h])
++AC_CONFIG_FILES([Makefile])
++
++
++AC_PROG_CXX
++AC_PROG_CC
++
++LT_INIT
++
++AC_CHECK_HEADERS([fcntl.h limits.h stdint.h stdlib.h string.h sys/ioctl.h unistd.h])
++
++AC_HEADER_STDBOOL
++AC_C_INLINE
++AC_TYPE_INT16_T
++AC_TYPE_INT32_T
++AC_TYPE_INT64_T
++AC_TYPE_INT8_T
++AC_TYPE_PID_T
++AC_TYPE_SIZE_T
++AC_TYPE_UINT16_T
++AC_TYPE_UINT32_T
++AC_TYPE_UINT64_T
++AC_TYPE_UINT8_T
++
++AC_FUNC_MALLOC
++AC_FUNC_MMAP
++AC_CHECK_FUNCS([memset munmap strerror])
++
++AC_OUTPUT
+diff --git a/hardware.c b/hardware.c
+index d2e3b4c..402f451 100644
+--- a/hardware.c
++++ b/hardware.c
+@@ -25,10 +25,14 @@
+ #include <limits.h>
+ 
+ #define LOG_TAG "HAL"
+-#include <utils/Log.h>
++#include <cutils/log.h>
+ 
+ /** Base path of the hal modules */
++#ifndef LINUX_ENABLED
+ #define HAL_LIBRARY_PATH1 "/system/lib/hw"
++#else
++#define HAL_LIBRARY_PATH1 "/usr/lib/hw"
++#endif
+ #define HAL_LIBRARY_PATH2 "/vendor/lib/hw"
+ 
+ /**
+-- 
+1.7.6
+
