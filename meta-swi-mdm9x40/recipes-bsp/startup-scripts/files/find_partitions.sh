@@ -37,18 +37,49 @@ FindAndMountUBI () {
    echo "MTD : Detected block device : $dir for $partition"
    mkdir -p $dir
 
-   ubiattach -m $mtd_block_number -d 1 /dev/ubi_ctrl
-   device=/dev/ubi1_0
-   while [ 1 ]
-    do
-        if [ -c $device ]
-        then
-            mount -t ubifs /dev/ubi1_0 $dir -o bulk_read
-            break
-        else
-            usleep 10
+   BOOTTYPE="ubifs"
+   BOOTDEV="/dev/mtdblock${mtd_block_number}"
+   BOOTOPTS="ro"
+
+   # Detect ubi partition
+   UBI_FLAG=$(dd if=/dev/mtd$mtd_block_number count=4 bs=1 2>/dev/null)
+   if echo $UBI_FLAG | grep 'UBI#' > /dev/null; then
+        if ! [ -e "/dev/ubi1_0" ]; then
+            # UBI partition, attach device
+            ubiattach -m ${mtd_block_number} -d 1 /dev/ubi_ctrl
         fi
-    done
+        SQFS_FLAG=$(dd if=/dev/ubi1_0 count=4 bs=1 2>/dev/null)
+        if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
+            # squashfs volume, create UBI block device
+            if ! [ -e "/dev/ubiblock1_0" ]; then
+                ubiblkvol -a /dev/ubi1_0
+                try_count=0
+                # Need to wait for the block device ready
+                while [ $try_count -lt 100 ]
+                do
+                    if [ -b /dev/ubiblock1_0 ]
+                    then
+                        break
+                    else
+                        usleep 10
+                        try_count=`expr $try_count + 1`
+                    fi
+                done
+            fi
+            BOOTTYPE=squashfs
+            BOOTDEV="/dev/ubiblock1_0"
+        else
+            BOOTDEV="/dev/ubi1_0"
+            BOOTOPTS="bulk_read"
+        fi
+
+    # Fallback on yaffs2
+    else
+        BOOTTYPE="yaffs2"
+        BOOTOPTS="rw,tags-ecc-off"
+    fi
+
+    mount -t ${BOOTTYPE} ${BOOTDEV} $dir -o ${BOOTOPTS}
 }
 
 FindAndMountVolumeUBI () {
@@ -82,5 +113,4 @@ else
 fi
 
 eval FindAndMount${fstype} modem /firmware
-
 exit 0
