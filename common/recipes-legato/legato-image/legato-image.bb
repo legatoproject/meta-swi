@@ -11,10 +11,10 @@ inherit legato
 INHIBIT_DEFAULT_DEPS = "1"
 
 gen_version() {
-    version_file="${LEGATO_STAGING_DIR}/$LEGATO_TARGET/system/version"
+    version_file="${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/system/version"
     echo $version_file
     if ! [ -e "$version_file" ]; then
-        version_file="${LEGATO_STAGING_DIR}/$LEGATO_TARGET/opt/legato/version"
+        version_file="${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/opt/legato/version"
     fi
 
     export VERSION="$(cat $version_file) $(hostname) $(date +'%Y/%m/%d %H:%M:%S')"
@@ -42,7 +42,7 @@ generate_images_mklegatoimg() {
 
     rm -rf $IMG_DIR
     mkdir -p $IMG_DIR
-    mklegatoimg -t $LEGATO_TARGET -d "${LEGATO_STAGING_DIR}/$LEGATO_TARGET" -o $IMG_DIR -v $VERSION
+    mklegatoimg -t $LEGATO_TARGET -d "${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET" -o $IMG_DIR -v $VERSION
 
     # Copy
     cd $IMG_DIR
@@ -65,10 +65,14 @@ generate_image_yaffs2() {
     fi
 
     # Generate the framework image
-    mkyaffs2image $yaffs2_opts "${LEGATO_STAGING_DIR}/$LEGATO_TARGET" "${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.yaffs2"
+    mkyaffs2image $yaffs2_opts "${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET" "${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.yaffs2"
 }
 
 compile_target() {
+    if [ -z "${LEGATO_VERSION}" ]; then
+        get_legato_version
+    fi
+
     # Check if legato version is recent enough to use mklegatoimg
     if grep BASH_SOURCE $(which mklegatoimg); then
         generate_images_mklegatoimg

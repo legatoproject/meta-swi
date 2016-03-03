@@ -56,8 +56,6 @@ do_install() {
     install -d ${D}/opt/legato
 
     # version file
-    LEGATO_VERSION=$(cat ${S}/version)
-
     install ${S}/version ${D}/opt/legato/
     install -d ${D}/usr/share/legato/
     install ${S}/version ${D}/usr/share/legato/
@@ -121,10 +119,12 @@ do_install() {
 }
 
 do_install_image() {
+    export LEGATO_VERSION=$(cat ${D}/usr/share/legato/version)
+
     # legato-image
     for target in ${LEGATO_ROOTFS_TARGETS}; do
-        mkdir -p ${LEGATO_STAGING_DIR}/${target}
-        cp -R ${S}/build/${target}/staging/* ${LEGATO_STAGING_DIR}/${target}/
+        mkdir -p ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}
+        cp -R ${S}/build/${target}/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
     done
 }
 

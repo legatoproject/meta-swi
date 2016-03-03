@@ -1,8 +1,6 @@
 
 LEGATO_ROOTFS_TARGETS ?= "localhost"
 LEGATO_STAGING_DIR = "${TMPDIR}/work-shared/legato"
-LEGATO_STAGING_APP_DIR = "${LEGATO_STAGING_DIR}/usr/local/bin/apps"
-
 
 # Only depend on legato-af if this is not legato-af
 def check_legato_af_dep(d):
@@ -28,6 +26,13 @@ legato_toolchain_env() {
 
     echo "Toolchain Dir: ${TOOLCHAIN_DIR_ENV} $TOOLCHAIN_DIR"
     echo "Toolchain Prefix: ${TOOLCHAIN_PREFIX_ENV} $TOOLCHAIN_PREFIX"
+}
+
+get_legato_version() {
+    legato_version_file=$(find ${TMPDIR}/sysroots -wholename "*/legato/version")
+    echo $legato_version_file
+
+    export LEGATO_VERSION="$(cat $legato_version_file)"
 }
 
 do_compile() {
@@ -65,16 +70,19 @@ do_install_image() {
         return
     fi
 
+    cat "${SYSROOT_DESTDIR}"
+    exit 1
+
     for target in ${LEGATO_ROOTFS_TARGETS}; do
         # Deploy app package in image
         echo "Shipping ${PN} in legato-image for $target"
-        install -d ${LEGATO_STAGING_DIR}/$target/usr/local/bin/apps
+        install -d ${LEGATO_STAGING_DIR}/${LEGATO_VERSION}/${target}/usr/local/bin/apps
         for app in `echo ${LEGATO_APP_NAME}`; do
             local app_file=${S}/${app}.${target}
             if [ -e ${S}/${app}.$target.update ]; then
                 app_file=${S}/${app}.$target.update
             fi
-            install ${app_file} ${LEGATO_STAGING_DIR}/${target}/usr/local/bin/apps
+            install ${app_file} ${LEGATO_STAGING_DIR}/${LEGATO_VERSION}/${target}/usr/local/bin/apps
         done
     done
 }
