@@ -133,8 +133,14 @@ prepare_ubi() {
 do_rootfs[postfuncs] += "prepare_ubi"
 
 default_rootfs_ps() {
-    # Default rootfs to yaffs2
-    ln -sf ${IMAGE_LINK_NAME}.yaffs2 ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
+    # Default rootfs to ubi for 2k
+    ln -sf ${IMAGE_LINK_NAME}.2k.ubi     ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.default
+
+    # Default rootfs to yaffs2 for 4k
+    ln -sf ${IMAGE_LINK_NAME}.4k.yaffs2  ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
+
+    # Default rootfs to 2k
+    ln -sf ${IMAGE_LINK_NAME}.2k.default ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
 }
 
 do_rootfs[postfuncs] += "default_rootfs_ps"
