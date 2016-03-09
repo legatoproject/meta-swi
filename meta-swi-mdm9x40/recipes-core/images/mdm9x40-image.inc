@@ -98,12 +98,11 @@ prepare_ubi_ps() {
 
 # Create UBI images
 prepare_ubi() {
-    prepare_ubi_ps '2k'
-    #prepare_ubi_ps '4k'
+    prepare_ubi_ps '4k'
 
     # Default image (no bs suffix) to 2k + squashfs
-    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.squashfs.2k.ubi"
-    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.ubi"
+    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.squashfs.4k.ubi"
+    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.ubi"
     rm -f $ubi_link_path
     ln -s $(basename $ubi_link_path_def) $ubi_link_path
 
@@ -115,14 +114,11 @@ prepare_ubi() {
 do_rootfs[postfuncs] += "prepare_ubi"
 
 default_rootfs_ps() {
-    # Default rootfs to ubi for 2k
-    ln -sf ${IMAGE_LINK_NAME}.2k.ubi     ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.default
+    # Default rootfs to ubi for 4k
+    ln -sf ${IMAGE_LINK_NAME}.4k.ubi  ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
 
-    # Default rootfs to yaffs2 for 4k
-    ln -sf ${IMAGE_LINK_NAME}.4k.yaffs2  ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
-
-    # Default rootfs to 2k
-    ln -sf ${IMAGE_LINK_NAME}.2k.default ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
+    # Default rootfs to 4k
+    ln -sf ${IMAGE_LINK_NAME}.4k.default ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
 }
 
 do_rootfs[postfuncs] += "default_rootfs_ps"
