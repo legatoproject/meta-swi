@@ -73,31 +73,13 @@ create_ubinize_config() {
     fi
     echo >> $cfg_path
 
-    echo \[usrfs_volume\] >> $cfg_path
-    echo mode=ubi >> $cfg_path
-    echo image="${UBI_USRFS_PATH}" >> $cfg_path
-    echo vol_id=1 >> $cfg_path
-    echo vol_type=dynamic >> $cfg_path
-    echo vol_name=usrfs >> $cfg_path
-    echo vol_flags=autoresize >> $cfg_path
-    echo >> $cfg_path
-
     echo \[cache_volume\] >> $cfg_path
     echo mode=ubi >> $cfg_path
-    echo vol_id=2 >> $cfg_path
+    echo vol_id=1 >> $cfg_path
     echo vol_type=dynamic >> $cfg_path
     echo vol_name=cachefs >> $cfg_path
     echo vol_size=${UBI_CACHE_SIZE} >> $cfg_path
 }
-
-create_usrfs() {
-    rm -rf "${WORKDIR}/usrfs"
-    mkdir -p "${WORKDIR}/usrfs"
-
-    mkfs.ubifs -r "${WORKDIR}/usrfs" -o ${UBI_USRFS_PATH} ${MKUBIFS_ARGS}
-}
-
-do_rootfs[prefuncs] += "create_usrfs"
 
 prepare_ubi_ps() {
     local page_size=$1
