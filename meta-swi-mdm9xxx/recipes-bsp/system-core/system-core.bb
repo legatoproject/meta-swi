@@ -32,6 +32,12 @@ inherit update-rc.d
 
 EXTRA_OEMAKE = "INCLUDES='-I${S}/include'"
 
+patch_adb_shell() {
+    # Use /bin/sh instead of /system/bin/sh for adbd
+    sed -i "s^/system/bin/sh^/bin/sh^" ${S}/adb/services.c
+}
+do_patch[postfuncs] += "patch_adb_shell"
+
 do_install_append() {
    install -m 0755 -d ${D}${includedir}/cutils
    install -m 0644  ${S}/include/cutils/* ${D}${includedir}/cutils
