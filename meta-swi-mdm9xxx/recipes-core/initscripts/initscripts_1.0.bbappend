@@ -3,23 +3,19 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI = "file://functions \
            file://devpts \
-           file://hostname.sh \
            file://mountall.sh \
-           file://banner.sh \
            file://bootmisc.sh \
+           file://bringup_ecm.sh \
            file://checkfs.sh \
            file://single \
            file://urandom \
-           file://rmnologin.sh \
            file://volatiles \
-           file://save-rtc.sh \
            file://inittab \
            file://mdev.conf \
            file://usb.sh \
            file://find-touchscreen.sh \
            file://rcS \
            file://rcK \
-           file://bootmisc.sh \
            file://GPLv2.patch \
           "
 
@@ -56,13 +52,11 @@ do_install () {
 	install -m 0755    ${WORKDIR}/find-touchscreen.sh	${D}${sysconfdir}/mdev/find-touchscreen.sh
 	install -m 0644    ${WORKDIR}/functions		${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/bootmisc.sh	${D}${sysconfdir}/init.d
-	install -m 0755    ${WORKDIR}/hostname.sh	${D}${sysconfdir}/init.d
+	install -m 0755    ${WORKDIR}/bringup_ecm.sh	${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/mountall.sh	${D}${sysconfdir}/init.d
-	install -m 0755    ${WORKDIR}/rmnologin.sh	${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/single		${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/urandom		${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/devpts		${D}${sysconfdir}/default
-	install -m 0755    ${WORKDIR}/save-rtc.sh	${D}${sysconfdir}/init.d
 	install -m 0644    ${WORKDIR}/volatiles		${D}${sysconfdir}/default/volatiles/00_core
 	install -m 0755    ${WORKDIR}/rcS			${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/rcK			${D}${sysconfdir}/init.d
@@ -70,10 +64,6 @@ do_install () {
 	if [ "${TARGET_ARCH}" = "arm" ]; then
 		install -m 0755 ${WORKDIR}/alignment.sh	${D}${sysconfdir}/init.d
 	fi
-#
-# Install device dependent scripts
-#
-	install -m 0755 ${WORKDIR}/banner.sh	${D}${sysconfdir}/init.d/banner.sh
 
 #
 # Remove some scripts
@@ -84,13 +74,10 @@ do_install () {
 #
 # Create runlevel links
 #
-	update-rc.d -r ${D} rmnologin.sh start 98 S .
-	update-rc.d -r ${D} urandom start 08 S .
-	update-rc.d -r ${D} save-rtc.sh start 25 S .
-	update-rc.d -r ${D} banner.sh start 02 S .
-	update-rc.d -r ${D} mountall.sh start 07 S .
-	update-rc.d -r ${D} hostname.sh start 39 S .
-	update-rc.d -r ${D} bootmisc.sh start 55 S .
+        update-rc.d -r ${D} urandom start 08 S .
+        update-rc.d -r ${D} mountall.sh start 07 S .
+        update-rc.d -r ${D} bootmisc.sh start 55 S .
+        update-rc.d -r ${D} bringup_ecm.sh start 95 S .
 	if [ "${TARGET_ARCH}" = "arm" ]; then
 	        update-rc.d -r ${D} alignment.sh start 06 S .
 	fi

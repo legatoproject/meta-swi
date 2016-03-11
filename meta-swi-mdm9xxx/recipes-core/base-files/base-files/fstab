@@ -1,1 +1,3 @@
-# /etc/fstab placeholder. Customers should put their file system mounts here.
+# Legato bind mounts
+/mnt/flash/legato /legato none bind 0 0
+/mnt/flash/home   /home none bind 0 0
