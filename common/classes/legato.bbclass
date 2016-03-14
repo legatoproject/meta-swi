@@ -70,9 +70,6 @@ do_install_image() {
         return
     fi
 
-    cat "${SYSROOT_DESTDIR}"
-    exit 1
-
     for target in ${LEGATO_ROOTFS_TARGETS}; do
         # Deploy app package in image
         echo "Shipping ${PN} in legato-image for $target"
