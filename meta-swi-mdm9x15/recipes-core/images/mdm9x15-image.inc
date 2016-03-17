@@ -54,6 +54,9 @@ IMAGE_INSTALL += "quota"
 IMAGE_INSTALL += "curl"
 IMAGE_INSTALL += "ca-certificates"
 
+# Add linkmon app to monitor USB link
+IMAGE_INSTALL += "linkmon"
+
 prepare_ubi_ps() {
     local page_size=$1
 

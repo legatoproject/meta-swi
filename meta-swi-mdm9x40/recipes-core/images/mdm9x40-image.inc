@@ -56,6 +56,9 @@ IMAGE_INSTALL += "kernel-module-alx"
 # Stubs
 IMAGE_INSTALL += "bsinfo"
 
+# Add linkmon app to monitor USB link
+IMAGE_INSTALL += "linkmon"
+
 create_ubinize_config() {
     local cfg_path=$1
     local rootfs_type=$2
