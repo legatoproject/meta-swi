@@ -6,30 +6,8 @@ INC_PR = "r0"
 
 inherit ubi-image
 
-IMAGE_INSTALL += "shadow"
-IMAGE_INSTALL += "dnsmasq"
-IMAGE_INSTALL += "powerapp"
-IMAGE_INSTALL += "powerapp-powerconfig"
-IMAGE_INSTALL += "powerapp-reboot"
-IMAGE_INSTALL += "powerapp-shutdown"
-IMAGE_INSTALL += "bridge-utils"
-IMAGE_INSTALL += "pimd"
-IMAGE_INSTALL += "reboot-daemon"
-IMAGE_INSTALL += "procps"
-IMAGE_INSTALL += "mtd-utils"
-IMAGE_INSTALL += "mtd-utils-ubifs"
-IMAGE_INSTALL += "libopencore-amr"
-IMAGE_INSTALL += "iperf"
-IMAGE_INSTALL += "iproute2-tc"
-IMAGE_INSTALL += "libvo-amrwbenc"
 IMAGE_INSTALL += "start-scripts-find-partitions"
 IMAGE_INSTALL += "start-scripts-firmware-links"
-IMAGE_INSTALL += "conntrack-tools"
-
-# Required to provide some extended privileges
-# to non-root processes
-IMAGE_INSTALL += "libcap"
-IMAGE_INSTALL += "libcap-bin"
 
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
@@ -55,6 +33,10 @@ IMAGE_INSTALL += "kernel-module-alx"
 
 # Stubs
 IMAGE_INSTALL += "bsinfo"
+
+# Add some extra packages for tool integration
+IMAGE_INSTALL += "lttng-ust"
+#IMAGE_INSTALL += "lttng-modules"
 
 create_ubinize_config() {
     local cfg_path=$1

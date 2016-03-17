@@ -9,29 +9,6 @@ INC_PR = "r0"
 
 inherit ubi-image
 
-IMAGE_INSTALL += "shadow"
-IMAGE_INSTALL += "dnsmasq"
-IMAGE_INSTALL += "powerapp"
-IMAGE_INSTALL += "powerapp-powerconfig"
-IMAGE_INSTALL += "powerapp-reboot"
-IMAGE_INSTALL += "powerapp-shutdown"
-IMAGE_INSTALL += "bridge-utils"
-IMAGE_INSTALL += "pimd"
-IMAGE_INSTALL += "reboot-daemon"
-IMAGE_INSTALL += "procps"
-IMAGE_INSTALL += "mtd-utils"
-IMAGE_INSTALL += "mtd-utils-ubifs"
-IMAGE_INSTALL += "libopencore-amr"
-IMAGE_INSTALL += "iperf"
-IMAGE_INSTALL += "iproute2-tc"
-IMAGE_INSTALL += "libvo-amrwbenc"
-IMAGE_INSTALL += "tcpdump"
-
-# Required to provide some extended privileges
-# to non-root processes
-IMAGE_INSTALL += "libcap"
-IMAGE_INSTALL += "libcap-bin"
-
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
 # manual installation of mdev.
@@ -47,12 +24,9 @@ IMAGE_INSTALL += "kernel-modules"
 # Install device trees to rootfs (/boot directory is default location).
 IMAGE_INSTALL += "kernel-devicetree"
 
-# Userland quota support.
-IMAGE_INSTALL += "quota"
-
-# Add curl with https support
-IMAGE_INSTALL += "curl"
-IMAGE_INSTALL += "ca-certificates"
+# Add some extra packages for tool integration
+IMAGE_INSTALL += "lttng-ust"
+IMAGE_INSTALL += "lttng-modules"
 
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL += "linkmon"
