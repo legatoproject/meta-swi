@@ -44,7 +44,7 @@ do_essential()
 set_boot_dev()
 {
     local ret=0
-    local mtd_part_name=system
+    local mtd_part_name='(rootfs|system)'
     local boot_opt=''
 
     if grep 'rootfs.type=' /proc/cmdline > /dev/null; then
@@ -54,7 +54,7 @@ set_boot_dev()
         fi
     fi
 
-    if grep 'rootfs.opts=' /proc/cmdline > /dev/null; then 
+    if grep 'rootfs.opts=' /proc/cmdline > /dev/null; then
         boot_opt=$(cat /proc/cmdline | sed -e 's/.* rootfs\.opts=\([a-z0-9,-_=]*\) .*/\1/')
         if [ -n "$boot_opt" ]; then
             BOOTOPTS=$boot_opt
@@ -69,7 +69,7 @@ set_boot_dev()
         BOOTWAIT=1
     fi
 
-    if grep 'rootfs.dev=' /proc/cmdline > /dev/null; then 
+    if grep 'rootfs.dev=' /proc/cmdline > /dev/null; then
         BOOTDEV=$(cat /proc/cmdline | sed -e 's/.* rootfs\.dev=\([^ ]*\) .*/\1/')
         if [ -n "$BOOTDEV" ]; then
             return ${ret}
@@ -77,7 +77,7 @@ set_boot_dev()
     fi
 
     mtd_dev_num=$( cat /proc/mtd | \
-                   grep "\"${mtd_part_name}\"" | \
+                   egrep "\"${mtd_part_name}\"" | \
                    sed 's/mtd\([0-9]*\):.*/\1/' )
 
     BOOTDEV="/dev/mtdblock${mtd_dev_num}"
