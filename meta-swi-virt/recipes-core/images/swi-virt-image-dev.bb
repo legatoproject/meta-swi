@@ -21,7 +21,7 @@ IMAGE_INSTALL += "libopkg"
 IMAGE_INSTALL += "legato-af"
 
 # Tool to recognize the platform
-IMAGE_INSTALL += "bsinfo"
+IMAGE_INSTALL += "bsinfo-stub"
 
 # Prepare a package with kernel + hdd image
 do_prepare_virt() {

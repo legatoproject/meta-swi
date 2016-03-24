@@ -32,7 +32,7 @@ IMAGE_INSTALL += "alx"
 IMAGE_INSTALL += "kernel-module-alx"
 
 # Stubs
-IMAGE_INSTALL += "bsinfo"
+IMAGE_INSTALL += "bsinfo-stub"
 
 # Add some extra packages for tool integration
 IMAGE_INSTALL += "lttng-ust"

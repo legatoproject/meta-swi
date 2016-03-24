@@ -4,25 +4,14 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/\
 ${LICENSE};md5=0835ade698e0bcf8506ecda2f7b4f302"
 PR = "r0"
 
-#FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
-
 SRC_URI = "file://bsinfo.in"
 
+TARGET_NAME ?= "BSWPXXXX"
+
 do_compile() {
-    local targetname="bsvirt-${VIRT_ARCH}"
+    local targetname="${TARGET_NAME}"
     local targetid="F0"
     local targetrev="01"
-
-    if [[ "${VIRT_ARCH}" == "arm" ]]; then
-        targetid="F0"
-    elif [[ "${VIRT_ARCH}" == "x86" ]]; then
-        targetid="F1"
-    elif [[ "${VIRT_ARCH}" == "x86_64" ]]; then
-        targetid="F2"
-    else
-        echo "Unknown target '${VIRT_ARCH}'"
-        exit 1
-    fi
 
     cp ${WORKDIR}/bsinfo.in ${WORKDIR}/bsinfo
     sed -i "s/#NAME/${targetname^^}/g" ${WORKDIR}/bsinfo
@@ -34,3 +23,4 @@ do_install() {
     install -d ${D}${bindir}
     install -m 0755 ${WORKDIR}/bsinfo ${D}${bindir}/bsinfo
 }
+
