@@ -33,6 +33,8 @@ IMAGE_INSTALL += "bsinfo-stub"
 IMAGE_INSTALL += "lttng-ust"
 #IMAGE_INSTALL += "lttng-modules"
 
+IMAGE_INSTALL += "embms-kernel"
+
 create_ubinize_config() {
     local cfg_path=$1
     local rootfs_type=$2
