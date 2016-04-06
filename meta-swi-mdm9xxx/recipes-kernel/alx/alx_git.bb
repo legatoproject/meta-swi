@@ -13,6 +13,7 @@ COMPATWIRELESS_REPO = "git://codeaurora.org/platform/external/compat-wireless;br
 
 SRC_URI  = "${COMPATWIRELESS_REPO}"
 SRC_URI += "file://start_alx_le"
+SRC_URI += "file://0001-Module-cannot-deep-sleep.patch;striplevel=6"
 
 S = "${WORKDIR}/git/drivers/net/ethernet/atheros/alx"
 B = "${S}"

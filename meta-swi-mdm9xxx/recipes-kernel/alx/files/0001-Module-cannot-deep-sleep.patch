@@ -1,0 +1,47 @@
+From e92e17f714684a360ce6b59690ebe23b27978278 Mon Sep 17 00:00:00 2001
+From: Yan Kong <ykong@sierrawireless.com>
+Date: Wed, 30 Mar 2016 10:26:13 +0800
+Subject: [PATCH] Module cannot deep sleep
+
+Change-Id: Ie7fb42fd446faa883155aee97aa5e0c5bd1784c3
+---
+ drivers/net/ethernet/atheros/alx/alx_main.c | 16 ++++++++++++++++
+ 1 file changed, 16 insertions(+)
+
+diff --git a/drivers/net/ethernet/atheros/alx/alx_main.c b/drivers/net/ethernet/atheros/alx/alx_main.c
+index 87aac95..8879b4c 100755
+--- a/drivers/net/ethernet/atheros/alx/alx_main.c
++++ b/drivers/net/ethernet/atheros/alx/alx_main.c
+@@ -3345,6 +3345,14 @@ static int alx_suspend(struct device *dev)
+ 	else
+ 		adpt->palx_ipa->ipa_prod_rm_state == ALX_IPA_RM_RELEASED;
+ 
++/*SWISTART*/
++#ifdef CONFIG_SIERRA
++	retval = odu_bridge_disconnect();
++	if (retval)
++		pr_err("Could not disconnect to ODU bridge %d \n", retval);
++#endif
++/*SWISTOP*/
++
+ 	if (wakeup) {
+ 		pci_prepare_to_sleep(pdev);
+ 	} else {
+@@ -3384,6 +3392,14 @@ static int alx_resume(struct device *dev)
+ 
+ 	retval = hw->cbs.config_wol(hw, 0);
+ 
++/*SWISTART*/
++#ifdef CONFIG_SIERRA
++	retval = odu_bridge_connect();
++	if (retval)
++		pr_err("Could not connect to ODU bridge %d \n", retval);
++#endif
++/*SWISTOP*/
++
+ 	if (netif_running(netdev)) {
+ 		retval = alx_open_internal(adpt, 0);
+ 		if (retval)
+-- 
+1.9.1
+
