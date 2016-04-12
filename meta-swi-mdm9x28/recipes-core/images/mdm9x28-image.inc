@@ -34,6 +34,7 @@ IMAGE_INSTALL += "lttng-ust"
 #IMAGE_INSTALL += "lttng-modules"
 
 IMAGE_INSTALL += "embms-kernel"
+IMAGE_INSTALL += "kernel-modules"
 
 create_ubinize_config() {
     local cfg_path=$1
