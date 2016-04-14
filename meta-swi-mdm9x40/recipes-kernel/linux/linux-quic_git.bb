@@ -7,7 +7,10 @@ COMPATIBLE_MACHINE = "(swi-mdm9x40)"
 
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9640_defconfig"
+B = "${WORKDIR}/build"
+KERNEL_EXTRA_ARGS        += "O=${B}"
 
+SRC_URI = "file://${LINUX_REPO_DIR}/../"
 SRC_DIR = "${LINUX_REPO_DIR}/.."
 
 LINUX_VERSION ?= "3.10.49"
@@ -18,15 +21,21 @@ DEPENDS += "dtbtool-native mkbootimg-native"
 
 do_configure_prepend() {
     cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
+
+    oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper
+    oe_runmake_call -C ${S} ARCH=${ARCH} ${KERNEL_EXTRA_ARGS} ${KERNEL_DEFCONFIG}
 }
 
 do_compile_append() {
-    oe_runmake dtbs
+    oe_runmake dtbs ${KERNEL_EXTRA_ARGS}
 }
 
 do_install_append() {
     oe_runmake headers_install O=${D}/usr/src/kernel
-    oe_runmake -C $kerneldir CC="${KERNEL_CC}" LD="${KERNEL_LD}" clean _mrproper_scripts 
+
+    # Copy headers back to $(D) folder, it should be done at upper command, but not
+    cp -fr ${B}/usr/include ${D}/usr/src/kernel/usr/
+    oe_runmake -C $kerneldir CC="${KERNEL_CC}" LD="${KERNEL_LD}" clean _mrproper_scripts
 }
 
 BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x40-${DATETIME}.2k"
@@ -61,7 +70,7 @@ gen_master_dtb() {
         ${B}/arch/arm/boot/dts/ \
         -s $page_size \
         -o ${DEPLOYDIR}/$master_dtb_name \
-        -p ${S}/scripts/dtc/ \
+        -p ${B}/scripts/dtc/ \
         -v
 
     if ! [ -e "${DEPLOYDIR}/$master_dtb_name" ]; then

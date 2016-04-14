@@ -10,9 +10,10 @@ KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
 B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
 
+SRC_URI = "file://${LINUX_REPO_DIR}/../"
 SRC_DIR = "${LINUX_REPO_DIR}/.."
 
-LINUX_VERSION ?= "3.18.20" 
+LINUX_VERSION ?= "3.18.20"
 PV = "${LINUX_VERSION}+git${GITSHA}"
 PR = "r1"
 
@@ -20,9 +21,7 @@ DEPENDS += "dtbtool-native mkbootimg-native"
 
 do_configure_prepend() {
     cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
-}
 
-do_configure () {
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper
     oe_runmake_call -C ${S} ARCH=${ARCH} ${KERNEL_EXTRA_ARGS} ${KERNEL_DEFCONFIG}
 }
@@ -33,9 +32,10 @@ do_compile_append() {
 
 do_install_append() {
     oe_runmake headers_install O=${D}/usr/src/kernel
+
     # Copy headers back to $(D) folder, it should be done at upper command, but not
     cp -fr ${B}/usr/include ${D}/usr/src/kernel/usr/
-    oe_runmake -C $kerneldir CC="${KERNEL_CC}" LD="${KERNEL_LD}" clean _mrproper_scripts 
+    oe_runmake -C $kerneldir CC="${KERNEL_CC}" LD="${KERNEL_LD}" clean _mrproper_scripts
 }
 
 BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x28-${DATETIME}.2k"
