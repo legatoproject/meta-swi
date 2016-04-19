@@ -1,0 +1,7 @@
+DEPENDS += "alsa-intf"
+DEPENDS += "qmi"
+DEPENDS += "qmi-framework"
+DEPENDS += "libopencore-amr"
+DEPENDS += "libvo-amrwbenc"
+DEPENDS += "cwetool-native"
+DEPENDS += "sierra"

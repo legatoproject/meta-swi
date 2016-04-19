@@ -44,6 +44,8 @@ LEGATO_WORKDIR ?= "${@determine_legato_prop(d, 'workdir')}"
 SRC_URI = "${LEGATO_REPO}"
 S = "${LEGATO_WORKDIR}"
 
+PRIVATE_LIBS = "libjansson.so.4"
+
 do_generate_version() {
     make version
 
