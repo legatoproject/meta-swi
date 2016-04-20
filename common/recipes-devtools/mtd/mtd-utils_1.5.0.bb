@@ -11,7 +11,8 @@ SRC_URI = "git://git.infradead.org/mtd-utils.git;protocol=git \
 		file://add-exclusion-to-mkfs-jffs2-git-2.patch \
         file://mtd-utils-fix-corrupt-cleanmarker-with-flash_erase--j-command.patch \
         file://flashcp-fix-wrong-pourcentage.patch \
-        file://ubi-utils-Add-ubiblkvol-tool.patch "
+        file://ubi-utils-Add-ubiblkvol-tool.patch \
+        file://build-with-gcc5.patch"
 
 S = "${WORKDIR}/git/"
 
