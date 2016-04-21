@@ -1,3 +1,7 @@
+# Tag M9615AAAARNLZA1713041
+SRCREV = "08811d0dc64c490e94aa0f5f0e97f19fef1d1e7e"
+LK_REPO ?= "git://codeaurora.org/kernel/lk;branch=ics_strawberry"
+
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://0000-mdm9x15-Import-SWI-changes.patch"
 SRC_URI += "file://0002-TRAC-1223-lk-make_sure_that_Yocto_kernel_receives_correct_atag_MTD_partition_information_from_bootloader.patch"

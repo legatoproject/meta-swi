@@ -7,10 +7,6 @@ PROVIDES = "virtual/lk"
 
 PR = "r2"
 
-# Tag M9615AAAARNLZA1713041
-SRCREV = "08811d0dc64c490e94aa0f5f0e97f19fef1d1e7e"
-LK_REPO ?= "git://codeaurora.org/kernel/lk;branch=ics_strawberry"
-
 SRC_URI = "${LK_REPO}"
 
 S = "${WORKDIR}/git"
@@ -40,7 +36,7 @@ addtask tag_lk before do_compile after do_configure
 do_compile[dirs] = "${S}"
 
 do_install() {
-	install	-d ${D}/boot
+	install -d ${D}/boot
 	install ${B}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
 	install ${B}/build-${LK_TARGET}/appsboot.raw ${D}/boot
 }

@@ -1,6 +1,5 @@
-# Tag LE.BR.1.2.1-64400-9x07
-SRCREV = "f88c9b2c39757459e146064ffd76fbd9fc502ba0"
-LK_REPO = "git://codeaurora.org/kernel/lk;branch=master"
+SRCREV = "${AUTOREV}"
+LK_REPO ?= "git://github.com/legatoproject/lk.git;protocol=https;branch=mdm9x28le101-swi"
 
 LK_TARGET = "mdm9607"
 
