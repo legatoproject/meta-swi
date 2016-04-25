@@ -53,14 +53,6 @@ create_ubinize_config() {
     if [[ "$rootfs_type" != "squashfs" ]]; then
         echo vol_size="${UBI_ROOTFS_SIZE}" >> $cfg_path
     fi
-    echo >> $cfg_path
-
-    echo \[cache_volume\] >> $cfg_path
-    echo mode=ubi >> $cfg_path
-    echo vol_id=1 >> $cfg_path
-    echo vol_type=dynamic >> $cfg_path
-    echo vol_name=cachefs >> $cfg_path
-    echo vol_size=${UBI_CACHE_SIZE} >> $cfg_path
 }
 
 prepare_ubi_ps() {
