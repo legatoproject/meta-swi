@@ -33,7 +33,7 @@ FindAndMountUBI () {
    partition=$1
    dir=$2
 
-   mtd_block_number=`cat $mtd_file | grep -i $partition | sed 's/^mtd//' | awk -F ':' '{print $1}'`
+   mtd_block_number=`cat $mtd_file | grep -iw $partition | sed 's/^mtd//' | awk -F ':' '{print $1}'`
    echo "MTD : Detected block device : $dir for $partition"
    mkdir -p $dir
 
