@@ -34,17 +34,6 @@ then
 	mknod -m 600 /dev/initctl p
 fi
 
-#
-# Do the smackfs mount.
-#
-if ! grep -F $SMACK_PATH /etc/mtab | grep -w -qs smackfs
-then
-    # Directory /legato should be properly mounted(via fstab) at this point.
-    # So create mountpoint and mount smackfs.
-    mkdir -p $SMACK_PATH
-    mount -t smackfs smack $SMACK_PATH
-fi
-
 # Set the SMACK label for /dev/null and /dev/zero to "*" so that everyone have access to them.
 setfattr -n security.SMACK64  -v "*" /dev/null
 setfattr -n security.SMACK64  -v "*" /dev/zero

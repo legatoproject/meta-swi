@@ -68,14 +68,6 @@ case "$1" in
         # Set proper hostname so that syslog prints proper hostname in log message.
         SetHostName
 
-        # Give subjects with "_", "admin" and "framework" rw access to "syslog".
-        if [ -e "$SMACK_PATH/load2" ]
-        then
-            echo "_ syslog rw---" > $SMACK_PATH/load2
-            echo "admin syslog rw---" >$SMACK_PATH/load2
-            echo "framework syslog rw---" > $SMACK_PATH/load2
-        fi
-
         local oldlabel=$(cat /proc/self/attr/current)
         echo syslog >/proc/self/attr/current
         start-stop-daemon -S -b -n syslogd -a /sbin/syslogd -- -n $SYSLOG_ARGS
