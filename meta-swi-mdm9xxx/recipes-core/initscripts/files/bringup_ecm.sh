@@ -4,11 +4,35 @@
 # Bring up ecm (i.e. developer interface)
 
 SYSTEM_BIN_PATH=/legato/systems/current/bin
+DNSMASQ_LEASE_FILE=/var/lib/misc/dnsmasq.leases
+ECM_MAC_ADDR_FILE=/sys/devices/virtual/android_usb/android0/f_ecm/native_ethaddr
 
 BringUpEcm_get_param()
 {
     local line=$( grep "$1" $ecm_conf 2>/dev/null )
     echo ${line#*:}
+}
+
+#
+# This function creates early lease file and restart dnsmasq to bringup ecm interface quickly.
+#
+CreateLeaseFileRestartDnsmasq()
+{
+    mac_addr=`cat $ECM_MAC_ADDR_FILE`
+    host_ipv4_addr=$( BringUpEcm_get_param host.ipV4 )
+    expiry_time=`date +'%s'`
+    # Add 12 hour with current time to get lease expiry time.
+    expiry_time=$((expiry_time + 3600 * 12))
+    # Stop dnsmasq to avoid race condition.
+    /etc/init.d/dnsmasq stop
+    # Check whether this is an entry in dnsmasq lease file.
+    if ! grep -i "$mac_addr" $DNSMASQ_LEASE_FILE > /dev/null 2>&1
+    then
+      # No entry in lease file. Create an entry and append it.
+      echo "$expiry_time $mac_addr $host_ipv4_addr * *" >> $DNSMASQ_LEASE_FILE
+    fi
+    # Start dnsmasq again.
+    /etc/init.d/dnsmasq start
 }
 
 BringUpEcm()
@@ -49,6 +73,7 @@ BringUpEcm()
                 # Read configuration from the (now created) config file
                 ecm_netmask=$( BringUpEcm_get_param netmask.ipV4 )
                 ecm_target_ip4=$( BringUpEcm_get_param target.ipV4 )
+                CreateLeaseFileRestartDnsmasq
             else
                 # Config file doesn't exist.  Use defaults.
                 ecm_netmask=255.255.255.0
