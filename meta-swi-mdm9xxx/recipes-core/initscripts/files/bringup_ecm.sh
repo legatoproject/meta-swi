@@ -39,6 +39,8 @@ BringUpEcm()
     if [ -f $gadget_mode ]; then
         ecm=$(egrep "e[ce]m" ${gadget_mode})
         if [ ! -z "$ecm" ]; then
+            # Upgrade to new ecm file layout for dnsmasq
+            $SYSTEM_BIN_PATH/configEcm upgrade
             # If the configuration file doesn't exists, create a default one
             if [ ! -f /mnt/userrw/PCONFIG ] && [ ! -f $ecm_conf ]; then
                 $SYSTEM_BIN_PATH/configEcm default
