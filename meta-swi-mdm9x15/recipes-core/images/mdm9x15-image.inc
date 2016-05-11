@@ -31,6 +31,11 @@ IMAGE_INSTALL += "lttng-modules"
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL += "linkmon"
 
+# Add WiFi TI drivers, tools, and scripts
+IMAGE_INSTALL += " ti-compat-wireless"
+IMAGE_INSTALL += " sierra-init-tiwifi"
+IMAGE_INSTALL += " rng-tools"
+
 prepare_ubi_ps() {
     local page_size=$1
 
