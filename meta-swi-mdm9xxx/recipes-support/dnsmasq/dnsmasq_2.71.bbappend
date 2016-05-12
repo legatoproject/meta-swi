@@ -1,3 +1,6 @@
+# Look at this directlry first.
+FILESEXTRAPATHS_append := "${THISDIR}/files:"
+
 INITSCRIPT_PARAMS = "start 94 S . stop 80 S ."
 
 do_install_prepend() {
