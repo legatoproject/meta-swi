@@ -73,8 +73,8 @@ prepare_ubi() {
     prepare_ubi_ps '2k'
     prepare_ubi_ps '4k'
 
-    # Default image (no bs suffix) to 2k + squashfs
-    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.squashfs.2k.ubi"
+    # Default image (no bs suffix) to 2k + ubifs
+    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubifs.2k.ubi"
     ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.ubi"
     rm -f $ubi_link_path
     ln -s $(basename $ubi_link_path_def) $ubi_link_path
