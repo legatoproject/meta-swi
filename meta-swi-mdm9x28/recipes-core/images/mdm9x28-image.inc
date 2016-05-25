@@ -56,10 +56,15 @@ create_ubinize_config() {
 prepare_ubi_ps() {
     local page_size=$1
 
-    local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.ubinize.cfg"
-
     for rootfs_type in ubifs squashfs; do
-        create_ubinize_config $ubinize_cfg $rootfs_type
+
+        if [[ "$rootfs_type" != "squashfs" ]]; then
+            local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.${rootfs_type}.ubinize_cfg"
+            create_ubinize_config $ubinize_cfg "${page_size}.$rootfs_type"
+        else
+            local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.ubinize_cfg"
+            create_ubinize_config $ubinize_cfg $rootfs_type
+        fi
 
         local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.${page_size}.ubi"
         local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${rootfs_type}.${page_size}.ubi"
