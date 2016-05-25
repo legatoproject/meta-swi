@@ -4,13 +4,12 @@
 auto lo
 iface lo inet loopback
 
+# Wired or wireless interfaces
+auto eth0
+iface eth0 inet dhcp
+
 # Wireless interfaces
 iface wlan0 inet manual
     pre-up /etc/init.d/tiwifi start
     post-down /etc/init.d/tiwifi stop
-
-# Wired or wireless interfaces
-auto eth0
-iface eth0 inet dhcp
-iface eth1 inet dhcp
 
