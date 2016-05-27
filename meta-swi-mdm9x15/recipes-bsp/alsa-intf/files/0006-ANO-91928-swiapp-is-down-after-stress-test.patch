@@ -1,0 +1,84 @@
+diff -uprN libalsa-intf/aplay.c libalsa-intf-new/aplay.c
+--- a/libalsa-intf/aplay.c	2016-05-26 21:08:56.387625200 +0800
++++ b/libalsa-intf/aplay.c	2016-05-27 16:49:16.382995853 +0800
+@@ -25,6 +25,7 @@
+ #include <sys/poll.h>
+ #include <sys/ioctl.h>
+ #include <getopt.h>
++#include <sys/prctl.h>
+ /* SWISTART */
+ #ifdef SIERRA
+ #include <semaphore.h>
+@@ -534,6 +535,7 @@ int play_raw(const char *fg, int rate, i
+ {
+     int fd;
+     unsigned flag = 0;
++    int ret;
+ 
+     if(!fn) {
+         fd = fileno(stdin);
+@@ -558,7 +560,9 @@ int play_raw(const char *fg, int rate, i
+ 
+     fprintf(stderr, "aplay: Playing '%s': format %s ch = %d\n",
+ 		    fn, get_format_desc(format), ch );
+-    return play_file(rate, ch, fd, flag, device, 0, thisid);
++    ret = play_file(rate, ch, fd, flag, device, 0, thisid);
++    close(fd);
++    return ret;
+ }
+ 
+ /* SWISTART */ //Add "thisid", to distinguish different devices
+@@ -568,6 +572,7 @@ int play_wav(const char *fg, int rate, i
+     struct wav_header hdr;
+     int fd;
+     unsigned flag = 0;
++    int ret;
+ 
+     if (pcm_flag) {
+         if(!fn) {
+@@ -626,7 +631,9 @@ ignore_header:
+         flag = PCM_NMMAP;
+     fprintf(stderr, "aplay: Playing '%s':%s\n", fn, get_format_desc(format) );
+ 
+-    return play_file(hdr.sample_rate, hdr.num_channels, fd, flag, device, hdr.data_sz, thisid);
++    ret = play_file(hdr.sample_rate, hdr.num_channels, fd, flag, device, hdr.data_sz, thisid);
++    close(fd);
++    return ret;
+ }
+ 
+ int main(int argc, char **argv)
+@@ -846,7 +853,10 @@ static void* exec_playing_thread(void* p
+     char* pFilename = NULL;
+     format = SNDRV_PCM_FORMAT_S16_LE;
+     int thisid = pInputParam->thisidx;
+-    
++
++    if (prctl(PR_SET_NAME, "APLAY_Thread") != 0)
++        printf("Set thread name error, errno: %d\n", errno);
++
+     pcm_flag = (pInputParam->host == APLAY_HOSTLESS_STREAM)? 0:1;
+ 
+     debug = pInputParam->debug;
+diff -uprN libalsa-intf/arec.c libalsa-intf-new/arec.c
+--- a/libalsa-intf/arec.c	2016-05-26 21:08:56.391625200 +0800
++++ b/libalsa-intf/arec.c	2016-05-27 16:49:41.798602365 +0800
+@@ -27,6 +27,7 @@
+ #include <sys/ioctl.h>
+ #include <getopt.h>
+ #include <limits.h>
++#include <sys/prctl.h>
+ /* SWISTART */ 
+ #ifdef SIERRA
+ #include <sys/types.h>
+@@ -846,7 +847,10 @@ static void* exec_playing_thread(void* p
+     char* pFilename = NULL;
+     int thisid = pInputParam->thisidx;
+     format = SNDRV_PCM_FORMAT_S16_LE;
+-    
++
++    if (prctl(PR_SET_NAME, "AREC_Thread") != 0)
++        printf("Set thread name error, errno: %d\n", errno);
++
+     pcm_flag = (pInputParam->host == AREC_HOSTLESS_STREAM)? 0:1;
+     
+     debug = pInputParam->debug;
