@@ -6,6 +6,11 @@
 export PATH=$PATH:/usr/bin:/bin:/usr/sbin:/sbin
 
 ti_wifi_start() {
+    # Add mdev rule for crda
+    grep crda /etc/mdev.conf > /dev/null
+    if [ $? -ne 0 ]; then
+       echo "\$COUNTRY=.. root:root 0660 */sbin/crda" >> /etc/mdev.conf
+    fi
     lsmod | grep wlcore >/dev/null
     if [ $? -ne 0 ]; then
        # Set IOT0_GPIO2 = 1 (WP GPIO33)
