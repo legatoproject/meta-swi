@@ -64,3 +64,7 @@ RDEPENDS_${PN} += "tcf-agent"
 
 # Add usb utils to enable lsusb on the target
 RDEPENDS_${PN} += "usbutils"
+
+# Add rngd for entropy
+RDEPENDS_${PN} += "rng-tools"
+

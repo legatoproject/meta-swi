@@ -32,9 +32,8 @@ IMAGE_INSTALL += "lttng-modules"
 IMAGE_INSTALL += "linkmon"
 
 # Add WiFi TI drivers, tools, and scripts
-IMAGE_INSTALL += " ti-compat-wireless"
-IMAGE_INSTALL += " sierra-init-tiwifi"
-IMAGE_INSTALL += " rng-tools"
+IMAGE_INSTALL += "ti-compat-wireless"
+IMAGE_INSTALL += "sierra-init-tiwifi"
 
 prepare_ubi_ps() {
     local page_size=$1
