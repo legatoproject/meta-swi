@@ -1,0 +1,31 @@
+diff -uprN libalsa-intf_old/aplay.c libalsa-intf/aplay.c
+--- a/libalsa-intf/aplay.c	2016-05-31 09:58:40.450130600 +0800
++++ b/libalsa-intf/aplay.c	2016-05-31 19:39:30.899335868 +0800
+@@ -905,21 +905,22 @@ static void* exec_playing_thread(void* p
+     {
+         rc = play_wav(pMmap, iRate, iCh, pDevice, "dummy", thisid);
+     }
+-    
++
+     if ((pInputParam->pfinish_Callback != NULL) && (sNoFinishCallbackFlag == 0))
+     {
+         printf("APLAY: CALL BACK EXEC!\n");
+         (*pInputParam->pfinish_Callback)(pInputParam->finish_pa1, pInputParam->finish_pa2);
+-        sNoFinishCallbackFlag = 0;
+     }
+-    
++
+     /* reset all */
+     memset(spInputParam[thisid], 0, sizeof(T_AplayParam));
+     *spForceStop[thisid] = 0;
+     *spPlayingFlag[thisid] = 0;
+-    
++    if (pInputParam->host == APLAY_HOST_STREAM)
++        sNoFinishCallbackFlag = 0;
++
+     printf("APLAY: PLAY END!\n");
+-    
++
+ }
+ 
+ int APlay_Start(const T_AplayParam *ptAplayParam)
