@@ -2,6 +2,9 @@
 # Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
 #
 # TI wireless wl18xx specific applications start or stop here
+# TI WIFI IoT board is managed by SDIO/MMC bus. Some signals need to be set
+# and managed before the SDIO/MMC module is inserted.
+# TI WIFI IoT conflicts with others devices using the SDIO/MMC bus
 
 export PATH=$PATH:/usr/bin:/bin:/usr/sbin:/sbin
 
@@ -13,6 +16,26 @@ ti_wifi_start() {
     fi
     lsmod | grep wlcore >/dev/null
     if [ $? -ne 0 ]; then
+       # Check if MMC/SDIO module is inserted. Because WIFI use SDIO/MMC bus
+       # we need to remove the SDIO/MMC module
+       lsmod | grep msm_sdcc >/dev/null
+       if [ $? -eq 0 ]; then
+          grep -q mmcblk /proc/mounts
+          if [ $? -ne 0 ]; then
+             rmmod msm_sdcc
+          else
+             false
+          fi
+          if [ $? -ne 0 ]; then
+             # Unable to remove. May be others devices use SDIO/MMC bus
+             echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+             echo "Unable to remove the SDIO/MMC module... May be in use ?"
+             echo "Please, free all SDIO/MMC devices before using TI WIFI."
+             echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+             exit 127
+          fi
+       fi
+
        # Set IOT0_GPIO2 = 1 (WP GPIO33)
        [ -d /sys/class/gpio/gpio33 ] || echo 33 >/sys/class/gpio/export
        echo out >/sys/class/gpio/gpio33/direction
@@ -72,6 +95,8 @@ ti_wifi_stop() {
        # Reset IOT0_GPIO2 = 0 (WP GPIO33)
        echo 0 >/sys/class/gpio/gpio33/value
 
+       # Insert MMC/SDIO module
+       modprobe msm_sdcc || exit 127
     fi
 }
 
