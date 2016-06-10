@@ -63,7 +63,7 @@ S = "${WORKDIR}/git"
 export prefix = "/opt/ltp"
 export exec_prefix = "/opt/ltp"
 
-inherit autotools
+inherit autotools-brokensep
 
 PACKAGES += "open-posix-testsuite"
 PACKAGES += "ltp-testsuite"
@@ -72,7 +72,7 @@ FILES_ltp-testsuite += "/opt/ltp/"
 
 TARGET_CC_ARCH += "${LDFLAGS}"
 
-EXTRA_OECONF = "--with-power-management-testsuite=yes --with-realtime-testsuite=yes"
+EXTRA_OECONF = "--with-power-management-testsuite=yes --with-realtime-testsuite=no"
 
 do_compile () {
 	oe_runmake
