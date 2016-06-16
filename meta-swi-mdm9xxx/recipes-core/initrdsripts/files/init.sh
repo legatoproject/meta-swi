@@ -3,6 +3,13 @@
 # Real root file system mount point.
 ROOTFS_MNTPT="/mnt/rootfs"
 
+# dm-verity default off
+DM_VERITY_ENCRYPT=off
+DM_VERITY_NOD="/dev/mapper/rt"
+
+# This strings will be change by build.sh when Dm-verity is enabled
+ROOTHASH=
+
 # Default boot device
 BOOTDEV=""
 
@@ -49,6 +56,11 @@ set_boot_dev()
     local ret=0
     local mtd_part_name='(rootfs|system)'
     local boot_opt=''
+
+    if grep 'verity=on' /proc/cmdline > /dev/null; then
+        DM_VERITY_ENCRYPT="on"
+        echo "DM_VERITY_ENCRYPT=on"
+    fi
 
     if [ -e /usr/bin/swidssd ]; then
         /usr/bin/swidssd read
@@ -109,6 +121,10 @@ set_boot_dev()
                 # squashfs volume, create UBI block device
                 if ! [ -e "/dev/ubiblock0_0" ]; then
                     ubiblkvol --attach /dev/ubi0_0
+                    if [ "$DM_VERITY_ENCRYPT" == "on" ]; then
+                        # Dm-verity hash volume need this partition, when it is on try to use it.
+                        ubiblkvol --attach /dev/ubi0_1
+                    fi
                 fi
                 BOOTTYPE=squashfs
                 BOOTDEV="/dev/ubiblock0_0"
@@ -116,12 +132,19 @@ set_boot_dev()
                 BOOTDEV="/dev/ubi0_0"
                 BOOTOPTS="bulk_read"
             fi
-
-        # Fallback on yaffs2
+            if [ "$DM_VERITY_ENCRYPT" == "on" ]; then
+                DM_FLAG=$(dd if=/dev/ubi0_1 count=4 bs=1 2>/dev/null)
+                if echo $DM_FLAG | grep 'veri' > /dev/null; then
+                    veritysetup create rt /dev/ubiblock0_0 /dev/ubiblock0_1 ${ROOTHASH}
+                fi
+            fi
+        elif echo $UBI_FLAG | grep 'hsqs' > /dev/null; then
+            BOOTTYPE=squashfs
+            BOOTOPTS=ro
         else
+            # Fallback on yaffs2
             BOOTTYPE="yaffs2"
             BOOTOPTS="rw,tags-ecc-off"
-            return ${ret}
         fi
     fi
 
@@ -147,10 +170,13 @@ checkpoint_rootfs()
     fi
 
     echo "rootfs: dev '${BOOTDEV}' '${BOOTTYPE}'"
-
-    export mnt_time=$( time mount -t ${BOOTTYPE} ${BOOTDEV} ${ROOTFS_MNTPT} -o ${BOOTOPTS} 2>&1 | \
-                       grep real | awk '{ print $3 }' | grep -oe '\([0-9.]*\)' )
-
+    if [ -e ${DM_VERITY_NOD} ]; then
+        echo "mount ${DM_VERITY_NOD}"
+        mount -t squashfs ${DM_VERITY_NOD} ${ROOTFS_MNTPT} -oro
+    else
+        export mnt_time=$( time mount -t ${BOOTTYPE} ${BOOTDEV} ${ROOTFS_MNTPT} -o ${BOOTOPTS} 2>&1 | \
+                        grep real | awk '{ print $3 }' | grep -oe '\([0-9.]*\)' )
+    fi
     if ! [ -e "${ROOTFS_MNTPT}/bin" ]; then
         echo "rootfs: mount failed"
 
