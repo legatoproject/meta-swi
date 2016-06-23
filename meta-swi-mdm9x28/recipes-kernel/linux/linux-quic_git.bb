@@ -120,7 +120,7 @@ do_bootimg() {
     gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x28.2k masterDTB.2k 2048
     gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x28.4k masterDTB.4k 4096
 
-    ln -sf ${BOOTIMG_NAME_2k}.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img
+    ln -sf ${BOOTIMG_NAME_4k}.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img
 }
 
 addtask bootimg after do_deploy before do_build
