@@ -1,23 +1,4 @@
-DESCRIPTION = "An image with only the bare minimum to accelerate the boot process."
-
-PACKAGE_INSTALL = "initramfs-mdminit busybox mtd-utils-ubifs"
-
-# Do not pollute the initrd image with rootfs features
-IMAGE_FEATURES = ""
-
-IMAGE_LINGUAS = " "
-
-LICENSE = "MIT"
-
-inherit core-image
-
-IMAGE_ROOTFS_SIZE ?= "8192"
-
-IMAGE_FSTYPES = "cpio.gz tar.bz2"
-
-PR = "0"
-
-PACKAGE_EXCLUDE += "busybox-syslog busybox-udhcpc"
+PACKAGE_INSTALL += "cryptsetup libgcrypt ossp-uuid"
 
 fakeroot do_filter_rootfs () {
 
@@ -32,7 +13,11 @@ fakeroot do_filter_rootfs () {
     for file in $(find); do
         if [[ "$file" == "./sbin/ldconfig" ]]; then
             remove_entity $file
-        elif echo "$file" | grep "./usr/lib/"; then
+        elif echo "$file" | grep "./usr/lib/opkg"; then
+            remove_entity $file
+        elif echo "$file" | grep "./usr/lib/liblvm"; then
+            remove_entity $file
+        elif echo "$file" | grep "./usr/lib/liblzo2"; then
             remove_entity $file
         elif [[ "$file" == "./usr/bin/update-alternatives" ]]; then
             remove_entity $file
@@ -45,6 +30,12 @@ fakeroot do_filter_rootfs () {
                 */ld-*) ;;
                 */libc.*) ;;
                 */libc-*) ;;
+                */libdl*) ;;
+                */librt*) ;;
+                */libpthread*) ;;
+                */libuuid*) ;;
+                */libudev*) ;;
+                */libcrypt*) ;;
                 *) remove_entity $file ;;
             esac
         elif echo $file | grep -e "./usr/sbin/.*ubi"; then
@@ -69,4 +60,3 @@ fakeroot do_filter_rootfs () {
     mknod dev/zero c 1 5
 }
 
-IMAGE_PREPROCESS_COMMAND += "do_filter_rootfs; "
