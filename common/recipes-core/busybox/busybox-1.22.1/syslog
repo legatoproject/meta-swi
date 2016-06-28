@@ -68,7 +68,7 @@ case "$1" in
         # Set proper hostname so that syslog prints proper hostname in log message.
         SetHostName
 
-        local oldlabel=$(cat /proc/self/attr/current)
+        oldlabel=$(cat /proc/self/attr/current)
         echo syslog >/proc/self/attr/current
         start-stop-daemon -S -b -n syslogd -a /sbin/syslogd -- -n $SYSLOG_ARGS
         echo $oldlabel >/proc/self/attr/current
