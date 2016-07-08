@@ -4,6 +4,7 @@ DEPENDS += " \
         mtd-utils-native"
 
 SRC_URI += "file://ubinize.cfg"
+SRC_URI += "file://ubinize-user1.cfg"
 
 INC_PR = "r0"
 
@@ -35,18 +36,30 @@ IMAGE_INSTALL += "linkmon"
 IMAGE_INSTALL += "ti-compat-wireless"
 IMAGE_INSTALL += "sierra-init-tiwifi"
 
+# Create UBI images for ROOT and USER1 partitions. If it becomes longer, this
+# function should be optimized (creation of sub-methods, etc.)
 prepare_ubi_ps() {
     local page_size=$1
 
+    # Initially, set for root partition
     local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.ubi"
     local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${page_size}.ubi"
-
     local ubinize_cfg=${WORKDIR}/gen_ubinize.cfg
 
+    # Process root partition UBI
     cp -af ${WORKDIR}/ubinize.cfg $ubinize_cfg
     sed -i -e "s|@@ROOTFS_PATH@@|${UBI_ROOTFS_PATH}|g" $ubinize_cfg
     sed -i -e "s|@@ROOTFS_SIZE@@|${UBI_ROOTFS_SIZE}|g" $ubinize_cfg
+    create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
 
+    # Process USER1 UBI
+    ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}-user1.${page_size}.ubi"
+    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}-user1.${page_size}.ubi"
+    ubinize_cfg=${WORKDIR}/gen_ubinize.cfg
+
+    cp -af ${WORKDIR}/ubinize-user1.cfg $ubinize_cfg
+    sed -i -e "s|@@USER1_PATH@@|${UBI_USER1_PATH}|g" $ubinize_cfg
+    sed -i -e "s|@@USER1_SIZE@@|${UBI_USER1_SIZE}|g" $ubinize_cfg
     create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
 }
 
