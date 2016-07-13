@@ -16,35 +16,7 @@ TARGET_LDFLAGS = ""
 
 do_configure[noexec] = "1"
 
-do_prepare_tools[depends] = "legato-tools:do_populate_sysroot"
-do_prepare_tools() {
-    # Remove 'tools' target
-    sed -i 's/.PHONY: tools//g' ${S}/Makefile
-    sed -i 's/tools:/disabled_tools:/g' ${S}/Makefile
-    touch ${S}/tools
-    mkdir -p ${S}/build/tools
-
-    # Prepare bin/
-    mkdir -p ${S}/bin
-    cd ${S}
-
-    realmk=$(which mk)
-    echo "mk: $realmk"
-
-    ln -sf $realmk build/tools/mk
-
-    cd ${S}/bin
-    ln -sf $realmk mk
-    ln -sf mk mkif
-    ln -sf mk mkcomp
-    ln -sf mk mkexe
-    ln -sf mk mkapp
-    ln -sf mk mksys
-    ln -sf ${S}/framework/tools/scripts/* ./
-    ln -sf ${S}/framework/tools/ifgen/ifgen ifgen
-}
-
-addtask prepare_tools before do_compile after do_generate_version
+do_compile[depends] = "legato-tools:do_populate_sysroot"
 
 compile_target() {
     make $LEGATO_TARGET
@@ -56,15 +28,15 @@ do_install() {
     install -d ${D}/opt/legato
 
     # version file
-    install ${S}/version ${D}/opt/legato/
+    install ${B}/version ${D}/opt/legato/
     install -d ${D}/usr/share/legato/
-    install ${S}/version ${D}/usr/share/legato/
+    install ${B}/version ${D}/usr/share/legato/
 
-    if [ -d "${S}/build/$target/staging/mnt/flash" ]; then
+    if [ -d "${B}/build/$target/staging/mnt/flash" ]; then
         # start-up scripts
         install -d ${D}/opt/legato/startupDefaults
         for target in ${LEGATO_ROOTFS_TARGETS}; do
-            for script in $(find ${S}/build/$target/staging/mnt/flash/startupDefaults -type f); do
+            for script in $(find ${B}/build/$target/staging/mnt/flash/startupDefaults -type f); do
                 install $script ${D}/opt/legato/startupDefaults/
             done
         done
@@ -87,20 +59,20 @@ do_install() {
     # liblegato
     install -d ${D}${libdir}
     first_target=$(echo ${LEGATO_ROOTFS_TARGETS} | awk '{print $1}')
-    if [ -e "${S}/build/$first_target/bin/lib/liblegato.so" ]; then
-        install ${S}/build/$first_target/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
+    if [ -e "${B}/build/$first_target/bin/lib/liblegato.so" ]; then
+        install ${B}/build/$first_target/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
     else
-        install ${S}/build/$first_target/staging/system/lib/liblegato.so ${D}${libdir}/liblegato.so
+        install ${B}/build/$first_target/staging/system/lib/liblegato.so ${D}${libdir}/liblegato.so
     fi
 
     # Populate liblegato.so in sysroots/
     for target in $(echo ${LEGATO_ROOTFS_TARGETS}); do
         install -d ${D}/usr/share/legato/build/$target/framework/lib
-        if [ -e "${S}/build/$target/bin/lib/liblegato.so" ]; then
-            install ${S}/build/$target/bin/lib/liblegato.so \
+        if [ -e "${B}/build/$target/bin/lib/liblegato.so" ]; then
+            install ${B}/build/$target/bin/lib/liblegato.so \
                     ${D}/usr/share/legato/build/$target/framework/lib/liblegato.so
         else
-            install ${S}/build/$target/staging/system/lib/liblegato.so \
+            install ${B}/build/$target/staging/system/lib/liblegato.so \
                     ${D}/usr/share/legato/build/$target/framework/lib/liblegato.so
         fi
     done
@@ -124,7 +96,7 @@ do_install_image() {
     # legato-image
     for target in ${LEGATO_ROOTFS_TARGETS}; do
         mkdir -p ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}
-        cp -R ${S}/build/${target}/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
+        cp -R ${B}/build/${target}/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
     done
 }
 
@@ -142,5 +114,4 @@ FILES_${PN} += "usr/local/*"
 FILES_${PN} += "mnt/legato/*"
 
 INSANE_SKIP_${PN} = "installed-vs-shipped dev-deps dev-so"
-
 
