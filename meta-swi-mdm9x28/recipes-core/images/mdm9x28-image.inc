@@ -5,6 +5,7 @@ DEPENDS += " \
 INC_PR = "r0"
 
 inherit ubi-image
+inherit set-files-attr
 
 IMAGE_INSTALL += "start-scripts-find-partitions"
 IMAGE_INSTALL += "start-scripts-firmware-links"
@@ -121,3 +122,12 @@ python do_unpack2() {
 
 addtask unpack2 before do_rootfs
 
+do_setfileattr() {
+    if [[ "x${SMACK_ATTR_NAME}" != "x" ]]; then
+        if [[ "x${SMACK_ATTR_VALUE}" != "x" ]]; then
+            set_file_attr ${IMAGE_ROOTFS}
+        fi
+    fi
+}
+
+IMAGE_PREPROCESS_COMMAND += "do_setfileattr"
