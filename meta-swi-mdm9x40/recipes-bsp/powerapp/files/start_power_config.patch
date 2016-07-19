@@ -1,0 +1,12 @@
+diff -uprN powerapp/start_power_config powerapp/start_power_config
+--- a/start_power_config    2016-07-20 10:07:35.425782500 +0800
++++ b/start_power_config    2016-07-20 10:10:41.863868611 +0800
+@@ -48,6 +48,8 @@ case "$1" in
+                 echo 40000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
+                 echo 300000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+                 echo mem > /sys/power/autosleep
++                timeout_val=40000000000
++                echo app_init $timeout_val > /sys/power/wake_lock
+                 ;;
+         esac
+
