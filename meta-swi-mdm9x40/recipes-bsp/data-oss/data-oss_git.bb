@@ -13,7 +13,7 @@ EXTRA_OECONF = "--with-sanitized-headers=${STAGING_KERNEL_DIR}/usr/include \
 
 # Tag LNX.LE.5.1-66221-9x40
 SRCREV = "67be864a70f78cab0f526f50ec4c8d65acbba80e"
-DATAOSS_REPO ?= "git://codeaurora.org/platform/vendor/qcom-opensource/dataservices;branch=LNX.LE.5.1_rb1.10"
+DATAOSS_REPO ?= "git://codeaurora.org/platform/vendor/qcom-opensource/dataservices;branch=LNX.LE.5.3"
 
 SRC_URI = "${DATAOSS_REPO}"
 S = "${WORKDIR}/git"
