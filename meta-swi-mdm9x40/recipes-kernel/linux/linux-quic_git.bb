@@ -13,7 +13,7 @@ KERNEL_EXTRA_ARGS        += "O=${B}"
 SRC_URI = "file://${LINUX_REPO_DIR}/../"
 SRC_DIR = "${LINUX_REPO_DIR}/.."
 
-LINUX_VERSION ?= "3.10.49"
+LINUX_VERSION ?= "3.18.31"
 PV = "${LINUX_VERSION}+git${GITSHA}"
 PR = "r1"
 
@@ -58,16 +58,16 @@ gen_master_dtb() {
     set -xe
 
     ver=$(sed -r 's/#define UTS_RELEASE "(.*)"/\1/' ${B}/include/generated/utsrelease.h)
-    dtb_files=$(find ${B}/arch/arm/boot/dts -iname "*${BASEMACHINE_QCOM}*.dtb" | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
+    dtb_files=$(find ${B}/arch/arm/boot/dts/qcom -iname "*${BASEMACHINE_QCOM}*.dtb" | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
 
     # Create separate images with dtb appended to zImage for all targets.
     for d in ${dtb_files}; do
        targets=$(echo ${d#${BASEMACHINE_QCOM}-})
-       cat $kernel_img ${B}/arch/arm/boot/dts/${d}.dtb > ${B}/arch/arm/boot/dts/dtb-zImage-${ver}-${targets}.dtb
+       cat $kernel_img ${B}/arch/arm/boot/dts/qcom/${d}.dtb > ${B}/arch/arm/boot/dts/dtb-zImage-${ver}-${targets}.dtb
     done
 
     ${STAGING_BINDIR_NATIVE}/dtbtool \
-        ${B}/arch/arm/boot/dts/ \
+        ${B}/arch/arm/boot/dts/qcom/ \
         -s $page_size \
         -o ${DEPLOYDIR}/$master_dtb_name \
         -p ${B}/scripts/dtc/ \
