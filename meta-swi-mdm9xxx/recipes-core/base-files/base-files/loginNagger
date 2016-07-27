@@ -1,0 +1,188 @@
+#!/bin/sh
+
+
+DONT_NAG_FILE=/mnt/flash/config/system/etc/noLoginNag
+
+PASSWORD_SET=false
+
+
+CheckRet()
+{
+    RETVAL=$?
+
+    if [ $RETVAL -ne 0 ]; then
+        exit $RETVAL
+    fi
+}
+
+
+DontNag()
+{
+    mkdir -p $( dirname $DONT_NAG_FILE ) &&
+    touch $DONT_NAG_FILE
+}
+
+
+DisableConsoleLogin()
+{
+    passwd -l root
+    CheckRet
+
+    echo "Console login Disabled."
+}
+
+
+DisableUartForConsole()
+{
+    # Get the uart mode.
+    mode="$(uartMode get $1)"
+    CheckRet
+
+    # See if the uart is currently used for /dev/console.
+    echo $mode | grep "/dev/console" > /dev/null 2>&1
+
+    if [ $? = 0 ]; then
+        # Disable the uart.
+        uartMode set $1 disable > /dev/null 2>&1
+        CheckRet
+    fi
+}
+
+
+DisableConsole()
+{
+    # Disable both uart 1 and 2 for use as /dev/console.
+    DisableUartForConsole 1
+    DisableUartForConsole 2
+
+    echo "Console will be disabled AFTER the next reboot."
+}
+
+
+EnableConsolePassword()
+{
+    if [ $PASSWORD_SET = true ]; then
+        echo "Password already set."
+    else
+        passwd
+        CheckRet
+
+        PASSWORD_SET=true
+    fi
+}
+
+
+LocalAccess()
+{
+    echo "";
+    echo "Configure local console login."
+
+    while true; do
+        echo "  1) Disable the console completely (the most secure)"
+        echo "  2) Disable console login but leave the console for debug messages (less secure)"
+        echo "  3) Enable console login with a password"
+
+        read -r choice
+        case $choice in
+            [1] ) DisableConsole; DontNag; break;;
+            [2] ) DisableConsoleLogin; DontNag; break;;
+            [3] ) EnableConsolePassword; DontNag; break;;
+
+            * );;
+        esac
+    done
+}
+
+
+DisableSshPasswords()
+{
+    echo "DROPBEAR_EXTRA_ARGS=\"-s -g\"" >> /etc/default/dropbear
+
+    /etc/init.d/dropbear restart
+}
+
+
+ConfigureSshKey()
+{
+    echo "";
+    echo "Please run the configtargetssh tool from the host."
+    echo "Or manually setup ssh keys using ssh-keygen."
+
+    while true; do
+        echo "Let me know when you're done."
+        echo "  1) Done setting up my ssh keys"
+        echo "  2) Cancel"
+
+        read -r choice
+        case $choice in
+            [1] ) DisableSshPasswords; LocalAccess; break;;
+            [2] ) SelectCredMethod; break;;
+
+            * );;
+        esac
+    done
+}
+
+
+SetupPassword()
+{
+    passwd
+    CheckRet
+
+    PASSWORD_SET=true
+
+    LocalAccess
+}
+
+
+ReminderMenu()
+{
+    echo "";
+
+    while true; do
+        echo "Would you like a reminder next time you log in [Y/n]?"
+
+        read -r choice
+        case $choice in
+            [yY] | "" ) echo "OK, I will remind you next time."; break;;
+            [nN] ) echo "OK, I will not bug you again"; DontNag; break;;
+
+            * );;
+        esac
+    done
+}
+
+
+SelectCredMethod()
+{
+    echo "";
+    echo "It is strongly recommended to setup credentials for remote login."
+
+    while true; do
+        echo "Please select one of the following options:"
+        echo "  1) Setup SSH keys (the most secure)"
+        echo "  2) Setup password (better than nothing)"
+        echo "  3) Do nothing"
+
+        read -r choice
+        case $choice in
+            [1] ) ConfigureSshKey; break;;
+            [2] ) SetupPassword; break;;
+            [3] ) ReminderMenu; break;;
+
+            * );;
+        esac
+    done
+}
+
+
+
+if [ ! -e $DONT_NAG_FILE ]; then
+    if [ ! -e ~/.ssh/authorized_keys ]; then
+        # SSH credentials have not been set, ask the user to setup credentials.
+        SelectCredMethod
+    else
+        # SSH credentials already set, ask the user how to handle local access.
+        LocalAccess
+    fi
+fi
