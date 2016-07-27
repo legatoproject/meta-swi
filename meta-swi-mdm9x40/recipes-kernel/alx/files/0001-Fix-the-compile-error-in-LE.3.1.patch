@@ -1,0 +1,43 @@
+From e8e9dff98d52cb3c11d4bf6e9152ded82770a865 Mon Sep 17 00:00:00 2001
+From: Yan Kong <ykong@sierrawireless.com>
+Date: Wed, 27 Jul 2016 17:00:43 +0800
+Subject: [PATCH] Fix the compile error in LE.3.1
+
+---
+ drivers/net/ethernet/atheros/alx/Makefile   | 3 +++
+ drivers/net/ethernet/atheros/alx/alx_main.c | 2 +-
+ 2 files changed, 4 insertions(+), 1 deletion(-)
+ mode change 100644 => 100755 drivers/net/ethernet/atheros/alx/Makefile
+
+diff --git a/drivers/net/ethernet/atheros/alx/Makefile b/drivers/net/ethernet/atheros/alx/Makefile
+old mode 100644
+new mode 100755
+index 5b27b7d..ffe7ccc
+--- a/drivers/net/ethernet/atheros/alx/Makefile
++++ b/drivers/net/ethernet/atheros/alx/Makefile
+@@ -4,6 +4,9 @@ KERNEL_SRC ?= /lib/modules/$(shell uname -r)/build
+ ifeq ($(CONFIG_ARCH_MDMCALIFORNIUM), y)
+ obj-m += alx.o
+ CDEFINES += -DMDM_PLATFORM
++else ifeq ($(CONFIG_ARCH_MDM9640), y)
++obj-m += alx.o
++CDEFINES += -DMDM_PLATFORM
+ else
+ obj-$(CONFIG_ALX) += alx.o
+ endif
+diff --git a/drivers/net/ethernet/atheros/alx/alx_main.c b/drivers/net/ethernet/atheros/alx/alx_main.c
+index 7e438a9..e4a3be4 100755
+--- a/drivers/net/ethernet/atheros/alx/alx_main.c
++++ b/drivers/net/ethernet/atheros/alx/alx_main.c
+@@ -603,7 +603,7 @@ static void alx_receive_skb_ipa(struct alx_adapter *adpt,
+ 	bool schedule_ipa_work = false;
+ 	bool is_pkt_ipv4 = alx_ipa_is_ipv4_pkt(proto);
+ 	bool is_pkt_ipv6 = alx_ipa_is_ipv6_pkt(proto);
+-	
++	struct alx_ipa_ctx *alx_ipa = adpt->palx_ipa;
+ 
+ 	skb_reset_mac_header(skb);
+ 	if (vlan_flag) {
+-- 
+1.9.1
+
