@@ -6,6 +6,7 @@ SRC_URI = "file://functions \
            file://mountall.sh \
            file://bootmisc.sh \
            file://bringup_ecm.sh \
+           file://bridge_ecm.sh \
            file://checkfs.sh \
            file://single \
            file://urandom \
@@ -53,6 +54,7 @@ do_install () {
 	install -m 0644    ${WORKDIR}/functions		${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/bootmisc.sh	${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/bringup_ecm.sh	${D}${sysconfdir}/init.d
+	install -m 0755    ${WORKDIR}/bridge_ecm.sh	${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/mountall.sh	${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/single		${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/urandom		${D}${sysconfdir}/init.d
