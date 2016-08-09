@@ -96,7 +96,11 @@ do_install_image() {
     # legato-image
     for target in ${LEGATO_ROOTFS_TARGETS}; do
         mkdir -p ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}
-        cp -R ${B}/build/${target}/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
+        if [ -d ${B}/build/${target}/readOnlyStaging/legato ]; then
+            cp -R ${B}/build/${target}/readOnlyStaging/legato/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
+        else
+            cp -R ${B}/build/${target}/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
+        fi
     done
 }
 
