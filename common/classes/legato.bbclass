@@ -45,6 +45,7 @@ do_compile() {
         legato_toolchain_env $LEGATO_TARGET
 
         export LEGATO_ROOT=${PKG_CONFIG_SYSROOT_DIR}/usr/share/legato
+        export LEGATO_SYSROOT=${PKG_CONFIG_SYSROOT_DIR}
 
         compile_target $LEGATO_TARGET
     done
