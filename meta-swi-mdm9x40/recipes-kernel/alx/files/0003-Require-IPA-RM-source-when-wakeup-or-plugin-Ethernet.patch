@@ -1,0 +1,58 @@
+From 87a5b1a3f1cb2aa163e2fc2b1ec16fdbda6c03a4 Mon Sep 17 00:00:00 2001
+From: Yan Kong <ykong@sierrawireless.com>
+Date: Sun, 14 Aug 2016 20:21:25 +0800
+Subject: [PATCH] Require IPA RM source when wakeup or plugin Ethernet cable
+
+---
+ drivers/net/ethernet/atheros/alx/alx_main.c | 13 ++++++++++++-
+ 1 file changed, 12 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/atheros/alx/alx_main.c b/drivers/net/ethernet/atheros/alx/alx_main.c
+index f90e03f..5bce628 100755
+--- a/drivers/net/ethernet/atheros/alx/alx_main.c
++++ b/drivers/net/ethernet/atheros/alx/alx_main.c
+@@ -3335,7 +3335,7 @@ static int alx_suspend(struct device *dev)
+ 	if (alx_ipa_rm_try_release(adpt))
+ 		pr_err("%s -- ODU PROD Release unsuccessful \n",__func__);
+ 	else
+-		adpt->palx_ipa->ipa_prod_rm_state == ALX_IPA_RM_RELEASED;
++		adpt->palx_ipa->ipa_prod_rm_state = ALX_IPA_RM_RELEASED;
+ 
+ /*SWISTART*/
+ #ifdef CONFIG_SIERRA
+@@ -3362,7 +3362,9 @@ static int alx_resume(struct device *dev)
+ 	struct alx_adapter *adpt = pci_get_drvdata(pdev);
+ 	struct net_device *netdev = adpt->netdev;
+ 	struct alx_hw *hw = &adpt->hw;
++	struct alx_ipa_ctx *alx_ipa = adpt->palx_ipa;
+ 	u32 retval;
++	enum alx_ipa_rm_state rm_state;;
+ 
+ 	pci_set_power_state(pdev, PCI_D0);
+ 	pci_restore_state(pdev);
+@@ -3389,6 +3391,13 @@ static int alx_resume(struct device *dev)
+ 	retval = odu_bridge_connect();
+ 	if (retval)
+ 		pr_err("Could not connect to ODU bridge %d \n", retval);
++
++	/* Request for IPA Resources */
++	spin_lock_bh(&alx_ipa->ipa_rm_state_lock);
++	rm_state = alx_ipa->ipa_prod_rm_state;
++	spin_unlock_bh(&alx_ipa->ipa_rm_state_lock);
++	if (rm_state == ALX_IPA_RM_RELEASED)
++		alx_ipa_rm_request(adpt);
+ #endif
+ /*SWISTOP*/
+ 
+@@ -3662,6 +3671,8 @@ static void alx_link_task_routine(struct alx_adapter *adpt)
+ 			adpt->palx_ipa->alx_ipa_perf_requested = false;
+ 			if (alx_ipa_rm_try_release(adpt))
+ 				pr_err("%s -- ODU PROD Release unsuccessful \n",__func__);
++			else
++				adpt->palx_ipa->ipa_prod_rm_state = ALX_IPA_RM_RELEASED;
+ 		}
+ #endif
+ 	}
+-- 
+1.9.1
+
