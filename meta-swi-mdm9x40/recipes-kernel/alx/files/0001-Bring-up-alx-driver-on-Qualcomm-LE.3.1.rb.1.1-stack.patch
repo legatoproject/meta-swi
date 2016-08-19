@@ -1,0 +1,155 @@
+From 798898d3044b7b67436f658fdde98d9c0793313c Mon Sep 17 00:00:00 2001
+From: Yan Kong <ykong@sierrawireless.com>
+Date: Fri, 19 Aug 2016 13:44:03 +0800
+Subject: [PATCH] Bring up alx driver on Qualcomm LE.3.1.rb.1.1 stack
+
+---
+ drivers/net/ethernet/atheros/alx/Makefile   |  2 ++
+ drivers/net/ethernet/atheros/alx/alx_main.c | 34 +++++++++++++++--------------
+ 2 files changed, 20 insertions(+), 16 deletions(-)
+ mode change 100644 => 100755 drivers/net/ethernet/atheros/alx/Makefile
+
+diff --git a/drivers/net/ethernet/atheros/alx/Makefile b/drivers/net/ethernet/atheros/alx/Makefile
+old mode 100644
+new mode 100755
+index 5b27b7d..1adfc90
+--- a/drivers/net/ethernet/atheros/alx/Makefile
++++ b/drivers/net/ethernet/atheros/alx/Makefile
+@@ -4,6 +4,8 @@ KERNEL_SRC ?= /lib/modules/$(shell uname -r)/build
+ ifeq ($(CONFIG_ARCH_MDMCALIFORNIUM), y)
+ obj-m += alx.o
+ CDEFINES += -DMDM_PLATFORM
++else ifeq ($(CONFIG_ARCH_MDM9640), y)
++obj-m += alx.o
+ else
+ obj-$(CONFIG_ALX) += alx.o
+ endif
+diff --git a/drivers/net/ethernet/atheros/alx/alx_main.c b/drivers/net/ethernet/atheros/alx/alx_main.c
+index 7e438a9..08e52da 100755
+--- a/drivers/net/ethernet/atheros/alx/alx_main.c
++++ b/drivers/net/ethernet/atheros/alx/alx_main.c
+@@ -3345,18 +3345,20 @@ static int alx_suspend(struct device *dev)
+ 	if (retval)
+ 		return retval;
+ 
++#ifdef MDM_PLATFORM
++/*SWISTART*/
++#ifdef CONFIG_SIERRA
+ 	if (alx_ipa_rm_try_release(adpt))
+ 		pr_err("%s -- ODU PROD Release unsuccessful \n",__func__);
+-        else
++	else
+ 		adpt->palx_ipa->ipa_prod_rm_state = ALX_IPA_RM_RELEASED;
+ 
+-/*SWISTART*/
+-#ifdef CONFIG_SIERRA
+ 	retval = odu_bridge_disconnect();
+ 	if (retval)
+ 		pr_err("Could not disconnect to ODU bridge %d \n", retval);
+ #endif
+ /*SWISTOP*/
++#endif
+ 
+ 	if (wakeup) {
+ 		pci_prepare_to_sleep(pdev);
+@@ -3397,6 +3399,7 @@ static int alx_resume(struct device *dev)
+ 
+ 	retval = hw->cbs.config_wol(hw, 0);
+ 
++#ifdef MDM_PLATFORM
+ /*SWISTART*/
+ #ifdef CONFIG_SIERRA
+ 	retval = odu_bridge_connect();
+@@ -3404,6 +3407,7 @@ static int alx_resume(struct device *dev)
+ 		pr_err("Could not connect to ODU bridge %d \n", retval);
+ #endif
+ /*SWISTOP*/
++#endif
+ 
+ 	if (netif_running(netdev)) {
+ 		retval = alx_open_internal(adpt, 0);
+@@ -3538,6 +3542,7 @@ static int alx_link_mac_restore(struct alx_adapter *adpt)
+ }
+ #endif
+ 
++#ifdef MDM_PLATFORM
+ static int alx_ipa_set_perf_level(void)
+ {
+ 	struct ipa_rm_perf_profile profile;
+@@ -3571,6 +3576,7 @@ static int alx_ipa_set_perf_level(void)
+ 	alx_ipa->alx_ipa_perf_requested = true;
+ 	return ret;
+ }
++#endif
+ 
+ static void alx_link_task_routine(struct alx_adapter *adpt)
+ {
+@@ -3578,8 +3584,10 @@ static void alx_link_task_routine(struct alx_adapter *adpt)
+ 	struct alx_hw *hw = &adpt->hw;
+ 	char *link_desc;
+ 	int ret = 0;
+-	struct alx_ipa_ctx *alx_ipa = adpt->palx_ipa;
+ 
++#ifdef MDM_PLATFORM
++	struct alx_ipa_ctx *alx_ipa = adpt->palx_ipa;
++#endif
+ 	if (!CHK_ADPT_FLAG(0, TASK_LSC_REQ))
+ 		return;
+ 	CLI_ADPT_FLAG(0, TASK_LSC_REQ);
+@@ -3748,6 +3756,7 @@ static void alx_task_routine(struct work_struct *work)
+ 	CLI_ADPT_FLAG(1, STATE_WATCH_DOG);
+ }
+ 
++#ifdef MDM_PLATFORM
+ /*
+  * alx_ipa_send_routine - Sends packets to IPA/ODU bridge Driver
+  * Scheduled on RX of IPA_WRITE_DONE Event
+@@ -3822,6 +3831,7 @@ static void alx_ipa_send_routine(struct work_struct *work)
+ 		alx_ipa_rm_try_release(adpt);
+ 	spin_unlock_bh(&adpt->flow_ctrl_lock);
+ }
++#endif
+ 
+ /* Calculate the transmit packet descript needed*/
+ static bool alx_check_num_tpdescs(struct alx_tx_queue *txque,
+@@ -4856,10 +4866,10 @@ static int __devinit alx_init(struct pci_dev *pdev,
+ #endif
+ 	static int cards_found;
+ 	int retval;
+-        struct odu_bridge_params *params_ptr, params;
+-        params_ptr = &params;
+-
+ #ifdef MDM_PLATFORM
++	struct odu_bridge_params *params_ptr, params;
++	params_ptr = &params;
++
+ 	retval = msm_pcie_pm_control(MSM_PCIE_RESUME, pdev->bus->number,
+ 					pdev, NULL, 0);
+ 	if (retval) {
+@@ -4998,11 +5008,7 @@ static int __devinit alx_init(struct pci_dev *pdev,
+ 	netdev->base_addr = (unsigned long)adpt->hw.hw_addr;
+ 
+ 	/* set cb member of netdev structure*/
+-#ifdef MDM_PLATFORM
+-       netdev->netdev_ops = &alx_netdev_ops;
+-#else
+-	netdev_attach_ops(netdev, &alx_netdev_ops);
+-#endif
++	netdev->netdev_ops = &alx_netdev_ops;
+ 	alx_set_ethtool_ops(netdev);
+ 	netdev->watchdog_timeo = ALX_WATCHDOG_TIME;
+ 	strlcpy(netdev->name, pci_name(pdev), sizeof(netdev->name) - 1);
+@@ -5491,10 +5497,6 @@ static struct pci_error_handlers alx_err_handler = {
+ #ifdef CONFIG_PM_SLEEP
+ static SIMPLE_DEV_PM_OPS(alx_pm_ops, alx_suspend, alx_resume);
+ #define ALX_PM_OPS (&alx_pm_ops)
+-#ifndef MDM_PLATFORM
+-compat_pci_suspend(alx_suspend)
+-compat_pci_resume(alx_resume)
+-#endif
+ #else
+ #define ALX_PM_OPS      NULL
+ #endif
+-- 
+1.9.1
+
