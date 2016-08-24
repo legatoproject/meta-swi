@@ -12,8 +12,16 @@
 
 beginswith() { case $2 in $1*) true;; *) false;; esac; }
 
-export PATH=/legato/systems/current/bin:$PATH
-LEGATO_START=/legato/systems/current/bin/start
+umount /legato
+if [ -e /mnt/legato/systems/current/read-only ]
+then
+    export PATH=/legato/systems/current/bin:$PATH
+    LEGATO_START=/legato/systems/current/bin/start
+    mount -o bind /mnt/legato /legato
+else
+    LEGATO_START=/mnt/legato/start
+    mount -o bind /mnt/flash/legato /legato
+fi
 
 # This is where old startup lived. We can try this if we we don't have new startup.
 COMPAT_STARTUP=/etc/init.d/startlegato-compat.sh
