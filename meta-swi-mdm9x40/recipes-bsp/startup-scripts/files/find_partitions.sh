@@ -103,10 +103,10 @@ emmc_dir=/dev/block/bootdevice/by-name
 mtd_file=/proc/mtd
 
 MODEM_PARTITION=modem
-DS_BOOT_SYSTEM_FLAG=0
+DS_MODEM_SUB_SYSTEM_FLAG=0
 if [ -e /usr/bin/swidssd ]; then
-    /usr/bin/swidssd read
-    DS_BOOT_SYSTEM_FLAG=$?
+    /usr/bin/swidssd read modem
+    DS_MODEM_SUB_SYSTEM_FLAG=$?
 fi
 
 if [ -d $emmc_dir ]
@@ -119,7 +119,7 @@ else
         eval FindAndMountVolume${fstype} usrfs /usr
 fi
 
-if [ $DS_BOOT_SYSTEM_FLAG -eq 200 ]; then
+if [ $DS_MODEM_SUB_SYSTEM_FLAG -eq 200 ]; then
     MODEM_PARTITION=modem2
 fi
 echo "mount modem from partition $MODEM_PARTITION"

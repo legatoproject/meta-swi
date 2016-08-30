@@ -29,7 +29,7 @@ DEVDIR_SIZE=262144
 #this_e=$( basename $0 )
 
 # Current boot system flag in dual system
-DS_BOOT_SYSTEM_FLAG=0
+DS_LINUX_SUB_SYSTEM_FLAG=0
 
 #
 # Helper functions
@@ -63,11 +63,11 @@ set_boot_dev()
     fi
 
     if [ -e /usr/bin/swidssd ]; then
-        /usr/bin/swidssd read
-        DS_BOOT_SYSTEM_FLAG=$?
+        /usr/bin/swidssd read linux
+        DS_LINUX_SUB_SYSTEM_FLAG=$?
     fi
 
-    if [ $DS_BOOT_SYSTEM_FLAG -eq 200 ]; then
+    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq 200 ]; then
         local mtd_part_name='(rootfs2|system2)'
     fi
     echo "mount root fs from partition $mtd_part_name"
