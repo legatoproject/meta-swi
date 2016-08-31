@@ -9,4 +9,4 @@ RDEPENDS_${PN} += "libcap-dev"
 RDEPENDS_${PN} += "procps-dev"
 RDEPENDS_${PN} += "kernel-dev"
 RDEPENDS_${PN} += "curl-dev"
-
+RDEPENDS_${PN} += "tinycbor-dev"

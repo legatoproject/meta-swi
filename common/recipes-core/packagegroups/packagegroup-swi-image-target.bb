@@ -68,3 +68,5 @@ RDEPENDS_${PN} += "usbutils"
 # Add rngd for entropy
 RDEPENDS_${PN} += "rng-tools"
 
+# Add tinucbor to all targets
+RDEPENDS_${PN} += "tinycbor"
