@@ -17,10 +17,10 @@ if [ -e /mnt/legato/systems/current/read-only ]
 then
     export PATH=/legato/systems/current/bin:$PATH
     LEGATO_START=/legato/systems/current/bin/start
-    mount -o bind /mnt/legato /legato
+    LEGATO_MNT=/mnt/legato
 else
     LEGATO_START=/mnt/legato/start
-    mount -o bind /mnt/flash/legato /legato
+    LEGATO_MNT=/mnt/flash/legato
 fi
 
 # This is where old startup lived. We can try this if we we don't have new startup.
@@ -30,6 +30,7 @@ COMPAT_STARTUP=/etc/init.d/startlegato-compat.sh
 case "$1" in
     start)
 
+        mount -o bind $LEGATO_MNT /legato
         if [ -x $LEGATO_START ]
         then
             $LEGATO_START
@@ -48,6 +49,7 @@ case "$1" in
         else
             $COMPAT_STARTUP stop
         fi
+        umount /legato
         ;;
 
     *)
