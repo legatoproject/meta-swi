@@ -1,14 +1,17 @@
 DEPENDS += " \
         virtual/lk \
-        mtd-utils-native"
+        mtd-utils-native \
+        cryptsetup-native"
 
 INC_PR = "r0"
 
 inherit ubi-image
+inherit dm-verity-hash
 inherit set-files-attr
 
 IMAGE_INSTALL += "start-scripts-find-partitions"
 IMAGE_INSTALL += "start-scripts-firmware-links"
+IMAGE_INSTALL += "cryptsetup"
 
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
@@ -41,30 +44,90 @@ create_ubinize_config() {
     local cfg_path=$1
     local rootfs_type=$2
 
-    local rootfs_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.$rootfs_type"
+    if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
+        local dm_hash_path=$3
+    fi
+
+    local rootfs_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${rootfs_type}"
 
     echo \[sysfs_volume\] > $cfg_path
     echo mode=ubi >> $cfg_path
     echo image="$rootfs_path" >> $cfg_path
     echo vol_id=0 >> $cfg_path
-    echo vol_type=dynamic >> $cfg_path
-    echo vol_name=rootfs >> $cfg_path
-    if [[ "$rootfs_type" != "squashfs" ]]; then
-        echo vol_size="${UBI_ROOTFS_SIZE}" >> $cfg_path
+
+    if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
+        # Dm-verity work with read only file system
+        echo vol_type=static >> $cfg_path
+    else
+        echo vol_type=dynamic >> $cfg_path
+        if [[ "${rootfs_type}" != "squashfs" ]]; then
+            echo vol_size="${UBI_ROOTFS_SIZE}" >> $cfg_path
+        fi
     fi
+
+    echo vol_name=rootfs >> $cfg_path
+
+    if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
+        # dm-verity hash tree table followed after the rootfs
+        # Init scripts will check this partition during boot up
+        if [[  -e ${dm_hash_path} ]]; then
+            echo >> $cfg_path
+            echo \[hash_volume\] >> $cfg_path
+            echo mode=ubi >> $cfg_path
+            echo image="$dm_hash_path" >> $cfg_path
+            echo vol_id=1 >> $cfg_path
+            echo vol_type=static >> $cfg_path
+            echo vol_name=hash >> $cfg_path
+            echo vol_alignment=1 >> $cfg_path
+        fi
+    fi
+}
+
+backup_hash_for_initramfs() {
+    local rootfs_type=$1
+    local dm_hash_filename=$2
+    ROOTHASH=$(cat $dm_hash_filename | grep Root | awk -F' ' '{printf $3}')
+    sed -i 's/^.*ROOTHASH=.*$/ROOTHASH='${ROOTHASH}'/g' ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
+    sed -i 's/^.*CUR_UBI_VOL=.*$/CUR_UBI_VOL='${rootfs_type}'/g' ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
 }
 
 prepare_ubi_ps() {
     local page_size=$1
+    local dm_hash_path=
 
     for rootfs_type in ubifs squashfs; do
 
-        if [[ "$rootfs_type" != "squashfs" ]]; then
+        if [[ "${rootfs_type}" != "squashfs" ]]; then
             local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.${rootfs_type}.ubinize_cfg"
-            create_ubinize_config $ubinize_cfg "${page_size}.$rootfs_type"
+            local image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${page_size}.${rootfs_type}"
         else
             local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.ubinize_cfg"
-            create_ubinize_config $ubinize_cfg $rootfs_type
+            local image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${rootfs_type}"
+        fi
+
+        if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
+            dm_hash_path="${image_path}.hash"
+            local dm_hash_filename="${dm_hash_path}.txt"
+
+            if [[ ! -e ${dm_hash_filename} ]]; then
+                # Now Dm-verity only work with squashfs
+                if [[ "${rootfs_type}" = "squashfs" ]]; then
+                    # During build initramfs, bb file will get root hash from "tmp.parameter.txt" and
+                    # write it to the start up scripts which will be attached to the boot image.
+
+                    echo "DM_VERITY_ENCRYPT=on" > ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
+                    echo "CUR_UBI_VOL=" >> ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
+                    echo "ROOTHASH=" >> ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
+                    create_dm_verity_hash $image_path ${dm_hash_path} ${dm_hash_filename}
+                    backup_hash_for_initramfs ${rootfs_type} ${dm_hash_filename}
+                fi
+            fi
+        fi
+
+        if [[ "${rootfs_type}" != "squashfs" ]]; then
+            create_ubinize_config ${ubinize_cfg} ${page_size}.${rootfs_type} ${dm_hash_path}
+        else
+            create_ubinize_config ${ubinize_cfg} ${rootfs_type} ${dm_hash_path}
         fi
 
         local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.${page_size}.ubi"
