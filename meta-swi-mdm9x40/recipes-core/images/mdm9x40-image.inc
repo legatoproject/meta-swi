@@ -32,8 +32,6 @@ DEPENDS += "${@check_legato_pkg(d)}"
 
 # AR8161
 IMAGE_INSTALL += "pciutils"
-IMAGE_INSTALL += "alx"
-IMAGE_INSTALL += "kernel-module-alx"
 
 # Stubs
 IMAGE_INSTALL += "bsinfo-stub"
