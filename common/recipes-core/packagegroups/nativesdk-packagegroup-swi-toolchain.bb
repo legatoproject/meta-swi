@@ -11,4 +11,5 @@ RDEPENDS_${PN} += "squashfs-tools"
 RDEPENDS_${PN} += "mtd-utils"
 RDEPENDS_${PN} += "mtd-utils-ubifs"
 RDEPENDS_${PN} += "attr"
+RDEPENDS_${PN} += "cryptsetup"
 
