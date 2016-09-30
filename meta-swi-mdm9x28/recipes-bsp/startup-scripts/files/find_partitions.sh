@@ -101,6 +101,13 @@ FindAndMountEXT4 () {
 emmc_dir=/dev/block/bootdevice/by-name
 mtd_file=/proc/mtd
 
+MODEM_PARTITION=modem
+DS_MODEM_SUB_SYSTEM_FLAG=0
+if [ -e /usr/bin/swidssd ]; then
+    /usr/bin/swidssd read modem
+    DS_MODEM_SUB_SYSTEM_FLAG=$?
+fi
+
 if [ -d $emmc_dir ]
 then
         fstype="EXT4"
@@ -111,6 +118,11 @@ else
         eval FindAndMountVolume${fstype} usrfs /usr
 fi
 
-eval FindAndMount${fstype} modem /firmware
+if [ $DS_MODEM_SUB_SYSTEM_FLAG -eq 200 ]; then
+    MODEM_PARTITION=modem2
+fi
+echo "mount modem from partition $MODEM_PARTITION"
+
+eval FindAndMount${fstype} ${MODEM_PARTITION} /firmware
 
 exit 0
