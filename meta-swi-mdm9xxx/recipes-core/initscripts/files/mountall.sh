@@ -34,10 +34,15 @@ then
 	mknod -m 600 /dev/initctl p
 fi
 
-# Set the SMACK label for /dev/null and /dev/zero to "*" so that everyone have access to them.
-setfattr -n security.SMACK64  -v "*" /dev/null
-setfattr -n security.SMACK64  -v "*" /dev/zero
-# Only allow the "framework" label to access the Legato directory.
-setfattr -n security.SMACK64 -v "framework" /legato
+if [ ! -e /legato/SMACK_DISABLED ]
+then
+    # Set the SMACK label for /dev/null and /dev/zero to "*" so that everyone have access to them.
+    setfattr -n security.SMACK64  -v "*" /dev/null
+    setfattr -n security.SMACK64  -v "*" /dev/zero
+    # Only allow the "framework" label to access the Legato directory.
+    setfattr -n security.SMACK64 -v "framework" /legato
+else
+    setfattr -n security.SMACK64 -v "_" /legato
+fi
 
 : exit 0
