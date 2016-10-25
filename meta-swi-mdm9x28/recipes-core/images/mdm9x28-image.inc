@@ -19,6 +19,7 @@ IMAGE_INSTALL += "cryptsetup"
 # IMAGE_INSTALL += "busybox-mdev"
 
 # Tools and helpers for i2c development
+IMAGE_INSTALL += "i2cgpioctl"
 IMAGE_INSTALL += "i2c-tools"
 
 # Only add Legato if this is a LEGATO_BUILD

@@ -86,15 +86,16 @@
 #define SOFTWARE_RESET_GPIO_EXPANDER1_DEVICE                   90
 #define SOFTWARE_RESET_GPIO_EXPANDER2_DEVICE                   91
 #define SOFTWARE_RESET_GPIO_EXPANDER3_DEVICE                   92
-#define LIST_I2C_BUSES                                         93
+#define LIST_I2C_BUSES                                         93 
 #define CLEAR_DEFAULT_CONFIGURATION                            99
 #define LOAD_DEFAULT_CONFIGURATION                            100
 
 static void help(void)
 {
     fprintf(stderr,
-        "i2cgpioctl tool for Sierra Wireless MangOH platform\n"
-        "Usage: i2cgpioctl \n");
+        "Usage: i2cgpioctl [i2cbusnum]\n"
+        "  i2cbusnum - i2c bus number, example: \"i2cgpioctl 4\" for /dev/i2c-4\n"
+        "    default: 0, i.e. /dev/i2c-0\n");
 }
 
 static int check_i2c_bus_slave_addr(int file, int mode, int i2c_addr)
@@ -362,74 +363,72 @@ static void print_i2c_busses(void)
 
 void cmd_usage(void)
 {
-    int cmd_cnt = 1;
-
-    printf("\nHello Sir, What would you like to do? \n");
+    printf("\nHello user, what would you like to do? \n");
     printf("\t 0. Exit\n");
-    printf("\t %d. Scan i2c bus\n", cmd_cnt++);
-    printf("\t %d. Enable PCA9548A I2C switch channel IOT0 Card\n", cmd_cnt++);
-    printf("\t %d. Disable PCA9548A I2C switch channel\n", cmd_cnt++);
-    printf("\t %d. Enable SX1509 GPIO Expander2 input for IOT0-2 Card\n", cmd_cnt++);
-    printf("\t %d. Enable SX1509 GPIO Expander2 output for IOT0-2 Card\n", cmd_cnt++);
-    printf("\t %d. Detect output high IOT i2c slave address\n", cmd_cnt++);
-    printf("\t %d. Detect IOT low i2c slave address\n", cmd_cnt++);
-    printf("\t %d. Detect SX1509 GPIO Expander1 i2c slave address\n", cmd_cnt++);
-    printf("\t %d. Detect SX1509 GPIO Expander2 i2c slave address\n", cmd_cnt++);
-    printf("\t %d. Detect SX1509 GPIO Expander3 i2c slave address\n", cmd_cnt++);
-    printf("\t %d. Detect USB3503 i2c slave address\n", cmd_cnt++);
-    printf("\t %d. Detect BQ24292I Battery i2c slave address\n", cmd_cnt++);
-    printf("\t %d. Detect LSM6DS0 3D i2c slave address\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander2 IOT0 GPIO1 LED D1 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander2 IOT0 GPIO2 LED D2 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander2 IOT0 GPIO3 LED D3 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander3 IOT0 GPIO4 LED D4 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander2 IOT1 GPIO1 LED D1 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander2 IOT1 GPIO2 LED D2 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander2 IOT1 GPIO3 LED D3 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander3 IOT1 GPIO4 LED D4 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander2 IOT2 GPIO1 LED D1 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander2 IOT2 GPIO2 LED D2 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander2 IOT2 GPIO3 LED D3 Light\n", cmd_cnt++);
-    printf("\t %d. Enable GPIO Expander3 IOT2 GPIO4 LED D4 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander2 IOT0 GPIO1 LED D1 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander2 IOT0 GPIO2 LED D2 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander2 IOT0 GPIO3 LED D3 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander3 IOT0 GPIO4 LED D4 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander2 IOT1 GPIO1 LED D1 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander2 IOT1 GPIO2 LED D2 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander2 IOT1 GPIO3 LED D3 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander3 IOT1 GPIO4 LED D4 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander2 IOT2 GPIO1 LED D1 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander2 IOT2 GPIO2 LED D2 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander2 IOT2 GPIO3 LED D3 Light\n", cmd_cnt++);
-    printf("\t %d. Disable GPIO Expander3 IOT2 GPIO4 LED D4 Light\n", cmd_cnt++);
-    printf("\t %d. Detect GPIO Expander2 IOT0 card insert/remove action\n", cmd_cnt++);
-    printf("\t %d. Detect GPIO Expander2 IOT1 card insert/remove action\n", cmd_cnt++);
-    printf("\t %d. Detect GPIO Expander2 IOT2 card insert/remove action\n", cmd_cnt++);
-    printf("\t %d. Detect GPIO Expander2 EXP3 IO14 Interrupt\n", cmd_cnt++);
-    printf("\t %d. Detect GPIO Expander2 Battery Charger IO15 Interrupt\n", cmd_cnt++);
-    printf("\t %d. Enable PCA9548A I2C switch channel IOT1 Card\n", cmd_cnt++);
-    printf("\t %d. Enable PCA9548A I2C switch channel IOT2 Card\n", cmd_cnt++);
-    printf("\t 55. GPIO Expander1 IO5 Arduino spi control switch\n");
-    printf("\t 57. GPIO Expander1 IO7 Arduino i2c control switch\n");
-    printf("\t 70. Detect GPIO Expander3 IO0 USB Hub Interrupt\n");
-    printf("\t 85. GPIO Expander(#1, #3) Enable UART2(RS232)\n");
-    printf("\t 86. GPIO Expander Enable UART1 IOT0 Module\n");
-    printf("\t 87. GPIO Expander Enable UART1 IOT1 Module\n");
-    printf("\t 88. GPIO Expander Enable UART1 IOT2 Module\n");
-    printf("\t 90. Software Reset GPIO Expander1 Device\n");
-    printf("\t 91. Software Reset GPIO Expander2 Device\n");
-    printf("\t 92. Software Reset GPIO Expander3 Device\n");
-    printf("\t 93. List i2c buses\n");
-    printf("\t 99. Clear default configuraiton\n");
-    printf("\t 100. Loading default configuraiton\n");
+    printf("\t %d. Scan i2c bus\n", SCAN_I2C_BUS);
+    printf("\t %d. Enable PCA9548A I2C switch channel IOT0 Card\n", ENABLE_PCA9548A_I2C_SWITCH_CHANNEL_IOT0_CARD);
+    printf("\t %d. Disable PCA9548A I2C switch channel\n", DISABLE_PCA9548A_I2C_SWITCH_CHANNEL);
+    printf("\t %d. Enable SX1509 GPIO Expander2 input for IOT0-2 Card\n", INPUT_SX1509_GPIO_EXPANDER2_IOT0_2);
+    printf("\t %d. Enable SX1509 GPIO Expander2 output for IOT0-2 Card\n", OUTPUT_SX1509_GPIO_EXPANDER2_IOT0_2);
+    printf("\t %d. Detect output high IOT i2c slave address\n", IOT_CARD_OUTPUT_I2C_ADDR_DETECT);
+    printf("\t %d. Detect IOT low i2c slave address\n", SX1509_GPIO_EXPANDER1_I2C_ADDR_DETECT);
+    printf("\t %d. Detect SX1509 GPIO Expander1 i2c slave address\n", SX1509_GPIO_EXPANDER1_I2C_ADDR_DETECT);
+    printf("\t %d. Detect SX1509 GPIO Expander2 i2c slave address\n", SX1509_GPIO_EXPANDER2_I2C_ADDR_DETECT);
+    printf("\t %d. Detect SX1509 GPIO Expander3 i2c slave address\n", SX1509_GPIO_EXPANDER3_I2C_ADDR_DETECT);
+    printf("\t %d. Detect USB3503 i2c slave address\n", USB3503_I2C_ADDR_DETECT);
+    printf("\t %d. Detect BQ24292I Battery i2c slave address\n", BQ24292I_BATTERY_I2C_ADDR_DETECT);
+    printf("\t %d. Detect LSM6DS0 3D i2c slave address\n", LSM6DS0_3D_I2C_ADDR_DETECT);
+    printf("\t %d. Enable GPIO Expander2 IOT0 GPIO1 LED D1 Light\n", ENABLE_EXPANDER2_IOT0_GPIO1_LED_D1);
+    printf("\t %d. Enable GPIO Expander2 IOT0 GPIO2 LED D2 Light\n", ENABLE_EXPANDER2_IOT0_GPIO2_LED_D2);
+    printf("\t %d. Enable GPIO Expander2 IOT0 GPIO3 LED D3 Light\n", ENABLE_EXPANDER2_IOT0_GPIO3_LED_D3);
+    printf("\t %d. Enable GPIO Expander3 IOT0 GPIO4 LED D4 Light\n", ENABLE_EXPANDER3_IOT0_GPIO4_LED_D4);
+    printf("\t %d. Enable GPIO Expander2 IOT1 GPIO1 LED D1 Light\n", ENABLE_EXPANDER2_IOT1_GPIO1_LED_D1);
+    printf("\t %d. Enable GPIO Expander2 IOT1 GPIO2 LED D2 Light\n", ENABLE_EXPANDER2_IOT1_GPIO2_LED_D2);
+    printf("\t %d. Enable GPIO Expander2 IOT1 GPIO3 LED D3 Light\n", ENABLE_EXPANDER2_IOT1_GPIO3_LED_D3);
+    printf("\t %d. Enable GPIO Expander3 IOT1 GPIO4 LED D4 Light\n", ENABLE_EXPANDER3_IOT1_GPIO4_LED_D4);
+    printf("\t %d. Enable GPIO Expander2 IOT2 GPIO1 LED D1 Light\n", ENABLE_EXPANDER2_IOT2_GPIO1_LED_D1);
+    printf("\t %d. Enable GPIO Expander2 IOT2 GPIO2 LED D2 Light\n", ENABLE_EXPANDER2_IOT2_GPIO2_LED_D2);
+    printf("\t %d. Enable GPIO Expander2 IOT2 GPIO3 LED D3 Light\n", ENABLE_EXPANDER2_IOT2_GPIO3_LED_D3);
+    printf("\t %d. Enable GPIO Expander3 IOT2 GPIO4 LED D4 Light\n", ENABLE_EXPANDER3_IOT2_GPIO4_LED_D4);
+    printf("\t %d. Disable GPIO Expander2 IOT0 GPIO1 LED D1 Light\n", DISABLE_EXPANDER2_IOT0_GPIO1_LED_D1);
+    printf("\t %d. Disable GPIO Expander2 IOT0 GPIO2 LED D2 Light\n", DISABLE_EXPANDER2_IOT0_GPIO2_LED_D2);
+    printf("\t %d. Disable GPIO Expander2 IOT0 GPIO3 LED D3 Light\n", DISABLE_EXPANDER2_IOT0_GPIO3_LED_D3);
+    printf("\t %d. Disable GPIO Expander3 IOT0 GPIO4 LED D4 Light\n", DISABLE_EXPANDER3_IOT0_GPIO4_LED_D4);
+    printf("\t %d. Disable GPIO Expander2 IOT1 GPIO1 LED D1 Light\n", DISABLE_EXPANDER2_IOT1_GPIO1_LED_D1);
+    printf("\t %d. Disable GPIO Expander2 IOT1 GPIO2 LED D2 Light\n", DISABLE_EXPANDER2_IOT1_GPIO2_LED_D2);
+    printf("\t %d. Disable GPIO Expander2 IOT1 GPIO3 LED D3 Light\n", DISABLE_EXPANDER2_IOT1_GPIO3_LED_D3);
+    printf("\t %d. Disable GPIO Expander3 IOT1 GPIO4 LED D4 Light\n", DISABLE_EXPANDER3_IOT1_GPIO4_LED_D4);
+    printf("\t %d. Disable GPIO Expander2 IOT2 GPIO1 LED D1 Light\n", DISABLE_EXPANDER2_IOT2_GPIO1_LED_D1);
+    printf("\t %d. Disable GPIO Expander2 IOT2 GPIO2 LED D2 Light\n", DISABLE_EXPANDER2_IOT2_GPIO2_LED_D2);
+    printf("\t %d. Disable GPIO Expander2 IOT2 GPIO3 LED D3 Light\n", DISABLE_EXPANDER2_IOT2_GPIO3_LED_D3);
+    printf("\t %d. Disable GPIO Expander3 IOT2 GPIO4 LED D4 Light\n", DISABLE_EXPANDER3_IOT2_GPIO4_LED_D4);
+    printf("\t %d. Detect GPIO Expander2 IOT0 card insert/remove action\n", DETECT_GPIO_EXPANDER2_IOT0_CARD_INSERT_REMOVE);
+    printf("\t %d. Detect GPIO Expander2 IOT1 card insert/remove action\n", DETECT_GPIO_EXPANDER2_IOT1_CARD_INSERT_REMOVE);
+    printf("\t %d. Detect GPIO Expander2 IOT2 card insert/remove action\n", DETECT_GPIO_EXPANDER2_IOT2_CARD_INSERT_REMOVE);
+    printf("\t %d. Detect GPIO Expander2 EXP3 IO14 Interrupt\n", DETECT_GPIO_EXPANDER2_GPIO_EXP3_INTERRUPT);
+    printf("\t %d. Detect GPIO Expander2 Battery Charger IO15 Interrupt\n", DETECT_GPIO_EXPANDER2_BATTERY_CHARGER_INTERRUPT);
+    printf("\t %d. Enable PCA9548A I2C switch channel IOT1 Card\n", ENABLE_PCA9548A_I2C_SWITCH_CHANNEL_IOT1_CARD);
+    printf("\t %d. Enable PCA9548A I2C switch channel IOT2 Card\n", ENABLE_PCA9548A_I2C_SWITCH_CHANNEL_IOT2_CARD);
+    printf("\t %d. GPIO Expander1 IO5 Arduino spi control switch\n", GPIO_EXPANDER1_IO5_ENABLE_ARDUINO_SPI_CONTROL_SWITCH);
+    printf("\t %d. GPIO Expander1 IO7 Arduino i2c control switch\n", GPIO_EXPANDER1_IO7_ENABLE_ARDUINO_I2C_CONTROL_SWITCH);
+    printf("\t %d. Detect GPIO Expander3 IO0 USB Hub Interrupt\n", DETECT_GPIO_EXPANDER3_IO0_USB_HUB_INTERRUPT);
+    printf("\t %d. GPIO Expander(#1, #3) Enable UART2(RS232)\n", GPIO_ENABLE_UART2_RS232);
+    printf("\t %d. GPIO Expander Enable UART1 IOT0 Module\n", GPIO_ENABLE_UART1_IOT0);
+    printf("\t %d. GPIO Expander Enable UART1 IOT1 Module\n", GPIO_ENABLE_UART1_IOT1);
+    printf("\t %d. GPIO Expander Enable UART1 IOT2 Module\n", GPIO_ENABLE_UART1_IOT2);
+    printf("\t %d. Software Reset GPIO Expander1 Device\n", SOFTWARE_RESET_GPIO_EXPANDER1_DEVICE);
+    printf("\t %d. Software Reset GPIO Expander2 Device\n", SOFTWARE_RESET_GPIO_EXPANDER2_DEVICE);
+    printf("\t %d. Software Reset GPIO Expander3 Device\n", SOFTWARE_RESET_GPIO_EXPANDER3_DEVICE);
+    printf("\t %d. List i2c buses\n", LIST_I2C_BUSES);
+    printf("\t %d. Clear default configuraiton\n", CLEAR_DEFAULT_CONFIGURATION);
+    printf("\t %d. Loading default configuraiton\n", LOAD_DEFAULT_CONFIGURATION);
 
     return;
 }
 
 int main(int argc, char *argv[])
 {
-    char *end;
+    char *end, *argvp;
     int i2cbus, file, res;
     int i2c_addr, daddr, data;
     char filename[20];
@@ -442,10 +441,32 @@ int main(int argc, char *argv[])
     mode = MODE_READ;
     i2cbus = 0;
 
+    do {
+        if (argc == 1) {
+            /* Default bus is selected */
+            break;
+        }
+        else if (argc == 2) {
+            for (argvp = &argv[1][0]; 
+                 (*argvp != '\0') && (isdigit(*argvp) > 0);
+                 *argvp++) {
+            };
+            if (*argvp == '\0') {
+                i2cbus = atoi(argv[1]);
+                break;
+            }
+        }
+
+        help();
+        exit(1);
+    } while(0);
+
     file = open_i2c_dev(i2cbus, filename, sizeof(filename), 0);
     if (file < 0) {
         exit(1);
     }
+
+    printf("i2c bus: %s\n", filename);
 
     if (ioctl(file, I2C_FUNCS, &funcs) < 0) {
         fprintf(stderr, "Error: Could not get the adapter "
@@ -484,13 +505,13 @@ int main(int argc, char *argv[])
 
         cmd_usage();
 
-        printf("Input option (1-100): ");
+        printf("Input option (0-100): ");
         scanf("%d", &cmd);
         printf("\n");
 
         switch (cmd) {
             case SCAN_I2C_BUS:
-                printf("Scanning i2c bus...\n");
+                printf("Scanning i2c-%d bus...\n", i2cbus);
                 res = scan_i2c_bus(file, mode, first, last);
                 printf("Done\n");
                 break;
@@ -1638,7 +1659,7 @@ int main(int argc, char *argv[])
                 break;
 
             default:
-                printf("Not supported command %d, try again!\n", cmd);
+                printf("Unsupported command %d, try again!\n", cmd);
                 printf("i2cgpioctl tool for Sierra Wireless MangOH platform\n\n");
                 break;
         }
