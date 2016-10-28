@@ -27,6 +27,8 @@ export PATH PS1 OPIEDIR QPEDIR QTDIR EDITOR TERM
 
 umask 022
 
-if [ -e /etc/loginNagger ]; then
+export PATH=/legato/systems/current/bin:$PATH
+
+if [ -f /etc/loginNagger ]; then
     /etc/loginNagger
 fi
