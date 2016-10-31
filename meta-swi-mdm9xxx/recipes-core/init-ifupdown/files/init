@@ -59,6 +59,12 @@ case "$1" in
 start)
 	echo -n "Configuring network interfaces... "
 	sysctl -e -p /etc/sysctl.conf >/dev/null 2>&1
+	if [ -x /usr/sbin/iptables-restore ] && [ -f /etc/iptables/rules.v4 ] ; then
+		/usr/sbin/iptables-restore < /etc/iptables/rules.v4
+	fi
+	if [ -x /usr/sbin/ip6tables-restore ] && [ -f /etc/iptables/rules.v6 ] ; then
+		/usr/sbin/ip6tables-restore < /etc/iptables/rules.v6
+	fi
 	ifup -a &
 	echo "done."
 	;;
