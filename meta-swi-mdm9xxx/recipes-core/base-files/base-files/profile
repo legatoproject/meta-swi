@@ -16,6 +16,8 @@ if [ "$PS1" ]; then
    PS1='\u@\h:\w\$ '
 fi
 
+export PATH=/legato/systems/current/bin:$PATH
+
 if [ -d /etc/profile.d ]; then
   for i in /etc/profile.d/* ; do
     . $i
@@ -27,8 +29,3 @@ export PATH PS1 OPIEDIR QPEDIR QTDIR EDITOR TERM
 
 umask 022
 
-export PATH=/legato/systems/current/bin:$PATH
-
-if [ -f /etc/loginNagger ]; then
-    /etc/loginNagger
-fi
