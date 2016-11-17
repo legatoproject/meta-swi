@@ -29,6 +29,29 @@
 # find_partitions        init.d script to dynamically find partitions
 #
 
+# import run environment
+source /etc/run.env
+
+# Wait until device shows up. After testing, it spent about 6 msec to
+# find the devices of /dev/ubi1_0 and /dev/ubiblock1_0. So, limit the
+# maximum time spent here to about 60 msec.
+wait_on_dev()
+{
+    local cntmax=20
+    local ret=${SWI_OK}
+    while [ ! "$1" "$2" ]; do
+        # When sleep 3 msec, it actually sleep for 3~4 msec, so here
+        # sleep 3 msec every cycle.
+        usleep 3000
+        cntmax=$( echo $(( ${cntmax} - 1 )) )
+        if [ ${cntmax} -eq 0 ]; then
+            ret=${SWI_ERR}
+            break
+        fi
+    done
+    return ${ret}
+}
+
 FindAndMountUBI () {
    partition=$1
    dir=$2
@@ -47,24 +70,24 @@ FindAndMountUBI () {
         if ! [ -e "/dev/ubi1_0" ]; then
             # UBI partition, attach device
             ubiattach -m ${mtd_block_number} -d 1 /dev/ubi_ctrl
+            # Need to wait for the /dev/ubi1_0 device ready
+            wait_on_dev "-c" "/dev/ubi1_0"
+            if [ $? -ne ${SWI_OK} ]; then
+                swi_log "Failed to wait on /dev/ubi1_0, exiting."
+                return ${SWI_ERR}
+            fi
         fi
         SQFS_FLAG=$(dd if=/dev/ubi1_0 count=4 bs=1 2>/dev/null)
         if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
             # squashfs volume, create UBI block device
             if ! [ -e "/dev/ubiblock1_0" ]; then
                 ubiblkvol -a /dev/ubi1_0
-                try_count=0
                 # Need to wait for the block device ready
-                while [ $try_count -lt 100 ]
-                do
-                    if [ -b /dev/ubiblock1_0 ]
-                    then
-                        break
-                    else
-                        usleep 10
-                        try_count=`expr $try_count + 1`
-                    fi
-                done
+                wait_on_dev "-b" "/dev/ubiblock1_0"
+                if [ $? -ne ${SWI_OK} ]; then
+                   swi_log "Failed to wait on /dev/ubiblock1_0, exiting."
+                   return ${SWI_ERR}
+                fi
             fi
             BOOTTYPE=squashfs
             BOOTDEV="/dev/ubiblock1_0"
