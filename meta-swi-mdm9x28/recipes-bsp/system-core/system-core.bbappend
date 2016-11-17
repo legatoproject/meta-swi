@@ -1,6 +1,6 @@
 
-# Tag LE.BR.1.2.1-64400-9x07
-SRCREV = "6ba4d991ead9291ab151a60515304405d30724e5"
+# Tag LE.BR.1.2.1-44100-9x07
+SRCREV = "95852f8b85a9b2d190b395aaf9621fb6cca90dc6"
 SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=mdm"
 
 DEPENDS += "zlib openssl"

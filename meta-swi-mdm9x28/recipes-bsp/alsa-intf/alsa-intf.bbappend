@@ -1,5 +1,5 @@
-# Tag LE.BR.1.2.1-64400-9x07
-SRCREV = "e905909728462393cef12b5e6802e708957037fe"
+# Tag LE.BR.1.2.1-44100-9x07
+SRCREV = "eac125d36533b535985713e7c64136e035b7a300"
 ALSAINTF_REPO = "git://codeaurora.org/platform/vendor/qcom-opensource/kernel-tests/mm-audio;branch=master"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
