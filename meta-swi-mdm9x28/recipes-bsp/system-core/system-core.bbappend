@@ -3,7 +3,7 @@
 SRCREV = "95852f8b85a9b2d190b395aaf9621fb6cca90dc6"
 SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=mdm"
 
-DEPENDS += "zlib openssl"
+DEPENDS += "zlib openssl libcap"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://0001-Fix-build-without-liblog.patch"
