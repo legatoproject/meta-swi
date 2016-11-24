@@ -31,6 +31,36 @@ DEVDIR_SIZE=262144
 # Current boot system flag in dual system
 DS_LINUX_SUB_SYSTEM_FLAG=0
 
+# swidssd is used during boot sequence to aid image swap.
+# 'swidssd read' will return 100 if system is booting up using boot image set one,
+# or 200 if system is booting up using boot image set two.
+# 'swidssd write' is used to indicate bad image set using bad image set flag
+# (please see DS_BAD_ROOTFS_1_MASK and DS_BAD_ROOTFS_2_MASK).
+# 'swidssd write' will return 0 on successful write, (-1) otherwise.
+# If swidssd is missing, stub executable will always return (1) to indicate that
+# swidssd is not available on the system.
+
+# If swidssd is missing, it will be replaced with '/bin/false'
+# which will always return '1' to indicate that swidssd is not
+# available. So, return code '1' must be treated as special,
+# and cannot be used by swidssd .
+SWIDSSD=/usr/bin/swidssd
+if [ ! -e ${SWIDSSD} ] ; then
+   SWIDSSD="/bin/false"
+fi
+
+# Flag to mount system 1
+DS_SYSTEM_1_FLAG=100
+
+# Flag to mount system 2
+DS_SYSTEM_2_FLAG=200
+
+# Mask of bad rootfs 1
+DS_BAD_ROOTFS_1_MASK=8000
+
+# Mask of bad rootfs 2
+DS_BAD_ROOTFS_2_MASK=10000
+
 #
 # Helper functions
 #
@@ -62,13 +92,13 @@ set_boot_dev()
         echo "DM_VERITY_ENCRYPT=on"
     fi
 
-    if [ -e /usr/bin/swidssd ]; then
-        /usr/bin/swidssd read linux
-        DS_LINUX_SUB_SYSTEM_FLAG=$?
-    fi
+    # Get dual system flag from shared memory if swidssd exists
+    ${SWIDSSD} read linux
+    DS_LINUX_SUB_SYSTEM_FLAG=$?
 
-    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq 200 ]; then
-        local mtd_part_name='(rootfs2|system2)'
+    # Mount rootfs_2 if system_2 flag is set
+    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
+        mtd_part_name='(rootfs2|system2)'
     fi
     echo "mount root fs from partition $mtd_part_name"
 
@@ -177,8 +207,19 @@ checkpoint_rootfs()
         export mnt_time=$( time mount -t ${BOOTTYPE} ${BOOTDEV} ${ROOTFS_MNTPT} -o ${BOOTOPTS} 2>&1 | \
                         grep real | awk '{ print $3 }' | grep -oe '\([0-9.]*\)' )
     fi
-    if ! [ -e "${ROOTFS_MNTPT}/bin" ]; then
+    if ! [ -d "${ROOTFS_MNTPT}/bin" ]; then
         echo "rootfs: mount failed"
+
+        # Regard it as bad rootfs, reboot and swap system
+        # Writing to shared memory when mount failed.
+        # Don't need to check return value in this case.
+        if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
+            # Set rootfs_2 bad flag to shared memory
+            ${SWIDSSD} write $DS_BAD_ROOTFS_2_MASK
+        elif [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_1_FLAG ]; then
+            # Set rootfs_1 bad flag to shared memory
+            ${SWIDSSD} write $DS_BAD_ROOTFS_1_MASK
+        fi
 
         if ! [ -e $BOOTDEV ]; then
             echo -n "rootfs: dev '${BOOTDEV}' does not exist"
