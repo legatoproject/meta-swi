@@ -8,9 +8,9 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/\
 ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 PROVIDES = "dtbtool-native"
 
-# Tag LNX.LE.5.3-79003-9x40
+# Tag LNX.LE.5.3-76132-9x40
 SRCREV = "59f4c7fec32ac03e33cf94c7d6cb576649bd50fa"
-SRC_URI  = "git://codeaurora.org/device/qcom/common;branch=LNX.LE.5.3_rb1.2"
+SRC_URI  = "git://codeaurora.org/device/qcom/common;branch=LNX.LE.5.3"
 SRC_URI += "file://makefile"
 
 S = "${WORKDIR}/git/dtbtool"
