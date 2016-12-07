@@ -134,5 +134,17 @@ do_bootimg() {
     fi
 }
 
-addtask bootimg after do_deploy before do_build
+do_add_mbnhdr_and_hash() {
+    # Append "mbn header" and "hash of kernel" to kernel image for data integrity check
+    # "mbnhdr_data" is 40bytes mbn header data in hex string format
+    mbnhdr_data="06000000030000000000000028000000200000002000000048000000000000004800000000000000"
+    # Transfer data from hex string format to binary format "0x06,0x00,0x00,..." and write to a file.
+    echo -n $mbnhdr_data | sed 's/\([0-9A-F]\{2\}\)/\\\\\\x\1/gI' | xargs printf > ${DEPLOY_DIR_IMAGE}/boot_mbnhdr
+    openssl dgst -sha256 -binary ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.2k.img > ${DEPLOY_DIR_IMAGE}/boot_hash.2k
+    openssl dgst -sha256 -binary ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.4k.img > ${DEPLOY_DIR_IMAGE}/boot_hash.4k
+    cat ${DEPLOY_DIR_IMAGE}/boot_mbnhdr ${DEPLOY_DIR_IMAGE}/boot_hash.2k >> ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.2k.img
+    cat ${DEPLOY_DIR_IMAGE}/boot_mbnhdr ${DEPLOY_DIR_IMAGE}/boot_hash.4k >> ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.4k.img
+}
 
+addtask bootimg after do_deploy before do_build
+addtask do_add_mbnhdr_and_hash after do_bootimg before do_build
