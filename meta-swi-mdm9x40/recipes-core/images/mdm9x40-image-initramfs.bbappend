@@ -1,4 +1,4 @@
-PACKAGE_INSTALL += "cryptsetup libgcrypt ossp-uuid"
+PACKAGE_INSTALL += "cryptsetup libgcrypt ossp-uuid swicert"
 
 fakeroot do_filter_rootfs () {
 
@@ -36,6 +36,7 @@ fakeroot do_filter_rootfs () {
                 */libuuid*) ;;
                 */libudev*) ;;
                 */libcrypt*) ;;
+                */libz.so*) ;;
                 *) remove_entity $file ;;
             esac
         elif echo $file | grep -e "./usr/sbin/.*ubi"; then

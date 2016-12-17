@@ -12,6 +12,7 @@ inherit set-files-attr
 IMAGE_INSTALL += "start-scripts-find-partitions"
 IMAGE_INSTALL += "start-scripts-firmware-links"
 IMAGE_INSTALL += "cryptsetup"
+IMAGE_INSTALL += "swicert"
 
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
@@ -47,85 +48,93 @@ create_ubinize_config() {
 
     if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
         local dm_hash_path=$3
+        local dm_root_hash_path=$4
     fi
 
-    local rootfs_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.$rootfs_type"
+    local rootfs_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${rootfs_type}"
+
     echo \[sysfs_volume\] > $cfg_path
     echo mode=ubi >> $cfg_path
     echo image="$rootfs_path" >> $cfg_path
     echo vol_id=0 >> $cfg_path
 
-    if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
-        # Dm-verity work with read only file system
+    if [[ "${rootfs_type}" = "squashfs" ]]; then
         echo vol_type=static >> $cfg_path
     else
         echo vol_type=dynamic >> $cfg_path
-        if [[ "$rootfs_type" != "squashfs" ]]; then
-            echo vol_size="${UBI_ROOTFS_SIZE}" >> $cfg_path
-        fi
+        echo vol_size="${UBI_ROOTFS_SIZE}" >> $cfg_path
     fi
 
     echo vol_name=rootfs >> $cfg_path
+    echo vol_alignment=1 >> $cfg_path
 
     if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
         # dm-verity hash tree table followed after the rootfs
-        echo >> $cfg_path
-        echo \[hash_volume\] >> $cfg_path
-        echo mode=ubi >> $cfg_path
-        echo image="$dm_hash_path" >> $cfg_path
-        echo vol_id=1 >> $cfg_path
-        echo vol_type=static >> $cfg_path
-        echo vol_name=hash >> $cfg_path
-        echo vol_alignment=1 >> $cfg_path
+        # Init scripts will check this partition during boot up
+        if [[ -s ${dm_hash_path} ]]; then
+            echo >> $cfg_path
+            echo \[hash_volume\] >> $cfg_path
+            echo mode=ubi >> $cfg_path
+            echo image="$dm_hash_path" >> $cfg_path
+            echo vol_id=1 >> $cfg_path
+            echo vol_type=static >> $cfg_path
+            echo vol_name=rootfs_hs >> $cfg_path
+            echo vol_alignment=1 >> $cfg_path
+        fi
+
+        #  dm-verity root hash is following the hash
+        if [[ -s ${dm_root_hash_path} ]]; then
+            echo >> $cfg_path
+            echo \[rh_volume\] >> $cfg_path
+            echo mode=ubi >> $cfg_path
+            echo image="$dm_root_hash_path" >> $cfg_path
+            echo vol_id=2 >> $cfg_path
+            echo vol_type=static >> $cfg_path
+            echo vol_name=rootfs_rhs >> $cfg_path
+            echo vol_alignment=1 >> $cfg_path
+        fi
     fi
 }
 
-backup_hash_for_initramfs() {
-    local rootfs_type=$1
+get_dm_root_hash() {
+    local dm_root_hash_path=$1
     local dm_hash_filename=$2
-    ROOTHASH=$(cat $dm_hash_filename | grep Root | awk -F' ' '{printf $3}')
-    sed -i 's/^.*ROOTHASH=.*$/ROOTHASH='${ROOTHASH}'/g' ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
-    sed -i 's/^.*CUR_UBI_VOL=.*$/CUR_UBI_VOL='${rootfs_type}'/g' ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
+    local root_hash=$(cat ${dm_hash_filename} | grep Root | awk -F' ' '{printf $3}')
+    echo ${root_hash} > ${dm_root_hash_path}
 }
 
 prepare_ubi_ps() {
     local page_size=$1
-    local dm_args=
-
-    if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
-        echo "DM_VERITY_ENCRYPT=on" > ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
-        echo "CUR_UBI_VOL=" >> ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
-        echo "ROOTHASH=" >> ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
-    fi
+    local ubinize_cfg=
+    local image_path=
+    local dm_hash_path=
+    local dm_hash_filename=
+    local dm_root_hash_path=
+    local ubi_path=
+    local ubi_link_path=
 
     for rootfs_type in ubifs squashfs; do
-        local ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.ubinize.cfg"
-        if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
-            local image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${rootfs_type}"
-            local dm_hash_path="${image_path}.hash"
-            local dm_hash_filename="${dm_hash_path}.txt"
-            local dm_hash_link_path="${DEPLOY_DIR_IMAGE}/${rootfs_type}.${page_size}.hash.txt"
+        ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.ubinize.cfg"
+        image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${rootfs_type}"
+
+        # Now Dm-verity only work with squashfs
+        if [ "${DM_VERITY_ENCRYPT}" = "on" -a "${rootfs_type}" = "squashfs" ]; then
+            dm_hash_path="${image_path}.hash"
+            dm_hash_filename="${dm_hash_path}.txt"
+            dm_root_hash_path="${image_path}.rhash"
+
+            create_dm_verity_hash ${image_path} ${dm_hash_path} ${dm_hash_filename}
+            get_dm_root_hash ${dm_root_hash_path} ${dm_hash_filename}
+            create_ubinize_config ${ubinize_cfg} ${rootfs_type} ${dm_hash_path} ${dm_root_hash_path}
+        else
+            create_ubinize_config ${ubinize_cfg} ${rootfs_type}
         fi
 
-        create_ubinize_config $ubinize_cfg $rootfs_type $dm_hash_path
+        ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.${page_size}.ubi"
+        ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${rootfs_type}.${page_size}.ubi"
 
-        local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.${page_size}.ubi"
-        local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${rootfs_type}.${page_size}.ubi"
-
-        if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
-            UBI_VOLS="${UBI_VOLS} ${rootfs_type}"
-            create_dm_verity_hash $image_path $dm_hash_path $dm_hash_filename $dm_args
-
-            backup_hash_for_initramfs ${rootfs_type} $dm_hash_filename
-            rm -f $dm_hash_link_path
-            ln -s $(basename $dm_hash_filename) $dm_hash_link_path
-        fi
         create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
     done
-
-    if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
-        echo "UBI_VOLS=${UBI_VOLS}" >> ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt
-    fi
 }
 
 # Create UBI images

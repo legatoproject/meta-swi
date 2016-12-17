@@ -117,21 +117,9 @@ gen_bootimg() {
 }
 
 do_bootimg() {
-    if [ "${DM_VERITY_ENCRYPT}" = "on" ]; then
-        # Get current UBI volume for Dm-verity
-        CUR_UBI_VOL=$(cat ${DEPLOY_DIR_IMAGE}/tmp.parameter.txt | grep CUR_UBI_VOL | awk -F'=' '{printf $2}')
-    fi
-    if [ "${DM_VERITY_ENCRYPT}" = "on" ]; then
-        if [ "x${CUR_UBI_VOL}" != "x" ]; then
-            gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}.${CUR_UBI_VOL}.hash" boot-yocto-mdm9x40.2k masterDTB.2k 2048
-            gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}.${CUR_UBI_VOL}.hash" boot-yocto-mdm9x40.4k masterDTB.4k 4096
-            ln -sf ${BOOTIMG_NAME_4k}.${CUR_UBI_VOL}.hash.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.img
-        fi
-    else
-        gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x40.2k masterDTB.2k 2048
-        gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x40.4k masterDTB.4k 4096
-        ln -sf ${BOOTIMG_NAME_4k}.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.img
-    fi
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x40.2k masterDTB.2k 2048
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x40.4k masterDTB.4k 4096
+    ln -sf ${BOOTIMG_NAME_4k}.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.img
 }
 
 do_add_mbnhdr_and_hash() {
