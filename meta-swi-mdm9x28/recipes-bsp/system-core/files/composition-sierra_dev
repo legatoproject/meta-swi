@@ -38,22 +38,106 @@ fi
 
 pkill adbd
 
+vid=$(/usr/bin/ud_getusbinfo VID)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets VID failed"
+  vid=1199
+fi
+
+pid=$(/usr/bin/ud_getusbinfo PID)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets PID failed"
+  pid=68C0
+fi
+
+devclass=$(/usr/bin/ud_getusbinfo DEVC)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets DEVC failed"
+  devclass=239
+fi
+
+devsubclass=$(/usr/bin/ud_getusbinfo DEVS)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets DEVS failed"
+  devsubclass=2
+fi
+
+devprotocol=$(/usr/bin/ud_getusbinfo DEVP)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets DEVP failed"
+  devprotocol=1
+fi
+
+diagstr=$(/usr/bin/ud_getusbinfo DIAGSTR)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets DIAGSTR failed"
+  diagstr='diag'
+fi
+
+serialstr=$(/usr/bin/ud_getusbinfo SERIALSTR)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets SERIALSTR failed"
+  serialstr='smd,tty'
+fi
+
+compstr=$(/usr/bin/ud_getusbinfo COMPSTR)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets COMPSTR failed"
+  compstr='diag,ffs,serial'
+fi
+
+remotewakeup=$(/usr/bin/ud_getusbinfo REM)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets REM failed"
+  remotewakeup=1
+fi
+
+manufacturer=$(/usr/bin/ud_getusbinfo MANU)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets MANU failed"
+  manufacturer='Sierra Wireless, Incorporated'
+fi
+
+product=$(/usr/bin/ud_getusbinfo PROD)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets PROD failed"
+  product='AR758x'
+fi
+
+serial=$(/usr/bin/ud_getusbinfo SER)
+if [ $? -ne 0 ];
+then
+  echo "ud_getusbinfo gets SER failed"
+  serial='0123456789ABCDEF'
+fi
+
 #echo $mode > /sys/bus/platform/devices/usb_bam/enable
 echo 0 > /sys/class/android_usb/android$num/enable
-/usr/bin/ud_getusbinfo VID > /sys/class/android_usb/android$num/idVendor
-/usr/bin/ud_getusbinfo PID > /sys/class/android_usb/android$num/idProduct
-echo 239 > /sys/class/android_usb/android$num/bDeviceClass
-echo 2 > /sys/class/android_usb/android$num/bDeviceSubClass
-echo 1 > /sys/class/android_usb/android$num/bDeviceProtocol
-/usr/bin/ud_getusbinfo DIAGSTR > /sys/class/android_usb/android$num/f_diag/clients
-/usr/bin/ud_getusbinfo SERIALSTR > /sys/class/android_usb/android$num/f_serial/transports
+echo $vid > /sys/class/android_usb/android$num/idVendor
+echo $pid > /sys/class/android_usb/android$num/idProduct
+echo $devclass > /sys/class/android_usb/android$num/bDeviceClass
+echo $devsubclass > /sys/class/android_usb/android$num/bDeviceSubClass
+echo $devprotocol > /sys/class/android_usb/android$num/bDeviceProtocol
+echo $diagstr > /sys/class/android_usb/android$num/f_diag/clients
+echo $serialstr > /sys/class/android_usb/android$num/f_serial/transports
 echo QTI,BAM_DMUX > /sys/class/android_usb/android$num/f_rmnet/transports
-/usr/bin/ud_getusbinfo COMPSTR > /sys/class/android_usb/android$num/functions
-echo 1 > /sys/class/android_usb/android$num/remote_wakeup
+echo $compstr > /sys/class/android_usb/android$num/functions
+echo $remotewakeup > /sys/class/android_usb/android$num/remote_wakeup
 
-echo "Sierra Wireless, Incorporated" > /sys/class/android_usb/android$num/iManufacturer
-echo "AR758X" > /sys/class/android_usb/android$num/iProduct
-echo "0123456789ABCDEF" > /sys/class/android_usb/android$num/iSerial
+echo $manufacturer > /sys/class/android_usb/android$num/iManufacturer
+echo $product > /sys/class/android_usb/android$num/iProduct
+echo $serial > /sys/class/android_usb/android$num/iSerial
 
 echo 1 > /sys/class/android_usb/android$num/enable
 
