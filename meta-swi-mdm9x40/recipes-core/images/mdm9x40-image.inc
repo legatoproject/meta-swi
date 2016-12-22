@@ -176,7 +176,7 @@ do_setfileattr() {
     fi
 }
 
-IMAGE_PREPROCESS_COMMAND += "do_setfileattr"
+IMAGE_PREPROCESS_COMMAND += "do_setfileattr; "
 
 addtask unpack2 before do_rootfs
 
