@@ -194,4 +194,4 @@ do_setfileattr() {
     fi
 }
 
-IMAGE_PREPROCESS_COMMAND += "do_setfileattr"
+IMAGE_PREPROCESS_COMMAND += "do_setfileattr; "
