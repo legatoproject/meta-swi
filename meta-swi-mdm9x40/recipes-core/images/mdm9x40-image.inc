@@ -12,7 +12,6 @@ inherit set-files-attr
 IMAGE_INSTALL += "start-scripts-find-partitions"
 IMAGE_INSTALL += "start-scripts-firmware-links"
 IMAGE_INSTALL += "cryptsetup"
-IMAGE_INSTALL += "swicert"
 
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
