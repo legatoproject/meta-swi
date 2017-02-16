@@ -2,9 +2,9 @@ DESCRIPTION = "Sierra Wireless Legato Image"
 HOMEPAGE = "http://www.legato.io/"
 LICENSE = "MPL2.0"
 
-DEPENDS += "yaffs2-utils"
-DEPENDS += "squashfs-tools"
-DEPENDS += "mtd-utils"
+DEPENDS += "yaffs2-utils-native"
+DEPENDS += "squashfs-tools-native"
+DEPENDS += "mtd-utils-native"
 
 inherit legato
 

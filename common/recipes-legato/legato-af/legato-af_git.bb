@@ -7,6 +7,10 @@ inherit legato
 
 require legato.inc
 
+DEPENDS += "yaffs2-utils-native"
+DEPENDS += "squashfs-tools-native"
+DEPENDS += "mtd-utils-native"
+
 FILESEXTRAPATHS += "${THISDIR}/files"
 
 LEGATO_ROOT ?= "/mnt/legato"
