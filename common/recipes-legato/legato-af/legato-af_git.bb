@@ -7,9 +7,13 @@ inherit legato
 
 require legato.inc
 
+# Host dependencies
 DEPENDS += "yaffs2-utils-native"
 DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"
+
+# Target dependencies
+DEPENDS += "curl"
 
 FILESEXTRAPATHS += "${THISDIR}/files"
 
