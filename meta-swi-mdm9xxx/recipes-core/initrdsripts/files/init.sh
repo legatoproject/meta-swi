@@ -330,6 +330,22 @@ mount_as_dm_verity() {
     return ${SWI_OK}
 }
 
+#Update rootfs image status to share memory for dual system.
+#Otherwise, it will do nothing.
+record_rootfs_image_status()
+{
+    # If there is something wrong in rootfs image, regard it as bad rootfs.
+    # Update it's status to shared memory. Swap system and reboot.
+    # Don't need to check return value in this case.
+    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
+        # Set rootfs_2 bad flag to shared memory
+        ${SWIDSSD} write $DS_BAD_ROOTFS_2_MASK
+    elif [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_1_FLAG ]; then
+        # Set rootfs_1 bad flag to shared memory
+        ${SWIDSSD} write $DS_BAD_ROOTFS_1_MASK
+    fi
+}
+
 # root file system partition must be called rootfs
 set_boot_dev()
 {
@@ -395,6 +411,7 @@ set_boot_dev()
     secure=$?
     if [ ${secure} -eq ${SWI_AUTH_FAIL} ]; then
         # If security authentication failure, should not continue
+        record_rootfs_image_status
         return ${SWI_ERR}
     fi
 
@@ -449,6 +466,7 @@ set_boot_dev()
     if [ ${secure} -eq ${SWI_AUTH_PASS} ]; then
         if ! [ -b ${DM_ROOTFS_MOUNT_POINT} ]; then
             echo "Something is wrong with DM-verity."
+            record_rootfs_image_status
             return ${SWI_ERR}
         fi
     fi
@@ -484,16 +502,7 @@ checkpoint_rootfs()
     if ! [ -d "${ROOTFS_MNTPT}/bin" ]; then
         echo "rootfs: mount failed"
 
-        # Regard it as bad rootfs, reboot and swap system
-        # Writing to shared memory when mount failed.
-        # Don't need to check return value in this case.
-        if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
-            # Set rootfs_2 bad flag to shared memory
-            ${SWIDSSD} write $DS_BAD_ROOTFS_2_MASK
-        elif [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_1_FLAG ]; then
-            # Set rootfs_1 bad flag to shared memory
-            ${SWIDSSD} write $DS_BAD_ROOTFS_1_MASK
-        fi
+        record_rootfs_image_status
 
         if ! [ -e $BOOTDEV ]; then
             echo -n "rootfs: dev '${BOOTDEV}' does not exist"
