@@ -17,11 +17,17 @@ IMAGE_INSTALL += "nfs-utils-client"
 IMAGE_INSTALL += "cmake"
 IMAGE_INSTALL += "libopkg"
 
-# Legato
-IMAGE_INSTALL += "legato-af"
-
 # Tool to recognize the platform
 IMAGE_INSTALL += "bsinfo-stub"
+
+# Only depend on legato-af if this is a LEGATO_BUILD
+def check_legato_dep(d):
+    legato_build = d.getVar('LEGATO_BUILD', True) or "false"
+    if legato_build == "true":
+        return "legato-af"
+    return ""
+
+DEPENDS += "${@check_legato_dep(d)}"
 
 # Prepare a package with kernel + hdd image
 do_prepare_virt() {
