@@ -1,4 +1,5 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+SRC_URI += "file://squashfs.cfg"
 SRC_URI += "file://smack.cfg"
 SRC_URI += "file://pm.cfg"
 
