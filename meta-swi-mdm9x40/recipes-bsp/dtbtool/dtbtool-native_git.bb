@@ -8,8 +8,8 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/\
 ${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 PROVIDES = "dtbtool-native"
 
-# Tag LNX.LE.5.3-76132-9x40
-SRCREV = "59f4c7fec32ac03e33cf94c7d6cb576649bd50fa"
+# Tag LNX.LE.5.3-76192-9x40
+SRCREV = "bbdc90ce7bbd7091190da31776f54fbe24f817c5"
 SRC_URI  = "git://codeaurora.org/device/qcom/common;branch=LNX.LE.5.3"
 SRC_URI += "file://makefile"
 
