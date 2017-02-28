@@ -1,4 +1,4 @@
 
-# Tag LNX.LE.5.3-76132-9x40
-SRCREV = "d04220ee2b1b46e19369137117bf82cd92e5420a"
+# Tag LNX.LE.5.3-76192-9x40
+SRCREV = "ba4a474892bf63b0f65865c5defce98c9bc74688"
 REBOOTD_REPO = "git://codeaurora.org/quic/le/mdm/reboot-daemon;branch=LNX.LE.5.3"
