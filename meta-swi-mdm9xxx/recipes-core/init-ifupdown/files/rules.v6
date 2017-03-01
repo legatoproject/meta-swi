@@ -14,8 +14,13 @@
 # Allow DNS replies
 -A INPUT -p udp -m udp --sport 53 -j ACCEPT
 
-# Allow PING replies
--A INPUT -p ipv6-icmp -m icmp6 --icmpv6-type 129 -j ACCEPT
+# Allow PING replies and neighbor/router discovery
+-A INPUT -p ipv6-icmp -m icmp6 --icmpv6-type echo-reply -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type router-advertisement -m hl --hl-eq 255 -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type neighbor-solicitation -m hl --hl-eq 255 -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type neighbor-advertisement -m hl --hl-eq 255 -j ACCEPT
+-A INPUT -p icmpv6 --icmpv6-type redirect -m hl --hl-eq 255 -j ACCEPT
+
 
 # Allow SSH, PING and DHCP over ECM interface
 -A INPUT -i usb0 -p tcp -m tcp --dport 22 -j ACCEPT
