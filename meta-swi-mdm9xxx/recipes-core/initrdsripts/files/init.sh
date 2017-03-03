@@ -183,13 +183,23 @@ do_essential()
 # Check security authentication. Parameters:
 #   $1 - ubi logical device number
 #   $2 - mtd partition number
+#   $3 - support not UBI image in this mtd partition:
+#      - ${SWI_TRUE}: Only check security when it is UBI image
+#      - ${SWI_FALSE}:Not UBI image is not allowed for security CPU
 check_security_auth()
 {
     local ubi_dev_num=$1
     local mtd_dev_num=$2
+    local support_not_ubi=$3
     local ret_auth=${SWI_AUTH_FAIL}
     local ubi_vol_total_num=0
     local auth_cmd="/usr/bin/swi_auth"
+
+    # UBI volume devices for root-hash, signature-root-hash and cert-chain
+    local ubi_rhash_dev=/dev/ubi${ubi_dev_num}_${UBI_RHASH_VOLNUM}
+    local ubi_srh_dev=/dev/ubi${ubi_dev_num}_${UBI_SRH_VOLNUM}
+    local ubi_cert_dev=/dev/ubi${ubi_dev_num}_${UBI_CERT_VOLNUM}
+    local ubi_dev_list=
 
     if ! [ -x ${auth_cmd} ] ; then
         echo "File ${auth_cmd} does not exist or is not executable."
@@ -206,10 +216,17 @@ check_security_auth()
     fi
 
     # Secure version should work with UBI, Otherwise, return authentication fail.
+    # But some of the partitions allow customers not to use, E.g legato, for these
+    # kinds of partition,if it is not UBI format we won't do security authentication
+    # for it.
     get_asc_of_ubi_magic_num ${mtd_dev_num}
     if [ $? -ne ${SWI_TRUE} ] ; then
-        echo "Cannot find UBI container on MTD ${mtd_dev_num}."
-        return ${SWI_AUTH_FAIL}
+        if [ ${support_not_ubi} -eq ${SWI_TRUE} ] ; then
+            return ${SWI_ERR}
+        else
+            echo "Cannot find UBI container on MTD ${mtd_dev_num}."
+            return ${SWI_AUTH_FAIL}
+        fi
     fi
 
     # Make link between physical and logical UBI device.
@@ -217,13 +234,32 @@ check_security_auth()
     if [ $? -ne 0 ] ; then
         echo "Unable to attach mtd ${mtd_dev_num} to UBI logical device ${ubi_dev_num}."
         return ${SWI_AUTH_FAIL}
-    else
-        wait_on_file "/dev/ubi${ubi_dev_num}"
+    fi
+
+    # There is a known issue:
+    # (Please look at "mtd-utils/tests/ubi-tests/README.udev" for detail.)
+    # There is a problem with udev: when a volume is created, there is a delay
+    # before corresponding /dev/ubiX_Y device node is created by udev, so some
+    # tests fail because of this. The symptom is error messages like
+    # "cannot open /dev/ubi0_0".
+    # We meet this issue here:
+    # There is a low probability that when the last volumes of UBI
+    # is ready but some of the other volumes are not ready.
+    # E.g ubix_4 is ready, but ubix_2 or ubix_3 is not ready.
+    # So here we need to check if all the UBI volumes are ready which
+    # are needed at the following step for security authentication.
+    ubi_dev_list="
+                  ${ubi_rhash_dev}
+                  ${ubi_srh_dev}
+                  ${ubi_cert_dev}
+                  "
+    for ubi_dev in ${ubi_dev_list} ; do
+        wait_on_file "${ubi_dev}"
         if [ $? -ne ${SWI_OK} ] ; then
-            echo "Tired of waiting on /dev/ubi${ubi_dev_num}."
+            echo "Tired of waiting on ${ubi_dev}."
             return ${SWI_AUTH_FAIL}
         fi
-    fi
+    done
 
     # Do authentication and handle the result.
     ${auth_cmd} nfuse ubi${ubi_dev_num}
@@ -407,7 +443,8 @@ set_boot_dev()
     BOOTDEV="/dev/mtdblock${mtd_dev_num}"
 
     check_security_auth ${UBI_ROOTFS_DEVNUM} \
-                        ${mtd_dev_num}
+                        ${mtd_dev_num}       \
+                        ${SWI_FALSE}
     secure=$?
     if [ ${secure} -eq ${SWI_AUTH_FAIL} ]; then
         # If security authentication failure, should not continue
@@ -427,9 +464,9 @@ set_boot_dev()
                     return ${SWI_ERR}
                 fi
                 # UBI static volume will takes more longer during ubiattach
-                wait_on_file "/dev/ubi${UBI_ROOTFS_DEVNUM}"
+                wait_on_file "${ubi_img_dev}"
                 if [ $? -ne ${SWI_OK} ] ; then
-                    echo "Tired of waiting on /dev/ubi${UBI_ROOTFS_DEVNUM}, exiting."
+                    echo "Tired of waiting on ${ubi_img_dev}, exiting."
                     return ${SWI_ERR}
                 fi
             fi
