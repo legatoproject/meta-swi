@@ -1,0 +1,1389 @@
+From e5694763643c4e4cc417c2a15ee9216c727d86c4 Mon Sep 17 00:00:00 2001
+From: Yan Kong <ykong@sierrawireless.com>
+Date: Mon, 12 Sep 2016 13:53:08 +0800
+Subject: [PATCH] mm-audio: offer aplay, arec, amix dynamic libraries
+
+---
+ libalsa-intf/Makefile.am |  23 +++
+ libalsa-intf/amix.c      |   4 +
+ libalsa-intf/aplay.c     | 250 +++++++++++++++++++----------
+ libalsa-intf/arec.c      | 398 ++++++++++++++++++++++++++++-------------------
+ 4 files changed, 433 insertions(+), 242 deletions(-)
+ mode change 100644 => 100755 libalsa-intf/Makefile.am
+ mode change 100644 => 100755 libalsa-intf/amix.c
+ mode change 100644 => 100755 libalsa-intf/aplay.c
+ mode change 100644 => 100755 libalsa-intf/arec.c
+
+diff --git a/libalsa-intf/Makefile.am b/libalsa-intf/Makefile.am
+old mode 100644
+new mode 100755
+index 8efee28..97eda94
+--- a/libalsa-intf/Makefile.am
++++ b/libalsa-intf/Makefile.am
+@@ -68,3 +68,26 @@ alsaucm_test_CPPFLAGS = -DQC_PROP $(ACDBLOADER_CFLAGS)
+ else
+ alsaucm_test_LDADD = -lpthread $(requiredlibs)
+ endif
++#SWISTART
++lib_LTLIBRARIES += libamix.la libaplay.la libarec.la
++libamix_la_CC = @CC@
++libamix_la_SOURCES = amix.c
++libamix_la_CFLAGS = $(AM_CFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DALSA_FUNC_CALL
++libamix_la_CPPFLAGS = $(AM_CPPFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DALSA_FUNC_CALL
++libamix_la_LIBADD = $(requiredlibs)
++libamix_la_LDFLAGS = -lm -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
++
++libaplay_la_CC = @CC@
++libaplay_la_SOURCES = aplay.c
++libaplay_la_CFLAGS = $(AM_CFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DALSA_FUNC_CALL
++libaplay_la_CPPFLAGS = $(AM_CPPFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DALSA_FUNC_CALL
++libaplay_la_LIBADD = $(requiredlibs)
++libaplay_la_LDFLAGS = -lm -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
++
++libarec_la_CC = @CC@
++libarec_la_SOURCES = arec.c
++libarec_la_CFLAGS = $(AM_CFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DALSA_FUNC_CALL
++libarec_la_CPPFLAGS = $(AM_CPPFLAGS) -DUSE_GLIB @GLIB_CFLAGS@ -DALSA_FUNC_CALL
++libarec_la_LIBADD = $(requiredlibs)
++libarec_la_LDFLAGS = -lm -lpthread @GLIB_LIBS@ -shared -version-info 1:0:0
++#SWISTOP
+\ No newline at end of file
+diff --git a/libalsa-intf/amix.c b/libalsa-intf/amix.c
+old mode 100644
+new mode 100755
+index b425ed5..757aac5
+--- a/libalsa-intf/amix.c
++++ b/libalsa-intf/amix.c
+@@ -48,7 +48,11 @@ struct mixer_ctl *get_ctl(struct mixer *mixer, char *name)
+     return mixer_get_control(mixer, name, idx);
+ }
+ 
++#ifdef ALSA_FUNC_CALL
++int amix(int argc, char **argv)
++#else
+ int main(int argc, char **argv)
++#endif
+ {
+     struct mixer *mixer;
+     struct mixer_ctl *ctl;
+diff --git a/libalsa-intf/aplay.c b/libalsa-intf/aplay.c
+old mode 100644
+new mode 100755
+index e4bbcce..afaf5f1
+--- a/libalsa-intf/aplay.c
++++ b/libalsa-intf/aplay.c
+@@ -25,6 +25,7 @@
+ #include <sys/poll.h>
+ #include <sys/ioctl.h>
+ #include <getopt.h>
++#include <pthread.h>
+ 
+ #include <sound/asound.h>
+ #include <sound/compress_params.h>
+@@ -51,20 +52,26 @@ struct output_metadata_handle_t {
+     uint32_t            reserved[12];
+ };
+ 
+-static struct output_metadata_handle_t outputMetadataTunnel;
+-
+-static pcm_flag = 1;
+-static debug = 0;
+-static uint32_t play_max_sz = 2147483648LL;
+-static int format = SNDRV_PCM_FORMAT_S16_LE;
+-static int period = 0;
+-static int compressed = 0;
+-static int set_channel_map = 0;
+-static char channel_map[8];
+-static char *compr_codec;
+-static int piped = 0;
+-static int outputMetadataLength = 0;
+-static int eosSet = 0;
++typedef struct aplay_attr {
++    uint32_t play_max_sz;
++    int pcm_flag;
++    int format;
++    int period;
++    int compressed;
++    int set_channel_map;
++    int piped;
++    int outputMetadataLength;
++    int eosSet;
++    char channel_map[8];
++    char* compr_codec;
++    char *filename;
++    char *data;
++    int fd;
++    struct output_metadata_handle_t outputMetadataTunnel;
++    struct pcm *pcm;
++}aplay_attr_t;
++
++static int debug = 0;
+ 
+ static struct option long_options[] =
+ {
+@@ -97,14 +104,15 @@ struct wav_header {
+     uint32_t data_sz;
+ };
+ 
++void aplay_cleanup(aplay_attr_t *aplay_attr);
+ 
+-void updateMetaData(size_t bytes) {
+-   outputMetadataTunnel.metadataLength = sizeof(outputMetadataTunnel);
+-   outputMetadataTunnel.timestamp = 0;
+-   outputMetadataTunnel.bufferLength =  bytes;
++void updateMetaData(size_t bytes, aplay_attr_t* aplay_attr) {
++   aplay_attr->outputMetadataTunnel.metadataLength = sizeof(aplay_attr->outputMetadataTunnel);
++   aplay_attr->outputMetadataTunnel.timestamp = 0;
++   aplay_attr->outputMetadataTunnel.bufferLength =  bytes;
+    fprintf(stderr, "bytes = %d\n", bytes);
+ }
+-static int set_params(struct pcm *pcm)
++static int set_params(struct pcm *pcm, aplay_attr_t* aplay_attr)
+ {
+      struct snd_pcm_hw_params *params;
+      struct snd_pcm_sw_params *sparams;
+@@ -137,8 +145,8 @@ static int set_params(struct pcm *pcm)
+      param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT, pcm->format);
+      param_set_mask(params, SNDRV_PCM_HW_PARAM_SUBFORMAT,
+                     SNDRV_PCM_SUBFORMAT_STD);
+-     if (period)
+-         param_set_min(params, SNDRV_PCM_HW_PARAM_PERIOD_BYTES, period);
++     if (aplay_attr->period)
++         param_set_min(params, SNDRV_PCM_HW_PARAM_PERIOD_BYTES, aplay_attr->period);
+      else
+          param_set_min(params, SNDRV_PCM_HW_PARAM_PERIOD_TIME, 10);
+      param_set_int(params, SNDRV_PCM_HW_PARAM_SAMPLE_BITS, 16);
+@@ -195,7 +203,7 @@ static int set_params(struct pcm *pcm)
+     return 0;
+ }
+ 
+-void send_channel_map_driver(struct pcm *pcm)
++void send_channel_map_driver(struct pcm *pcm, aplay_attr_t* aplay_attr)
+ {
+     int i, ret;
+     struct mixer *mixer;
+@@ -206,7 +214,7 @@ void send_channel_map_driver(struct pcm *pcm)
+         fprintf(stderr,"oops: %s: %d\n", strerror(errno), __LINE__);
+         return;
+     }
+-    ret = pcm_set_channel_map(pcm, mixer, 8, channel_map);
++    ret = pcm_set_channel_map(pcm, mixer, 8, aplay_attr->channel_map);
+     if (ret < 0)
+         fprintf(stderr, "could not set channel mask\n");
+     mixer_close(mixer);
+@@ -215,7 +223,7 @@ void send_channel_map_driver(struct pcm *pcm)
+ }
+ 
+ static int play_file(unsigned rate, unsigned channels, int fd,
+-              unsigned flags, const char *device, unsigned data_sz)
++              unsigned flags, const char *device, unsigned data_sz, aplay_attr_t* aplay_attr)
+ {
+     struct pcm *pcm;
+     struct mixer *mixer;
+@@ -253,23 +261,26 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+     pcm = pcm_open(flags, device);
+     if (pcm < 0)
+         return pcm;
++    aplay_attr->pcm = pcm;
+ 
+     if (!pcm_ready(pcm)) {
+         pcm_close(pcm);
++        close(fd);
+         return -EBADFD;
+     }
+ 
+-    if (compressed) {
++    if (aplay_attr->compressed) {
+        struct snd_compr_caps compr_cap;
+        struct snd_compr_params compr_params;
+        if (ioctl(pcm->fd, SNDRV_COMPRESS_GET_CAPS, &compr_cap)) {
+           fprintf(stderr, "Aplay: SNDRV_COMPRESS_GET_CAPS, failed Error no %d \n", errno);
+           pcm_close(pcm);
++          close(fd);
+           return -errno;
+        }
+-       if (!period)
+-           period = compr_cap.min_fragment_size;
+-           switch (get_compressed_format(compr_codec)) {
++       if (!aplay_attr->period)
++           aplay_attr->period = compr_cap.min_fragment_size;
++           switch (get_compressed_format(aplay_attr->compr_codec)) {
+            case SND_AUDIOCODEC_MP3:
+                compr_params.codec.id = SND_AUDIOCODEC_MP3;
+                break;
+@@ -287,25 +298,27 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+        if (ioctl(pcm->fd, SNDRV_COMPRESS_SET_PARAMS, &compr_params)) {
+           fprintf(stderr, "Aplay: SNDRV_COMPRESS_SET_PARAMS,failed Error no %d \n", errno);
+           pcm_close(pcm);
++          close(fd);
+           return -errno;
+        }
+-       outputMetadataLength = sizeof(struct output_metadata_handle_t);
++       aplay_attr->outputMetadataLength = sizeof(struct output_metadata_handle_t);
+     } else if (channels > 2) {
+-        if(set_channel_map) {
+-            send_channel_map_driver(pcm);
++        if(aplay_attr->set_channel_map) {
++            send_channel_map_driver(pcm, aplay_attr);
+         }
+     }
+     pcm->channels = channels;
+     pcm->rate = rate;
+     pcm->flags = flags;
+-    pcm->format = format;
+-    if (set_params(pcm)) {
++    pcm->format = aplay_attr->format;
++    if (set_params(pcm, aplay_attr)) {
+         fprintf(stderr, "Aplay:params setting failed\n");
+         pcm_close(pcm);
++        close(fd);
+         return -errno;
+     }
+ 
+-    if (!pcm_flag) {
++    if (!aplay_attr->pcm_flag) {
+        if (pcm_prepare(pcm)) {
+           fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
+           pcm_close(pcm);
+@@ -314,6 +327,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+        if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_START)) {
+           fprintf(stderr, "Aplay: Hostless IOCTL_START Error no %d \n", errno);
+           pcm_close(pcm);
++          close(fd);
+           return -errno;
+        }
+        while(1) {
+@@ -329,11 +343,13 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+         if (mmap_buffer(pcm)) {
+              fprintf(stderr, "Aplay:params setting failed\n");
+              pcm_close(pcm);
++             close(fd);
+              return -errno;
+         }
+         if (pcm_prepare(pcm)) {
+           fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
+           pcm_close(pcm);
++          close(fd);
+           return -errno;
+         }
+ 
+@@ -350,6 +366,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+                   if (pcm_prepare(pcm)) {
+                       fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
+                       pcm_close(pcm);
++                      close(fd);
+                       return -errno;
+                   }
+                   pcm->running = 1;
+@@ -373,6 +390,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+              if (avail < 0) {
+                  fprintf(stderr, "Aplay:Failed in pcm_avail\n");
+                  pcm_close(pcm);
++                 close(fd);
+                  return avail;
+              }
+              if (avail < pcm->sw_p->avail_min) {
+@@ -401,27 +419,29 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+               */
+              memset(dst_addr, 0x0, bufsize);
+ 
+-             if (data_sz && !piped) {
++             if (data_sz && !aplay_attr->piped) {
+                  if (remainingData < bufsize) {
+                      bufsize = remainingData;
+                      frames = remainingData / (2*channels);
+                  }
+              }
+-             fprintf(stderr, "addr = %d, size = %d \n", (dst_addr + outputMetadataLength),(bufsize - outputMetadataLength));
+-             err = read(fd, (dst_addr + outputMetadataLength) , (bufsize - outputMetadataLength));
+-             if(compressed) {
+-                 updateMetaData(err);
+-                 memcpy(dst_addr, &outputMetadataTunnel, outputMetadataLength);
++             fprintf(stderr, "addr = %d, size = %d \n",
++                (dst_addr + aplay_attr->outputMetadataLength),(bufsize - aplay_attr->outputMetadataLength));
++             err = read(fd, (dst_addr + aplay_attr->outputMetadataLength),
++                (bufsize - aplay_attr->outputMetadataLength));
++             if(aplay_attr->compressed) {
++                 updateMetaData(err, aplay_attr);
++                 memcpy(dst_addr, &aplay_attr->outputMetadataTunnel, aplay_attr->outputMetadataLength);
+              }
+ 
+              if (debug)
+                  fprintf(stderr, "read %d bytes from file\n", err);
+              if (err <= 0 ) {
+                  fprintf(stderr," EOS set\n ");
+-                 eosSet = 1;
++                 aplay_attr->eosSet = 1;
+                  break;
+              }
+-             if (data_sz && !piped) {
++             if (data_sz && !aplay_attr->piped) {
+                  remainingData -= bufsize;
+                  if (remainingData <= 0)
+                      break;
+@@ -447,7 +467,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+                  fprintf(stderr, "Aplay:sync_ptr->s.status.hw_ptr %ld  sync_ptr->c.control.appl_ptr %ld\n",
+                             pcm->sync_ptr->s.status.hw_ptr,
+                             pcm->sync_ptr->c.control.appl_ptr);
+-                 if (compressed && start) {
++                 if (aplay_attr->compressed && start) {
+                     struct snd_compr_tstamp tstamp;
+         if (ioctl(pcm->fd, SNDRV_COMPRESS_TSTAMP, &tstamp))
+       fprintf(stderr, "Aplay: failed SNDRV_COMPRESS_TSTAMP\n");
+@@ -472,6 +492,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+                     } else {
+                         fprintf(stderr, "Aplay:Error no %d \n", errno);
+                         pcm_close(pcm);
++                        close(fd);
+                         return -errno;
+                     }
+                 } else
+@@ -493,7 +514,7 @@ start_done:
+                            pcm->sync_ptr->s.status.hw_ptr,
+                            pcm->sync_ptr->c.control.appl_ptr);
+ 
+-                if(compressed && eosSet) {
++                if(aplay_attr->compressed && aplay_attr->eosSet) {
+                     fprintf(stderr,"Audio Drain DONE ++\n");
+                     if ( ioctl(pcm->fd, SNDRV_COMPRESS_DRAIN) < 0 ) {
+                         fprintf(stderr,"Audio Drain failed\n");
+@@ -508,6 +529,7 @@ start_done:
+         if (pcm_prepare(pcm)) {
+             fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
+             pcm_close(pcm);
++            close(fd);
+             return -errno;
+         }
+ 
+@@ -517,10 +539,13 @@ start_done:
+         if (!data) {
+             fprintf(stderr, "Aplay:could not allocate %d bytes\n", bufsize);
+             pcm_close(pcm);
++            close(fd);
+             return -ENOMEM;
+         }
++        else
++            aplay_attr->data = data;
+ 
+-        if (data_sz && !piped) {
++        if (data_sz && !aplay_attr->piped) {
+             if (remainingData < bufsize)
+                 bufsize = remainingData;
+         }
+@@ -530,11 +555,12 @@ start_done:
+                 fprintf(stderr, "Aplay: pcm_write failed\n");
+                 free(data);
+                 pcm_close(pcm);
++                close(fd);
+                 return -errno;
+             }
+             memset(data, 0, bufsize);
+ 
+-            if (data_sz && !piped) {
++            if (data_sz && !aplay_attr->piped) {
+                 remainingData -= bufsize;
+                 if (remainingData <= 0)
+                     break;
+@@ -546,49 +572,52 @@ start_done:
+     }
+     fprintf(stderr, "Aplay: Done playing\n");
+     pcm_close(pcm);
++	close(fd);
+     return 0;
+ }
+ 
+-int play_raw(const char *fg, int rate, int ch, const char *device, const char *fn)
++int play_raw(const char *fg, int rate, int ch, const char *device, const char *fn, aplay_attr_t *aplay_attr)
+ {
+     int fd;
+     unsigned flag = 0;
+     char *cformat = NULL;
+ 
+     if(!fn) {
+-        fd = fileno(stdin);
+-        piped = 1;
++        aplay_attr->fd = fileno(stdin);
++        aplay_attr->piped = 1;
+     } else {
+-        fd = open(fn, O_RDONLY);
+-        if (fd < 0) {
++        aplay_attr->fd = open(fn, O_RDONLY);
++        if (aplay_attr->fd < 0) {
+             fprintf(stderr, "Aplay:aplay: cannot open '%s'\n", fn);
+-            return fd;
++            return aplay_attr->fd;
+         }
+     }
++    aplay_attr->fd = fd;
+ 
+     if (!strncmp(fg, "M", sizeof("M")))
+         flag = PCM_MMAP;
+     else if (!strncmp(fg, "N", sizeof("N")))
+         flag = PCM_NMMAP;
+ 
+-    cformat = get_format_desc(format);
++    cformat = get_format_desc(aplay_attr->format);
+     if (cformat != NULL && fn != NULL)
+         fprintf(stderr, "aplay: Playing '%s': format %s ch = %d\n",
+                 fn, cformat, ch );
+-    return play_file(rate, ch, fd, flag, device, 0);
++    return play_file(rate, ch, fd, flag, device, 0, aplay_attr);
+ }
+ 
+-int play_wav(const char *fg, int rate, int ch, const char *device, const char *fn)
++int play_wav(const char *fg, int rate, int ch, const char *device, const char *fn, aplay_attr_t *aplay_attr)
+ {
+     struct wav_header hdr;
+     int fd;
+     unsigned flag = 0;
+     char *cformat = NULL;
++    int ret = -1;
+ 
+-    if (pcm_flag) {
++    if (aplay_attr->pcm_flag) {
+         if(!fn) {
+             fd = fileno(stdin);
+-            piped = 1;
++            aplay_attr->piped = 1;
+         } else {
+             fd = open(fn, O_RDONLY);
+             if (fd < 0) {
+@@ -596,7 +625,7 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+                 return fd;
+             }
+         }
+-        if (compressed) {
++        if (aplay_attr->compressed) {
+             hdr.sample_rate = rate;
+             hdr.num_channels = ch;
+             hdr.data_sz = 0;
+@@ -605,7 +634,8 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+ 
+         if (read(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
+             fprintf(stderr, "Aplay:aplay: cannot read header\n");
+-            return -errno;
++            ret = -errno;
++			goto exit_close_fd;
+         }
+ 
+         if ((hdr.riff_id != ID_RIFF) ||
+@@ -614,20 +644,23 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+              if (fn != NULL)
+                  fprintf(stderr, "Aplay:aplay: '%s' is not a riff/wave file\n",
+                          fn);
+-            return -EINVAL;
++            ret =  -EINVAL;
++            goto exit_close_fd;
+         }
+         if ((hdr.audio_format != FORMAT_PCM) ||
+             (hdr.fmt_sz != 16)) {
+             if (fn != NULL)
+                 fprintf(stderr, "Aplay:aplay: '%s' is not pcm format\n",
+                         fn);
+-            return -EINVAL;
++            ret = -EINVAL;
++            goto exit_close_fd;
+         }
+         if (hdr.bits_per_sample != 16) {
+             if (fn != NULL)
+                 fprintf(stderr, "Aplay:aplay: '%s' is not 16bit per sample\n",
+                         fn);
+-            return -EINVAL;
++            ret = -EINVAL;
++            goto exit_close_fd;
+         }
+     } else {
+         fd = -EBADFD;
+@@ -636,16 +669,23 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+         hdr.data_sz = 0;
+     }
+ 
++    aplay_attr->fd = fd;
++
+ ignore_header:
+     if (!strncmp(fg, "M", sizeof("M")))
+         flag = PCM_MMAP;
+     else if (!strncmp(fg, "N", sizeof("N")))
+         flag = PCM_NMMAP;
+-    cformat = get_format_desc(format);
++    cformat = get_format_desc(aplay_attr->format);
+     if (cformat != NULL && fn != NULL)
+         fprintf(stderr, "aplay: Playing '%s':%s\n", fn, cformat);
+ 
+-    return play_file(hdr.sample_rate, hdr.num_channels, fd, flag, device, hdr.data_sz);
++    return play_file(hdr.sample_rate, hdr.num_channels, fd, flag, device, hdr.data_sz, aplay_attr);
++
++exit_close_fd:
++    if (fd > 0)
++        close(fd);
++	return ret;
+ }
+ 
+ char get_channel_map_val(char *string)
+@@ -687,7 +727,11 @@ char get_channel_map_val(char *string)
+     return retval;
+ }
+ 
++#ifdef ALSA_FUNC_CALL
++int aplay(int argc, char **argv, pthread_mutex_t *arg_mutex_x)
++#else
+ int main(int argc, char **argv)
++#endif
+ {
+     int option_index = 0;
+     int c,i;
+@@ -700,6 +744,12 @@ int main(int argc, char **argv)
+     int rc = 0;
+     char *cformat = NULL;
+     char *temp_ptr;
++    aplay_attr_t aplay_attr_val = {0};
++    aplay_attr_t* aplay_attr = &aplay_attr_val;
++
++    aplay_attr->pcm_flag = 1;
++    aplay_attr->play_max_sz = 2147483648LL;
++    aplay_attr->format = SNDRV_PCM_FORMAT_S16_LE;
+ 
+     if (argc <2) {
+           printf("\nUsage: aplay [options] <file>\n"
+@@ -727,10 +777,15 @@ int main(int argc, char **argv)
+            fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
+            return 0;
+      }
++
++#ifdef ALSA_FUNC_CALL
++     if (arg_mutex_x != NULL) pthread_mutex_lock(arg_mutex_x);
++#endif
++     optind = 0;
+      while ((c = getopt_long(argc, argv, "PVMD:R:C:F:B:T:X:", long_options, &option_index)) != -1) {
+        switch (c) {
+        case 'P':
+-          pcm_flag = 0;
++          aplay_attr->pcm_flag = 0;
+           break;
+        case 'V':
+           debug = 1;
+@@ -749,24 +804,24 @@ int main(int argc, char **argv)
+           break;
+        case 'F':
+           printf("optarg = %s\n", optarg);
+-          format = get_format(optarg);
++          aplay_attr->format = get_format(optarg);
+           break;
+        case 'B':
+-          period = (int)strtol(optarg, NULL, 0);
++          aplay_attr->period = (int)strtol(optarg, NULL, 0);
+           break;
+        case 'T':
+-          compressed = 1;
++          aplay_attr->compressed = 1;
+           printf("compressed codec type requested = %s\n", optarg);
+-          compr_codec = optarg;
++          aplay_attr->compr_codec = optarg;
+           break;
+        case 'X':
+-          set_channel_map = 1; i = 0;
+-          memset(channel_map, 0, sizeof(channel_map));
++          aplay_attr->set_channel_map = 1; i = 0;
++          memset(aplay_attr->channel_map, 0, sizeof(aplay_attr->channel_map));
+           ptr = strtok_r(optarg, ",", &temp_ptr);
+-          while((ptr != NULL) && (i < sizeof(channel_map))) {
+-              channel_map[i] = get_channel_map_val(ptr);
+-              if (channel_map[i] < 0 || channel_map[i] > 16) {
+-                  set_channel_map = 0;
++          while((ptr != NULL) && (i < sizeof(aplay_attr->channel_map))) {
++              aplay_attr->channel_map[i] = get_channel_map_val(ptr);
++              if (aplay_attr->channel_map[i] < 0 || aplay_attr->channel_map[i] > 16) {
++                  aplay_attr->set_channel_map = 0;
+                   break;
+               }
+               ptr = strtok_r(NULL, ",", &temp_ptr); i++;
+@@ -797,10 +852,17 @@ int main(int argc, char **argv)
+                    fprintf(stderr, "%s ", cformat);
+            }
+            fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
++#ifdef ALSA_FUNC_CALL
++           if (arg_mutex_x != NULL) pthread_mutex_unlock(arg_mutex_x);
++#endif
+           return -EINVAL;
+        }
+ 
+     }
++#ifdef ALSA_FUNC_CALL
++    if (arg_mutex_x != NULL) pthread_mutex_unlock(arg_mutex_x);
++#endif
++
+     filename = (char*) calloc(1, 30);
+     if (!filename) {
+           fprintf(stderr, "Aplay:Failed to allocate filename!");
+@@ -813,17 +875,45 @@ int main(int argc, char **argv)
+        strlcpy(filename, argv[optind++], 30);
+     }
+ 
+-    if (pcm_flag) {
+-   if (format == SNDRV_PCM_FORMAT_S16_LE && filename != NULL)
+-             rc = play_wav(mmap, rate, ch, device, filename);
++    aplay_attr->filename = filename;
++
++#ifdef ALSA_FUNC_CALL
++    pthread_cleanup_push(aplay_cleanup, aplay_attr);
++#endif
++
++    if (aplay_attr->pcm_flag) {
++   if (aplay_attr->format == SNDRV_PCM_FORMAT_S16_LE && filename != NULL)
++             rc = play_wav(mmap, rate, ch, device, filename, aplay_attr);
+          else
+-             rc = play_raw(mmap, rate, ch, device, filename);
++             rc = play_raw(mmap, rate, ch, device, filename, aplay_attr);
+     } else {
+-        rc = play_wav(mmap, rate, ch, device, "dummy");
++        rc = play_wav(mmap, rate, ch, device, "dummy", aplay_attr);
+     }
+     if (filename)
+         free(filename);
+ 
++#ifdef ALSA_FUNC_CALL
++    pthread_cleanup_pop(0);
++#endif
++
+     return rc;
+ }
+ 
++void aplay_cleanup(aplay_attr_t *aplay_attr)
++{
++    if (aplay_attr->data != NULL)
++        free(aplay_attr->data);
++
++    if (aplay_attr->pcm->fd > 0)
++        pcm_close(aplay_attr->pcm);	
++
++    if (aplay_attr->fd > 0)
++        close(aplay_attr->fd);
++
++    if (aplay_attr->filename != NULL)
++        free(aplay_attr->filename);
++
++    return;
++}
++
++
+diff --git a/libalsa-intf/arec.c b/libalsa-intf/arec.c
+old mode 100644
+new mode 100755
+index 6316cfa..33fe67e
+--- a/libalsa-intf/arec.c
++++ b/libalsa-intf/arec.c
+@@ -27,6 +27,7 @@
+ #include <sys/ioctl.h>
+ #include <getopt.h>
+ #include <limits.h>
++#include <pthread.h>
+ 
+ #include <sound/asound.h>
+ #include <sound/compress_params.h>
+@@ -47,19 +48,6 @@
+ #endif
+ 
+ #define COMPR_META_DATA_SIZE	64
+-static struct wav_header hdr;
+-static int fd;
+-static struct pcm *pcm;
+-static debug = 0;
+-static pcm_flag = 1;
+-static duration = 0;
+-static char *filename;
+-static char *data;
+-static int format = SNDRV_PCM_FORMAT_S16_LE;
+-static int period = 0;
+-static int piped = 0;
+-static int compressed = 0;
+-static char *compr_codec;
+ 
+ static struct option long_options[] =
+ {
+@@ -92,7 +80,27 @@ struct wav_header {
+     uint32_t data_sz;
+ };
+ 
+-static int set_params(struct pcm *pcm)
++typedef struct arec_attr {
++    struct wav_header hdr;
++    int fd;
++    struct pcm *pcm;
++    int pcm_flag;
++    int duration;
++    char *filename;
++    char *data;
++    int format;
++    int period;
++    int piped;
++    int compressed;
++    char *compr_codec;
++}arec_attr_t;
++
++static arec_attr_t arec_attr_signal = {0};
++static debug = 0;
++
++void arec_cleanup(arec_attr_t *arec_attr);
++
++static int set_params(struct pcm *pcm, arec_attr_t *arec_attr)
+ {
+      struct snd_pcm_hw_params *params;
+      struct snd_pcm_sw_params *sparams;
+@@ -114,8 +122,8 @@ static int set_params(struct pcm *pcm)
+      param_set_mask(params, SNDRV_PCM_HW_PARAM_FORMAT, pcm->format);
+      param_set_mask(params, SNDRV_PCM_HW_PARAM_SUBFORMAT,
+                     SNDRV_PCM_SUBFORMAT_STD);
+-     if (period)
+-         param_set_min(params, SNDRV_PCM_HW_PARAM_PERIOD_BYTES, period);
++     if (arec_attr->period)
++         param_set_min(params, SNDRV_PCM_HW_PARAM_PERIOD_BYTES, arec_attr->period);
+      else
+          param_set_min(params, SNDRV_PCM_HW_PARAM_PERIOD_TIME, 10);
+      param_set_int(params, SNDRV_PCM_HW_PARAM_SAMPLE_BITS, 16);
+@@ -183,7 +191,7 @@ static int set_params(struct pcm *pcm)
+ 
+ }
+ 
+-int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsigned flags, const char *device)
++int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsigned flags, const char *device, arec_attr_t *arec_attr)
+ {
+     unsigned xfer, bufsize, framesize;
+     int r, avail;
+@@ -207,24 +215,24 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+     else
+         flags |= PCM_STEREO;
+ 
+-    pcm = pcm_open(flags, device);
+-    if (!pcm_ready(pcm)) {
+-        pcm_close(pcm);
++    arec_attr->pcm = pcm_open(flags, device);
++    if (!pcm_ready(arec_attr->pcm)) {
++        pcm_close(arec_attr->pcm);
+         goto fail;
+     }
+ 
+-    if (compressed) {
++    if (arec_attr->compressed) {
+        struct snd_compr_caps compr_cap;
+        struct snd_compr_params compr_params;
+        printf("SNDRV_COMPRESS_GET_CAPS= 0x%X\n", SNDRV_COMPRESS_GET_CAPS);
+-       if (ioctl(pcm->fd, SNDRV_COMPRESS_GET_CAPS, &compr_cap)) {
++       if (ioctl(arec_attr->pcm->fd, SNDRV_COMPRESS_GET_CAPS, &compr_cap)) {
+           fprintf(stderr, "AREC: SNDRV_COMPRESS_GET_CAPS, failed Error no %d \n", errno);
+-          pcm_close(pcm);
++          pcm_close(arec_attr->pcm);
+           return -errno;
+        }
+-       if (!period)
+-           period = compr_cap.min_fragment_size;
+-           switch (get_compressed_format(compr_codec)) {
++       if (!arec_attr->period)
++           arec_attr->period = compr_cap.min_fragment_size;
++           switch (get_compressed_format(arec_attr->compr_codec)) {
+            case SND_AUDIOCODEC_MP3:
+                compr_params.codec.id = SND_AUDIOCODEC_MP3;
+                break;
+@@ -241,31 +249,31 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+            default:
+                break;
+            }
+-       if (ioctl(pcm->fd, SNDRV_COMPRESS_SET_PARAMS, &compr_params)) {
++       if (ioctl(arec_attr->pcm->fd, SNDRV_COMPRESS_SET_PARAMS, &compr_params)) {
+           fprintf(stderr, "AREC: SNDRV_COMPRESS_SET_PARAMS,failed Error no %d \n", errno);
+-          pcm_close(pcm);
++          pcm_close(arec_attr->pcm);
+           return -errno;
+        }
+     }
+-    pcm->channels = channels;
+-    pcm->rate = rate;
+-    pcm->flags = flags;
+-    pcm->format = format;
+-    if (set_params(pcm)) {
++    arec_attr->pcm->channels = channels;
++    arec_attr->pcm->rate = rate;
++    arec_attr->pcm->flags = flags;
++    arec_attr->pcm->format = arec_attr->format;
++    if (set_params(arec_attr->pcm, arec_attr)) {
+         fprintf(stderr, "Arec:params setting failed\n");
+-        pcm_close(pcm);
++        pcm_close(arec_attr->pcm);
+         return -EINVAL;
+     }
+ 
+-    if (!pcm_flag) {
+-        if (pcm_prepare(pcm)) {
++    if (!arec_attr->pcm_flag) {
++        if (pcm_prepare(arec_attr->pcm)) {
+             fprintf(stderr, "Arec:Failed in pcm_prepare\n");
+-            pcm_close(pcm);
++            pcm_close(arec_attr->pcm);
+             return -errno;
+         }
+-	if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_START)) {
++    if (ioctl(arec_attr->pcm->fd, SNDRV_PCM_IOCTL_START)) {
+             fprintf(stderr, "Arec: Hostless IOCTL_START Error no %d \n", errno);
+-            pcm_close(pcm);
++            pcm_close(arec_attr->pcm);
+             return -errno;
+ 	}
+         while(1) {
+@@ -275,80 +283,80 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+ 
+     if (flags & PCM_MMAP) {
+         u_int8_t *dst_addr = NULL;
+-        struct snd_pcm_sync_ptr *sync_ptr1 = pcm->sync_ptr;
++        struct snd_pcm_sync_ptr *sync_ptr1 = arec_attr->pcm->sync_ptr;
+         unsigned int tmp;
+ 
+-        if (mmap_buffer(pcm)) {
++        if (mmap_buffer(arec_attr->pcm)) {
+              fprintf(stderr, "Arec:params setting failed\n");
+-             pcm_close(pcm);
++             pcm_close(arec_attr->pcm);
+              return -EINVAL;
+         }
+         if (debug)
+             fprintf(stderr, "Arec:mmap_buffer done\n");
+ 
+-        if (pcm_prepare(pcm)) {
++        if (pcm_prepare(arec_attr->pcm)) {
+             fprintf(stderr, "Arec:Failed in pcm_prepare\n");
+-            pcm_close(pcm);
++            pcm_close(arec_attr->pcm);
+             return -errno;
+         }
+ 
+-        bufsize = pcm->period_size;
++        bufsize = arec_attr->pcm->period_size;
+ 
+         if (debug)
+             fprintf(stderr, "Arec:bufsize = %d\n", bufsize);
+-        if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_START)) {
++        if (ioctl(arec_attr->pcm->fd, SNDRV_PCM_IOCTL_START)) {
+             if (errno == EPIPE) {
+-			fprintf(stderr, "Arec:Failed in SNDRV_PCM_IOCTL_START\n");
+-			/* we failed to make our window -- try to restart */
+-			pcm->running = 0;
++            fprintf(stderr, "Arec:Failed in SNDRV_PCM_IOCTL_START\n");
++            /* we failed to make our window -- try to restart */
++            arec_attr->pcm->running = 0;
+             } else {
+                 fprintf(stderr, "Arec:Error no %d \n", errno);
+                 return -errno;
+             }
+         }
+ 
+-        pfd[0].fd = pcm->fd;
++        pfd[0].fd = arec_attr->pcm->fd;
+         pfd[0].events = POLLIN;
+ 
+-        hdr.data_sz = 0;
+-        if (pcm->flags & PCM_MONO) {
++        arec_attr->hdr.data_sz = 0;
++        if (arec_attr->pcm->flags & PCM_MONO) {
+                 frames = bufsize / 2;
+-        } else if (pcm->flags & PCM_QUAD) {
++        } else if (arec_attr->pcm->flags & PCM_QUAD) {
+                 frames = bufsize / 8;
+-        } else if (pcm->flags & PCM_5POINT1) {
++        } else if (arec_attr->pcm->flags & PCM_5POINT1) {
+                 frames = bufsize / 12;
+         } else{
+                 frames = bufsize / 4;
+         }
+         x.frames = frames;
+         for(;;) {
+-            if (!pcm->running) {
+-                if (pcm_prepare(pcm))
++            if (!arec_attr->pcm->running) {
++                if (pcm_prepare(arec_attr->pcm))
+                     return --errno;
+                 start = 0;
+             }
+             /* Sync the current Application pointer from the kernel */
+-            pcm->sync_ptr->flags = SNDRV_PCM_SYNC_PTR_APPL | SNDRV_PCM_SYNC_PTR_AVAIL_MIN;/*SNDRV_PCM_SYNC_PTR_HWSYNC;*/
+-            err = sync_ptr(pcm);
++            arec_attr->pcm->sync_ptr->flags = SNDRV_PCM_SYNC_PTR_APPL | SNDRV_PCM_SYNC_PTR_AVAIL_MIN;/*SNDRV_PCM_SYNC_PTR_HWSYNC;*/
++            err = sync_ptr(arec_attr->pcm);
+             if (err == EPIPE) {
+                 fprintf(stderr, "Arec:Failed in sync_ptr \n");
+                 /* we failed to make our window -- try to restart */
+                 //pcm->overruns++;
+-                pcm->running = 0;
++                arec_attr->pcm->running = 0;
+                 continue;
+                 }
+                /*
+                 * Check for the available data in driver. If available data is
+                 * less than avail_min we need to wait
+                 */
+-                avail = pcm_avail(pcm);
++                avail = pcm_avail(arec_attr->pcm);
+                 if (debug)
+                      fprintf(stderr, "Arec:avail 1 = %d frames = %ld, avail_min = %d,"
+                              "x.frames = %d, bufsize = %d, dst_addr = %p\n",avail, frames,
+-                             (int)pcm->sw_p->avail_min, (int)x.frames, bufsize, dst_addr);
++                             (int)arec_attr->pcm->sw_p->avail_min, (int)x.frames, bufsize, dst_addr);
+                 if (avail < 0)
+                         return avail;
+-                if (avail < pcm->sw_p->avail_min) {
++                if (avail < arec_attr->pcm->sw_p->avail_min) {
+                         poll(pfd, nfds, TIMEOUT_INFINITE);
+                         continue;
+                 }
+@@ -359,8 +367,8 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+                 * to be read we need to calcutate the buffer offset where we can
+                 * start reading from.
+                 */
+-                dst_addr = dst_address(pcm);
+-                if (compressed) {
++                dst_addr = dst_address(arec_attr->pcm);
++                if (arec_attr->compressed) {
+                     framesize =  (unsigned)(dst_addr[3] << 24) + (unsigned)(dst_addr[2] << 16) +
+                         (unsigned) (dst_addr[1] << 8) + (unsigned)dst_addr[0];
+                     if (debug)
+@@ -383,22 +391,22 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+                     return -errno;
+                 }
+                 x.frames -= frames;
+-                pcm->sync_ptr->c.control.appl_ptr += frames;
+-                pcm->sync_ptr->flags = 0;
+-                err = sync_ptr(pcm);
++                arec_attr->pcm->sync_ptr->c.control.appl_ptr += frames;
++                arec_attr->pcm->sync_ptr->flags = 0;
++                err = sync_ptr(arec_attr->pcm);
+                 if (err == EPIPE) {
+                      fprintf(stderr, "Arec:Failed in sync_ptr \n");
+                      /* we failed to make our window -- try to restart */
+-                     pcm->running = 0;
++                     arec_attr->pcm->running = 0;
+                      continue;
+                 }
+                 rec_size += bufsize;
+-                if (!compressed) {
+-                    hdr.data_sz += bufsize;
+-                    hdr.riff_sz = hdr.data_sz + 44 - 8;
+-                    if (!piped) {
++                if (!arec_attr->compressed) {
++                    arec_attr->hdr.data_sz += bufsize;
++                    arec_attr->hdr.riff_sz = arec_attr->hdr.data_sz + 44 - 8;
++                    if (!arec_attr->piped) {
+                         lseek(fd, 0, SEEK_SET);
+-                        write(fd, &hdr, sizeof(hdr));
++                        write(fd, &arec_attr->hdr, sizeof(arec_attr->hdr));
+                         lseek(fd, 0, SEEK_END);
+                     }
+                 }
+@@ -406,150 +414,155 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+                       break;
+            }
+     } else {
+-	    bufsize = pcm->period_size;
+-            if (pcm_prepare(pcm)) {
++	    bufsize = arec_attr->pcm->period_size;
++            if (pcm_prepare(arec_attr->pcm)) {
+                 fprintf(stderr, "Arec:Failed in pcm_prepare\n");
+-                pcm_close(pcm);
++                pcm_close(arec_attr->pcm);
+                 return -errno;
+             }
+ 
+-	    data = calloc(1, bufsize);
+-	    if (!data) {
++	    arec_attr->data = calloc(1, bufsize);
++	    if (!arec_attr->data) {
+ 		fprintf(stderr, "Arec:could not allocate %d bytes\n", bufsize);
+ 		return -ENOMEM;
+ 	    }
+ 
+-	    while (!pcm_read(pcm, data, bufsize)) {
+-		if (write(fd, data, bufsize) != bufsize) {
++#ifndef ALSA_FUNC_CALL
++    /* arec_attr_signal will be used in signal handler later */
++    memcpy(&arec_attr_signal, arec_attr, sizeof(arec_attr_t));
++#endif
++
++	    while (!pcm_read(arec_attr->pcm, arec_attr->data, bufsize)) {
++		if (write(fd, arec_attr->data, bufsize) != bufsize) {
+ 		    fprintf(stderr, "Arec:could not write %d bytes\n", bufsize);
+ 		    break;
+ 		}
+                 rec_size += bufsize;
+-                hdr.data_sz += bufsize;
+-                hdr.riff_sz = hdr.data_sz + 44 - 8;
+-                if (!piped) {
++                arec_attr->hdr.data_sz += bufsize;
++                arec_attr->hdr.riff_sz = arec_attr->hdr.data_sz + 44 - 8;
++                if (!arec_attr->piped) {
+                     lseek(fd, 0, SEEK_SET);
+-                    write(fd, &hdr, sizeof(hdr));
++                    write(fd, &arec_attr->hdr, sizeof(arec_attr->hdr));
+                     lseek(fd, 0, SEEK_END);
+                 }
+                 if (rec_size >= count)
+                     break;
+ 	    }
++        free(arec_attr->data);
+     }
+     fprintf(stderr, " rec_size =%d count =%d\n", rec_size, count);
+     close(fd);
+-    free(data);
+-    pcm_close(pcm);
+-    return hdr.data_sz;
++    pcm_close(arec_attr->pcm);
++    return arec_attr->hdr.data_sz;
+ 
+ fail:
+-    fprintf(stderr, "Arec:pcm error: %s\n", pcm_error(pcm));
++    fprintf(stderr, "Arec:pcm error: %s\n", pcm_error(arec_attr->pcm));
+     return -errno;
+ }
+ 
+ int rec_raw(const char *fg, const char *device, int rate, int ch,
+-                    const char *fn)
++                    const char *fn, arec_attr_t *arec_attr)
+ {
+     unsigned flag = 0;
+     uint32_t rec_max_sz = 2147483648LL;
+     uint32_t count;
+     int i = 0;
+-    printf("rec_raw-> pcm_flag = %d\n", pcm_flag);
++    printf("rec_raw-> pcm_flag = %d\n", arec_attr->pcm_flag);
+     if (!fn) {
+-        fd = fileno(stdout);
+-        piped = 1;
++        arec_attr->fd = fileno(stdout);
++        arec_attr->piped = 1;
+     } else {
+-        fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0664);
+-        if (fd < 0) {
++        arec_attr->fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0664);
++        if (arec_attr->fd < 0) {
+             fprintf(stderr, "Arec:arec: cannot open '%s'\n", fn);
+             return -EBADFD;
+         }
+     }
+-    if (duration == 0) {
++    if (arec_attr->duration == 0) {
+          count = rec_max_sz;
+     } else {
+          count = rate * ch * 2;
+-         count *= (uint32_t)duration;
++         count *= (uint32_t)arec_attr->duration;
+     }
+     count = count < rec_max_sz ? count : rec_max_sz;
+     if (debug)
+         fprintf(stderr, "arec: %d ch, %d hz, %d bit, format %x\n",
+-        ch, rate, 16, format);
++        ch, rate, 16, arec_attr->format);
+ 
+     if (!strncmp(fg, "M", sizeof("M"))) {
+         flag = PCM_MMAP;
+     } else if (!strncmp(fg, "N", sizeof("N"))) {
+         flag = PCM_NMMAP;
+     }
+-    return record_file(rate, ch, fd, count, flag, device);
++    return record_file(rate, ch, arec_attr->fd, count, flag, device, arec_attr);
+ }
+ 
+-int rec_wav(const char *fg, const char *device, int rate, int ch, const char *fn)
++int rec_wav(const char *fg, const char *device, int rate, int ch, const char *fn, arec_attr_t *arec_attr)
+ {
+     unsigned flag = 0;
+     uint32_t rec_max_sz = 2147483648LL;
+     uint32_t count = 0;
+     int i = 0;
+-    printf("rec_wav-> pcm_flag = %d\n", pcm_flag);
+-    if (pcm_flag) {
++    printf("rec_wav-> pcm_flag = %d\n", arec_attr->pcm_flag);
++    if (arec_attr->pcm_flag) {
+         if (!fn) {
+-            fd = fileno(stdout);
+-            piped = 1;
++            arec_attr->fd = fileno(stdout);
++            arec_attr->piped = 1;
+         } else {
+-            fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0664);
+-            if (fd < 0) {
++            arec_attr->fd = open(fn, O_WRONLY | O_CREAT | O_TRUNC, 0664);
++            if (arec_attr->fd < 0) {
+                 fprintf(stderr, "Arec:arec: cannot open '%s'\n", fn);
+                 return -EBADFD;
+             }
+         }
+-        if (compressed) {
++        if (arec_attr->compressed) {
+ 
+-            printf("rec_wav-> compressed = %d\n", compressed);
+-            hdr.sample_rate = rate;
+-            hdr.num_channels = ch;
++            printf("rec_wav-> compressed = %d\n", arec_attr->compressed);
++            arec_attr->hdr.sample_rate = rate;
++            arec_attr->hdr.num_channels = ch;
+             goto ignore_header;
+         }
+-        memset(&hdr, 0, sizeof(struct wav_header));
+-        hdr.riff_id = ID_RIFF;
+-        hdr.riff_fmt = ID_WAVE;
+-        hdr.fmt_id = ID_FMT;
+-        hdr.fmt_sz = 16;
+-        hdr.audio_format = FORMAT_PCM;
+-        hdr.num_channels = ch;
+-        hdr.sample_rate = rate;
+-        hdr.bits_per_sample = 16;
+-        hdr.byte_rate = (rate * ch * hdr.bits_per_sample) / 8;
+-        hdr.block_align = ( hdr.bits_per_sample * ch ) / 8;
+-        hdr.data_id = ID_DATA;
+-        hdr.data_sz = 0;
+-        hdr.riff_sz = hdr.data_sz + 44 - 8;
+-        if (write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
++        memset(&arec_attr->hdr, 0, sizeof(struct wav_header));
++        arec_attr->hdr.riff_id = ID_RIFF;
++        arec_attr->hdr.riff_fmt = ID_WAVE;
++        arec_attr->hdr.fmt_id = ID_FMT;
++        arec_attr->hdr.fmt_sz = 16;
++        arec_attr->hdr.audio_format = FORMAT_PCM;
++        arec_attr->hdr.num_channels = ch;
++        arec_attr->hdr.sample_rate = rate;
++        arec_attr->hdr.bits_per_sample = 16;
++        arec_attr->hdr.byte_rate = (rate * ch * arec_attr->hdr.bits_per_sample) / 8;
++        arec_attr->hdr.block_align = ( arec_attr->hdr.bits_per_sample * ch ) / 8;
++        arec_attr->hdr.data_id = ID_DATA;
++        arec_attr->hdr.data_sz = 0;
++        arec_attr->hdr.riff_sz = arec_attr->hdr.data_sz + 44 - 8;
++        if (write(arec_attr->fd, &arec_attr->hdr, sizeof(arec_attr->hdr)) != sizeof(arec_attr->hdr)) {
+             if (debug)
+                 fprintf(stderr, "arec: cannot write header\n");
+             return -errno;
+         }
+         if (debug)
+             fprintf(stderr, "arec: %d ch, %d hz, %d bit, %s\n",
+-                    hdr.num_channels, hdr.sample_rate, hdr.bits_per_sample,
+-                    hdr.audio_format == FORMAT_PCM ? "PCM" : "unknown");
++                    arec_attr->hdr.num_channels, arec_attr->hdr.sample_rate, arec_attr->hdr.bits_per_sample,
++                    arec_attr->hdr.audio_format == FORMAT_PCM ? "PCM" : "unknown");
+     } else {
+-        hdr.sample_rate = rate;
+-        hdr.num_channels = ch;
++        arec_attr->hdr.sample_rate = rate;
++        arec_attr->hdr.num_channels = ch;
+     }
+ ignore_header:
+ 
+-   if (duration == 0) {
++   if (arec_attr->duration == 0) {
+         count = rec_max_sz;
+     } else {
+           count = rate * ch * 2;
+-          count *= (uint32_t)duration;
++          count *= (uint32_t)arec_attr->duration;
+     }
+     if (!strncmp(fg, "M", sizeof("M"))) {
+         flag = PCM_MMAP;
+     } else if (!strncmp(fg, "N", sizeof("N"))) {
+         flag = PCM_NMMAP;
+     }
+-    return record_file(hdr.sample_rate, hdr.num_channels, fd, count, flag, device);
++    return record_file(arec_attr->hdr.sample_rate, arec_attr->hdr.num_channels, arec_attr->fd, count, flag, device, arec_attr);
+ }
+ 
+ static void signal_handler(int sig)
+@@ -558,27 +571,31 @@ static void signal_handler(int sig)
+     FILE *fp;
+ 
+     fprintf(stderr, "Arec:Aborted by signal %s...\n", strsignal(sig));
+-    fprintf(stderr, "Arec:lseeked to %d", (int) lseek(fd, 0, SEEK_SET));
+-    hdr.riff_sz = hdr.data_sz + 44 - 8;
+-    fprintf(stderr, "Arec: hdr.data_sz =%d\n", hdr.data_sz);
+-    fprintf(stderr, "Arec: hdr.riff_sz =%d\n", hdr.riff_sz);
+-    if (write(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
++    fprintf(stderr, "Arec:lseeked to %d", (int) lseek(arec_attr_signal.fd, 0, SEEK_SET));
++    arec_attr_signal.hdr.riff_sz = arec_attr_signal.hdr.data_sz + 44 - 8;
++    fprintf(stderr, "Arec: hdr.data_sz =%d\n", arec_attr_signal.hdr.data_sz);
++    fprintf(stderr, "Arec: hdr.riff_sz =%d\n", arec_attr_signal.hdr.riff_sz);
++    if (write(arec_attr_signal.fd, &arec_attr_signal.hdr, sizeof(arec_attr_signal.hdr)) != sizeof(arec_attr_signal.hdr)) {
+ 	if (debug)
+             fprintf(stderr, "Arec:arec: cannot write header\n");
+     } else
+-       fd = -1;
++       arec_attr_signal.fd = -1;
+ 
+-    if (fd > 1) {
+-        close(fd);
+-        fd = -1;
++    if (arec_attr_signal.fd > 1) {
++        close(arec_attr_signal.fd);
++        arec_attr_signal.fd = -1;
+     }
+-    free(filename);
+-    free(data);
+-    pcm = NULL;
++    free(arec_attr_signal.filename);
++    free(arec_attr_signal.data);
++    arec_attr_signal.pcm = NULL;
+     raise(sig);
+ }
+ 
++#ifdef ALSA_FUNC_CALL
++int arec(int argc, char **argv, pthread_mutex_t *arg_mutex_x)
++#else
+ int main(int argc, char **argv)
++#endif
+ {
+     int rate = 48000;
+     int ch = 1;
+@@ -590,6 +607,12 @@ int main(int argc, char **argv)
+     struct sigaction sa;
+     int rc = 0;
+     char *cformat = NULL;
++    arec_attr_t arec_attr_val = {0};
++    arec_attr_t *arec_attr = &arec_attr_val;
++
++	arec_attr->format = SNDRV_PCM_FORMAT_S16_LE;
++    arec_attr->pcm_flag = 1;
++
+ 
+     if (argc < 2) {
+         printf("\nUsage: arec [options] <file>\n"
+@@ -613,10 +636,16 @@ int main(int argc, char **argv)
+            fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
+           return 0;
+     }
++
++#ifdef ALSA_FUNC_CALL
++    if (arg_mutex_x != NULL) pthread_mutex_lock(arg_mutex_x);
++#endif
++
++    optind = 0;
+     while ((c = getopt_long(argc, argv, "PVMD:R:C:T:F:B:K:", long_options, &option_index)) != -1) {
+        switch (c) {
+        case 'P':
+-          pcm_flag = 0;
++          arec_attr->pcm_flag = 0;
+           break;
+        case 'V':
+           debug = 1;
+@@ -634,18 +663,18 @@ int main(int argc, char **argv)
+           ch  = (int)strtol(optarg, NULL, 0);
+           break;
+        case 'T':
+-          duration = (int)strtol(optarg, NULL, 0);
++          arec_attr->duration = (int)strtol(optarg, NULL, 0);
+           break;
+        case 'F':
+-          format = (int)get_format(optarg);
++          arec_attr->format = (int)get_format(optarg);
+           break;
+        case 'B':
+-          period = (int)strtol(optarg, NULL, 0);
++          arec_attr->period = (int)strtol(optarg, NULL, 0);
+           break;
+        case 'K':
+-          compressed = 1;
++          arec_attr->compressed = 1;
+           printf("compressed codec type requested = %s\n", optarg);
+-          compr_codec = optarg;
++          arec_attr->compr_codec = optarg;
+           break;
+        default:
+           printf("\nUsage: arec [options] <file>\n"
+@@ -666,37 +695,82 @@ int main(int argc, char **argv)
+                if (cformat != NULL)
+                    fprintf(stderr, "%s ", cformat);
+            }
+-           fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
++          fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
++#ifdef ALSA_FUNC_CALL
++          if (arg_mutex_x != NULL) pthread_mutex_unlock(arg_mutex_x);
++#endif
+           return -EINVAL;
+        }
+     }
+-    filename = (char*) calloc(1, 30);
+-     if (!filename) {
++
++#ifdef ALSA_FUNC_CALL
++    if (arg_mutex_x != NULL) pthread_mutex_unlock(arg_mutex_x);
++#endif
++
++    arec_attr->filename = (char*) calloc(1, 30);
++     if (!arec_attr->filename) {
+           fprintf(stderr, "Arec:Failed to allocate filename!");
+           return -ENOMEM;
+     }
+     if (optind > argc - 1) {
+-        free(filename);
+-        filename = NULL;
++        free(arec_attr->filename);
++        arec_attr->filename = NULL;
+     } else {
+-        strlcpy(filename, argv[optind++], 30);
++        strlcpy(arec_attr->filename, argv[optind++], 30);
+     }
+ 
++#ifdef ALSA_FUNC_CALL
++    pthread_cleanup_push(arec_cleanup, arec_attr);
++#else
+     memset(&sa, 0, sizeof(sa));
+     sa.sa_handler = &signal_handler;
+     sigaction(SIGABRT, &sa, NULL);
++#endif
+ 
+-    if (pcm_flag) {
+-        if (format == SNDRV_PCM_FORMAT_S16_LE)
+-             rc = rec_wav(mmap, device, rate, ch, filename);
++    if (arec_attr->pcm_flag) {
++        if (arec_attr->format == SNDRV_PCM_FORMAT_S16_LE)
++             rc = rec_wav(mmap, device, rate, ch, arec_attr->filename, arec_attr);
+          else
+-             rc = rec_raw(mmap, device, rate, ch, filename);
++             rc = rec_raw(mmap, device, rate, ch, arec_attr->filename, arec_attr);
+     } else {
+-        rc = rec_wav(mmap, device, rate, ch, "dummy");
++        rc = rec_wav(mmap, device, rate, ch, "dummy", arec_attr);
+     }
+-    if (filename)
+-        free(filename);
++    if (arec_attr->filename)
++        free(arec_attr->filename);
++
++#ifdef ALSA_FUNC_CALL
++    pthread_cleanup_pop(0);
++#endif
+ 
+     return rc;
+ }
+ 
++void arec_cleanup(arec_attr_t *arec_attr)
++{
++    if (arec_attr->fd > 0)
++    {
++        fprintf(stderr, "Arec:lseeked to %d\n", (int) lseek(arec_attr->fd, 0, SEEK_SET));
++        arec_attr->hdr.riff_sz = arec_attr->hdr.data_sz + 44 - 8;
++        fprintf(stderr, "Arec: hdr.data_sz =%d\n", arec_attr->hdr.data_sz);
++        fprintf(stderr, "Arec: hdr.riff_sz =%d\n", arec_attr->hdr.riff_sz);
++        if (write(arec_attr->fd, &arec_attr->hdr, sizeof(arec_attr->hdr)) != sizeof(arec_attr->hdr))
++        {
++            if (debug)
++                fprintf(stderr, "Arec:arec: cannot write header\n");
++        }
++        close(arec_attr->fd);
++    }
++
++    if (arec_attr->data != NULL)
++        free(arec_attr->data);
++
++    if (arec_attr->pcm != NULL)
++        pcm_close(arec_attr->pcm);
++
++    if (arec_attr->filename)
++        free(arec_attr->filename);
++
++    return;
++}
++
++
+-- 
+1.9.1
+
