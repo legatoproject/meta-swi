@@ -1,7 +1,7 @@
 
-# Tag LE.BR.1.2.1-44100-9x07
-SRCREV = "95852f8b85a9b2d190b395aaf9621fb6cca90dc6"
-SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=mdm"
+# Tag LE.BR.1.3.1-04810-9x50
+SRCREV = "cdad155a747c1ed679e0360b868f7e71d67795e6"
+SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=le-blast.lnx.1.0-rel"
 
 DEPENDS += "zlib openssl libcap"
 
