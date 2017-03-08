@@ -18,9 +18,15 @@ addtask tag_lk before do_compile after do_configure
 do_install() {
     install -d ${D}/boot
     install ${B}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
+    if [ -f "${B}/build-${LK_TARGET}/appsboot_rw.mbn" ] ; then
+        install ${B}/build-${LK_TARGET}/appsboot_rw.mbn ${D}/boot
+    fi
 }
 
 do_deploy() {
     install -d ${DEPLOY_DIR_IMAGE}
     install ${B}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
+    if [ -f "${B}/build-${LK_TARGET}/appsboot_rw.mbn" ] ; then
+        install ${B}/build-${LK_TARGET}/appsboot_rw.mbn ${DEPLOY_DIR_IMAGE}
+    fi
 }
