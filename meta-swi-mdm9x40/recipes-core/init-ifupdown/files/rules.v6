@@ -39,6 +39,8 @@
 
 # Allow incoming SSH connections over Eth0 interface
 -A INPUT -i eth0 -p tcp -m tcp --dport 22 -j ACCEPT
+-A INPUT -i ecm0 -p tcp -m tcp --dport 22 -j ACCEPT
+-A INPUT -i bridge0 -p tcp -m tcp --dport 22 -j ACCEPT
 
 # Allow DHCP request on Bridge0
 -A INPUT -i bridge0 -p udp --dport 67 -j ACCEPT
