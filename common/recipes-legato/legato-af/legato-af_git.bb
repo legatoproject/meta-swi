@@ -14,6 +14,7 @@ DEPENDS += "mtd-utils-native"
 
 # Target dependencies
 DEPENDS += "curl"
+DEPENDS += "zlib"
 
 FILESEXTRAPATHS += "${THISDIR}/files"
 
