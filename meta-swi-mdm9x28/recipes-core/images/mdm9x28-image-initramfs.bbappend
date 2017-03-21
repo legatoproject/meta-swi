@@ -9,70 +9,43 @@ fakeroot do_filter_rootfs () {
         echo "Removing $file"
         rm -rf $file
     }
-    if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
-        for file in $(find); do
-            if [[ "$file" == "./sbin/ldconfig" ]]; then
-                remove_entity $file
-            elif echo "$file" | grep "./usr/lib/opkg"; then
-                remove_entity $file
-            elif echo "$file" | grep "./usr/lib/liblvm"; then
-                remove_entity $file
-            elif echo "$file" | grep "./usr/lib/liblzo2"; then
-                remove_entity $file
-            elif [[ "$file" == "./usr/bin/update-alternatives" ]]; then
-                remove_entity $file
-            elif echo $file | grep '\.suid'; then
-                remove_entity $file
-            elif [[ "$(readlink file)" == "/bin/busybox.suid" ]]; then
-                remove_entity $file
-            elif echo $file | grep '\./lib/'; then
-                case $file in
-                    */ld-*) ;;
-                    */libc.*) ;;
-                    */libc-*) ;;
-                    */libdl*) ;;
-                    */librt*) ;;
-                    */libpthread*) ;;
-                    */libuuid*) ;;
-                    */libudev*) ;;
-                    */libcrypt*) ;;
-                    */libz.so*) ;;
-                    *) remove_entity $file ;;
-                esac
-            elif echo $file | grep -e "./usr/sbin/.*ubi"; then
-                if [[ "$file" != "./usr/sbin/ubiattach" ]] && [[ "$file" != "./usr/sbin/ubiblkvol" ]]; then
-                    remove_entity $file
-                fi
-            fi
-        done
-    else
-        for file in $(find); do
-            if [[ "$file" == "./sbin/ldconfig" ]]; then
-                remove_entity $file
-            elif echo "$file" | grep "./usr/lib/"; then
-                remove_entity $file
-            elif [[ "$file" == "./usr/bin/update-alternatives" ]]; then
-                remove_entity $file
-            elif echo $file | grep '\.suid'; then
-                remove_entity $file
-            elif [[ "$(readlink file)" == "/bin/busybox.suid" ]]; then
-                remove_entity $file
-            elif echo $file | grep '\./lib/'; then
-                case $file in
-                    */ld-*) ;;
-                    */libc.*) ;;
-                    */libc-*) ;;
-                    *) remove_entity $file ;;
-                esac
-            elif echo $file | grep -e "./usr/sbin/.*ubi"; then
-                if [[ "$file" != "./usr/sbin/ubiattach" ]] && [[ "$file" != "./usr/sbin/ubiblkvol" ]]; then
-                    remove_entity $file
-                fi
-            elif echo $file | grep '\./usr/sbin/'; then
+
+    for file in $(find); do
+        if [[ "$file" == "./sbin/ldconfig" ]]; then
+            remove_entity $file
+        elif echo "$file" | grep "./usr/lib/opkg"; then
+            remove_entity $file
+        elif echo "$file" | grep "./usr/lib/liblvm"; then
+            remove_entity $file
+        elif echo "$file" | grep "./usr/lib/liblzo2"; then
+            remove_entity $file
+        elif [[ "$file" == "./usr/bin/update-alternatives" ]]; then
+            remove_entity $file
+        elif echo $file | grep '\.suid'; then
+            remove_entity $file
+        elif [[ "$(readlink file)" == "/bin/busybox.suid" ]]; then
+            remove_entity $file
+        elif echo $file | grep '\./lib/'; then
+            case $file in
+                */ld-*) ;;
+                */libc.*) ;;
+                */libc-*) ;;
+                */libdl*) ;;
+                */librt*) ;;
+                */libpthread*) ;;
+                */libuuid*) ;;
+                */libudev*) ;;
+                */libcrypt*) ;;
+                */libz.so*) ;;
+                *) remove_entity $file ;;
+            esac
+        elif echo $file | grep -e "./usr/sbin/.*ubi"; then
+            if [[ "$file" != "./usr/sbin/ubiattach" ]] && [[ "$file" != "./usr/sbin/ubiblkvol" ]]; then
                 remove_entity $file
             fi
-        done
-    fi
+        fi
+    done
+
     # Create basic folders
     for entry in bin dev lib mnt proc run sys tmp var; do
         mkdir -p $entry
