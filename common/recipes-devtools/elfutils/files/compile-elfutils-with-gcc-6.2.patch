@@ -1,0 +1,255 @@
+commit 8d5fae210dacc06310f56aa8cc6a7f4f2b85f6f6
+Author: Kaz Kylheku <kkylheku@sierrawireless.com>
+Date:   Tue Mar 14 15:28:08 2017 -0700
+
+    build with gcc 6.2.0.
+
+    - many functions test an argument against NULL which
+      is marked as __nonnull_attribute__
+
+    - the big fix in the switch statement is an indentation
+      change; gcc identified it as misleading indentation.
+
+diff --git a/libdw/libdw.h b/libdw/libdw.h
+index 0d94c52..e036702 100644
+--- a/libdw/libdw.h
++++ b/libdw/libdw.h
+@@ -359,8 +359,7 @@ extern int dwarf_child (Dwarf_Die *die, Dwarf_Die *result)
+    the same as DIE, it sets RESULT->addr to the address of the
+    (non-sibling) DIE that follows this one, or NULL if this DIE
+    was the last one in the compilation unit.  */
+-extern int dwarf_siblingof (Dwarf_Die *die, Dwarf_Die *result)
+-     __nonnull_attribute__ (2);
++extern int dwarf_siblingof (Dwarf_Die *die, Dwarf_Die *result);
+ 
+ /* Check whether the DIE has children.  */
+ extern int dwarf_haschildren (Dwarf_Die *die) __nonnull_attribute__ (1);
+diff --git a/libdwfl/libdwfl.h b/libdwfl/libdwfl.h
+index 2bb4f45..837542e 100644
+--- a/libdwfl/libdwfl.h
++++ b/libdwfl/libdwfl.h
+@@ -421,7 +421,7 @@ extern int dwfl_validate_address (Dwfl *dwfl,
+    with the difference between addresses within the loaded module
+    and those in symbol tables or Dwarf information referring to it.  */
+ extern Elf *dwfl_module_getelf (Dwfl_Module *, GElf_Addr *bias)
+-  __nonnull_attribute__ (1, 2);
++  __nonnull_attribute__ (2);
+ 
+ /* Return the number of symbols in the module's symbol table,
+    or -1 for errors.  */
+@@ -712,7 +712,7 @@ typedef struct
+ bool dwfl_attach_state (Dwfl *dwfl, Elf *elf, pid_t pid,
+                         const Dwfl_Thread_Callbacks *thread_callbacks,
+ 			void *dwfl_arg)
+-  __nonnull_attribute__ (1, 4);
++  __nonnull_attribute__ (1);
+ 
+ /* Calls dwfl_attach_state with Dwfl_Thread_Callbacks setup for extracting
+    thread state from the ELF core file.  Returns the pid number extracted
+diff --git a/libebl/eblobjnote.c b/libebl/eblobjnote.c
+index d1fe821..c2464f9 100644
+--- a/libebl/eblobjnote.c
++++ b/libebl/eblobjnote.c
+@@ -135,86 +135,86 @@ ebl_object_note (ebl, name, type, descsz, desc)
+ 	return;
+       }
+ 
+-    switch (type)
+-      {
+-      case NT_GNU_BUILD_ID:
+-	if (strcmp (name, "GNU") == 0 && descsz > 0)
+-	  {
+-	    printf (gettext ("    Build ID: "));
+-	    uint_fast32_t i;
+-	    for (i = 0; i < descsz - 1; ++i)
+-	      printf ("%02" PRIx8, (uint8_t) desc[i]);
+-	    printf ("%02" PRIx8 "\n", (uint8_t) desc[i]);
+-	  }
+-	break;
+-
+-      case NT_GNU_GOLD_VERSION:
+-	if (strcmp (name, "GNU") == 0 && descsz > 0)
+-	  /* A non-null terminated version string.  */
+-	  printf (gettext ("    Linker version: %.*s\n"),
+-		  (int) descsz, desc);
+-	break;
+-
+-      case NT_GNU_ABI_TAG:
+-	if (strcmp (name, "GNU") == 0 && descsz >= 8 && descsz % 4 == 0)
+-	  {
+-	    Elf_Data in =
+-	      {
+-		.d_version = EV_CURRENT,
+-		.d_type = ELF_T_WORD,
+-		.d_size = descsz,
+-		.d_buf = (void *) desc
+-	      };
+-	    uint32_t buf[descsz / 4];
+-	    Elf_Data out =
+-	      {
+-		.d_version = EV_CURRENT,
+-		.d_type = ELF_T_WORD,
+-		.d_size = descsz,
+-		.d_buf = buf
+-	      };
+-
+-	    if (elf32_xlatetom (&out, &in, ebl->data) != NULL)
+-	      {
+-		const char *os;
+-		switch (buf[0])
+-		  {
+-		  case ELF_NOTE_OS_LINUX:
+-		    os = "Linux";
+-		    break;
+-
+-		  case ELF_NOTE_OS_GNU:
+-		    os = "GNU";
+-		    break;
+-
+-		  case ELF_NOTE_OS_SOLARIS2:
+-		    os = "Solaris";
+-		    break;
+-
+-		  case ELF_NOTE_OS_FREEBSD:
+-		    os = "FreeBSD";
+-		    break;
+-
+-		  default:
+-		    os = "???";
+-		    break;
+-		  }
+-
+-		printf (gettext ("    OS: %s, ABI: "), os);
+-		for (size_t cnt = 1; cnt < descsz / 4; ++cnt)
+-		  {
+-		    if (cnt > 1)
+-		      putchar_unlocked ('.');
+-		    printf ("%" PRIu32, buf[cnt]);
+-		  }
+-		putchar_unlocked ('\n');
+-	      }
+-	    break;
+-	  }
+-	/* FALLTHROUGH */
+-
+-      default:
+-	/* Unknown type.  */
+-	break;
+-      }
++  switch (type)
++    {
++    case NT_GNU_BUILD_ID:
++      if (strcmp (name, "GNU") == 0 && descsz > 0)
++	{
++	  printf (gettext ("    Build ID: "));
++	  uint_fast32_t i;
++	  for (i = 0; i < descsz - 1; ++i)
++	    printf ("%02" PRIx8, (uint8_t) desc[i]);
++	  printf ("%02" PRIx8 "\n", (uint8_t) desc[i]);
++	}
++      break;
++
++    case NT_GNU_GOLD_VERSION:
++      if (strcmp (name, "GNU") == 0 && descsz > 0)
++	/* A non-null terminated version string.  */
++	printf (gettext ("    Linker version: %.*s\n"),
++		(int) descsz, desc);
++      break;
++
++    case NT_GNU_ABI_TAG:
++      if (strcmp (name, "GNU") == 0 && descsz >= 8 && descsz % 4 == 0)
++	{
++	  Elf_Data in =
++	    {
++	      .d_version = EV_CURRENT,
++	      .d_type = ELF_T_WORD,
++	      .d_size = descsz,
++	      .d_buf = (void *) desc
++	    };
++	  uint32_t buf[descsz / 4];
++	  Elf_Data out =
++	    {
++	      .d_version = EV_CURRENT,
++	      .d_type = ELF_T_WORD,
++	      .d_size = descsz,
++	      .d_buf = buf
++	    };
++
++	  if (elf32_xlatetom (&out, &in, ebl->data) != NULL)
++	    {
++	      const char *os;
++	      switch (buf[0])
++		{
++		case ELF_NOTE_OS_LINUX:
++		  os = "Linux";
++		  break;
++
++		case ELF_NOTE_OS_GNU:
++		  os = "GNU";
++		  break;
++
++		case ELF_NOTE_OS_SOLARIS2:
++		  os = "Solaris";
++		  break;
++
++		case ELF_NOTE_OS_FREEBSD:
++		  os = "FreeBSD";
++		  break;
++
++		default:
++		  os = "???";
++		  break;
++		}
++
++	      printf (gettext ("    OS: %s, ABI: "), os);
++	      for (size_t cnt = 1; cnt < descsz / 4; ++cnt)
++		{
++		  if (cnt > 1)
++		    putchar_unlocked ('.');
++		  printf ("%" PRIu32, buf[cnt]);
++		}
++	      putchar_unlocked ('\n');
++	    }
++	  break;
++	}
++      /* FALLTHROUGH */
++
++    default:
++      /* Unknown type.  */
++      break;
++    }
+ }
+diff --git a/libebl/libebl.h b/libebl/libebl.h
+index 50d6baa..b34ade8 100644
+--- a/libebl/libebl.h
++++ b/libebl/libebl.h
+@@ -403,17 +403,16 @@ extern bool ebl_set_initial_registers_tid (Ebl *ebl,
+ 
+ /* Number of registers to allocate for ebl_set_initial_registers_tid.
+    EBL architecture can unwind iff EBL_FRAME_NREGS > 0.  */
+-extern size_t ebl_frame_nregs (Ebl *ebl)
+-  __nonnull_attribute__ (1);
++extern size_t ebl_frame_nregs (Ebl *ebl);
+ 
+ /* Convert *REGNO as is in DWARF to a lower range suitable for
+    Dwarf_Frame->REGS indexing.  */
+ extern bool ebl_dwarf_to_regno (Ebl *ebl, unsigned *regno)
+-  __nonnull_attribute__ (1, 2);
++  __nonnull_attribute__ (2);
+ 
+ /* Modify PC as fetched from inferior data into valid PC.  */
+ extern void ebl_normalize_pc (Ebl *ebl, Dwarf_Addr *pc)
+-  __nonnull_attribute__ (1, 2);
++  __nonnull_attribute__ (2);
+ 
+ /* Callback type for ebl_unwind's parameter getfunc.  */
+ typedef bool (ebl_tid_registers_get_t) (int firstreg, unsigned nregs,
+@@ -437,7 +436,7 @@ extern bool ebl_unwind (Ebl *ebl, Dwarf_Addr pc, ebl_tid_registers_t *setfunc,
+ 			ebl_tid_registers_get_t *getfunc,
+ 			ebl_pid_memory_read_t *readfunc, void *arg,
+ 			bool *signal_framep)
+-  __nonnull_attribute__ (1, 3, 4, 5, 7);
++  __nonnull_attribute__ (3, 4, 5, 7);
+ 
+ /* Returns true if the value can be resolved to an address in an
+    allocated section, which will be returned in *ADDR
