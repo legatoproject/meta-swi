@@ -69,6 +69,17 @@ case "$1" in
 
   stop)
         echo "Stopping USB Android Gadget"
+        if [ -d /sys/class/android_usb/android0 ]
+        then
+            echo 0 >/sys/class/android_usb/android0/enable
+        fi
+
+        start-stop-daemon -K -n adbd
+
+        if [ -d /sys/class/android_usb/android0/f_ffs ]
+        then
+            umount /dev/usb-ffs/adb
+        fi
         ;;
 
   restart)
