@@ -6,14 +6,14 @@ LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 COMPATIBLE_MACHINE = "(swi-mdm9x50)"
 
 # Provide a config baseline for things so the kernel will build...
-KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
+KERNEL_DEFCONFIG ?= "mdm9650_defconfig"
 B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
 
 SRC_URI = "file://${LINUX_REPO_DIR}/../"
 SRC_DIR = "${LINUX_REPO_DIR}/.."
 
-LINUX_VERSION ?= "3.18.20"
+LINUX_VERSION ?= "3.18.31"
 PV = "${LINUX_VERSION}+git${GITSHA}"
 PR = "r1"
 
