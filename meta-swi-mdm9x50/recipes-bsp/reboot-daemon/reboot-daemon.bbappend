@@ -1,7 +1,7 @@
 
 # Tag LE.BR.1.3.1-04810-9x50
 SRCREV = "e312fbda7e61d82ddce34b12e34cf46ad8d4e549"
-REBOOTD_REPO = "git://codeaurora.org/quic/le/mdm/reboot-daemon;branch=master"
+REBOOTD_REPO = "git://codeaurora.org/quic/le/mdm/reboot-daemon;branch=LE.BR.1.3.1_rb1.27"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI +="file://start_rebootdaemon"
