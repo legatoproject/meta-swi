@@ -1,7 +1,7 @@
-DESCRIPTION = "Sierra Wireless Legato Initialization"
-HOMEPAGE = "http://www.sierrawireless.com"
-LICENSE = "SierraWireless-Proprietary"
-LIC_FILES_CHKSUM = "file://../startlegato.sh;startline=2;endline=2;md5=0357211a003ec058e91c7f12c9922033"
+DESCRIPTION = "Legato Initialization"
+HOMEPAGE = "http://www.legato.io/"
+LICENSE = "MPL-2.0"
+LIC_FILES_CHKSUM = "file://../startlegato.sh;startline=2;endline=2;md5=3c2fa32f2c886dd9f19dad1b05ed1ced"
 
 SRC_URI = " \
           file://startlegato.sh \

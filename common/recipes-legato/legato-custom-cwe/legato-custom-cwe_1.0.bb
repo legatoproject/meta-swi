@@ -1,13 +1,10 @@
-DESCRIPTION = "Sierra Wireless Library"
-HOMEPAGE = "http://www.sierrawireless.com"
-LICENSE = "SierraWireless-Proprietary"
-LIC_FILES_CHKSUM = "file://LICENSE;md5=dbdf22205bb8b7f613788e897d3e869e"
+DESCRIPTION = "Legato Custom CWE"
+HOMEPAGE = "http://legato.io"
+LICENSE = "MPL-2.0"
 
 DEPENDS = "cwetool"
 DEPENDS += "yaffs2-utils"
 DEPENDS += "legato-af"
-
-SRC_URI += "file://LICENSE"
 
 INC_PR = "r0"
 
