@@ -1,6 +1,6 @@
-DESCRIPTION = "Sierra Wireless Legato Image"
+DESCRIPTION = "Legato Image"
 HOMEPAGE = "http://www.legato.io/"
-LICENSE = "MPL2.0"
+LICENSE = "MPL-2.0"
 
 DEPENDS += "yaffs2-utils-native"
 DEPENDS += "squashfs-tools-native"

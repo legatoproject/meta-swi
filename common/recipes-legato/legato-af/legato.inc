@@ -1,5 +1,6 @@
 HOMEPAGE = "http://www.legato.io/"
-LICENSE = "MPL2.0"
+LICENSE = "MPL-2.0"
+LIC_FILES_CHKSUM = "file://${LEGATO_WORKDIR}/LICENSE.md;md5=55a288862ec4d1fd20f996344d511a1f"
 
 DEPENDS += "cmake-native"
 

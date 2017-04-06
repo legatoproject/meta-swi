@@ -1,5 +1,5 @@
 #!/bin/sh
-# Copyright (c) Sierra Wireless, Inc. Use of this work is subject to license.
+# Copyright (c) Sierra Wireless, Inc.
 #
 # Provides a hook for legato into the init scripts
 
@@ -7,7 +7,7 @@ LEGATO_START=/mnt/legato/start
 
 case "$1" in
     start)
-		echo "Legato start sequence"
+        echo "Legato start sequence"
         $LEGATO_START
         ;;
 
