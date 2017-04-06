@@ -8,8 +8,7 @@ SDK_PACKAGING_FUNC_ORIG = "create_shar"
 SDK_PACKAGING_FUNC = "create_sdk_pkgs"
 
 repack_tarball() {
-    TARBALL_BZ="${SDK_DEPLOY}/${TOOLCHAIN_OUTPUTNAME}.tar.bz2"
-    TARBALL="${SDK_DEPLOY}/${TOOLCHAIN_OUTPUTNAME}.tar"
+    TARBALL_XZ="${SDKDEPLOYDIR}/${TOOLCHAIN_OUTPUTNAME}.tar.xz"
 
     SDK_STAGE_DIR="${WORKDIR}/swistage"
 
@@ -22,10 +21,10 @@ repack_tarball() {
     cd $SDK_STAGE_DIR
 
     echo "Extract SDK"
-    tar jxf $TARBALL_BZ
+    tar Jxf $TARBALL_XZ
 
     echo "Backup tarball"
-    mv $TARBALL_BZ "$TARBALL_BZ.orig"
+    mv $TARBALL_XZ "$TARBALL_XZ.orig"
 
     ROOT_DIR=$(basename ${SDKPATH})
 
@@ -34,19 +33,19 @@ repack_tarball() {
     mkdir $ROOT_DIR
     mv sysroots $ROOT_DIR
 
-    echo "Recreate tarball '$TARBALL_BZ'"
-    tar jcf $TARBALL_BZ $ROOT_DIR
+    echo "Recreate tarball '$TARBALL_XZ'"
+    tar ${SDKTAROPTS} -cf - $ROOT_DIR | pixz > $TARBALL_XZ
 
-    echo "Moving '$TARBALL_BZ' to '$TARBALL_BZ.repkg'"
-    mv $TARBALL_BZ "$TARBALL_BZ.repkg"
-    mv "$TARBALL_BZ.orig" $TARBALL_BZ
+    echo "Moving '$TARBALL_XZ' to '$TARBALL_XZ.repkg'"
+    mv $TARBALL_XZ "$TARBALL_XZ.repkg"
+    mv "$TARBALL_XZ.orig" $TARBALL_XZ
 }
 
 move_repacked() {
-    TARBALL_BZ="${SDK_DEPLOY}/${TOOLCHAIN_OUTPUTNAME}.tar.bz2"
+    TARBALL_XZ="${SDKDEPLOYDIR}/${TOOLCHAIN_OUTPUTNAME}.tar.xz"
 
-    echo "Moving '$TARBALL_BZ.repkg' to '$TARBALL_BZ'"
-    mv "$TARBALL_BZ.repkg" $TARBALL_BZ
+    echo "Moving '$TARBALL_XZ.repkg' to '$TARBALL_XZ'"
+    mv "$TARBALL_XZ.repkg" $TARBALL_XZ
 }
 
 python create_sdk_pkgs() {

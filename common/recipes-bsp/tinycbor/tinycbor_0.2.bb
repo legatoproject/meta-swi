@@ -37,7 +37,7 @@ do_compile() {
 
 # Install tinycbor to location forced by its Makefile.
 do_install() {
-   DESTDIR=${D} make install
+    DESTDIR=${D} make install
 }
 
 # Do cleanup before final installation, and make sure that library is installed

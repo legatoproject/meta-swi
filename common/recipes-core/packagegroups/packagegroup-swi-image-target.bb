@@ -35,7 +35,6 @@ RDEPENDS_${PN} += "attr"
 
 # Adds an alternative to tar (bsdtar)
 RDEPENDS_${PN} += "libarchive"
-RDEPENDS_${PN} += "libarchive-bin"
 
 # Enable (de)compression with bz2
 RDEPENDS_${PN} += "bzip2"

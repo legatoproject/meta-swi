@@ -7,3 +7,5 @@ gdbserver_sysroot_preprocess () {
     install -m 755 ${D}${bindir}/gdbserver ${SYSROOT_DESTDIR}${bindir}/
 }
 
+# Default PACKAGECONFIG relies on readline while being incompatible with readline 5.2
+PACKAGECONFIG=""

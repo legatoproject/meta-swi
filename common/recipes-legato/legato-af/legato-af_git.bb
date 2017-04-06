@@ -132,4 +132,5 @@ FILES_${PN} += "usr/local/*"
 FILES_${PN} += "mnt/legato/*"
 
 INSANE_SKIP_${PN} = "installed-vs-shipped dev-deps dev-so already-stripped"
+INSANE_SKIP_${PN}-dev = "dev-elf"
 

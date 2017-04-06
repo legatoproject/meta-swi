@@ -5,9 +5,10 @@
  pkgconfigdir = $(libdir)/pkgconfig
  
 -CFLAGS = -Wall -Wextra
-+CFLAGS = -Wall -Wextra -fPIC
++CFLAGS ?= -Wall -Wextra -fPIC
  LDFLAGS_GCSECTIONS = -Wl,--gc-sections
- LDFLAGS = $(if $(gc_sections-pass),$(LDFLAGS_GCSECTIONS))
+-LDFLAGS = $(if $(gc_sections-pass),$(LDFLAGS_GCSECTIONS))
++LDFLAGS += $(if $(gc_sections-pass),$(LDFLAGS_GCSECTIONS))
  
 @@ -35,6 +35,9 @@
  

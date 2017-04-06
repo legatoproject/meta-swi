@@ -3,6 +3,8 @@ SRC_URI += "file://squashfs.cfg"
 SRC_URI += "file://smack.cfg"
 SRC_URI += "file://pm.cfg"
 
+RDEPENDS_${PN} += "kern-tools-native"
+
 # x86
 COMPATIBLE_MACHINE_swi-virt-x86 = "swi-virt-x86"
 

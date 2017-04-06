@@ -4,9 +4,7 @@ INC_PR = "r0"
 
 IMAGE_FEATURES += "dev-pkgs"
 
-DEPENDS += "linux-yocto"
-
-FSTYPE_VIRT ?= "ext3"
+FSTYPE_VIRT ?= "ext4"
 
 IMAGE_INSTALL += "util-linux"
 IMAGE_INSTALL += "util-linux-blkid"
@@ -29,6 +27,7 @@ def check_legato_dep(d):
 DEPENDS += "${@check_legato_dep(d)}"
 
 # Prepare a package with kernel + hdd image
+do_prepare_virt[depends] += "virtual/kernel:do_populate_sysroot"
 do_prepare_virt() {
     VIRT_DIR=${WORKDIR}/virt
 
@@ -73,10 +72,10 @@ do_prepare_virt() {
     # Partitions
     touch part.sch
     # part 1 = rootfs
-    echo ",512,L,*" >> part.sch
+    echo ",512M,L,*" >> part.sch
     # part 2 = /mnt/flash
     echo ",+,L,-" >> part.sch
-    sfdisk -u M --force hda.raw < part.sch
+    sfdisk --force hda.raw < part.sch
 
     fdisk -l hda.raw
 
@@ -121,5 +120,5 @@ do_prepare_virt() {
     ln -sf $VIRT_NAME $IMG_NAME.tar.bz2
 }
 
-addtask prepare_virt after do_rootfs before do_build
+addtask prepare_virt after do_image_qa before do_build
 
