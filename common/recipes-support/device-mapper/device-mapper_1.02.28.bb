@@ -1,5 +1,6 @@
 SUMMARY = "device-mapper"
-DESCRIPTION = "LVM2 need this lib libdevmapper."
+DESCRIPTION = "Device-mapper is infrastructure in the Linux kernel \
+that provides a generic way to create virtual layers of block devices."
 HOMEPAGE = "https://www.sourceware.org/dm/"
 SECTION = "console"
 LICENSE = "GPL-2.0-with-OpenSSL-exception"
@@ -13,7 +14,7 @@ SRC_URI[tarball.sha256sum] = "24c7887fe896325a6cdc86b8beeb0d9c2de8b1c4cb20f53c2d
 
 inherit autotools gettext pkgconfig
 
-DEPENDS = "util-linux libgcrypt openssl"
+DEPENDS = "popt"
 
 S = "${WORKDIR}/device-mapper.${PV}"
 B = "${S}"
@@ -27,7 +28,6 @@ do_install() {
     install -d ${D}${libdir}
     install -m 0755 ${S}/dmsetup/dmsetup ${D}${sbindir}
     install -m 0755 ${S}/lib/libdevmapper.so.1.02 ${D}${libdir}
-    install -m 0755 ${S}/lib/ioctl/libdevmapper.so ${D}${libdir}
     install -m 0755 ${S}/lib/ioctl/libdevmapper.a ${D}${libdir}
     install -m 0755 ${S}/include/libdevmapper.h ${D}${includedir}
     install -m 0755 ${S}/man/dmsetup.8 ${D}${mandir}/man8
@@ -38,3 +38,5 @@ do_copy_make() {
 }
 
 addtask copy_make after do_configure before do_compile
+
+BBCLASSEXTEND = "native nativesdk"
