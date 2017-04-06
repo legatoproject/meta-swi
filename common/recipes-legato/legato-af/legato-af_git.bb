@@ -16,6 +16,10 @@ DEPENDS += "mtd-utils-native"
 DEPENDS += "curl"
 DEPENDS += "zlib"
 
+# Build time dependencies (not in the rootfs image)
+do_compile[depends]  = "legato-tools:do_populate_sysroot"
+do_compile[depends] += "gdb:do_populate_sysroot"
+
 FILESEXTRAPATHS += "${THISDIR}/files"
 
 LEGATO_ROOT ?= "/mnt/legato"
@@ -24,8 +28,6 @@ LDFLAGS = ""
 TARGET_LDFLAGS = ""
 
 do_configure[noexec] = "1"
-
-do_compile[depends] = "legato-tools:do_populate_sysroot"
 
 compile_target() {
     make $LEGATO_TARGET
