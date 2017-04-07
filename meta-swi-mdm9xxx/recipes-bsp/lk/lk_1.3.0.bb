@@ -50,7 +50,7 @@ do_deploy() {
 }
 
 do_deploy[dirs] = "${S}"
-addtask deploy before do_package_stage after do_compile
+addtask deploy before do_package_stage after do_install
 
 PACKAGE_STRIP = "no"
 
