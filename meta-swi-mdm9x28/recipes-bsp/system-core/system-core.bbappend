@@ -9,6 +9,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://0001-Fix-build-without-liblog.patch"
 SRC_URI += "file://composition-sierra_dev"
 SRC_URI += "file://start_usb"
+SRC_URI += "file://0002-QTI9X07-125-Do-not-start-adb-if-not-enabled.patch"
 
 do_install_append() {
     install -m 0755 ${WORKDIR}/composition-sierra_dev -D ${D}${bindir}/usb/compositions/sierra_dev
