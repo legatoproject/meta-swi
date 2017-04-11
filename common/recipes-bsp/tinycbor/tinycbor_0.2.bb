@@ -1,4 +1,3 @@
-inherit autotools
 DESCRIPTION = "Concise Binary Object Representation (CBOR) Library"
 LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=0835ade698e0bcf8506ecda2f7b4f302"
@@ -28,9 +27,12 @@ B = "${S}"
 # Typing this number of times is not fun at all.
 localdir = "/usr/local"
 
+# Build as position-independent code as to be able to work as dynamic library
+TARGET_CFLAGS="-Wall -Wextra -fPIC"
+
 # Compile tinycbor
 do_compile() {
-    make all
+    oe_runmake all
 }
 
 # Install tinycbor to location forced by its Makefile.
@@ -80,3 +82,4 @@ do_populate_sysroot() {
     install -m 0644 ${D}/${includedir}/tinycbor/*.h \
         ${SYSROOT_DESTDIR}/${includedir}/tinycbor
 }
+

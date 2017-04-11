@@ -33,7 +33,7 @@
  	$(AR) cqs $@ $^
  
 +lib/libtinycbor.so: $(TINYCBOR_SOURCES:.c=.o)
-+	$(CC) -shared -Wl,-soname,libtinycbor.so.0 -o lib/libtinycbor.so.0.2 $^
++	$(CC) -shared -Wl,-soname,libtinycbor.so.0 -o lib/libtinycbor.so.0.2 $(LDFLAGS) $^
 +	cd lib ; ln -s libtinycbor.so.0.2 libtinycbor.so ; ln -s libtinycbor.so.0.2 libtinycbor.so.0
 +
  bin/cbordump: $(CBORDUMP_SOURCES:.c=.o) lib/libtinycbor.a | bin
