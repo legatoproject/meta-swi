@@ -1,5 +1,5 @@
 # look for files in the layer first
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-${PV}:"
+FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI += "file://microcom_local_echo_and_ascii_backspace.patch"
 
