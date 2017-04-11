@@ -15,7 +15,6 @@ IMAGE_INSTALL += "nfs-utils-client"
 
 # Add some things for dev & system intg
 IMAGE_INSTALL += "cmake"
-IMAGE_INSTALL += "libopkg"
 
 # Tool to recognize the platform
 IMAGE_INSTALL += "bsinfo-stub"
