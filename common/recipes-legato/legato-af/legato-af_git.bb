@@ -15,6 +15,7 @@ DEPENDS += "mtd-utils-native"
 # Target dependencies
 DEPENDS += "curl"
 DEPENDS += "zlib"
+DEPENDS += "tinycbor"
 
 # Build time dependencies (not in the rootfs image)
 do_compile[depends]  = "legato-tools:do_populate_sysroot"
