@@ -24,7 +24,7 @@ ALLOW_EMPTY_${PN} = "1"
 INITSCRIPT_PACKAGES = "${PN}-adbd ${PN}-usb"
 
 INITSCRIPT_NAME_${PN}-adbd = "adbd"
-INITSCRIPT_PARAMS_${PN}-adbd = "start 96 S . stop 58 S ."
+INITSCRIPT_PARAMS_${PN}-adbd = "start 96 S ."
 INITSCRIPT_NAME_${PN}-usb = "usb"
 INITSCRIPT_PARAMS_${PN}-usb = "start 09 S ."
 
