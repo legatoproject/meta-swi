@@ -17,7 +17,7 @@ LINUX_VERSION ?= "3.18.31"
 PV = "${LINUX_VERSION}+git${GITSHA}"
 PR = "r1"
 
-DEPENDS += "dtbtool-native mkbootimg-native"
+do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
 do_configure_prepend() {
     cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
