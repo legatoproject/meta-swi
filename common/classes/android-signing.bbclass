@@ -13,7 +13,7 @@ android_signature_add() {
     local attestation_ca=$5
     local root_ca=$6
 
-    # andriod-signing's boot_signer requires java from host machine
+    # android-signing's boot_signer requires java from host machine
     export PATH=$PATH:/usr/bin
 
     ${ANDROID_SIGNING_DIR}/verity/boot_signer $image_type \
