@@ -1,4 +1,5 @@
 inherit kernel
+inherit android-signing
 
 require recipes-kernel/linux-quic/linux-quic.inc
 
@@ -167,11 +168,21 @@ do_bootimg() {
     date=$(date +"%Y%m%d%H%M%S")
     image_name_2k=$(echo ${BOOTIMG_NAME_2k} | sed -e s/@{DATETIME}/$date/)
     image_name_4k=$(echo ${BOOTIMG_NAME_4k} | sed -e s/@{DATETIME}/$date/)
+
     gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" $image_name_2k boot-yocto-mdm9x28.2k masterDTB.2k 2048
     if [ $? -ne 0 ] ; then exit 1 ; fi
     gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" $image_name_4k boot-yocto-mdm9x28.4k masterDTB.4k 4096
     if [ $? -ne 0 ] ; then exit 1 ; fi
     ln -sf $image_name_4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img
+
+    install ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img.unsigned
+    install ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img.unsigned
+
+    # sign the image:
+    android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img.unsigned ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img.signed verity
+    android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img.unsigned ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img.signed verity
+
+    ln -sf boot-yocto-mdm9x28.4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img.unsigned
     echo "${PV} $date" >> ${DEPLOY_DIR_IMAGE}/kernel.version
 }
 
