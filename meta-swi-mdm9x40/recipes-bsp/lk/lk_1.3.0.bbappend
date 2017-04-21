@@ -14,25 +14,12 @@ INSANE_SKIP_${PN} += "already-stripped"
 
 DEPENDS += "openssl-native python-native"
 
-add_hash_segment() {
-    IMAGE_NAME=$1
-    cd ${B}
-    if [ -f "${B}/build-${LK_TARGET}/$IMAGE_NAME.mbn" ] ; then
-        mv ${B}/build-${LK_TARGET}/$IMAGE_NAME.mbn ${B}/../../$IMAGE_NAME.mbn
-        python ${THISDIR}/files/add_hash_segment.py image=${B}/../../$IMAGE_NAME.mbn imageType=APBL of=${B}/build-${LK_TARGET}/unsigned
-        install ${B}/build-${LK_TARGET}/unsigned/$IMAGE_NAME.umbn ${B}/../../$IMAGE_NAME.mbn
-    fi
-}
-
-do_add_hash() {
-    add_hash_segment appsboot
-    add_hash_segment appsboot_rw
-}
-
-addtask add_hash after do_compile before do_install
+LK_HASH_MODE = "dual_system"
 
 do_install_prepend() {
-    install ${B}/../../appsboot.mbn ${B}/build-${LK_TARGET}/
+    if [ -f "${B}/../../appsboot.mbn" ] ; then
+        install ${B}/../../appsboot.mbn ${B}/build-${LK_TARGET}/
+    fi
     if [ -f "${B}/../../appsboot_rw.mbn" ] ; then
         install ${B}/../../appsboot_rw.mbn ${B}/build-${LK_TARGET}/
     fi

@@ -81,7 +81,9 @@ do_install() {
 
 do_deploy() {
     install -d ${DEPLOY_DIR_IMAGE}
-    install ${D}/boot/appsboot.mbn ${DEPLOY_DIR_IMAGE}
+    if [ -f "${D}/boot/appsboot.mbn" ] ; then
+        install ${D}/boot/appsboot.mbn ${DEPLOY_DIR_IMAGE}
+    fi
     if [ -f "${D}/boot/appsboot.raw" ] ; then
         install ${D}/boot/appsboot.raw ${DEPLOY_DIR_IMAGE}
     fi
@@ -101,3 +103,46 @@ PACKAGE_STRIP = "no"
 
 FILES_${PN} = "/boot"
 FILES_${PN}-dbg = "/boot/.debug"
+
+LK_HASH_MODE = "no_hash"
+
+DEPENDS += "${@oe.utils.conditional('LK_HASH_MODE', 'dual_system', "openssl-native python-native", '', d)}"
+
+add_hash_dual_system() {
+    IMAGE_NAME=$1
+    cd ${B}
+    if [ -f "${B}/../../$IMAGE_NAME.mbn" ] ; then
+        python ${THISDIR}/files/add_hash_segment.py image=${B}/../../$IMAGE_NAME.mbn imageType=APBL of=${B}/build-${LK_TARGET}/unsigned
+        install ${B}/build-${LK_TARGET}/unsigned/$IMAGE_NAME.umbn ${B}/../../$IMAGE_NAME.mbn
+    fi
+}
+
+add_hash_android_signing() {
+    IMAGE_NAME=$1
+    cd ${B}
+    if [ -f "${B}/../../$IMAGE_NAME.mbn" ] ; then
+        android_signature_add /aboot ${B}/../../$IMAGE_NAME.mbn ${B}/../../$IMAGE_NAME.mbn.signed verity
+        install ${B}/../../$IMAGE_NAME.mbn ${B}/build-${LK_TARGET}/$IMAGE_NAME.mbn
+    fi
+}
+
+add_hash_segment() {
+    case ${LK_HASH_MODE} in
+        dual_system)
+            add_hash_dual_system $1 ;;
+        android_signing)
+            add_hash_android_signing $1 ;;
+        no_hash)
+            echo "no signed images for boot" ;;
+        *)
+            exit 1 ;;
+    esac
+}
+
+do_add_hash() {
+    add_hash_segment appsboot
+    add_hash_segment appsboot_rw
+    add_hash_segment appsboot_rw_ima
+}
+
+addtask add_hash after do_compile before do_install
