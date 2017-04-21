@@ -1,4 +1,5 @@
 inherit kernel localgit
+inherit android-signing
 
 DESCRIPTION = "QuIC Linux Kernel"
 LICENSE = "GPLv2"
@@ -152,9 +153,14 @@ do_bootimg() {
     date=$(date +"%Y%m%d%H%M%S")
     image_name_2k=$(echo ${BOOTIMG_NAME_2k} | sed -e s/@{DATETIME}/$date/)
     image_name_4k=$(echo ${BOOTIMG_NAME_4k} | sed -e s/@{DATETIME}/$date/)
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" $image_name_2k boot-yocto-mdm9x28.2k masterDTB.2k 2048
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" $image_name_4k boot-yocto-mdm9x28.4k masterDTB.4k 4096
-    ln -sf $image_name_4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x28.2k.unsigned masterDTB.2k 2048
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x28.4k.unsigned masterDTB.4k 4096
+
+    # sign the image:
+    android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.unsigned.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img
+    android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.unsigned.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img
+
+    ln -sf boot-yocto-mdm9x28.4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img
     echo "${PV} $date" >> ${DEPLOY_DIR_IMAGE}/kernel.version
 }
 
