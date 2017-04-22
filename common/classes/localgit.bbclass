@@ -10,16 +10,31 @@ inherit gitsha
 S = "${WORKDIR}/${PN}"
 O = "${WORKDIR}/${PN}-obj"
 
-# Explicitly bypass fetch...  It's already fetched...
-do_fetch () {
-}
+# We optionally allow fetching of additional files and directories,
+# so we leave do_fetch intact. Recipes inheriting from this class
+# can still stuff SRC_URI and fetch things.
 
-# Override unpack for this recipe.  It's basically unpacked, but we need to 
-# do a symlink into the ${WORKDIR} to the area specified by ${SRC_DIR} so that
+# Before fetching, we install the source directory as a symbolic
+# link from insider ${WORKDIR} to ${SRC_DIR} so that
 # other stages for things like the autotools stuff works like it's supposed
 # to without too many extra special interventions...
-do_unpack() {
-	rm -rf ${WORKDIR}/${PN}
-	ln -s ${SRC_DIR} ${WORKDIR}/${PN}
-}
 
+do_fetch_prepend() {
+    import shutil
+
+    target = d.getVar("SRC_DIR", expand=True)
+    workdir = d.getVar("WORKDIR", expand=True)
+    pn = d.getVar("PN", expand=True)
+
+    link = workdir + "/" + pn
+
+    # Six lines of Python just to blow something away:
+    if os.path.islink(link):
+      os.remove(link)
+    elif os.path.isdir(link): # isdir yields true for symlinks to directories
+      shutil.rmtree(link)     # this doesn't like symlinks to directories
+    elif os.path.exists(link):
+      os.remove(link)
+
+    os.symlink(target, link)
+}
