@@ -10,6 +10,9 @@ SRCREV = "267df67ebf6ac7b29bf43fdfe9af41a64aec0036"
 LIBHARDWARE_REPO = "git://codeaurora.org/platform/hardware/libhardware;branch=LNX.LE.2.1"
 PR = "r0"
 
+# Location of autotools.patch
+FILESEXTRAPATHS_append .= ":${META_SWI_MDM9XXX_LAYERDIR}/recipes-bsp/libhardware/files"
+
 SRC_URI  = "${LIBHARDWARE_REPO}"
 SRC_URI += "file://autotools.patch"
 
