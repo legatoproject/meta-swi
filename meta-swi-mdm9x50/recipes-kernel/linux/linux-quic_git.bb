@@ -57,13 +57,18 @@ gen_master_dtb() {
 
     set -xe
 
+    if [ -z "${BASEMACHINE_QCOM}" ] ; then
+       echo "BASEMACHINE_QCOM is empty or unset"
+       exit 1
+    fi
+
     ver=$(sed -r 's/#define UTS_RELEASE "(.*)"/\1/' ${B}/include/generated/utsrelease.h)
-    dtb_files=$(find ${B}/arch/arm/boot/dts -iname "*${BASEMACHINE_QCOM}*.dtb" | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
+    dtb_files=$(find ${B}/arch/arm/boot/dts -iname "*${BASEMACHINE_QCOM}*.dtb")
 
     # Create separate images with dtb appended to zImage for all targets.
-    for d in ${dtb_files}; do
-       targets=$(echo ${d#${BASEMACHINE_QCOM}-})
-       cat $kernel_img ${B}/arch/arm/boot/dts/qcom/${d}.dtb > ${B}/arch/arm/boot/dts/dtb-zImage-${ver}-${targets}.dtb
+    for dfile in ${dtb_files}; do
+       targets=$(echo $(basename $dfile) | sed -e s/${BASEMACHINE_QCOM}-// -e s/\\.dtb$//)
+       cat $kernel_img $dfile > ${B}/arch/arm/boot/dts/dtb-zImage-${ver}-${targets}.dtb
     done
 
     ${STAGING_BINDIR_NATIVE}/dtbtool \
