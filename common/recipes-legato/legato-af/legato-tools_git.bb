@@ -11,7 +11,7 @@ require legato.inc
 do_configure[noexec] = "1"
 
 do_compile() {
-    cd "${LEGATO_WORKDIR}"
+    cd "${S}"
     VERBOSE=1 oe_runmake sdk
 }
 
