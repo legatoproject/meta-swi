@@ -58,21 +58,27 @@ do_fetch () {
 # Override unpack for this recipe.
 do_unpack() {
     rm -rf ${WORKDIR}/${PN}
-    ln -s ${LEGATO_WORKDIR} ${WORKDIR}/${PN}
+    mkdir -p ${WORKDIR}/${PN}
+
+    # Copy all files
+    tar cf - -C ${LEGATO_WORKDIR} . | tar xpf - -C ${WORKDIR}/${PN}
+
+    # Fix git repositories
+    cd ${LEGATO_WORKDIR}
+    find -name "*.git" > ${WORKDIR}/list-git
+    cd ${WORKDIR}/${PN}
+    for dir in $(cat ${WORKDIR}/list-git); do
+        rm -rf $dir
+        ln -sf ${LEGATO_WORKDIR}/$dir $dir
+    done
+
+    # Clean in case LEGATO_WORKDIR has been used by itself
+    make clean
 }
 
 PRIVATE_LIBS = "libjansson.so.4"
 
 do_compile_prepend() {
-    export LEGATO_ROOT="${LEGATO_WORKDIR}"
+    export LEGATO_ROOT="${S}"
     export PATH="${S}/bin:$PATH"
 }
-
-clean_legato_workdir() {
-    pwd
-    cd ${LEGATO_WORKDIR}
-    make clean
-}
-
-do_clean[postfuncs] += "clean_legato_workdir"
-
