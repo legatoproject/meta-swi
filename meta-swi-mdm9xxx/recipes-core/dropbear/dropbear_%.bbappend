@@ -1,7 +1,5 @@
 # look for files in the layer first
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
-
-SRC_URI += "file://init"
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
 
 INITSCRIPT_PARAMS_dropbear = "start 95 S . stop 90 S ."
 
