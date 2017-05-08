@@ -1,6 +1,5 @@
 DESCRIPTION = "Legato - Application framework"
 SECTION = "base"
-DEPENDS = "legato-tools"
 PR = "r0"
 
 inherit legato
@@ -8,6 +7,7 @@ inherit legato
 require legato.inc
 
 # Host dependencies
+DEPENDS = "legato-tools"
 DEPENDS += "yaffs2-utils-native"
 DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"

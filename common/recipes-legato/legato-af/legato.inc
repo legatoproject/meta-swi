@@ -8,7 +8,10 @@ DEPENDS += "cmake-native"
 # the checksum of this files and therefore rebuild when they change.
 # Generated files are excluded from the list.
 def list_legato_files(d):
-    import urllib
+    try:
+        from urllib.parse import quote
+    except ImportError:
+        from urllib import quote
 
     startpath = d.getVar("LEGATO_WORKDIR", True)
     if not startpath:
@@ -36,7 +39,7 @@ def list_legato_files(d):
             if " " in f:
                 continue # Unable to handle files that contain a space
 
-            file_list.append( "file://" + urllib.quote(os.path.join(startpath, path, f)) )
+            file_list.append( "file://" + quote(os.path.join(startpath, path, f)) )
 
     return "\n".join(file_list)
 
