@@ -11,5 +11,4 @@ DEPENDS = "nativesdk-device-mapper nativesdk-popt libxml2-native lcms-native m4-
 S = "${WORKDIR}/cryptsetup-${PV}"
 
 RDEPENDS_${PN} = "nativesdk-device-mapper"
-PRIVATE_LIBS = "libdevmapper.so.1.02"
 do_compile[depends] += "nativesdk-device-mapper:do_populate_sysroot"
