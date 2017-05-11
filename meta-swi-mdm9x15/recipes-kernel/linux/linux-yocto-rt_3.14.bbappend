@@ -6,10 +6,10 @@ PR := "${PR}.1"
 
 COMPATIBLE_MACHINE_swi-mdm9x15 = "swi-mdm9x15"
 
-KBRANCH_DEFAULT_MDM9X15 ?= "standard/swi-mdm9x15-yocto-1.7-swi-le55"
+KBRANCH_DEFAULT_MDM9X15 ?= "standard/swi-mdm9x15-yocto-1.7-ref"
 KBRANCH_swi-mdm9x15 = "${KBRANCH_DEFAULT_MDM9X15}"
 
-KMETA_DEFAULT_MDM9X15 ?= "meta-yocto-1.7-swi-le55"
+KMETA_DEFAULT_MDM9X15 ?= "meta-yocto-1.7-ref"
 KMETA = "${KMETA_DEFAULT_MDM9X15}"
 
 KSRC_linux_yocto_3_14 := "${LINUX_REPO_DIR}"
