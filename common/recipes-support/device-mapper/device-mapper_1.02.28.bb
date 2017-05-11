@@ -28,6 +28,7 @@ do_install() {
     install -d ${D}${libdir}
     install -m 0755 ${S}/dmsetup/dmsetup ${D}${sbindir}
     install -m 0755 ${S}/lib/libdevmapper.so.1.02 ${D}${libdir}
+    ln -s libdevmapper.so.1.02 ${D}${libdir}/libdevmapper.so
     install -m 0755 ${S}/lib/ioctl/libdevmapper.a ${D}${libdir}
     install -m 0755 ${S}/include/libdevmapper.h ${D}${includedir}
     install -m 0755 ${S}/man/dmsetup.8 ${D}${mandir}/man8
