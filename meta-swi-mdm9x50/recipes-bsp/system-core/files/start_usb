@@ -34,6 +34,22 @@ case "$1" in
         case $KERNEL in
           3.*)
 
+            # add VBUS floating change according to case 02721431
+
+            # If we don't do this, the DWC3 USB controller block
+            # remains in a low power state.  It doesn't generate any
+            # interrupt to stimulate the driver into operation, and
+            # the mere attempts to read its registers
+            # (e.g. cat /sys/kernel/debug/8a00000.dwc3/regdump)
+            # will lock up the device, triggering a watchdog reset.
+            chmod u+w /sys/class/power_supply/usb/type
+            chmod u+w /sys/class/power_supply/usb/present
+            echo 4 > /sys/class/power_supply/usb/type
+            echo 1 > /sys/class/power_supply/usb/present
+
+            # the following makes irreproducible a frequent hang
+            usleep 200000
+
             # FFS / ADB
             if [ -d /sys/class/android_usb/android0/f_ffs ]
             then
