@@ -10,6 +10,8 @@ SRC_URI += "file://0001-Fix-build-without-liblog.patch"
 SRC_URI += "file://composition-sierra_dev"
 SRC_URI += "file://start_usb"
 
+INITSCRIPT_PARAMS_${PN}-usb = "start 30 S ."
+
 do_install_append() {
     install -m 0755 ${WORKDIR}/composition-sierra_dev -D ${D}${bindir}/usb/compositions/sierra_dev
     ln -s ${bindir}/usb/compositions/sierra_dev ${D}${bindir}/usb/boot_hsusb_composition
