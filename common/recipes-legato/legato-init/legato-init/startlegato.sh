@@ -3,11 +3,42 @@
 #
 # Provides a hook for legato into the init scripts
 
-LEGATO_START=/mnt/legato/start
+if [ -e "/etc/run.env" ]; then
+    source /etc/run.env
+fi
+
+FLASH_MOUNTPOINT=${FLASH_MOUNTPOINT:-/mnt/flash}
+FLASH_MOUNTPOINT_LEGATO=${FLASH_MOUNTPOINT_LEGATO:-/mnt/legato}
+SMACK_PATH=/legato/smack
+
+if [ -e "${FLASH_MOUNTPOINT_LEGATO}/systems/current/read-only" ]
+then
+    export PATH=/legato/systems/current/bin:$PATH
+    LEGATO_START=/legato/systems/current/bin/start
+    LEGATO_MNT=${FLASH_MOUNTPOINT_LEGATO}
+else
+    LEGATO_START=${FLASH_MOUNTPOINT_LEGATO}/start
+    LEGATO_MNT=${FLASH_MOUNTPOINT}/legato
+
+    # Create mountpoint in case it doesn't already exists.
+    mkdir -p ${LEGATO_MNT}
+fi
 
 case "$1" in
     start)
         echo "Legato start sequence"
+
+        umount /legato 2>/dev/null
+        mount -o bind $LEGATO_MNT /legato
+
+        if [ ! -e /legato/SMACK_DISABLED ]
+        then
+            # Only allow the "framework" label to access the Legato directory.
+            setfattr -n security.SMACK64 -v "framework" /legato
+        else
+            setfattr -n security.SMACK64 -v "_" /legato
+        fi
+
         $LEGATO_START
         ;;
 
@@ -15,6 +46,7 @@ case "$1" in
         # Do something to stop Legato
         echo "Legato shutdown sequence"
         $LEGATO_START stop
+        umount /legato
         ;;
 
     *)
