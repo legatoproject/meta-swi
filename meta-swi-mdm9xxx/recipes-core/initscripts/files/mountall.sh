@@ -11,11 +11,9 @@
 
 source /etc/run.env
 
-SMACK_PATH=/legato/smack
-
 # Create directories for bind-mounts(done via fstab) required by legato.
-mkdir -p /mnt/flash/legato
-mkdir -p /mnt/flash/home
+mkdir -p ${FLASH_MOUNTPOINT}/legato
+mkdir -p ${FLASH_MOUNTPOINT}/home
 
 #
 # Mount local filesystems in /etc/fstab. For some reason, people
@@ -34,15 +32,8 @@ then
 	mknod -m 600 /dev/initctl p
 fi
 
-if [ ! -e /legato/SMACK_DISABLED ]
-then
-    # Set the SMACK label for /dev/null and /dev/zero to "*" so that everyone have access to them.
-    setfattr -n security.SMACK64  -v "*" /dev/null
-    setfattr -n security.SMACK64  -v "*" /dev/zero
-    # Only allow the "framework" label to access the Legato directory.
-    setfattr -n security.SMACK64 -v "framework" /legato
-else
-    setfattr -n security.SMACK64 -v "_" /legato
-fi
+# Set the SMACK label for /dev/null and /dev/zero to "*" so that everyone have access to them.
+setfattr -n security.SMACK64 -v "*" /dev/null
+setfattr -n security.SMACK64 -v "*" /dev/zero
 
 : exit 0
