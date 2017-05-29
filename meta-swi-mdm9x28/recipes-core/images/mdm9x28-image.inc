@@ -22,6 +22,15 @@ IMAGE_INSTALL += "cryptsetup"
 IMAGE_INSTALL += "i2cgpioctl"
 IMAGE_INSTALL += "i2c-tools"
 
+# Add WiFi TI drivers, tools, and scripts
+IMAGE_INSTALL += "wpa-supplicant"
+IMAGE_INSTALL += "hostapd"
+IMAGE_INSTALL += "iw"
+IMAGE_INSTALL += "ti-wifi-utils"
+IMAGE_INSTALL += "crda"
+
+IMAGE_INSTALL += "sierra-init-tiwifi"
+
 # Only add Legato if this is a LEGATO_BUILD
 def check_legato_pkg(d):
     legato_build = d.getVar('LEGATO_BUILD', True) or "false"
@@ -40,10 +49,6 @@ IMAGE_INSTALL += "kernel-modules"
 
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL += "linkmon"
-
-# Add WiFi TI drivers, tools, and scripts
-IMAGE_INSTALL += "ti-compat-wireless"
-IMAGE_INSTALL += "sierra-init-tiwifi"
 
 create_ubinize_config() {
     local cfg_path=$1

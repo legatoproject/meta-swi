@@ -27,11 +27,6 @@ SRCREV_meta_pn-linux-yocto_swi-mdm9x15 ?= "${AUTOREV}"
 # Tell yocto to build device tree.
 KERNEL_DEVICETREE = "${KERNEL_DEVICE_TREE_BLOB_NAME}"
 
-# WiFi specific features
-KERNEL_EXTRA_FEATURES += " features/rfkill/rfkill.scc \
-                           features/mac80211/mac80211.scc \
-                           features/tiwifi/tiwifi.scc"
-
 do_patch_prepend(){
     if [ "${KBRANCH}" != "standard/base" ]; then
         updateme_flags="--branch ${KBRANCH}"

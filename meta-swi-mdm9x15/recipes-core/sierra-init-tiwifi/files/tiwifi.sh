@@ -36,17 +36,38 @@ ti_wifi_start() {
           fi
        fi
 
-       # Set IOT0_GPIO2 = 1 (WP GPIO33)
-       [ -d /sys/class/gpio/gpio33 ] || echo 33 >/sys/class/gpio/export
-       echo out >/sys/class/gpio/gpio33/direction
-       echo 1 >/sys/class/gpio/gpio33/value
-
        # Enable all GPIOs on all EXPANDERs
        gpioexp 1 1 enable >/dev/null || exit 127
-       # Clear SDIO_SEL, GPIO#13/EXPANDER#1 - Select the SDIO
-       gpioexp 1 13 output normal low >/dev/null || exit 127
+
+       ### mangOH green has 3 expanders
        # Set IOTO_RESET, GPIO#4/EXPANDER#3 - IOT0 Reset signal is disabled
-       gpioexp 3 4 output normal high >/dev/null || exit 127
+       gpioexp 3 4 output normal high >/dev/null 2>&1
+       if [ $? -ne 0 ]; then
+           echo "mangOH red board"
+
+           # Set IOT0_GPIO2 = 1 (WP GPIO13)
+           [ -d /sys/class/gpio/gpio13 ] || echo 13 >/sys/class/gpio/export
+           echo out >/sys/class/gpio/gpio13/direction
+           echo 1 >/sys/class/gpio/gpio13/value
+
+           # Set IOT0_RESET = 1 (WP GPIO2)
+           [ -d /sys/class/gpio/gpio2 ] || echo 2 >/sys/class/gpio/export
+           echo out >/sys/class/gpio/gpio2/direction
+           echo 1 >/sys/class/gpio/gpio2/value
+
+           # Clear SDIO_SEL, GPIO#9/EXPANDER#1 - Select the SDIO
+           gpioexp 1 9 output normal low >/dev/null || exit 127
+       else
+           echo "mangOH green board"
+
+           # Set IOT0_GPIO2 = 1 (WP GPIO33)
+           [ -d /sys/class/gpio/gpio33 ] || echo 33 >/sys/class/gpio/export
+           echo out >/sys/class/gpio/gpio33/direction
+           echo 1 >/sys/class/gpio/gpio33/value
+
+           # Clear SDIO_SEL, GPIO#13/EXPANDER#1 - Select the SDIO
+           gpioexp 1 13 output normal low >/dev/null || exit 127
+       fi
 
        # Set IOT0_GPIO4 = 1 (WP GPIO8)
        [ -d /sys/class/gpio/gpio8 ] || echo 8 >/sys/class/gpio/export
@@ -82,18 +103,34 @@ ti_wifi_stop() {
        rmmod wlcore || exit 127
        rmmod mac80211 || exit 127
        rmmod cfg80211 || exit 127
-       rmmod compat || exit 127
+       if `lsmod | grep '^compat '`; then
+           rmmod compat || exit 127
+       fi
 
        rmmod msm-sdcc || exit 127
 
        # Reset IOT0_GPIO4 = 0 (WP GPIO8)
        echo 0 >/sys/class/gpio/gpio8/value
        # Clear IOTO_RESET, GPIO#4/EXPANDER#3 - IOT0 Reset signal is enabled
-       gpioexp 3 4 output normal low >/dev/null || exit 127
-       # Set SDIO_SEL, GPIO#13/EXPANDER#1 - Deselect the SDIO
-       gpioexp 1 13 output normal high >/dev/null || exit 127
-       # Reset IOT0_GPIO2 = 0 (WP GPIO33)
-       echo 0 >/sys/class/gpio/gpio33/value
+       gpioexp 3 4 output normal low >/dev/null 2>&1
+       if [ $? -ne 0 ]; then
+           echo "mangOH red board"
+           # Set IOT0_RESET = 1 (WP GPIO2)
+           echo 0 >/sys/class/gpio/gpio2/value
+
+           # Clear SDIO_SEL, GPIO#9/EXPANDER#1 - Deselect the SDIO
+           gpioexp 1 9 output normal high >/dev/null || exit 127
+
+           # Reset IOT0_GPIO2 = 0 (WP GPIO13)
+           echo 0 >/sys/class/gpio/gpio13/value
+       else
+           echo "mangOH green board"
+           # Set SDIO_SEL, GPIO#13/EXPANDER#1 - Deselect the SDIO
+           gpioexp 1 13 output normal high >/dev/null || exit 127
+
+           # Reset IOT0_GPIO2 = 0 (WP GPIO33)
+           echo 0 >/sys/class/gpio/gpio33/value
+       fi
 
        # Insert MMC/SDIO module
        modprobe msm_sdcc || exit 127

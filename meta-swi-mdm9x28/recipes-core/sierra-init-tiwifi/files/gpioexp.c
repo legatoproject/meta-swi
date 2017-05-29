@@ -656,6 +656,7 @@ int main( int argc, char **argv )
     int daddr;
     int data;
     int i;
+    int ret = 0;
     const int i2cbus = 4;
     unsigned char reg, val;
 
@@ -684,27 +685,27 @@ int main( int argc, char **argv )
 
     for( i = 3; i < argc; i++ ) {
       if( 0 == strcmp( argv[i], "input" ) )
-        mangoh_gpioExpander_SetDirectionMode( gpiop, MANGOH_GPIOEXPANDER_PIN_MODE_INPUT );
+        ret = mangoh_gpioExpander_SetDirectionMode( gpiop, MANGOH_GPIOEXPANDER_PIN_MODE_INPUT );
       else if( 0 == strcmp( argv[i], "output" ) )
-        mangoh_gpioExpander_SetDirectionMode( gpiop, MANGOH_GPIOEXPANDER_PIN_MODE_OUTPUT );
+        ret = mangoh_gpioExpander_SetDirectionMode( gpiop, MANGOH_GPIOEXPANDER_PIN_MODE_OUTPUT );
       else if( 0 == strcmp( argv[i], "low" ) )
-        mangoh_gpioExpander_Output( gpiop, MANGOH_GPIOEXPANDER_ACTIVE_TYPE_LOW );
+        ret = mangoh_gpioExpander_Output( gpiop, MANGOH_GPIOEXPANDER_ACTIVE_TYPE_LOW );
       else if( 0 == strcmp( argv[i], "high" ) )
-        mangoh_gpioExpander_Output( gpiop, MANGOH_GPIOEXPANDER_ACTIVE_TYPE_HIGH );
+        ret = mangoh_gpioExpander_Output( gpiop, MANGOH_GPIOEXPANDER_ACTIVE_TYPE_HIGH );
       else if( 0 == strcmp( argv[i], "inverse" ) )
-        mangoh_gpioExpander_SetPolarity( gpiop, MANGOH_GPIOEXPANDER_POLARITY_TYPE_INVERSE );
+        ret = mangoh_gpioExpander_SetPolarity( gpiop, MANGOH_GPIOEXPANDER_POLARITY_TYPE_INVERSE );
       else if( 0 == strcmp( argv[i], "normal" ) )
-        mangoh_gpioExpander_SetPolarity( gpiop, MANGOH_GPIOEXPANDER_POLARITY_TYPE_NORMAL );
+        ret = mangoh_gpioExpander_SetPolarity( gpiop, MANGOH_GPIOEXPANDER_POLARITY_TYPE_NORMAL );
       else if( 0 == strcmp( argv[i], "down" ) )
-        mangoh_gpioExpander_SetPullUpDown( gpiop, MANGOH_GPIOEXPANDER_PULLUPDOWN_TYPE_DOWN );
+        ret = mangoh_gpioExpander_SetPullUpDown( gpiop, MANGOH_GPIOEXPANDER_PULLUPDOWN_TYPE_DOWN );
       else if( 0 == strcmp( argv[i], "up" ) )
-        mangoh_gpioExpander_SetPullUpDown( gpiop, MANGOH_GPIOEXPANDER_PULLUPDOWN_TYPE_UP );
+        ret = mangoh_gpioExpander_SetPullUpDown( gpiop, MANGOH_GPIOEXPANDER_PULLUPDOWN_TYPE_UP );
       else if( 0 == strcmp( argv[i], "off" ) )
-        mangoh_gpioExpander_SetPullUpDown( gpiop, MANGOH_GPIOEXPANDER_PULLUPDOWN_TYPE_OFF );
+        ret = mangoh_gpioExpander_SetPullUpDown( gpiop, MANGOH_GPIOEXPANDER_PULLUPDOWN_TYPE_OFF );
       else if( 0 == strcmp( argv[i], "opendrain" ) )
-        mangoh_gpioExpander_SetOpenDrain( gpiop, MANGOH_GPIOEXPANDER_OPEN_DRAIN_OP );
+        ret = mangoh_gpioExpander_SetOpenDrain( gpiop, MANGOH_GPIOEXPANDER_OPEN_DRAIN_OP );
       else if( 0 == strcmp( argv[i], "pushpull" ) )
-        mangoh_gpioExpander_SetOpenDrain( gpiop, MANGOH_GPIOEXPANDER_PUSH_PULL_OP );
+        ret = mangoh_gpioExpander_SetOpenDrain( gpiop, MANGOH_GPIOEXPANDER_PUSH_PULL_OP );
       else if( 0 == strcmp( argv[i], "value" ) )
         printf( "%d\n", mangoh_gpioExpander_Input( gpiop ) );
       else if( 0 == strcmp( argv[i], "regval" ) ) {
@@ -746,5 +747,5 @@ int main( int argc, char **argv )
       }
     }
 
-  exit( 0 );
+  exit( ret ? 3 : 0 );
 }
