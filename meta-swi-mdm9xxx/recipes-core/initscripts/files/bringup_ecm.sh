@@ -5,7 +5,8 @@
 
 SYSTEM_BIN_PATH=/legato/systems/current/bin
 DNSMASQ_LEASE_FILE=/var/lib/misc/dnsmasq.leases
-ECM_MAC_ADDR_FILE=/sys/devices/virtual/android_usb/android0/f_ecm/native_ethaddr
+ECM_MAC_ADDR_FILE_1=/sys/devices/virtual/android_usb/android0/f_ecm/native_ethaddr
+ECM_MAC_ADDR_FILE_2=/sys/devices/virtual/android_usb/android0/f_ecm/ecm_ethaddr
 
 BringUpEcm_get_param()
 {
@@ -18,7 +19,15 @@ BringUpEcm_get_param()
 #
 CreateLeaseFileRestartDnsmasq()
 {
-    mac_addr=`cat $ECM_MAC_ADDR_FILE`
+    if [ -e "$ECM_MAC_ADDR_FILE_1" ]; then
+        mac_addr=$(cat $ECM_MAC_ADDR_FILE_1)
+    elif [ -e "$ECM_MAC_ADDR_FILE_2" ]; then
+        mac_addr=$(cat $ECM_MAC_ADDR_FILE_2)
+    else
+        echo "Unable to determine ECM MAC address."
+        return
+    fi
+
     host_ipv4_addr=$( BringUpEcm_get_param host.ipV4 )
     expiry_time=`date +'%s'`
     # Add 12 hour with current time to get lease expiry time.
