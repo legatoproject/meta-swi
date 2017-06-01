@@ -160,6 +160,7 @@ prepare_ubi() {
 }
 
 do_rootfs[postfuncs] += "prepare_ubi"
+do_rootfs[depends] += "cryptsetup-native:do_populate_sysroot"
 
 default_rootfs_ps() {
     # Default rootfs to ubi for 4k
