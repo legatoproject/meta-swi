@@ -83,10 +83,12 @@ do_compile() {
     # before calling build_wl18xx.sh because of some disturbances between Yocto and TI SDK
     CC= ./swi_build_wl18xx.sh firmware
 
-    # CC is set to native gcc to build the configuration tool for the Linux kernel
-    # Compile, install and deploy to ROOTFS the TI wlxxxx drivers from TI build tree instead
-    # of them provided in the Linux-3.14 kernel tree
-    CC=gcc ./swi_build_wl18xx.sh modules
+    if [ "${PREFERRED_PROVIDER_virtual/kernel}" == "linux-yocto" ]; then
+        # CC is set to native gcc to build the configuration tool for the Linux kernel
+        # Compile, install and deploy to ROOTFS the TI wlxxxx drivers from TI build tree instead
+        # of them provided in the Linux-3.14 kernel tree
+        CC=gcc ./swi_build_wl18xx.sh modules
+    fi
 
     export YOCTO_CC=$CC
     export YOCTO_LDFLAGS=${LDFLAGS/ -Wl,--as-needed/}
@@ -144,7 +146,9 @@ do_install() {
     cp -a ${S}/fs/etc ${D}/
     sed -i 's/wlan1/wlan0/' ${D}/etc/hostapd.conf
     sed -i 's/^ssid=.*$/ssid='${TIWIFI_DEFAULT_AP_NAME}'/' ${D}/etc/hostapd.conf
-    cp -a ${S}/fs/lib/modules ${D}/lib/
+    if [ -d ${S}/fs/lib/modules ]; then
+        cp -a ${S}/fs/lib/modules ${D}/lib/
+    fi
     cp -a ${S}/fs/lib/firmware ${D}/lib/
     cp -a ${S}/fs/usr/bin ${D}/usr
     cp -a ${S}/fs/usr/sbin ${D}/usr
@@ -155,7 +159,7 @@ do_install() {
     cp -a ${S}/fs/sbin ${D}/
     cp -a ${S}/fs/usr/local/bin ${D}/
     cp -a ${S}/fs/usr/local/sbin ${D}/
-    cp -a ${WORKDIR}/wl18xx-conf.bin ${D}/lib/firmware/ti-connectivity/
+    cp -a ${WORKDIR}/wl18xx-conf.bin ${D}/lib/firmware/ti-connectivity/wl18xx-conf.bin
     chown -R --reference=${D}/usr ${D}
     chmod -R u+rwX,go-w ${D}
 
