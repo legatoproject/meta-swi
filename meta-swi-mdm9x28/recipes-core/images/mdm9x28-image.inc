@@ -44,6 +44,10 @@ IMAGE_INSTALL += "kernel-modules"
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL += "linkmon"
 
+# Add WiFi TI drivers, tools, and scripts
+IMAGE_INSTALL += "ti-compat-wireless"
+IMAGE_INSTALL += "sierra-init-tiwifi"
+
 create_ubinize_config() {
     local cfg_path=$1
     local rootfs_type=$2
