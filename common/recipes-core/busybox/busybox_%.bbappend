@@ -1,7 +1,9 @@
 # look for files in the layer first
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-SRC_URI += "file://microcom_local_echo_and_ascii_backspace.patch"
+SRC_URI += "file://microcom_local_echo_and_ascii_backspace.patch \
+            file://mdev-dev-bus-usb.patch \
+            file://recursive-action-optimize.patch"
 
 INITSCRIPT_PARAMS_${PN}-syslog = "start 20 S . stop 80 S ."
 
