@@ -1,0 +1,137 @@
+From: Kaz Kylheku <kkylheku@sierrawireless.com>
+Subject: [PATCH] busybox mdev: include /sys/devices in "mdev -s" scan.
+
+* util-linux/mdev.c (MAX_SYSFS_DEVICES_DEPTH): New preprocessor
+constant.
+(struct actiondata): New structure, to give a shape to the scratch
+area used in the file system recurive walk, so we can have an
+integer configuration parameter in it for max depth.
+(fileAction): Treat the userData pointer as a pointer to a struct
+actiondata, which it now is. Treat the flexible array at the end of
+the structure as the character scratch space.
+(dirAction): Similarly, treat the userData pointer as a pointer to
+struct actiondata instead of ignoring it. Check the actual depth
+against the maxdepth value in actiondata.
+(mdev_main): Prepare the maxdepth parameter in the scratch
+structure, which is cast to a struct actiondata for this purpose.
+Pass the actiondata pointer to the recursive_action calls.  Add a
+new recursive_action call to process /sys/devices.  For that, we use
+a max depth of 9, and disable the following of symlinks, since that
+*will* get into a loop.
+
+* include/libbb.h (RESERVE_CONFIG_BUFFER, RESERVE_CONFIG_UBUFFER):
+Add some align attributes to the stack and static versions of these
+macros.  This is because in mdev.c, we cast the scratch area created
+by these macros to a struct containing an integer. The xmalloc
+versions of these macros don't need any treatment, for obvious
+reasons.
+
+Index: busybox-1.22.1/util-linux/mdev.c
+===================================================================
+--- busybox-1.22.1.orig/util-linux/mdev.c
++++ busybox-1.22.1/util-linux/mdev.c
+@@ -294,6 +294,8 @@ struct globals {
+ 
+ /* Prevent infinite loops in /sys symlinks */
+ #define MAX_SYSFS_DEPTH 3
++/* For /sys/devices we dig deeper */
++#define MAX_SYSFS_DEVICES_DEPTH 9
+ 
+ /* We use additional bytes in make_device() */
+ #define SCRATCH_SIZE 128
+@@ -808,6 +810,11 @@ static void make_device(char *device_nam
+ 	} /* for (;;) */
+ }
+ 
++struct actiondata {
++	int maxdepth;
++	char scratch[1];
++};
++
+ /* File callback for /sys/ traversal */
+ static int FAST_FUNC fileAction(const char *fileName,
+ 		struct stat *statbuf UNUSED_PARAM,
+@@ -815,7 +822,8 @@ static int FAST_FUNC fileAction(const ch
+ 		int depth UNUSED_PARAM)
+ {
+ 	size_t len = strlen(fileName) - 4; /* can't underflow */
+-	char *scratch = userData;
++	struct actiondata *ad = userData;
++	char *scratch = ad->scratch;
+ 
+ 	/* len check is for paranoid reasons */
+ 	if (strcmp(fileName + len, "/dev") != 0 || len >= PATH_MAX)
+@@ -834,6 +842,8 @@ static int FAST_FUNC dirAction(const cha
+ 		void *userData UNUSED_PARAM,
+ 		int depth)
+ {
++	struct actiondata *ad = userData;
++
+ 	/* Extract device subsystem -- the name of the directory
+ 	 * under /sys/class/ */
+ 	if (1 == depth) {
+@@ -850,7 +860,7 @@ static int FAST_FUNC dirAction(const cha
+ 		}
+ 	}
+ 
+-	return (depth >= MAX_SYSFS_DEPTH ? SKIP : TRUE);
++	return (depth >= ad->maxdepth ? SKIP : TRUE);
+ }
+ 
+ /* For the full gory details, see linux/Documentation/firmware_class/README
+@@ -1046,11 +1056,14 @@ int mdev_main(int argc UNUSED_PARAM, cha
+ 	xchdir("/dev");
+ 
+ 	if (argv[1] && strcmp(argv[1], "-s") == 0) {
++		struct actiondata *ad = (struct actiondata *) temp;
+ 		/*
+ 		 * Scan: mdev -s
+ 		 */
+ 		struct stat st;
+ 
++		ad->maxdepth = MAX_SYSFS_DEPTH;
++
+ #if ENABLE_FEATURE_MDEV_CONF
+ 		/* Same as xrealloc_vector(NULL, 4, 0): */
+ 		G.rule_vec = xzalloc((1 << 4) * sizeof(*G.rule_vec));
+@@ -1075,11 +1088,16 @@ int mdev_main(int argc UNUSED_PARAM, cha
+ 			 */
+ 			recursive_action("/sys/block",
+ 				ACTION_RECURSE | ACTION_FOLLOWLINKS | ACTION_QUIET,
+-				fileAction, dirAction, temp, 0);
++				fileAction, dirAction, ad, 0);
+ 		}
+ 		recursive_action("/sys/class",
+ 			ACTION_RECURSE | ACTION_FOLLOWLINKS,
+-			fileAction, dirAction, temp, 0);
++			fileAction, dirAction, ad, 0);
++
++		ad->maxdepth = MAX_SYSFS_DEVICES_DEPTH;
++		recursive_action("/sys/devices",
++			ACTION_RECURSE, /* Note: no symlink following here */
++			fileAction, dirAction, ad, 0);
+ 	} else {
+ 		char *fw;
+ 		char *seq;
+Index: busybox-1.22.1/include/libbb.h
+===================================================================
+--- busybox-1.22.1.orig/include/libbb.h
++++ busybox-1.22.1/include/libbb.h
+@@ -275,13 +275,13 @@ struct BUG_off_t_size_is_misdetected {
+ 
+ /* buffer allocation schemes */
+ #if ENABLE_FEATURE_BUFFERS_GO_ON_STACK
+-#define RESERVE_CONFIG_BUFFER(buffer,len)  char buffer[len]
+-#define RESERVE_CONFIG_UBUFFER(buffer,len) unsigned char buffer[len]
++#define RESERVE_CONFIG_BUFFER(buffer,len)  char buffer[len] __attribute__((aligned (16))
++#define RESERVE_CONFIG_UBUFFER(buffer,len) unsigned char buffer[len] __attribute__((aligned (16))
+ #define RELEASE_CONFIG_BUFFER(buffer)      ((void)0)
+ #else
+ #if ENABLE_FEATURE_BUFFERS_GO_IN_BSS
+-#define RESERVE_CONFIG_BUFFER(buffer,len)  static          char buffer[len]
+-#define RESERVE_CONFIG_UBUFFER(buffer,len) static unsigned char buffer[len]
++#define RESERVE_CONFIG_BUFFER(buffer,len)  static          char buffer[len] __attribute__((aligned (16))
++#define RESERVE_CONFIG_UBUFFER(buffer,len) static unsigned char buffer[len] __attribute__((aligned (16))
+ #define RELEASE_CONFIG_BUFFER(buffer)      ((void)0)
+ #else
+ #define RESERVE_CONFIG_BUFFER(buffer,len)  char *buffer = xmalloc(len)

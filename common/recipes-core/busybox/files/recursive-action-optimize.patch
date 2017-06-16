@@ -1,0 +1,489 @@
+From: Kaz Kylheku <kkylheku@sierrawireless.com>
+Subject: [PATCH] busybox: implement d_type optimization in recursive_action
+
+The recursive_action in busybox is widely used for walking directory
+structures. Unfortunately, it performs a stat() system call for
+every item visited. On some operating systems like GNU/Linux, the
+"struct dirent" structure contains a useful member called "d_type"
+which provides type information about the object, making it
+unnecessary to call stat just for traversing the structure.
+
+This change is complicated by two things
+
+1. recursive_action passes the "struct stat *" pointer to the
+actions.  However, not all actions actually use struct stat.
+Specifically, I'm interested in speeding up the actions used by
+"mdev -s", which do not make use of it.  What we do is introduce a
+new flag called ACTION_NO_STAT, which the caller can set to 1 to
+indicate "my recurse_action callbacks don't need struct stat".
+
+2. in recursive_action, we don't actually have the "struct dirent *"
+which corresponds to the item that the function is being asked to
+visit.  No problem, we can add a "struct dirent *" argument. But
+this means that all the calls to the function have to be updated.
+This could be addressed by splitting recursive_action into a
+non-recursive API wrapper, and a helper function that is recursive.
+I've chosen just to add the argument to the API and edit all the
+calls.  The top-level calls to recurse_action pass the "struct
+dirent *" as null, and so recurse_action will always do the stat for
+the root item of a recursive walk.
+
+* include/libbb.h (ACTION_NO_STAT): New enum constant for
+recurse_action flags.
+(DIRENT_NULL): New macro. This is just NULL but with the type
+specifically (struct dirent *), for better parameter checking.
+I'm adding this to numerous function calls.
+(recursive_action): Declaration updated to add "struct dirent *"
+parameter.
+
+* libbb/recursive_action.c (DIRENT_HAS_D_TYPE, dirent_type): New
+macros.
+(recursive_action): New parameter, dent, added. If three conditions
+are met, then the call to stat() is elided: struct dirent has
+the d_type member, the caller has specified the dirent for
+fileName, and the callbacks do not require a struct stat.
+In other cases, the stat() is performed. In the case when we are
+relying on d_type, we still do a lstat if d_type indicates
+a symbolic link, and the caller has set the flag not to be given
+dangling symbolic links. Also, we pass a null "struct stat *"
+poiter to callers that have set ACTION_NO_STAT, whether or not
+we have filled in the stat structure.
+
+* util-linux/mdev.c (mdev_main): Specify ACTION_NO_STAT in
+all of the "mdev -s" recursive_action calls, since the
+handlers ignore the stat parameter. Pass DIRENT_NULL for
+the new struct dirent * parameter.
+
+* archival/tar.c (writeTarFile): Specify DIRENT_NULL argument
+in recursive_action call for the new parameter.
+
+* coreutils/chown.c (chown_main): Likewise.
+
+* debianutils/run_parts.c (run_parts_main): Likewise
+
+* editors/diff.c (diffdir): Likewise
+
+* findutils/find.c (find_main): Likewise
+
+* findutils/grep.c (grep_dir): Likewise
+
+* modutils/depmod.c (depmod_main): Likewise
+
+* modutils/modprobe-small.c (process_module): Likewise
+
+* networking/netstat.c (FAST_FUNC dir_act): Likewise
+
+* selinux/chcon.c (chcon_main): Likewise
+
+* selinux/setfiles.c (process_one): Likewise
+
+* util-linux/lspci.c (lspci_main): Likewise
+
+* util-linux/lsusb.c (lsusb_main): Likewise
+
+* util-linux/volume_id/get_devname.c (uuidcache_init): Likewise
+
+Index: busybox-1.22.1/include/libbb.h
+===================================================================
+--- busybox-1.22.1.orig/include/libbb.h
++++ busybox-1.22.1/include/libbb.h
+@@ -351,9 +351,11 @@ enum {
+ 	/*ACTION_REVERSE      = (1 << 4), - unused */
+ 	ACTION_QUIET          = (1 << 5),
+ 	ACTION_DANGLING_OK    = (1 << 6),
++	ACTION_NO_STAT        = (1 << 7), /* callback doesn't require stat structure */
+ };
++#define DIRENT_NULL ((struct dirent *) 0)
+ typedef uint8_t recurse_flags_t;
+-extern int recursive_action(const char *fileName, unsigned flags,
++extern int recursive_action(const char *fileName, struct dirent *dent, unsigned flags,
+ 	int FAST_FUNC (*fileAction)(const char *fileName, struct stat* statbuf, void* userData, int depth),
+ 	int FAST_FUNC (*dirAction)(const char *fileName, struct stat* statbuf, void* userData, int depth),
+ 	void* userData, unsigned depth) FAST_FUNC;
+Index: busybox-1.22.1/libbb/recursive_action.c
+===================================================================
+--- busybox-1.22.1.orig/libbb/recursive_action.c
++++ busybox-1.22.1/libbb/recursive_action.c
+@@ -12,6 +12,22 @@
+ #undef DEBUG_RECURS_ACTION
+ 
+ /*
++ * glibc defines the _DIRENT_HAVE_D_TYPE macro in <dirent.h> if struct
++ * dirent has the d_type member. We convert its presence or absence to
++ * an integer flag we can test with if statements. Use of d_type
++ * speeds up recursion because it allows traversals without calls to
++ * the stat function.
++ */
++
++#ifdef _DIRENT_HAVE_D_TYPE
++#define DIRENT_HAS_D_TYPE 1
++#define dirent_type(D) ((D)->d_type)
++#else
++#define DIRENT_HAS_D_TYPE 0
++#define dirent_type(D) (0)
++#endif
++
++/*
+  * Walk down all the directories under the specified
+  * location, and do something (something specified
+  * by the fileAction and dirAction function pointers).
+@@ -51,9 +67,15 @@ static int FAST_FUNC true_action(const c
+  * ACTION_FOLLOWLINKS mainly controls handling of links to dirs.
+  * 0: lstat(statbuf). Calls fileAction on link name even if points to dir.
+  * 1: stat(statbuf). Calls dirAction and optionally recurse on link to dir.
++ *
++ * The dirent parameter may be null. If it is not null, it is assumed to
++ * correspond to fileName; that is to say, fileName refers to an object
++ * which was retrieved from a directory traversal using readdir, and
++ * dirent points to its dirent.
+  */
+ 
+ int FAST_FUNC recursive_action(const char *fileName,
++		struct dirent *dent,
+ 		unsigned flags,
+ 		int FAST_FUNC (*fileAction)(const char *fileName, struct stat *statbuf, void* userData, int depth),
+ 		int FAST_FUNC (*dirAction)(const char *fileName, struct stat *statbuf, void* userData, int depth),
+@@ -65,6 +87,7 @@ int FAST_FUNC recursive_action(const cha
+ 	int status;
+ 	DIR *dir;
+ 	struct dirent *next;
++	int action_needs_stat = (flags & ACTION_NO_STAT) == 0;
+ 
+ 	if (!fileAction) fileAction = true_action;
+ 	if (!dirAction) dirAction = true_action;
+@@ -73,38 +96,61 @@ int FAST_FUNC recursive_action(const cha
+ 	if (depth == 0)
+ 		follow = ACTION_FOLLOWLINKS | ACTION_FOLLOWLINKS_L0;
+ 	follow &= flags;
+-	status = (follow ? stat : lstat)(fileName, &statbuf);
+-	if (status < 0) {
++
++	/* Do the stat call if we don't have the dirent corresponding to fileName,
++	 * or dirent has no d_type field, or if the callback hasn't declined access
++	 * to the stat structure (so we have to to do the stat anyway). */
++	if (dent == NULL || !DIRENT_HAS_D_TYPE || action_needs_stat) {
++		status = (follow ? stat : lstat)(fileName, &statbuf);
++
++		if (status < 0) {
+ #ifdef DEBUG_RECURS_ACTION
+-		bb_error_msg("status=%d flags=%x", status, flags);
++			bb_error_msg("status=%d flags=%x", status, flags);
+ #endif
+-		if ((flags & ACTION_DANGLING_OK)
+-		 && errno == ENOENT
+-		 && lstat(fileName, &statbuf) == 0
++			if ((flags & ACTION_DANGLING_OK)
++			 && errno == ENOENT
++			 && lstat(fileName, &statbuf) == 0
++			) {
++				/* Dangling link */
++				return fileAction(fileName, &statbuf, userData, depth);
++			}
++			goto done_nak_warn;
++		}
++
++		/* If S_ISLNK(m), then we know that !S_ISDIR(m).
++		 * Then we can skip checking first part: if it is true, then
++		 * (!dir) is also true! */
++		if ( /* (!(flags & ACTION_FOLLOWLINKS) && S_ISLNK(statbuf.st_mode)) || */
++		 !S_ISDIR(statbuf.st_mode)
+ 		) {
+-			/* Dangling link */
+ 			return fileAction(fileName, &statbuf, userData, depth);
+ 		}
+-		goto done_nak_warn;
+-	}
+-
+-	/* If S_ISLNK(m), then we know that !S_ISDIR(m).
+-	 * Then we can skip checking first part: if it is true, then
+-	 * (!dir) is also true! */
+-	if ( /* (!(flags & ACTION_FOLLOWLINKS) && S_ISLNK(statbuf.st_mode)) || */
+-	 !S_ISDIR(statbuf.st_mode)
+-	) {
+-		return fileAction(fileName, &statbuf, userData, depth);
++	} else {
++		/* We have dent, DIRENT_HAS_D_TYPE and callbacks don't need stat.
++		 * Thus, we can do the d_type optimization: avoid calling stat. */
++		switch (dirent_type(dent)) {
++		case DT_DIR:
++			break; /* go to common code below for dirctory handling */
++		case DT_LNK:
++			/* We stat all links if the caller is not okay with dangling ones. */
++			if ((flags & ACTION_DANGLING_OK) == 0) {
++				if (lstat(fileName, &statbuf) != 0)
++					goto done_nak_warn;
++			}
++			/* fallthrough */
++		default:
++			return fileAction(fileName, 0, userData, depth);
++		}
+ 	}
+ 
+ 	/* It's a directory (or a link to one, and followLinks is set) */
+ 
+ 	if (!(flags & ACTION_RECURSE)) {
+-		return dirAction(fileName, &statbuf, userData, depth);
++		return dirAction(fileName, action_needs_stat ? &statbuf : 0, userData, depth);
+ 	}
+ 
+ 	if (!(flags & ACTION_DEPTHFIRST)) {
+-		status = dirAction(fileName, &statbuf, userData, depth);
++		status = dirAction(fileName, action_needs_stat ? &statbuf : 0, userData, depth);
+ 		if (!status)
+ 			goto done_nak_warn;
+ 		if (status == SKIP)
+@@ -126,10 +172,10 @@ int FAST_FUNC recursive_action(const cha
+ 		if (nextFile == NULL)
+ 			continue;
+ 		/* process every file (NB: ACTION_RECURSE is set in flags) */
+-		if (!recursive_action(nextFile, flags, fileAction, dirAction,
++		if (!recursive_action(nextFile, next, flags, fileAction, dirAction,
+ 						userData, depth + 1))
+ 			status = FALSE;
+-//		s = recursive_action(nextFile, flags, fileAction, dirAction,
++//		s = recursive_action(nextFile, next, flags, fileAction, dirAction,
+ //						userData, depth + 1);
+ 		free(nextFile);
+ //#define RECURSE_RESULT_ABORT 3
+@@ -143,7 +189,7 @@ int FAST_FUNC recursive_action(const cha
+ 	closedir(dir);
+ 
+ 	if (flags & ACTION_DEPTHFIRST) {
+-		if (!dirAction(fileName, &statbuf, userData, depth))
++		if (!dirAction(fileName, action_needs_stat ? &statbuf : 0, userData, depth))
+ 			goto done_nak_warn;
+ 	}
+ 
+Index: busybox-1.22.1/archival/tar.c
+===================================================================
+--- busybox-1.22.1.orig/archival/tar.c
++++ busybox-1.22.1/archival/tar.c
+@@ -723,7 +723,7 @@ static NOINLINE int writeTarFile(int tar
+ 
+ 	/* Read the directory/files and iterate over them one at a time */
+ 	while (include) {
+-		if (!recursive_action(include->data, recurseFlags,
++		if (!recursive_action(include->data, DIRENT_NULL, recurseFlags,
+ 				writeFileToTarball, writeFileToTarball, &tbInfo, 0)
+ 		) {
+ 			errorFlag = TRUE;
+Index: busybox-1.22.1/coreutils/chmod.c
+===================================================================
+--- busybox-1.22.1.orig/coreutils/chmod.c
++++ busybox-1.22.1/coreutils/chmod.c
+@@ -125,6 +125,7 @@ int chmod_main(int argc UNUSED_PARAM, ch
+ 	smode = *argv++;
+ 	do {
+ 		if (!recursive_action(*argv,
++			DIRENT_NULL,    // dirent
+ 			OPT_RECURSE,    // recurse
+ 			fileAction,     // file action
+ 			fileAction,     // dir action
+Index: busybox-1.22.1/coreutils/chown.c
+===================================================================
+--- busybox-1.22.1.orig/coreutils/chown.c
++++ busybox-1.22.1/coreutils/chown.c
+@@ -145,6 +145,7 @@ int chown_main(int argc UNUSED_PARAM, ch
+ 	/* Ok, ready to do the deed now */
+ 	while (*++argv) {
+ 		if (!recursive_action(*argv,
++				DIRENT_NULL,    /* dirent */
+ 				flags,          /* flags */
+ 				fileAction,     /* file action */
+ 				fileAction,     /* dir action */
+Index: busybox-1.22.1/debianutils/run_parts.c
+===================================================================
+--- busybox-1.22.1.orig/debianutils/run_parts.c
++++ busybox-1.22.1/debianutils/run_parts.c
+@@ -160,6 +160,7 @@ int run_parts_main(int argc UNUSED_PARAM
+ 	/* run-parts has to sort executables by name before running them */
+ 
+ 	recursive_action(argv[optind],
++			DIRENT_NULL,    /* dirent */
+ 			ACTION_RECURSE|ACTION_FOLLOWLINKS,
+ 			act,            /* file action */
+ 			act,            /* dir action */
+Index: busybox-1.22.1/editors/diff.c
+===================================================================
+--- busybox-1.22.1.orig/editors/diff.c
++++ busybox-1.22.1/editors/diff.c
+@@ -869,7 +869,7 @@ static void diffdir(char *p[2], const ch
+ 		 * Using list.len to specify its length,
+ 		 * add_to_dirlist will remove it. */
+ 		list[i].len = strlen(p[i]);
+-		recursive_action(p[i], ACTION_RECURSE | ACTION_FOLLOWLINKS,
++		recursive_action(p[i], DIRENT_NULL, ACTION_RECURSE | ACTION_FOLLOWLINKS,
+ 				add_to_dirlist, skip_dir, &list[i], 0);
+ 		/* Sort dl alphabetically.
+ 		 * GNU diff does this ignoring any number of trailing dots.
+Index: busybox-1.22.1/findutils/find.c
+===================================================================
+--- busybox-1.22.1.orig/findutils/find.c
++++ busybox-1.22.1/findutils/find.c
+@@ -1358,6 +1358,7 @@ int find_main(int argc UNUSED_PARAM, cha
+ 
+ 	for (i = 0; argv[i]; i++) {
+ 		if (!recursive_action(argv[i],
++				DIRENT_NULL,    /* dirent */
+ 				G.recurse_flags,/* flags */
+ 				fileAction,     /* file action */
+ 				fileAction,     /* dir action */
+Index: busybox-1.22.1/findutils/grep.c
+===================================================================
+--- busybox-1.22.1.orig/findutils/grep.c
++++ busybox-1.22.1/findutils/grep.c
+@@ -662,6 +662,7 @@ static int grep_dir(const char *dir)
+ {
+ 	int matched = 0;
+ 	recursive_action(dir,
++		/* dirent= */ DIRENT_NULL,
+ 		/* recurse=yes */ ACTION_RECURSE |
+ 		/* followLinks=no */
+ 		/* depthFirst=yes */ ACTION_DEPTHFIRST,
+Index: busybox-1.22.1/modutils/depmod.c
+===================================================================
+--- busybox-1.22.1.orig/modutils/depmod.c
++++ busybox-1.22.1/modutils/depmod.c
+@@ -215,7 +215,7 @@ int depmod_main(int argc UNUSED_PARAM, c
+ 			parse_module(*argv, /*sb (unused):*/ NULL, &modules, 0);
+ 		} while (*++argv);
+ 	} else {
+-		recursive_action(".", ACTION_RECURSE,
++		recursive_action(".", DIRENT_NULL, ACTION_RECURSE,
+ 				parse_module, NULL, &modules, 0);
+ 	}
+ 
+Index: busybox-1.22.1/modutils/modprobe-small.c
+===================================================================
+--- busybox-1.22.1.orig/modutils/modprobe-small.c
++++ busybox-1.22.1/modutils/modprobe-small.c
+@@ -563,6 +563,7 @@ static void process_module(char *name, c
+ 		 * on success. */
+ 		module_found_idx = -1;
+ 		recursive_action(".",
++			DIRENT_NULL, /* dirent */
+ 			ACTION_RECURSE, /* flags */
+ 			fileAction, /* file action */
+ 			NULL, /* dir action */
+Index: busybox-1.22.1/modutils/modprobe.c
+===================================================================
+--- busybox-1.22.1.orig/modutils/modprobe.c
++++ busybox-1.22.1/modutils/modprobe.c
+@@ -341,7 +341,7 @@ static int FAST_FUNC config_file_action(
+ 
+ static int read_config(const char *path)
+ {
+-	return recursive_action(path, ACTION_RECURSE | ACTION_QUIET,
++	return recursive_action(path, DIRENT_NULL, ACTION_RECURSE | ACTION_QUIET,
+ 				config_file_action, NULL, NULL, 1);
+ }
+ 
+Index: busybox-1.22.1/networking/netstat.c
+===================================================================
+--- busybox-1.22.1.orig/networking/netstat.c
++++ busybox-1.22.1/networking/netstat.c
+@@ -293,6 +293,7 @@ static int FAST_FUNC dir_act(const char
+ 	strcpy(proc_pid_fname + len - (sizeof("cmdline")-1), "fd");
+ 	pid_slash_progname = concat_path_file(pid, bb_basename(cmdline_buf)); /* "PID/argv0" */
+ 	n = recursive_action(proc_pid_fname,
++			DIRENT_NULL,
+ 			ACTION_RECURSE | ACTION_QUIET,
+ 			add_to_prg_cache_if_socket,
+ 			NULL,
+@@ -311,7 +312,7 @@ static void prg_cache_load(void)
+ 	int load_ok;
+ 
+ 	prg_cache_loaded = 1;
+-	load_ok = recursive_action("/proc", ACTION_RECURSE | ACTION_QUIET,
++	load_ok = recursive_action("/proc", DIRENT_NULL, ACTION_RECURSE | ACTION_QUIET,
+ 				NULL, dir_act, NULL, 0);
+ 	if (load_ok)
+ 		return;
+Index: busybox-1.22.1/selinux/chcon.c
+===================================================================
+--- busybox-1.22.1.orig/selinux/chcon.c
++++ busybox-1.22.1/selinux/chcon.c
+@@ -201,6 +201,7 @@ int chcon_main(int argc UNUSED_PARAM, ch
+ 		fname[fname_len] = '\0';
+ 
+ 		if (recursive_action(fname,
++					DIRENT_NULL,
+ 					1<<option_mask32 & OPT_RECURSIVE,
+ 					change_filedir_context,
+ 					change_filedir_context,
+Index: busybox-1.22.1/selinux/setfiles.c
+===================================================================
+--- busybox-1.22.1.orig/selinux/setfiles.c
++++ busybox-1.22.1/selinux/setfiles.c
+@@ -498,6 +498,7 @@ static int process_one(char *name)
+ 
+ 	if (S_ISDIR(sb.st_mode) && recurse) {
+ 		if (recursive_action(name,
++				DIRENT_NULL,
+ 				ACTION_RECURSE,
+ 				apply_spec,
+ 				apply_spec,
+Index: busybox-1.22.1/util-linux/lspci.c
+===================================================================
+--- busybox-1.22.1.orig/util-linux/lspci.c
++++ busybox-1.22.1/util-linux/lspci.c
+@@ -102,6 +102,7 @@ int lspci_main(int argc UNUSED_PARAM, ch
+ 	getopt32(argv, "m" /*non-compat:*/ "k" /*ignored:*/ "nv");
+ 
+ 	recursive_action("/sys/bus/pci/devices",
++			DIRENT_NULL,
+ 			ACTION_RECURSE,
+ 			fileAction,
+ 			NULL, /* dirAction */
+Index: busybox-1.22.1/util-linux/lsusb.c
+===================================================================
+--- busybox-1.22.1.orig/util-linux/lsusb.c
++++ busybox-1.22.1/util-linux/lsusb.c
+@@ -65,6 +65,7 @@ int lsusb_main(int argc UNUSED_PARAM, ch
+ 	/* no options, no getopt */
+ 
+ 	recursive_action("/sys/bus/usb/devices",
++			DIRENT_NULL,
+ 			ACTION_RECURSE,
+ 			fileAction,
+ 			NULL, /* dirAction */
+Index: busybox-1.22.1/util-linux/mdev.c
+===================================================================
+--- busybox-1.22.1.orig/util-linux/mdev.c
++++ busybox-1.22.1/util-linux/mdev.c
+@@ -1075,16 +1075,19 @@ int mdev_main(int argc UNUSED_PARAM, cha
+ 			 * Some people configure kernel to have no blockdevs.
+ 			 */
+ 			recursive_action("/sys/block",
+-				ACTION_RECURSE | ACTION_FOLLOWLINKS | ACTION_QUIET,
++				DIRENT_NULL,
++				ACTION_RECURSE | ACTION_FOLLOWLINKS | ACTION_QUIET | ACTION_NO_STAT,
+ 				fileAction, dirAction, ad, 0);
+ 		}
+ 		recursive_action("/sys/class",
+-			ACTION_RECURSE | ACTION_FOLLOWLINKS,
++			DIRENT_NULL,
++			ACTION_RECURSE | ACTION_FOLLOWLINKS | ACTION_NO_STAT,
+ 			fileAction, dirAction, ad, 0);
+ 
+ 		ad->maxdepth = MAX_SYSFS_DEVICES_DEPTH;
+ 		recursive_action("/sys/devices",
+-			ACTION_RECURSE, /* Note: no symlink following here */
++			DIRENT_NULL,
++			ACTION_RECURSE | ACTION_NO_STAT, /* Note: no symlink following here */
+ 			fileAction, dirAction, ad, 0);
+ 	} else {
+ 		char *fw;
+Index: busybox-1.22.1/util-linux/volume_id/get_devname.c
+===================================================================
+--- busybox-1.22.1.orig/util-linux/volume_id/get_devname.c
++++ busybox-1.22.1/util-linux/volume_id/get_devname.c
+@@ -141,7 +141,7 @@ uuidcache_init(int scan_devices)
+ 	 * (Maybe add scanning of /sys/block/XXX/dev for devices
+ 	 * somehow not having their /dev/XXX entries created?) */
+ 	if (scan_devices)
+-		recursive_action("/dev", ACTION_RECURSE,
++		recursive_action("/dev", DIRENT_NULL, ACTION_RECURSE,
+ 			uuidcache_check_device, /* file_action */
+ 			NULL, /* dir_action */
+ 			NULL, /* userData */
