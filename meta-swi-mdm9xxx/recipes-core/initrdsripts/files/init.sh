@@ -461,12 +461,14 @@ set_boot_dev()
                 ubiattach -m ${mtd_dev_num} -d ${UBI_ROOTFS_DEVNUM}
                 if [ $? -ne 0 ] ; then
                     echo "Unable to attach mtd${mtd_dev_num} to UBI logical device ${UBI_ROOTFS_DEVNUM}"
+                    record_rootfs_image_status
                     return ${SWI_ERR}
                 fi
                 # UBI static volume will takes more longer during ubiattach
                 wait_on_file "${ubi_img_dev}"
                 if [ $? -ne ${SWI_OK} ] ; then
                     echo "Tired of waiting on ${ubi_img_dev}, exiting."
+                    record_rootfs_image_status
                     return ${SWI_ERR}
                 fi
             fi
