@@ -120,6 +120,13 @@ then
   serial='0123456789ABCDEF'
 fi
 
+if [ -w /sys/module/g_android/parameters/num_rmnet_swi ]; then
+    numnet=$(/usr/bin/ud_getusbinfo NUMNET)
+    if [ $? -eq 0 ]; then
+        echo $numnet > /sys/module/g_android/parameters/num_rmnet_swi
+    fi
+fi
+
 #echo $mode > /sys/bus/platform/devices/usb_bam/enable
 echo 0 > /sys/class/android_usb/android$num/enable
 echo $vid > /sys/class/android_usb/android$num/idVendor
