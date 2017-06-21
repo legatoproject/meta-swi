@@ -1,0 +1,1302 @@
+#!/bin/sh
+#
+# Add here mounts of the file systems needed early in the boot process.
+# This file is reserved for system use, because system file systems typically
+# need more flexibility when it comes down to mount paths and error handling.
+# Customer file system mounts should go to fstab or elsewhere.
+#
+# import run environment
+source /etc/run.env
+
+# This executable
+this_e=$( basename $0 )
+
+# UBIFS mount options. Platforms may or may not have quota support. Hence, quota
+# support must be separated from the rest of the default options.
+UBI_MNTOPT_DEFAULT="sync,smackfsdef=_"
+UBI_MNT_OPT_QUOTA="usrquota,grpquota"
+
+@if !mdm9x15
+# Is YAFFS2 supported by the system ?
+# Auto support detection can be overriden in run.env
+if [ -z "$YAFFS2_SUPPORT" ]; then
+    if zcat /proc/config.gz | grep "YAFFS_YAFFS2=y"; then
+        YAFFS2_SUPPORT=true
+    else
+        YAFFS2_SUPPORT=false
+    fi
+fi
+
+@endif
+# YAFFS2 FS mount options. Do not change ecc for tags, you may break YAFFS2
+# file systems on various platforms.
+YAFFS2_MNTOPT="rw,tags-ecc-off,smackfsdef=_"
+
+@if !mdm9x15
+# Current boot system flag in dual system
+DS_LINUX_SUB_SYSTEM_FLAG=0
+@endif
+
+# Wait until file shows up. Note that this will wait on any file and there
+# will be no distinction between regular or device file. While covering wide
+# range of cases, we may need to restrict this to device files in the future.
+# Limit the time spent here to about 1 sec. If file does not show up for 1 sec.
+# it will probably never show up.
+wait_on_file()
+{
+    local cntmax=50
+    local ret=${SWI_OK}
+
+    while [ ! -e "$1" ] ; do
+        usleep 20000
+        cntmax=$( echo $(( ${cntmax} - 1 )) )
+        if [ ${cntmax} -eq 0 ] ; then
+            ret=${SWI_ERR}
+            break
+        fi
+    done
+
+    return ${ret}
+
+}
+
+# Get mtd device number which corresponds to mtd partition name.
+# Parameters:
+#    $1 - mtd partition name
+#
+# If there is an error, negative number will be returned.
+get_mtdpart_dev_num()
+{
+    local mtd_part_name=${1}
+    local mtd_dev_num=
+    local err=-1
+
+    if [ -z ${mtd_part_name} ] ; then
+        swi_log "MTD partition name is empty."
+        return ${err}
+    fi
+
+    mtd_dev_num=$( cat /proc/mtd | \
+@if mdm9x15
+                   grep ${mtd_part_name} | \
+@else
+                   grep ${mtd_part_name} -w | \
+@endif
+                   awk '{print $1}' | \
+                   sed 's/://g' | \
+                   grep -o "[0-9]*" )
+
+    if [ -z ${mtd_dev_num} ] ; then
+        swi_log "MTD partition ${mtd_part_name} device number is not available."
+        mtd_dev_num=${err}
+    fi
+
+    return ${mtd_dev_num}
+}
+
+# Get mtd partition size in MiB. Parameters:
+#    $1 - mtd partition name
+#
+# If you are modifying any of it, please keep it simple. Bash math statements
+# may be unreadable in its very basic form.
+get_mtdpart_size_mib()
+{
+    local mtd_part_name=$1
+    local mtd_part_size=0
+    local err=0
+
+    if [ -z ${mtd_part_name} ] ; then
+        swi_log "MTD partition name is empty."
+        return ${err}
+    fi
+
+    # Get mtd partition size in bytes (will be in hex format).
+@if mdm9x15
+    mtd_part_size=$( cat /proc/mtd | grep ${mtd_part_name} | awk '{ print $2 }' )
+@else
+    mtd_part_size=$( cat /proc/mtd | grep ${mtd_part_name} -w | awk '{ print $2 }' )
+@endif
+    if [ -z ${mtd_part_size} ] ; then
+        swi_log "MTD partition ${mtd_part_name} size is unavailable. "
+        return ${err}
+    fi
+
+    # Get byte size of this partition in decimal format.
+    mtd_part_size=$(( printf "%d" 0x${mtd_part_size} ))
+
+    # We do have byte size of this partition, but we need its size in MiB.
+    mtd_part_size=$( echo $(( ${mtd_part_size} / ( 1024 * 1024 ) )) )
+
+    return ${mtd_part_size}
+}
+
+# Create single ubi volume. Parameters:
+#   $1 - mtd partition name
+#   $2 - ubi device number
+#   $3 - ubi volume number associated with ubi device number
+#   $4 - ubi volume name
+#   $5 - ubi volume size. If not specified, whole MTD device will be used.
+create_single_ubi_vol()
+{
+    local mtd_part_name=$1
+    local ubi_dev_num=$2
+    local ubi_vol_num=$3
+    local ubi_vol_name=$4
+    local ubi_vol_size=$5
+
+    local mtd_dev_num=-1
+    local ret=${SWI_OK}
+
+    get_mtdpart_dev_num ${mtd_part_name}
+    mtd_dev_num=$?
+    if [ ${mtd_dev_num} -lt 0 ] ; then
+        # Error obtaining mtd device number, get out.
+        return ${SWI_ERR}
+    fi
+
+@if mdm9x15
+    # Prepare mtd device for UBI use.
+
+    # Erase MTD device.
+    flash_erase /dev/mtd${mtd_dev_num} 0 0
+    if [ $? -ne 0 ] ; then
+        swi_log "Cannot erase /dev/mtd${mtd_dev_num}"
+        return ${SWI_ERR}
+    fi
+
+@endif
+    # Format MTD device for UBI use.
+@if mdm9x15
+    ubiformat /dev/mtd${mtd_dev_num}
+@else
+    ubiformat /dev/mtd${mtd_dev_num} -y
+@endif
+    if [ $? -ne 0 ] ; then
+        swi_log "Cannot format mtd${mtd_dev_num}"
+        return ${SWI_ERR}
+    fi
+
+    # Make link between physical and logical UBI device. If device does not
+    # show up, tough luck.
+    ubiattach -m ${mtd_dev_num} -d ${ubi_dev_num}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to attach mtd partition ${mtd_part_name} to UBI logical device ${ubi_dev_num}"
+        return ${SWI_ERR}
+    fi
+    wait_on_file "/dev/ubi${ubi_dev_num}"
+    if [ $? -ne ${SWI_OK} ] ; then
+        swi_log "Tired of waiting on /dev/ubi${ubi_dev_num}, exiting."
+        return ${SWI_ERR}
+    fi
+
+    # If volume size is not specified, whole device will be used.
+    if [ -z "${ubi_vol_size}" ] ; then
+        ubi_vol_size=$( ubinfo -d ${ubi_dev_num} | \
+                               grep "Amount of available logical eraseblocks" | \
+                               awk '{ print $9 }' | \
+                               xargs printf "%.0f" )
+        if [ ${ubi_vol_size} -gt 0 ] ; then
+            # Make sure that rounding is taken into account, otherwise mkvol
+            # may fail.
+            ubi_vol_size=$( echo $(( ${ubi_vol_size} - 1 )) )
+        fi
+    fi
+
+    # Now, make UBI volume. If vol size happens to be 0 (small flash partition)
+    # mkvol will fail, which is perfectly fine.
+    swi_log "Making single volume, size ${ubi_vol_size}MiB on UBI device number ${ubi_dev_num}..."
+    ubimkvol /dev/ubi${ubi_dev_num} -N ${ubi_vol_name} -s ${ubi_vol_size}MiB
+    if [ $? -ne 0 ] ; then
+        swi_log "Cannot make UBI volume ${ubi_vol_name} on UBI device number ${ubi_dev_num}"
+        ret=${SWI_ERR}
+    fi
+
+    # Make sure detach happens. ubifs mount will attach it again.
+    ubidetach -m ${mtd_dev_num}
+
+    return ${ret}
+}
+
+# Check if YAFFS2 file system is empty. If it is empty, only "lost+found" dir
+# will be located on file system. Parameters:
+#   $1 - file system mount point
+#
+is_yaffs2_empty()
+{
+    local mntpt=$1
+    local ret=${SWI_FALSE}
+    local cdir=$( pwd )
+    local var=
+
+    # If file system is empty, it will have it its root the following entries:
+    #   .
+    #   ..
+    #   lost+found
+    cd ${mntpt}
+    var=$( ls -al | wc -l )
+    if [ ${var} -eq 3 ] ; then
+        # It is empty.
+        ret=${SWI_TRUE}
+    fi
+
+    cd ${cdir}
+    return ${ret}
+}
+
+# Perform quotacheck and repair quota files
+# in case of a problem.
+# $1 - mount point
+quotacheck_ug()
+{
+
+    mntpt=${1}
+    ug_sw=ug
+    ret=${SWI_OK}
+    ug_str=
+    qc_sw=
+
+
+    ug_sw="ug"
+    qc_sw="-${ug_sw}mb"
+
+    # Check both user and group at the same time. If group file is corrupt
+    # quotacheck will stop and wait for user input, but show must go on.
+    # Therefore, we need 'yes' in order to get things moving again.
+    yes | quotacheck ${qc_sw} ${mntpt}
+    if [ $? -eq 0 ] ; then
+        return ${SWI_OK}
+    fi
+
+    # Quotacheck failed, now we go into repair mode, and test
+    # quotas individually.
+    list="u g"
+    for item in ${list} ; do
+
+        ug_sw=${item}
+
+        if [ "x${ug_sw}" = "xu" ] ; then
+            ug_str="user"
+        elif [ "x${ug_sw}" = "xg" ] ; then
+            ug_str="group"
+        else
+            swi_log "Invalid parameter '${ug_sw}'."
+            return ${SWI_ERR}
+        fi
+
+        qc_sw="-${ug_sw}mb"
+
+        quotacheck ${qc_sw} ${mntpt}
+        if [ $? -ne 0 ] ; then
+
+            # Quotacheck failed.
+
+            # if there is a backup file, try to use it.
+            if [ -s ${mntpt}/aquota.${ug_str}~ ] ; then
+                swi_log "Quota check failed, trying to use '${ug_str}' backup file."
+                rm -f ${mntpt}/aquota.${ug_str}
+                cp -af ${mntpt}/aquota.${ug_str}~ ${mntpt}/aquota.${ug_str}
+
+                quotacheck ${qc_sw} ${mntpt}
+                if [ $? -eq 0 ] ; then
+                    swi_log "Quota check done, '${ug_str}' backup file looks healthy."
+                    continue
+                fi
+                swi_log "Quota check using '${ug_str}' backup file failed, '${ug_str}' file must be created."
+            fi
+
+            # Make sure corrupt backup file is not used. Otherwise, we may end up
+            # using corrupt backup file again, if new file fails next time around.
+            swi_log "Removing corrupt '${ug_str}' files."
+            rm -f ${mntpt}/aquota.${ug_str}*
+
+            # Things did not go that well with backup file, try to recreate quota file.
+            qc_sw="${qc_sw}""c"
+
+            quotacheck ${qc_sw} ${mntpt}
+            if [ $? -ne 0 ] ; then
+                swi_log "Quota check failed while creating '${ug_str}' quota file, giving up."
+
+                # Any leftovers may indicate to other parties that quotas are actually
+                # functional, where in fact they are not.
+                rm -f ${mntpt}/aquota.${ug_str}*
+                ret=${SWI_ERR}
+                break
+            else
+                # Make sure that backup file always exists
+                cp -af ${mntpt}/aquota.${ug_str} ${mntpt}/aquota.${ug_str}~
+            fi
+        fi
+
+    done
+
+    return ${ret}
+}
+
+@if !mdm9x15
+# Generic function to active DM verity feature. Parameters:
+#   $1 - ubi logical device number
+#   $2 - ubi logical volume number for raw image
+#   $3 - ubi logical volume number for hash bin
+#   $4 - ubi logical volume number for root hash
+#   $5 - DM verity nod name for the partition
+#   $6 - file system mount point
+mount_as_dm_verity() {
+    local ubi_dev_num=$1
+    local ubi_vol_num_image=$2
+    local ubi_vol_num_hash=$3
+    local ubi_vol_num_rhash=$4
+    local dm_nod_name=$5
+    local mntpt=$6
+
+    # Char device path
+    local ubi_img_dev=/dev/ubi${ubi_dev_num}_${ubi_vol_num_image}
+    local ubi_hash_dev=/dev/ubi${ubi_dev_num}_${ubi_vol_num_hash}
+    local ubi_rhash_dev=/dev/ubi${ubi_dev_num}_${ubi_vol_num_rhash}
+
+    # Block device path
+    local ubi_hash_block_dev=/dev/ubiblock${ubi_dev_num}_${ubi_vol_num_hash}
+    local ubi_img_block_dev=/dev/ubiblock${ubi_dev_num}_${ubi_vol_num_image}
+
+    if grep 'verity=on' /proc/cmdline > /dev/null; then
+        DM_VERITY_ENCRYPT="on"
+    fi
+
+    if [ "$DM_VERITY_ENCRYPT" != "on" ]; then
+        swi_log "DM verity is not enabled!"
+        return ${SWI_ERR}
+    fi
+
+    DM_FLAG=$(dd if=/dev/ubi${ubi_dev_num}_${UBI_HASH_VOLNUM} count=4 bs=1 2>/dev/null)
+    if [ "$DM_FLAG" != "veri" ]; then
+        swi_log "Hash volume is not found for DM verity!"
+        return ${SWI_ERR}
+    fi
+
+    # Create UBI block device for squashfs image
+    if ! [ -e "${ubi_img_block_dev}" ]; then
+        ubiblkvol -a ${ubi_img_dev}
+        if [ $? -ne 0 ] ; then
+            swi_log "Unable to create ${ubi_img_block_dev}"
+            return ${SWI_ERR}
+        fi
+        wait_on_file "${ubi_img_block_dev}"
+        if [ $? -ne ${SWI_OK} ] ; then
+            swi_log "Tired of waiting on ${ubi_img_block_dev}, exiting."
+            return ${SWI_ERR}
+        fi
+    fi
+
+    # Dm-verity hash tree table is localed at this volume, check and prepare to use it.
+    if ! [ -e "${ubi_hash_block_dev}" ]; then
+        ubiblkvol -a ${ubi_hash_dev}
+        if [ $? -ne 0 ] ; then
+            swi_log "Unable to create ${ubi_hash_block_dev}"
+            return ${SWI_ERR}
+        fi
+        wait_on_file "${ubi_hash_block_dev}"
+        if [ $? -ne ${SWI_OK} ] ; then
+            swi_log "Tired of waiting on ${ubi_hash_block_dev}, exiting."
+            return ${SWI_ERR}
+        fi
+    fi
+
+    # Get the root hash from rhash volume
+    ROOTHASH=$(dd if=${ubi_rhash_dev} count=64 bs=1 2>/dev/null)
+
+    # Create Dm-verity layer
+    veritysetup create ${dm_nod_name} ${ubi_img_block_dev} ${ubi_hash_block_dev} ${ROOTHASH}
+    if [ $? -ne 0 ] ; then
+        swi_log "nod: ${dm_nod_name} ubiImgBlock:${ubi_img_block_dev} hashBlock:${ubi_hash_block_dev}"
+        swi_log "ROOTHASH:${ROOTHASH}"
+        swi_log "Dm-verity partition create fail!"
+        return ${SWI_ERR}
+    fi
+    return ${SWI_OK}
+}
+
+@endif
+# Generic function to mount ubi filesystems. Parameters:
+#   $1 - mtd partition name
+#   $2 - file system mount point
+#   $3 - file system type to mount
+#   $4 - ubi logical device number
+#   $5 - ubi logical volume number
+#   $6 - ubifs mount options (default ones should be excluded)
+@if !mdm9x15
+# Other parameters for DM verity and security
+#   $7 - DM verity nod name for the partition
+#   $8 - Security check status
+@endif
+mount_ubifs()
+{
+    local mtd_part_name=$1
+    local mntpt=$2
+    local fstype=$3
+    local ubi_dev_num=$4
+    local ubi_vol_num=$5
+    local ubifs_mnt_options=$6
+
+@if !mdm9x15
+    # Parameters for DM verity
+    local dm_nod_name=$7
+    local ubi_hash_dev=/dev/ubi${ubi_dev_num}_${UBI_HASH_VOLNUM}
+    local dm_mount_name=
+
+    # Parameters for security check status
+    local secure=$8
+
+@endif
+    local mtd_dev_num=
+    local ubi_devvol_pair=${ubi_dev_num}_${ubi_vol_num}
+    local ret=${SWI_OK}
+    local ubidev_name=ubi
+
+    # Get mtd device number
+    get_mtdpart_dev_num ${mtd_part_name}
+    mtd_dev_num=$?
+    if [ ${mtd_dev_num} -lt 0 ] ; then
+        # Error obtaining mtd device number, get out.
+        return ${SWI_ERR}
+    fi
+
+@if !mdm9x15
+    # Scurity version already check that condition, Save boot up time.
+    if [ "${secure}" != "{SWI_AUTH_PASS}" ] ; then
+        if ! dd if=/dev/mtd${mtd_dev_num} count=1 bs=4 2>/dev/null | grep 'UBI#' > /dev/null; then
+            swi_log "UBI: mtd ${mtd_dev_num} it not UBI."
+            return ${SWI_ERR}
+        else
+            swi_log "UBI: mtd ${mtd_dev_num} is UBI."
+        fi
+    fi
+
+@endif
+    # Make link between physical and logical UBI device. If device does not
+    # show up, we need to exit.
+@if mdm9x15
+    ubiattach -m ${mtd_dev_num} -d ${ubi_dev_num}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to attach mtd partition ${mtd_part_name} to UBI logical device ${ubi_dev_num}"
+        return ${SWI_ERR}
+    fi
+    wait_on_file "/dev/ubi${ubi_dev_num}"
+    if [ $? -ne ${SWI_OK} ] ; then
+        swi_log "Tired of waiting on /dev/ubi${ubi_dev_num}, exiting."
+        return ${SWI_ERR}
+    fi
+@else
+    # If device exist do not detach and then attach again - save boot up time
+    if ! [ -e "/dev/ubi${ubi_dev_num}" ]; then
+        ubiattach -m ${mtd_dev_num} -d ${ubi_dev_num}
+        if [ $? -ne 0 ] ; then
+            swi_log "Unable to attach mtd partition ${mtd_part_name} to UBI logical device ${ubi_dev_num}"
+            return ${SWI_ERR}
+        fi
+        wait_on_file "/dev/ubi${ubi_dev_num}"
+        if [ $? -ne ${SWI_OK} ] ; then
+            swi_log "Tired of waiting on /dev/ubi${ubi_dev_num}, exiting."
+            return ${SWI_ERR}
+        fi
+    fi
+@endif
+
+    # Create corresponding block device. It is not needed for UBIFS volumes,
+    # but it is needed for volumes containg file systems like squashfs.
+    # If device does not show up for whatever reason, we need to exit.
+@if mdm9x15
+    ubiblkvol -a /dev/ubi${ubi_devvol_pair}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to use ubi${ubi_dev_num} partition ${ubi_vol_num}"
+        ubidetach -m ${mtd_dev_num}
+        return ${SWI_ERR}
+    fi
+    wait_on_file "/dev/ubiblock${ubi_devvol_pair}"
+    if [ $? -ne ${SWI_OK} ] ; then
+        swi_log "Tired of waiting on /dev/ubiblock${ubi_devvol_pair}, exiting."
+        return ${SWI_ERR}
+    fi
+
+    # Mount UBI volume. squashfs UBI volumes are using ubiblock instead of ubi
+    # device.
+    if [ "${fstype}" == "squashfs" ] ; then
+        ubidev_name=ubiblock
+    fi
+@else
+    if [ "${fstype}" == "squashfs" ] ; then
+        SQFS_FLAG=$(dd if=/dev/ubi${ubi_devvol_pair} count=1 bs=4 2>/dev/null)
+        if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
+            # squashfs volume, create UBI block device
+            if ! [ -e "/dev/ubiblock${ubi_devvol_pair}" ]; then
+                ubiblkvol -a /dev/ubi${ubi_devvol_pair}
+                if [ $? -ne 0 ] ; then
+                    swi_log "Unable to use ubi${ubi_dev_num} partition ${ubi_vol_num}"
+                    ubidetach -m ${mtd_dev_num}
+                    return ${SWI_ERR}
+                fi
+                wait_on_file "/dev/ubiblock${ubi_devvol_pair}"
+                if [ $? -ne ${SWI_OK} ] ; then
+                    swi_log "Tired of waiting on /dev/ubiblock${ubi_devvol_pair}, exiting."
+                    return ${SWI_ERR}
+                fi
+
+            fi
+
+            if [ -e "${ubi_hash_dev}" -a -n "${dm_nod_name}" ]; then
+                # Both hash vol and nod name are exist,Try to run DM verity.
+                mount_as_dm_verity ${ubi_dev_num}      \
+                                   ${ubi_vol_num}      \
+                                   ${UBI_HASH_VOLNUM}  \
+                                   ${UBI_RHASH_VOLNUM} \
+                                   ${dm_nod_name}      \
+                                   ${mntpt}
+                 if [ $? -ne ${SWI_OK} ] ; then
+                     # DM verity not working clear the nod name
+                    if [ "${secure}" == "{SWI_AUTH_PASS}" ] ; then
+                       # Any error should stop for security version.
+                       return ${SWI_ERR}
+                    fi
+                else
+                    # All DM verity will mount at this folder "/dev/mapper" with
+                    # different nod name
+                    dm_mount_name="/dev/mapper/${dm_nod_name}"
+                fi
+            fi
+
+        fi
+        # Mount UBI volume. squashfs UBI volumes are using ubiblock instead of ubi
+        # device.
+
+        ubidev_name=ubiblock
+    fi
+@endif
+
+@if mdm9x15
+    mount -t ${fstype} /dev/${ubidev_name}${ubi_devvol_pair} ${mntpt} \
+          -o${UBI_MNTOPT_DEFAULT},${ubifs_mnt_options}
+    if [ $? -ne 0 ] ; then
+        # detach will release block device as well.
+        swi_log "Unable to mount /dev/ubiblock${ubi_devvol_pair} onto ${mntpt}."
+        ubidetach -m ${mtd_dev_num}
+        return ${SWI_ERR}
+    fi
+@else
+    if [ -e "${dm_mount_name}" ]; then
+        mount -t ${fstype} ${dm_mount_name} ${mntpt} \
+              -oro,${UBI_MNTOPT_DEFAULT}
+        if [ $? -ne 0 ] ; then
+            # Remove DM nod to release the device
+            swi_log "Unable to mount DM: ${dm_mount_name} onto ${mntpt}."
+            veritysetup remove ${dm_nod_name}
+            return ${SWI_ERR}
+        fi
+    else
+        mount -t ${fstype} /dev/${ubidev_name}${ubi_devvol_pair} ${mntpt} \
+          -o${UBI_MNTOPT_DEFAULT},${ubifs_mnt_options}
+        if [ $? -ne 0 ] ; then
+            # detach will release block device as well.
+            swi_log "Unable to mount /dev/ubiblock${ubi_devvol_pair} onto ${mntpt}."
+            ubidetach -m ${mtd_dev_num}
+            return ${SWI_ERR}
+        fi
+    fi
+@endif
+
+    # If quota options are passed in, do quota check. Use neat shell substitute
+    # trick. Parameters passed must be in the same order as bellow in order
+    # for this to work. Only if there is exact match, echo output will be
+    # an empty string.
+    # squashfs mount will fail this test, because quota options are not
+    # passed in.
+    mnt_opts="${UBI_MNTOPT_DEFAULT},${ubifs_mnt_options}"
+    var=$( echo -n "${mnt_opts/${UBI_MNTOPT_DEFAULT},${UBI_MNT_OPT_QUOTA},rw/}" )
+    if [ -z ${var} ] ; then
+        # Quota options were passed in, do file system quota check.
+        swi_log "Performing quota check on file system mounted at ${mntpt}"
+
+        quotacheck_ug ${mntpt}
+        if [ $? -ne 0 ] ; then
+            ret=${SWI_ERR}
+        fi
+    fi
+
+    # Release resources in case of error.
+    if [ ${ret} -ne ${SWI_OK} ] ; then
+        umount ${mntpt}
+        ubidetach -m ${mtd_dev_num}
+    fi
+
+    return ${ret}
+}
+
+# Try to mount R/W UBIFS using various mount options. The reason for this is that
+# some of the platforms are UBIFS capable, but do not have quota support.
+# Always try to mount with quota support first. Parameters:
+#   $1 - mtd partition name
+#   $2 - file system mount point
+#   $3 - UBI logical device number
+#   $4 - UBI volume associated with UBI logical device number
+mount_ubifs_multi_mount_options()
+{
+    local mtd_part_name=$1
+    local mntpt=$2
+    local ubi_dev_num=$3
+    local ubi_vol_num=$4
+
+    # Try to mount UBIFS partition using various mount options. Do not change
+    # parameter order, you will break things.
+    list="${UBI_MNT_OPT_QUOTA},rw rw"
+    for item in ${list} ; do
+        swi_log "Trying to mount UBIFS on ${mntpt} using [${item}] mount options..."
+        mount_ubifs ${mtd_part_name} ${mntpt} \
+                    ubifs ${ubi_dev_num} ${ubi_vol_num} "${item}"
+        if [ $? -eq ${SWI_OK} ]; then
+            swi_log "UBIFS volume successfully mounted on ${mntpt}"
+            return ${SWI_OK}
+        fi
+    done
+
+    return ${SWI_ERR}
+}
+
+
+# Generic function to mount yaffs2 filesystem. Parameters:
+# $1 - mtd partition name
+mount_yaffs_fs()
+{
+    local ret=${SWI_OK}
+    local mtd_part_name=$1
+    local mtd_dev_num=
+    local mntpt=$2
+
+@if !mdm9x15
+    if ! ${YAFFS2_SUPPORT}; then
+        swi_log "Trying to mount as yaffs2 while there is no support, aborting."
+        return ${SWI_ERR}
+    fi
+
+@endif
+    # Get the device number
+    get_mtdpart_dev_num ${mtd_part_name}
+    mtd_dev_num=$?
+    if [ ${mtd_dev_num} -lt 0 ] ; then
+        # Error obtaining mtd device number, get out.
+        return ${SWI_ERR}
+    fi
+
+    # Mount YAFFS2 volume. It is highly unlikely that it would fail.
+    mount -t yaffs2 /dev/mtdblock${mtd_dev_num} ${mntpt} -o${YAFFS2_MNTOPT}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to mount /dev/mtdblock${mtd_dev_num} onto ${mntpt}."
+        ret=${SWI_ERR}
+    fi
+
+    return ${ret}
+}
+
+# Mount user partition. UBIFS will be used if all possible unless YAFFS2 is
+# forced by the user.
+mount_early_user_start()
+{
+@if mdm9x15
+    local ret=${SWI_OK}
+@endif
+    local mtd_part_name=${USER_MTDEV_NAME}
+    local mtd_part_size=0
+    local var=""
+
+@if !mdm9x15
+    if [ -z "$mtd_part_name" ]; then
+        swi_log "User part name does not exist"
+        return ${SWI_OK}
+    fi
+@endif
+
+    # User may be forcing file system. We will let upper layers decide what is
+    # going to happen, if there is an error.
+
+    # Try UBIFS first.
+    grep -w "user1_fs=ubifs" /proc/cmdline > /dev/null
+    if [ $? -eq 0 ] ; then
+
+        swi_log "User is forcing ${mtd_part_name} file system to be ubifs."
+
+        # Try to mount existing UBIFS partition first.
+        mount_ubifs_multi_mount_options ${mtd_part_name} \
+                                        ${FLASH_MOUNTPOINT} \
+                                        ${UBI_USER1_DEVNUM} \
+                                        ${UBI_USER1_VOLNUM}
+        if [ $? -eq ${SWI_OK} ] ; then
+            # It actually worked, and we do not have to be here any more.
+            return ${SWI_OK}
+        fi
+
+        # That did not work, so we need to force this partition to be single
+        # volume UBIFS .
+        create_single_ubi_vol ${mtd_part_name} ${UBI_USER1_DEVNUM} \
+                              ${UBI_USER1_VOLNUM} ${UBI_USER1_VOLNAME}
+        if [ $? -ne ${SWI_OK} ] ; then
+             # UBI volume creation did not work, so get out since user wanted
+             # UBIFS.
+             return ${SWI_ERR}
+        fi
+
+        # Now we mount UBIFS volume created above.
+        mount_ubifs_multi_mount_options ${mtd_part_name} \
+                                        ${FLASH_MOUNTPOINT} \
+                                        ${UBI_USER1_DEVNUM} \
+                                        ${UBI_USER1_VOLNUM}
+        if [ $? -ne ${SWI_OK} ] ; then
+            # There is nothing we can do here, user wanted forced UBIFS file
+            # system, but we cannot mount it.
+            return ${SWI_ERR}
+        fi
+
+        # user partition is ubifs now.
+        return ${SWI_OK}
+
+    fi
+
+    grep -w "user1_fs=yaffs2" /proc/cmdline > /dev/null
+    if [ $? -eq 0 ] ; then
+        # yaffs2 cannot fail unless the whole flash is dead.
+        swi_log "User is forcing ${mtd_part_name} file system to be yaffs2."
+        mount_yaffs_fs ${mtd_part_name} ${FLASH_MOUNTPOINT}
+        return ${SWI_OK}
+    fi
+
+    # We are passed user forced options, try to mount UBIFS partition first.
+    mount_ubifs_multi_mount_options ${mtd_part_name} \
+                                    ${FLASH_MOUNTPOINT} \
+                                    ${UBI_USER1_DEVNUM} \
+                                    ${UBI_USER1_VOLNUM}
+    if [ $? -eq ${SWI_OK} ] ; then
+        # It actually worked, and we do not have to be here any more.
+        return ${SWI_OK}
+    fi
+
+@if mdm9x15
+    # Mount YAFFS2 partition. If empty, we may as well have it as UBIFS.
+    mount_yaffs_fs ${mtd_part_name} ${FLASH_MOUNTPOINT}
+    is_yaffs2_empty ${FLASH_MOUNTPOINT}
+    if [ $? -eq ${SWI_TRUE} ] ; then
+        swi_log "YAFFS2 file system on ${mtd_part_name} partition is empty, forcing it to be UBIFS."
+        umount ${FLASH_MOUNTPOINT}
+
+        create_single_ubi_vol ${mtd_part_name} ${UBI_USER1_DEVNUM} \
+                              ${UBI_USER1_VOLNUM} ${UBI_USER1_VOLNAME}
+        if [ $? -ne ${SWI_OK} ] ; then
+             # UBI volume creation did not work, go back to YAFFS2.
+             mount_yaffs_fs ${mtd_part_name} ${FLASH_MOUNTPOINT}
+             return ${SWI_OK}
+        fi
+        # It worked, try to mount it.
+        mount_ubifs_multi_mount_options ${mtd_part_name} \
+                                        ${FLASH_MOUNTPOINT} \
+                                        ${UBI_USER1_DEVNUM} \
+                                        ${UBI_USER1_VOLNUM}
+        if [ $? -ne ${SWI_OK} ] ; then
+            # UBI volume mount did not work, go back to YAFFS2.
+            mount_yaffs_fs ${mtd_part_name} ${FLASH_MOUNTPOINT}
+            return ${SWI_OK}
+        fi
+    fi
+@else
+    if ${YAFFS2_SUPPORT}; then
+        # Mount YAFFS2 partition. If empty, we may as well have it as UBIFS.
+        mount_yaffs_fs ${mtd_part_name} ${FLASH_MOUNTPOINT}
+        is_yaffs2_empty ${FLASH_MOUNTPOINT}
+        if [ $? -ne ${SWI_TRUE} ] ; then
+            # Filesystem is not empty
+            return ${SWI_OK}
+        fi
+        swi_log "YAFFS2 file system on ${mtd_part_name} partition is empty."
+    fi
+
+    swi_log "Forcing ${mtd_part_name} to be UBIFS."
+    umount ${FLASH_MOUNTPOINT}
+
+    create_single_ubi_vol ${mtd_part_name} ${UBI_USER1_DEVNUM} \
+                          ${UBI_USER1_VOLNUM} ${UBI_USER1_VOLNAME}
+    if [ $? -ne ${SWI_OK} ] ; then
+         # UBI volume creation did not work, go back to YAFFS2.
+         mount_yaffs_fs ${mtd_part_name} ${FLASH_MOUNTPOINT}
+         return ${SWI_OK}
+    fi
+    # It worked, try to mount it.
+    mount_ubifs_multi_mount_options ${mtd_part_name} \
+                                    ${FLASH_MOUNTPOINT} \
+                                    ${UBI_USER1_DEVNUM} \
+                                    ${UBI_USER1_VOLNUM}
+    if [ $? -ne ${SWI_OK} ] ; then
+        # UBI volume mount did not work, go back to YAFFS2.
+        mount_yaffs_fs ${mtd_part_name} ${FLASH_MOUNTPOINT}
+        return ${SWI_OK}
+    fi
+@endif
+
+    return ${SWI_OK}
+}
+
+# Unmount user partition
+mount_early_user_stop()
+{
+    local mntpt=${FLASH_MOUNTPOINT}
+    local is_ubifs=
+    local mtd_dev_num=
+
+    is_ubifs=$( grep -w "${FLASH_MOUNTPOINT} ubifs" /proc/mounts )
+
+    # There is nothing we can do if umount fails, so do not check
+    # the result of the operation. The same goes for ubidetach.
+    umount -l ${mntpt}
+    if [ ! -z "${is_ubifs}" ] ; then
+        get_mtdpart_dev_num ${USER_MTDEV_NAME}
+        mtd_dev_num=$?
+        if [ ! ${mtd_dev_num} -lt 0 ] ; then
+            # detach takes care of the block device as well.
+            ubidetach -m ${mtd_dev_num}
+        fi
+    fi
+
+    return ${SWI_OK}
+}
+
+@if !mdm9x15
+# For security version, cert chain is store at
+# UBI volume, So it should work with UBI system
+# Check scurity authenticate. Parameters:
+#   $1 - ubi logical device number
+#   $2 - mtd partition name
+check_security_auth()
+{
+    local ubi_dev_num=$1
+    local mtd_part_name=$2
+    local mtd_dev_num=
+    local ubi_work_well=${SWI_TRUE}
+
+    # Get mtd device number
+    get_mtdpart_dev_num ${mtd_part_name}
+    mtd_dev_num=$?
+    if [ ${mtd_dev_num} -lt 0 ] ; then
+        # Error obtaining mtd device number, get out.
+        return ${SWI_ERR}
+    fi
+
+    if ! dd if=/dev/mtd${mtd_dev_num} count=1 bs=4 2>/dev/null | grep 'UBI#' > /dev/null; then
+        swi_log "Secure: mtd ${mtd_dev_num} it not UBI."
+        ubi_work_well=${SWI_FALSE}
+    fi
+
+    if [ ${ubi_work_well} -eq ${SWI_TRUE} ] ; then
+        # Make link between physical and logical UBI device. If device does not
+        # show up, we need to exit.
+        # If device exist do not detach and then attach again - save boot up time
+        if ! [ -e "/dev/ubi${ubi_dev_num}" ]; then
+            ubiattach -m ${mtd_dev_num} -d ${ubi_dev_num}
+            if [ $? -ne 0 ] ; then
+                swi_log "Unable to attach mtd partition ${mtd_part_name} to UBI logical device ${ubi_dev_num}"
+                ubi_work_well=${SWI_FALSE}
+            fi
+            wait_on_file "/dev/ubi${ubi_dev_num}"
+            if [ $? -ne ${SWI_OK} ] ; then
+                swi_log "Tired of waiting on /dev/ubi${ubi_dev_num}, exiting."
+                ubi_work_well=${SWI_FALSE}
+            fi
+        fi
+    fi
+
+    swi_auth "ubi${ubi_dev_num}"
+    ret_auth=$?
+    case "$ret_auth" in
+        4)
+            # This is non-secure version do nothing!
+            swi_log "Non-secure !"
+            return ${SWI_NONE_SECU}
+        ;;
+        6)
+            # This is secure version must work with UBI+SQUASHFS+DMverity!
+            swi_log "Security !"
+            if [ ${ubi_work_well} -ne ${SWI_TRUE} ] ; then
+                # Security work with UBI. if not, stop! Avoid secure hole.
+                swi_log "Authenticate fail!"
+                return ${SWI_AUTH_FAIL}
+            fi
+
+            UBI_VOL_COUNT=$(cat /sys/class/ubi/ubi${ubi_dev_num}/volumes_count)
+            if [ ${UBI_VOL_COUNT} != "${DM_SECU_UBI_VOL_COUNT}" ] ; then
+                swi_log "DM verity with security version should has $DM_SECU_UBI_VOL_COUNT UBI volumes!"
+                ubidetach -m ${mtd_dev_num}
+                return ${SWI_AUTH_FAIL}
+            fi
+            return ${SWI_AUTH_PASS}
+        ;;
+        *)
+        # Any other error means fail !
+            swi_log "Authenticate fail! error: ${ret_auth}"
+            ubidetach -m ${mtd_dev_num}
+            return  ${SWI_AUTH_FAIL}
+        ;;
+    esac
+}
+
+@endif
+# Mount user0 Legato "backup" partition. This partition may be squashfs or
+# yaffs2. Since yaffs2 does not recognize any other file systems, try to
+# mount all other file systems first. If all fails, mount yaffs2 partition.
+mount_early_legato_start()
+{
+    local ret=${SWI_OK}
+@if !mdm9x15
+    local secure=
+
+    if [ -e /usr/bin/swidssd ]; then
+        /usr/bin/swidssd read linux
+        DS_LINUX_SUB_SYSTEM_FLAG=$?
+    fi
+
+    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq 200 ]; then
+        LEGATO_MTDEV_NAME=${LEGATO_MTDEV_NAME}2
+    fi
+    echo "mount Legato from partition $LEGATO_MTDEV_NAME"
+@endif
+
+    if [ ! -e ${FLASH_MOUNTPOINT_LEGATO} ]; then
+        mkdir -p ${FLASH_MOUNTPOINT_LEGATO}
+        if [ $? -ne 0 ]; then
+            swi_log "Unable to create ${FLASH_MOUNTPOINT_LEGATO}"
+            return ${SWI_ERR}
+        fi
+    fi
+
+@if !mdm9x15
+    check_security_auth ${UBI_USER0_DEVNUM}        \
+                   ${LEGATO_MTDEV_NAME}
+    secure=$?
+    if [ ${secure} -eq ${SWI_AUTH_FAIL} ]; then
+        #  If auth fail for secure version must stop going on!
+        return ${SWI_ERR}
+    fi
+
+@endif
+    # Try to mount squashfs file system first. It is sitting on top of
+    # UBI volume, and we need to use ubifs related commands to try to
+    # mount it.
+    mount_ubifs ${LEGATO_MTDEV_NAME} ${FLASH_MOUNTPOINT_LEGATO} \
+@if mdm9x15
+                squashfs ${UBI_USER0_DEVNUM} ${UBI_USER0_LEGATO_VOLNUM} ro
+@else
+                squashfs ${UBI_USER0_DEVNUM} ${UBI_USER0_LEGATO_VOLNUM} ro \
+                ${DM_LGT_NOD_NAME} \
+                ${secure}
+@endif
+    ret=$?
+    if [ ${ret} -eq ${SWI_OK} ]; then
+        swi_log "SQUASHFS successfully mounted on ${FLASH_MOUNTPOINT_LEGATO}"
+        return ${ret}
+    fi
+
+@if !mdm9x15
+
+    if [ "${secure}" == "{SWI_AUTH_PASS}" ] ; then
+        # If auth pass means this is security version!
+        # Any error at mount_ubifs is not allowed for security.
+        return ${SWI_ERR}
+    fi
+
+    if ${YAFFS2_SUPPORT}; then
+        # Mounting of squashfs failed. YAFFS2 "takes no prisoners" and it will mount
+        # even if that means wiping out existing file system(s).
+        mount_yaffs_fs ${LEGATO_MTDEV_NAME} ${FLASH_MOUNTPOINT_LEGATO}
+        return $?
+    else
+        swi_log "Unable to find a way to mount ${LEGATO_MTDEV_NAME} to ${FLASH_MOUNTPOINT_LEGATO}"
+        return ${SWI_OK} # Mounting legato partition is not compulsory for the system to boot
+    fi
+@else
+    # Mounting of squashfs failed. YAFFS2 "takes no prisoners" and it will mount
+    # even if that means wiping out existing file system(s).
+    mount_yaffs_fs ${LEGATO_MTDEV_NAME} ${FLASH_MOUNTPOINT_LEGATO}
+    return $?
+@endif
+}
+
+# Unmount user0 Legato "backup" partition. For details take look at the 'start'
+# related method above.
+mount_early_legato_stop()
+{
+    local ret=${SWI_OK}
+    local mntpt=${FLASH_MOUNTPOINT_LEGATO}
+    local is_squashfs=
+
+    is_squashfs=$( mount | grep "${mntpt}" | grep "type squashfs" | \
+                   grep "ubiblock" )
+
+    # There is nothing we can do if umount fails, so do not check
+    # the result of the operation. The same is true for ubidetach.
+    umount -l ${mntpt}
+    if [ ! -z "${is_squashfs}" ] ; then
+        get_mtdpart_dev_num ${LEGATO_MTDEV_NAME}
+        mtd_dev_num=$?
+        if [ ! ${mtd_dev_num} -lt 0 ] ; then
+            ubidetach -m ${mtd_dev_num}
+        fi
+    fi
+
+    return ${ret}
+}
+
+@if mdm9x15
+# Mount userrw file system. This partition is currently YAFFS2 on all platforms.
+@else
+# Mount userrw file system using UBIFS.
+@endif
+mount_early_userrw_start()
+{
+    local mtd_part_name=${USERRW_MTDEV_NAME}
+    local mntpt=${USERRW_MTDEV_MOUNTPOINT}
+@if mdm9x15
+    local mtd_dev_num=
+@endif
+
+@if mdm9x15
+    # Get the device number
+    get_mtdpart_dev_num ${mtd_part_name}
+    mtd_dev_num=$?
+    if [ ${mtd_dev_num} -lt 0 ] ; then
+        # Error obtaining mtd device number, get out.
+        return ${SWI_ERR}
+    fi
+@else
+    if [ -z "$mtd_part_name" ]; then
+        swi_log "Userrw part name does not exist"
+        return ${SWI_OK}
+    fi
+
+    swi_log "Mounting ${mtd_part_name} file system as UBIFS"
+    # Try to mount existing UBIFS partition first.
+    mount_ubifs_multi_mount_options ${mtd_part_name} \
+                                    ${mntpt} \
+                                    ${UBI_USERRW_DEVNUM} \
+                                    ${UBI_USERRW_VOLNUM}
+    if [ $? -eq ${SWI_OK} ] ; then
+        swi_log "${mtd_part_name} mounted to ${mntpt}"
+        return ${SWI_OK}
+    fi
+
+    # That did not work, so we need to force this partition to be single
+    # volume UBIFS .
+    swi_log "Formatting ${mtd_part_name} as UBIFS partition"
+    create_single_ubi_vol ${mtd_part_name} ${UBI_USERRW_DEVNUM} \
+                          ${UBI_USERRW_VOLNUM} ${UBI_USERRW_VOLNAME}
+    if [ $? -ne ${SWI_OK} ] ; then
+         # UBI volume creation failed
+         swi_log "Failed formatting ${mtd_part_name}"
+         return ${SWI_ERR}
+    fi
+@endif
+
+@if mdm9x15
+    # Mount userrw YAFFS2 volume
+    mount -t yaffs2 /dev/mtdblock${mtd_dev_num} ${mntpt} -o${YAFFS2_MNTOPT}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to mount /dev/mtdblock${mtd_dev_num} onto ${mntpt}."
+        return ${SWI_ERR}
+    fi
+@else
+    # Now we mount UBIFS volume created above.
+    mount_ubifs_multi_mount_options ${mtd_part_name} \
+                                    ${mntpt} \
+                                    ${UBI_USERRW_DEVNUM} \
+                                    ${UBI_USERRW_VOLNUM}
+    if [ $? -ne ${SWI_OK} ] ; then
+        # UBI volume creation failed
+        swi_log "Failed mounting ${mtd_part_name} to ${mntpt}"
+        return ${SWI_ERR}
+    fi
+@endif
+
+@if !mdm9x15
+    # user partition is ubifs now.
+    swi_log "${mtd_part_name} mounted to ${mntpt}"
+@endif
+    return ${SWI_OK}
+}
+
+@if mdm9x15
+# Unmount userrw file system. This file system is YAFFS2 on all platforms.
+@else
+# Unmount userrw file system.
+@endif
+mount_early_userrw_stop()
+{
+@if mdm9x15
+    local ret=${SWI_OK}
+@endif
+    local mntpt=${USERRW_MTDEV_MOUNTPOINT}
+@if !mdm9x15
+    local is_ubifs=
+    local mtd_dev_num=
+
+    is_ubifs=$( grep -w "${USERRW_MTDEV_MOUNTPOINT} ubifs" /proc/mounts )
+@endif
+
+    # There is nothing we can do if umount fails, so do not check
+@if mdm9x15
+    # the result of the operation.
+@else
+    # the result of the operation. The same goes for ubidetach.
+@endif
+    umount -l ${mntpt}
+@if !mdm9x15
+    if [ ! -z "${is_ubifs}" ] ; then
+        get_mtdpart_dev_num ${USERRW_MTDEV_NAME}
+        mtd_dev_num=$?
+        if [ ! ${mtd_dev_num} -lt 0 ] ; then
+            # detach takes care of the block device as well.
+            ubidetach -m ${mtd_dev_num}
+        fi
+    fi
+@endif
+
+@if mdm9x15
+    return ${ret}
+@else
+    return ${SWI_OK}
+@endif
+}
+
+# Early mount pseudo file systems. It is not necessary to unmount
+# these before rebooting.
+mount_early_pseudo()
+{
+    local ret=0
+
+    # mount mdev.
+    mount -t tmpfs mdev /dev -o rw,relatime,size=${DEVDIR_SIZE},mode=0755,smackfsdef='*'
+
+    # Show mqueue stuff.
+    mkdir -p /dev/mqueue
+    mount -t mqueue none /dev/mqueue -o smackfsdef='*'
+
+    # Create multiplexor device
+    mknod -m 666 /dev/ptmx c 5 2
+
+    # mount devpts for consoles and such.
+    mkdir -p /dev/pts
+    # mount -t devpts devpts /dev/pts
+    mount -t devpts none /dev/pts -o mode=0620,gid=5,smackfsdef='*'
+
+    # DM, FIXME: Restrict the size of this volume.
+    # Mount shared memory.
+    mkdir -p /dev/shm
+    mount -t tmpfs tmpfs /dev/shm -o mode=0777,smackfsdef='*'
+
+    # Kick hotplugging and start mdev.
+    echo "/sbin/mdev" > /proc/sys/kernel/hotplug
+    mdev -s
+}
+
+mount_early_other()
+{
+    local ret=0
+
+    # DM, FIXME: Restrict the size of this volume.
+    # Need /run to be volatile.
+    mount -t tmpfs tmpfs /run -o mode=0755,nodev,nosuid,strictatime,smackfsdef=_
+
+    # DM, FIXME: Restrict the size of this volume.
+    # Need /var to be volatile.
+    mount -t tmpfs tmpfs /var -o mode=0755,nodev,nosuid,strictatime,smackfsdef=_
+
+    # Do not restrict the size this file system.
+    mount -t tmpfs tmpfs /tmp -o mode=0755,nodev,nosuid,strictatime,smackfsdef=_
+
+    return ${ret}
+}
+
+# Necessary early dirs
+mount_early_create_dirs()
+{
+    local ret=0
+
+    mkdir -p /var/run/dbus
+    mkdir -p /var/lock/subsys
+    mkdir -p /var/log
+    mkdir -p /var/lib/urandom
+
+    return ${ret}
+}
+
+# Chooser.
+mount_early_start()
+{
+    local ret=0
+
+    # list of methods to execute
+    local method_list_essential=""
+
+    # Mount essential volumes only if we are not relying on the initramfs
+    if grep 'root=' /proc/cmdline > /dev/null; then
+        method_list_essential="
+                               mount_early_pseudo
+                               mount_early_other
+                               mount_early_create_dirs"
+    fi
+
+    local method_list="
+                       mount_early_user_start
+                       mount_early_legato_start
+                       mount_early_userrw_start
+                      "
+
+    for method in ${method_list_essential} ${method_list} ; do
+        echo "${this_e}: Executing ${method}... "
+        ${method}
+        if [ $? -ne 0 ] ; then return 1 ; fi
+    done
+
+    return ${ret}
+}
+
+# Stop all.
+mount_early_stop()
+{
+    local ret=0
+
+    # list of methods to execute
+    local method_list="
+                       mount_early_user_stop
+                       mount_early_legato_stop
+                       mount_early_userrw_stop
+                      "
+
+    for method in ${method_list} ; do
+        echo "${this_e}: Executing ${method}... "
+        ${method}
+        if [ $? -ne 0 ] ; then return 1 ; fi
+    done
+
+    return ${ret}
+}
+
+
+#
+# Execution starts here.
+#
+case "$1" in
+    start)
+        mount_early_start
+    ;;
+
+    stop)
+        mount_early_stop
+    ;;
+
+    *)
+        echo "Usage: ${this_e} {start | stop}"
+        exit 1
+    ;;
+esac
+
+exit 0
+

@@ -1,0 +1,173 @@
+#!/bin/sh
+# Provides tools to mount and umount unionfs specific to SWIR system.
+
+# import run environment
+. /etc/run.env
+
+# This executable
+this_e=$( basename $0 )
+
+# Set global variables (e.g. outside of functions).
+flash_mntpt_g=${UFS_ROOT}
+root_etc_g=/etc
+root_data_g=/data
+@if !mdm9x15
+root_firmware_g=/lib/firmware
+@endif
+ufs_type=${UFS_T}
+
+# Returns SWI_TRUE if unionfs should fudge rootfs.
+is_fudge_ro_rootfs_allowed()
+{
+    local ret=${SWI_FALSE}
+    local A=$( cat /proc/cmdline | grep -oe "fudge_ro_rootfs=\S*" )
+    if [ "x${A}" == "xfudge_ro_rootfs=true" ] ; then
+        ret=${SWI_TRUE}
+    elif [ "x${A}" == "xfudge_ro_rootfs=false" ] ; then
+        ret=${SWI_FALSE}
+    else
+        # Allow mount if rootfs is RO and flash mountpoint is RW
+        local rootfs_ro=`mount | grep " on / " | grep -w ro`
+        local flashfs_rw=`mount | grep " on $FLASH_MOUNTPOINT " | grep -w rw`
+        if [ -z rootfs_ro ] || [ -z flashfs_rw ] ; then
+            ret=${SWI_FALSE}
+        else
+            ret=${SWI_TRUE}
+        fi
+    fi
+
+    if [ $ret -eq ${SWI_TRUE} ] ; then
+        swi_log "RO rootfs fudge allowed."
+    else
+        swi_log "RO rootfs fudge NOT allowed."
+    fi
+
+    return ${ret}
+}
+
+@if !mdm9x15
+mount_unionfs_dir()
+{
+    local root_g=$1
+    local mount_opts=""
+
+    mkdir -p ${flash_mntpt_g}${root_g}
+
+    if [[ "${ufs_type}" == "aufs" ]]; then
+        mount_opts="dirs=${flash_mntpt_g}${root_g}=rw:${root_g}=ro"
+    elif [[ "${ufs_type}" == "overlay" ]]; then
+        # Make sure working directory is empty
+        rm -rf ${flash_mntpt_g}${root_g}_wk
+        mkdir -p ${flash_mntpt_g}${root_g}_wk
+        mount_opts="lowerdir=${root_g},workdir=${flash_mntpt_g}${root_g}_wk,upperdir=${flash_mntpt_g}${root_g}"
+    else
+        return ${SWI_ERR}
+    fi
+
+    mount -t ${ufs_type} -o ${mount_opts} ${ufs_type} ${root_g}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to mount unionfs file system (${flash_mntpt_g}${root_g}=rw, ${root_g}=ro, union=${root_g})."
+        return ${SWI_ERR}
+    fi
+
+    return ${SWI_OK}
+}
+@endif
+
+# Start union fs
+mount_unionfs_start()
+{
+    local ret=${SWI_OK}
+
+    is_fudge_ro_rootfs_allowed
+    if [ $? -ne ${SWI_TRUE} ] ; then
+        swi_log "Not allowed to fudge rootfs."
+        return ${SWI_ERR}
+    fi
+
+    # Try to make /etc writable.
+@if mdm9x15
+    mkdir -p ${flash_mntpt_g}${root_etc_g}
+    mount -t ${ufs_type} -o dirs=${flash_mntpt_g}${root_etc_g}=rw:${root_etc_g}=ro ${ufs_type} ${root_etc_g}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to mount unionfs file system (${flash_mntpt_g}${root_etc_g}=rw, ${root_etc_g}=ro, union=${root_etc_g})."
+        return ${SWI_ERR}
+    fi
+@else
+    mount_unionfs_dir ${root_etc_g}
+
+    # Try to make /data writable
+    mount_unionfs_dir ${root_data_g}
+    if [ $? -ne ${SWI_OK} ] ; then
+        umount -l ${root_etc_g}
+        return ${SWI_ERR}
+    fi
+@endif
+
+@if mdm9x15
+    # Try to make /data writable
+    mkdir -p ${flash_mntpt_g}${root_data_g}
+    mount -t ${ufs_type} -o dirs=${flash_mntpt_g}${root_data_g}=rw:${root_data_g}=ro ${ufs_type} ${root_data_g}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to mount unionfs file system (${flash_mntpt_g}${root_data_g}=rw, ${root_data_g}=ro, union=${root_data_g})."
+        umount -l ${root_etc_g}
+        return ${SWI_ERR}
+    fi
+@else
+    # Overlay /lib/firmware
+    mount_unionfs_dir ${root_firmware_g}
+    if [ $? -ne ${SWI_OK} ] ; then
+        umount -l ${root_data_g}
+        umount -l ${root_etc_g}
+        return ${SWI_ERR}
+    fi
+@endif
+
+    return ${ret}
+}
+
+# Stop union fs.
+mount_unionfs_stop()
+{
+    ret=${SWI_OK}
+
+    is_fudge_ro_rootfs_allowed
+    if [ $? -ne ${SWI_TRUE} ] ; then
+        swi_log "Nothing to do (fudging of rootfs is not allowed)."
+        return ${ret}
+    fi
+
+    # Unmount unionfs (don't care about the result).
+@if !mdm9x15
+    umount -l ${root_firmware_g} &>/dev/null
+    umount -l ${root_data_g} &>/dev/null
+@endif
+    umount -l ${root_etc_g} &>/dev/null
+@if mdm9x15
+    umount -l ${root_data_g} &>/dev/null
+@endif
+
+    return ${ret}
+}
+
+
+#
+# Execution starts here.
+#
+case "$1" in
+    start)
+        mount_unionfs_start
+    ;;
+
+    stop)
+        mount_unionfs_stop
+    ;;
+
+    *)
+        echo "Usage: ${this_e} {start | stop}"
+        exit 1
+    ;;
+esac
+
+exit 0
+

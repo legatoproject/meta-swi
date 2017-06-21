@@ -1,0 +1,294 @@
+#!/bin/sh
+
+
+DONT_NAG_FILE=/mnt/flash/config/system/etc/noLoginNag
+TOOLS_PATH=/legato/systems/current/bin
+
+PASSWORD_SET=false
+
+
+CheckRet()
+{
+    RETVAL=$?
+
+    if [ $RETVAL -ne 0 ]; then
+        exit $RETVAL
+    fi
+}
+
+
+DontNag()
+{
+    mkdir -p $( dirname $DONT_NAG_FILE ) &&
+    touch $DONT_NAG_FILE
+}
+
+
+DisablePasswordLogin()
+{
+    echo ""
+
+    while true; do
+        echo "You are about to disable password-based authentication for root user account."
+        echo "Are you sure [y/N]?"
+        read -r choice
+
+        case $choice in
+            [nN] | "" ) return 1;;
+            [yY] )
+                passwd -l root
+                CheckRet
+                echo "Password-based authentication for root account disabled."
+                break;;
+
+            * )
+                ;;
+        esac
+    done
+}
+
+
+DisableUartForConsole()
+{
+    # Get the uart mode.
+    mode="$($TOOLS_PATH/uartMode get $1)"
+    CheckRet
+
+    # See if the uart is currently used for /dev/console.
+    echo $mode | grep "/dev/console" > /dev/null 2>&1
+
+    if [ $? = 0 ]; then
+        # Disable the uart.
+        $TOOLS_PATH/uartMode set $1 disable > /dev/null 2>&1
+        CheckRet
+    fi
+}
+
+
+DisableConsole()
+{
+    echo ""
+
+    while true; do
+        echo "You are about to disable console access for all users."
+        echo "Are you sure [y/N]?"
+        read -r choice
+
+        case $choice in
+            [nN] | "" ) return 1;;
+            [yY] )
+                if [ -f /etc/securetty ]; then
+                    echo > /etc/securetty
+                fi
+
+                # Disable both uart 1 and 2 for use as /dev/console.
+                DisableUartForConsole 1
+                DisableUartForConsole 2
+
+                echo "Console access changes will take effect AFTER reboot."
+                break;;
+
+            * )
+                ;;
+        esac
+    done
+}
+
+
+EnableConsolePassword()
+{
+    passwd
+    CheckRet
+
+    PASSWORD_SET=true
+}
+
+
+LocalAccess()
+{
+    echo "";
+    echo "Configure local console login."
+
+    if [ $PASSWORD_SET = true ]; then
+        while true; do
+            echo "  Disable console access [Y/n]?"
+
+            read -r choice
+            case $choice in
+                [yY] | "" )
+                    DisableConsole
+                    if [ $? -eq 0 ]; then
+                       DontNag; break
+                    fi
+                    ;;
+                [nN] ) DontNag; break;;
+
+                * );;
+            esac
+        done
+    else
+        while true; do
+            echo "  1) Disable console access (the most secure)"
+            echo "  2) Disable password-based authentication for root user account"
+            echo "     but leave the console for debug messages (less secure)"
+            echo "     WARNING: This will disable password-based authentication for"
+            echo "     root user account completely (even over ssh)."
+            echo "  3) Enable password-based authentication for root user account"
+
+            read -r choice
+            case $choice in
+                [1] )
+                   DisableConsole
+                   if [ $? -eq 0 ]; then
+                       DontNag; break
+                   fi
+                   ;;
+                [2] )
+                   DisablePasswordLogin
+                   if [ $? -eq 0 ]; then
+                       DontNag; break
+                   fi
+                   ;;
+                [3] ) EnableConsolePassword; DontNag; break;;
+
+                * );;
+            esac
+        done
+    fi
+}
+
+
+DisableSshPasswords()
+{
+    echo "";
+    echo "You are about to disable password-based authentication via ssh for all users."
+
+    while true; do
+        echo "Are you sure you can successfully login using ssh keys [y/N]?"
+        read -r choice
+
+        case $choice in
+            [nN] | "" ) return 1;;
+            [yY] )
+                  echo "DROPBEAR_EXTRA_ARGS=\"-s -g\"" >> /etc/default/dropbear
+                  /etc/init.d/dropbear restart
+                  break
+                  ;;
+
+            * ) ;;
+        esac
+    done
+}
+
+
+ConfigureSshKey()
+{
+    echo "";
+    echo "Please run the Legato configtargetssh tool from the host."
+    echo "Or manually setup ssh keys using ssh-keygen and copy keys to target."
+
+    while true; do
+        echo "Let me know when you're done."
+        echo "  1) Done setting up my ssh keys"
+        echo "  2) Cancel"
+
+        read -r choice
+        case $choice in
+            [1] )
+               DisableSshPasswords
+               if [ $? -eq 0 ]; then
+                   LocalAccess; break
+               fi
+               ;;
+            [2] ) SelectCredMethod; break;;
+
+            * );;
+        esac
+    done
+}
+
+
+SetupPassword()
+{
+    passwd
+    CheckRet
+
+    PASSWORD_SET=true
+
+    LocalAccess
+}
+
+
+ReminderMenu()
+{
+    echo "";
+
+    while true; do
+        echo "Would you like a reminder next time you log in [Y/n]?"
+
+        read -r choice
+        case $choice in
+            [yY] | "" ) echo "OK, I will remind you next time."; break;;
+            [nN] ) echo "OK, I will not bug you again"; DontNag; break;;
+
+            * );;
+        esac
+    done
+}
+
+
+SelectCredMethod()
+{
+    echo "";
+    echo "It is strongly recommended to setup credentials for remote login."
+
+    while true; do
+        echo "Please select one of the following options:"
+        echo "  1) Setup ssh keys and disable passwords-based authentication via ssh"
+        echo "     (the most secure)"
+        echo "  2) Setup password (better than nothing)"
+        echo "  3) Do nothing"
+
+        read -r choice
+        case $choice in
+            [1] ) ConfigureSshKey; break;;
+            [2] ) SetupPassword; break;;
+            [3] ) ReminderMenu; break;;
+
+            * );;
+        esac
+    done
+}
+
+
+
+if [ ! -f $DONT_NAG_FILE ]; then
+    if [ ! -f ~/.ssh/authorized_keys ]; then
+        # SSH credentials have not been set, ask the user to setup credentials.
+        SelectCredMethod
+    else
+        nopass=`grep DROPBEAR_EXTRA_ARGS /etc/default/dropbear | grep "\-s" | grep "\-g"`
+        if [ -z $nopass ]; then
+            echo "Apparently ssh keys have been set but password-based authentication via ssh"
+            echo "is still enabled. It is recommended to disable password-based authentication"
+            echo "when using ssh keys."
+            while true; do
+                echo "Do you want to disable password-based authentication via ssh [Y/n]?"
+                read -r choice
+                case $choice in
+                    [Nn] ) break;;
+                    [Yy] | "" )
+                        DisableSshPasswords
+                        if [ $? -eq 0 ]; then
+                            break
+                        fi
+                        ;;
+
+                    * ) ;;
+                esac
+            done
+        fi
+        # SSH credentials already set, ask the user how to handle local access.
+        LocalAccess
+    fi
+fi
