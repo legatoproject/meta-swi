@@ -1,0 +1,134 @@
+#!/bin/sh
+# --------------------------------------------------------------
+# Copyright (c) 2012 Sierra Wireless. All Rights Reserved.
+# --------------------------------------------------------------
+# restart_swi_apps: Simple script to restart swi apps if they are not running
+
+@if !mdm9x15
+# import run environment
+source /etc/run.env
+
+@endif
+#This function will kill a process
+kill_process(){
+  if [ -n "$(ps -e | grep -v grep | grep "$1")" ]; then
+    ps -e | grep -v grep | grep "$1" | awk '{print $1}' | xargs kill -TERM
+  else
+@if mdm9x15
+    echo "$1 does not exist"
+@else
+    swi_log "$1 does not exist"
+@endif
+    return;
+  fi
+  sleep 1;
+  if [ -n "$(ps -e | grep -v grep | grep "$1")" ]; then
+    ps -e | grep -v grep | grep "$1" | awk '{print $1}' | xargs kill -KILL
+  else
+@if mdm9x15
+    echo "killing $1 by signal TERM"
+@else
+    swi_log "killing $1 by signal TERM"
+@endif
+    return;
+  fi
+  sleep 1;
+  if [ -n "$(ps -e | grep -v grep | grep "$1")" ]; then
+@if mdm9x15
+    echo "restart_swi_apps can't kill $1"
+@else
+    swi_log "restart_swi_apps can't kill $1"
+@endif
+    exit -1;
+  else
+@if mdm9x15
+    echo "killing $1 by signal KILL"
+@else
+    swi_log "killing $1 by signal KILL"
+@endif
+    return;
+  fi
+}
+
+# This function will start swiapp
+start_swiapp(){
+  # Terminate all hostapd instances - swiapp spawns them again
+  kill_process hostapd
+
+  # Terminate all aplay instances
+  kill_process aplay
+
+  # Terminate all arec instances
+  kill_process arec
+
+  free | logger;
+  sleep 1;
+  /usr/bin/swiapp > /dev/null 2>&1 &
+}
+
+@if mdm9x15
+# Bail out if this script is already running
+if [ $(ps -e | grep -v grep | grep "restart_swi_app" | wc -l) -gt 2 ]; then
+  echo "restart_swi_app is already running!"
+  exit 0
+fi
+
+@endif
+# Save the HW type
+TYPE=`bsinfo -st`
+DELAY=15
+
+if [ -z "$(ps -e | grep -v grep | grep "swiapp")" ]; then
+@if mdm9x15
+  echo "swiapp does not start, start it"
+@else
+  swi_log "Starting swiapp..."
+@endif
+  start_swiapp
+fi
+
+while [ 1 ]
+do
+  sleep ${DELAY}
+  # This will start swiapp if it is not running
+  if [ -z "$(ps -e | grep -v grep | grep "swiapp")" ]; then
+@if mdm9x15
+    echo "swiapp killed, restart it"
+@else
+    swi_log "swiapp killed, restart it"
+@endif
+    start_swiapp
+
+    if [ t${TYPE} = 't09' -o t${TYPE} = 't0A' -o t${TYPE} = 't0B' -o t${TYPE} = 't1C' -o t${TYPE} = 't1D' -o t${TYPE} = 't1E' -o \
+           t${TYPE} = 't04' -o t${TYPE} = 't05' -o t${TYPE} = 't06' -o t${TYPE} = 't24' -o t${TYPE} = 't25' -o t${TYPE} = 't26' -o \
+           t${TYPE} = 't2B' -o t${TYPE} = 't2C' -o t${TYPE} = 't31' -o t${TYPE} = 't32' -o t${TYPE} = 't33' -o t${TYPE} = 't34' ]; then
+       # Stop and restart M2M specific apps to sync up
+       # applicable to WP7100, WP7102, WP7104, WP7100_LARGER_MEM, WP7102_LARGER_MEM, WP7104_LARGER_MEM,
+       # AR7550, AR7552, AR7554, AR7550M, AR7552M, AR7554M, AR7558M, AR7556, AR8652, AR7556M, AR7554RD, AR7552RD
+       /etc/init.d/startm2m.sh stop
+       /etc/init.d/startm2m.sh start
+    fi
+  else
+    if [ t${TYPE} = 't09' -o t${TYPE} = 't0A' -o t${TYPE} = 't0B' -o t${TYPE} = 't1C' -o t${TYPE} = 't1D' -o t${TYPE} = 't1E' -o \
+           t${TYPE} = 't04' -o t${TYPE} = 't05' -o t${TYPE} = 't06' -o t${TYPE} = 't24' -o t${TYPE} = 't25' -o t${TYPE} = 't26' -o \
+           t${TYPE} = 't2B' -o t${TYPE} = 't2C' -o t${TYPE} = 't31' -o t${TYPE} = 't32' -o t${TYPE} = 't33' -o t${TYPE} = 't34' ]; then
+       # Monitor if M2M specific apps still alive
+       # applicable to WP7100, WP7102, WP7104, WP7100_LARGER_MEM, WP7102_LARGER_MEM, WP7104_LARGER_MEM,
+       # AR7550, AR7552, AR7554, AR7550M, AR7552M, AR7554M, AR7558M, AR7556, AR8652, AR7556M, AR7554RD, AR7552RD
+       /etc/init.d/startm2m.sh monitor
+    fi
+  fi
+
+  if [ -z "$(ps -e | grep -v grep | grep "swisync")" ]; then
+    if [ -x /usr/bin/swisync ]; then
+@if mdm9x15
+      echo "swisync killed, restart it"
+@else
+      swi_log "swisync killed, restart it"
+@endif
+      /usr/bin/swisync > /dev/null 2>&1 &
+    fi
+  fi
+
+  DELAY=5
+done

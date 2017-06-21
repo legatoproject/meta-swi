@@ -1,0 +1,21 @@
+#!/bin/sh
+# Copyright (c) 2014-2016 Sierra Wireless
+#
+# start getty
+
+source /etc/run.env
+console=`cat /sys/devices/virtual/tty/console/active 2>/dev/null`
+
+if [ ! -z ${console} ]; then
+  swi_log "${console} reserved for CONSOLE"
+  /sbin/getty ${console} 115200 vt100
+else
+  swi_log "No UART mapped to CONSOLE"
+
+  # This script is run from inittab and will be respawned
+  # by init if it exits. That is why blocking call is needed
+  # to prevent exit from happening.
+  while [ 1 ] ; do
+      sleep 2147483648
+  done
+fi
