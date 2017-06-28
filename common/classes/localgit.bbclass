@@ -19,7 +19,7 @@ O = "${WORKDIR}/${PN}-obj"
 # other stages for things like the autotools stuff works like it's supposed
 # to without too many extra special interventions...
 
-do_fetch_prepend() {
+python do_fetch() {
     import shutil
 
     target = d.getVar("SRC_DIR", expand=True)
@@ -37,4 +37,25 @@ do_fetch_prepend() {
       os.remove(link)
 
     os.symlink(target, link)
+}
+
+# Suppress do_unpack and do_patch logic.
+# Local symlinked checkouts don't require unpacking and patching.
+do_unpack () {
+}
+
+do_patch () {
+}
+
+# base.bbclass contains logic which checks for the
+# exact situation we have created, namely ${S} != ${WORKDIR} and
+# in that case it associates do_unpack with a 'cleandirs'
+# flag value of "${S}". That has the effect of blowing off our symlink
+# when do_unpack is dispatched with bb.build.exec_func,
+# and that happens even if do_unpack is a blank action.
+# I know what you're thinking, and no: the simple
+#    do_unpack[cleandirs] = ""
+# doesn't work; it has to be the following python snippet:
+python () {
+    d.setVarFlag('do_unpack', 'cleandirs', '')
 }
