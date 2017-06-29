@@ -34,13 +34,12 @@ do_install_append() {
     oe_runmake headers_install O=${D}/usr/src/kernel
 
     # Copy headers back to $(D) folder, it should be done at upper command, but not
+    mkdir -p ${D}/usr/src/kernel/usr
     cp -fr ${B}/usr/include ${D}/usr/src/kernel/usr/
 
     # Copy generated headers also
     mkdir -p ${D}/usr/src/kernel/include/generated
     cp -fr ${B}/include/generated ${D}/usr/src/kernel/include
-
-    oe_runmake -C $kerneldir CC="${KERNEL_CC}" LD="${KERNEL_LD}" clean _mrproper_scripts
 }
 
 # Note that @{DATETIME} isn't a BitBake variable expansion;
