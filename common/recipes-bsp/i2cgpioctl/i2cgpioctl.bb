@@ -31,7 +31,7 @@ do_unpack[postfuncs] += "generate_version"
 
 do_compile() {
     cd ${S}
-    ${CC} -g -o i2cgpioctl -I tools i2cgpioctl.c tools/util.c tools/i2cbusses.c
+    ${CC} ${CFLAGS} ${LDFLAGS} -g -o i2cgpioctl -I tools i2cgpioctl.c tools/util.c tools/i2cbusses.c
 }
 
 do_install() {
