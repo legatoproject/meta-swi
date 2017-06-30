@@ -11,9 +11,7 @@ this_e=$( basename $0 )
 flash_mntpt_g=${UFS_ROOT}
 root_etc_g=/etc
 root_data_g=/data
-@if !mdm9x15
 root_firmware_g=/lib/firmware
-@endif
 ufs_type=${UFS_T}
 
 # Returns SWI_TRUE if unionfs should fudge rootfs.
@@ -45,7 +43,6 @@ is_fudge_ro_rootfs_allowed()
     return ${ret}
 }
 
-@if !mdm9x15
 mount_unionfs_dir()
 {
     local root_g=$1
@@ -55,6 +52,10 @@ mount_unionfs_dir()
 
     if [[ "${ufs_type}" == "aufs" ]]; then
         mount_opts="dirs=${flash_mntpt_g}${root_g}=rw:${root_g}=ro"
+    elif [[ "${ufs_type}" == "overlayfs" ]]; then
+        # Overlayfs v21 have a bit different mount options. And it is called overlayfs
+        # instead of overlay. This file system is in kernel 3.14 (e.g. mdm9x15/WP85).
+       mount_opts="lowerdir=${root_g},upperdir=${flash_mntpt_g}${root_g}"
     elif [[ "${ufs_type}" == "overlay" ]]; then
         # Make sure working directory is empty
         rm -rf ${flash_mntpt_g}${root_g}_wk
@@ -72,7 +73,6 @@ mount_unionfs_dir()
 
     return ${SWI_OK}
 }
-@endif
 
 # Start union fs
 mount_unionfs_start()
@@ -86,15 +86,10 @@ mount_unionfs_start()
     fi
 
     # Try to make /etc writable.
-@if mdm9x15
-    mkdir -p ${flash_mntpt_g}${root_etc_g}
-    mount -t ${ufs_type} -o dirs=${flash_mntpt_g}${root_etc_g}=rw:${root_etc_g}=ro ${ufs_type} ${root_etc_g}
-    if [ $? -ne 0 ] ; then
-        swi_log "Unable to mount unionfs file system (${flash_mntpt_g}${root_etc_g}=rw, ${root_etc_g}=ro, union=${root_etc_g})."
+    mount_unionfs_dir ${root_etc_g}
+    if [ $? -ne ${SWI_OK} ] ; then
         return ${SWI_ERR}
     fi
-@else
-    mount_unionfs_dir ${root_etc_g}
 
     # Try to make /data writable
     mount_unionfs_dir ${root_data_g}
@@ -102,18 +97,8 @@ mount_unionfs_start()
         umount -l ${root_etc_g}
         return ${SWI_ERR}
     fi
-@endif
 
-@if mdm9x15
-    # Try to make /data writable
-    mkdir -p ${flash_mntpt_g}${root_data_g}
-    mount -t ${ufs_type} -o dirs=${flash_mntpt_g}${root_data_g}=rw:${root_data_g}=ro ${ufs_type} ${root_data_g}
-    if [ $? -ne 0 ] ; then
-        swi_log "Unable to mount unionfs file system (${flash_mntpt_g}${root_data_g}=rw, ${root_data_g}=ro, union=${root_data_g})."
-        umount -l ${root_etc_g}
-        return ${SWI_ERR}
-    fi
-@else
+@if !mdm9x15
     # Overlay /lib/firmware
     mount_unionfs_dir ${root_firmware_g}
     if [ $? -ne ${SWI_OK} ] ; then
@@ -140,12 +125,9 @@ mount_unionfs_stop()
     # Unmount unionfs (don't care about the result).
 @if !mdm9x15
     umount -l ${root_firmware_g} &>/dev/null
-    umount -l ${root_data_g} &>/dev/null
 @endif
     umount -l ${root_etc_g} &>/dev/null
-@if mdm9x15
     umount -l ${root_data_g} &>/dev/null
-@endif
 
     return ${ret}
 }
