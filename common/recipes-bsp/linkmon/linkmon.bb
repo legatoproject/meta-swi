@@ -8,7 +8,7 @@ SRC_URI = "file://linkmon.c"
 S = "${WORKDIR}"
 
 do_compile() {
-    ${CC} linkmon.c -o linkmon
+    ${CC} ${CFLAGS} linkmon.c -o linkmon ${LDFLAGS}
 }
 
 do_install() {
