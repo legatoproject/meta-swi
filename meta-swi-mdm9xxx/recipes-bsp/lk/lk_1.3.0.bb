@@ -21,7 +21,7 @@ LK_TARGET ?= "mdm9615"
 # 2 - SPEW
 LK_DEBUG ?= "0"
 
-EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' ${LK_TARGET} DEBUG=${LK_DEBUG} BOOTLOADER_OUT='${B}'"
+EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' TOOLCHAIN_OPTIONS='${TOOLCHAIN_OPTIONS}' ${LK_TARGET} DEBUG=${LK_DEBUG} BOOTLOADER_OUT='${B}'"
 
 do_tag_lk() {
 	# We remove the sierra_lkversion.h to avoid this file to be counted in sha1
