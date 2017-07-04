@@ -12,6 +12,7 @@ flash_mntpt_g=${UFS_ROOT}
 root_etc_g=/etc
 root_data_g=/data
 root_firmware_g=/lib/firmware
+overlayfs_sig_g=${OVERLAYFS_SIGNATURE}
 ufs_type=${UFS_T}
 
 # Returns SWI_TRUE if unionfs should fudge rootfs.
@@ -50,12 +51,27 @@ mount_unionfs_dir()
 
     mkdir -p ${flash_mntpt_g}${root_g}
 
+    # Kernel 3.14
+    # Prior to overlayfs, we've had aufs. Even these are very similar,
+    # operations like file/dir move/delete are handled differently.
+    # In order to be backwards compatible, we need to make sure that
+    # prior changes are preserved. For now, we are not going to be
+    # very smart and try to transition from aufs to overlayfs. If
+    # RW unionfs was aufs, leave it that way.
+    if [[ "${ufs_type}" == "overlayfs" ]]; then
+        if [[ ! -f ${flash_mntpt_g}/${overlayfs_sig_g} ]]; then
+            # Flip it back, not ready to transition yet.
+            ufs_type=aufs
+        fi
+    fi
+
     if [[ "${ufs_type}" == "aufs" ]]; then
         mount_opts="dirs=${flash_mntpt_g}${root_g}=rw:${root_g}=ro"
     elif [[ "${ufs_type}" == "overlayfs" ]]; then
         # Overlayfs v21 have a bit different mount options. And it is called overlayfs
         # instead of overlay. This file system is in kernel 3.14 (e.g. mdm9x15/WP85).
        mount_opts="lowerdir=${root_g},upperdir=${flash_mntpt_g}${root_g}"
+       touch ${flash_mntpt_g}/${overlayfs_sig_g}
     elif [[ "${ufs_type}" == "overlay" ]]; then
         # Make sure working directory is empty
         rm -rf ${flash_mntpt_g}${root_g}_wk
