@@ -448,7 +448,6 @@ set_boot_dev()
     secure=$?
     if [ ${secure} -eq ${SWI_AUTH_FAIL} ]; then
         # If security authentication failure, should not continue
-        record_rootfs_image_status
         return ${SWI_ERR}
     fi
 
@@ -461,14 +460,12 @@ set_boot_dev()
                 ubiattach -m ${mtd_dev_num} -d ${UBI_ROOTFS_DEVNUM}
                 if [ $? -ne 0 ] ; then
                     echo "Unable to attach mtd${mtd_dev_num} to UBI logical device ${UBI_ROOTFS_DEVNUM}"
-                    record_rootfs_image_status
                     return ${SWI_ERR}
                 fi
                 # UBI static volume will takes more longer during ubiattach
                 wait_on_file "${ubi_img_dev}"
                 if [ $? -ne ${SWI_OK} ] ; then
                     echo "Tired of waiting on ${ubi_img_dev}, exiting."
-                    record_rootfs_image_status
                     return ${SWI_ERR}
                 fi
             fi
@@ -505,7 +502,6 @@ set_boot_dev()
     if [ ${secure} -eq ${SWI_AUTH_PASS} ]; then
         if ! [ -b ${DM_ROOTFS_MOUNT_POINT} ]; then
             echo "Something is wrong with DM-verity."
-            record_rootfs_image_status
             return ${SWI_ERR}
         fi
     fi
@@ -540,8 +536,6 @@ checkpoint_rootfs()
     fi
     if ! [ -d "${ROOTFS_MNTPT}/bin" ]; then
         echo "rootfs: mount failed"
-
-        record_rootfs_image_status
 
         if ! [ -e $BOOTDEV ]; then
             echo -n "rootfs: dev '${BOOTDEV}' does not exist"
@@ -674,7 +668,10 @@ init_main()
     for method in ${method_list} ; do
         # echo "${this_e}: Executing ${method}... "
         ${method}
-        if [ $? -ne 0 ] ; then return 1 ; fi
+        if [ $? -ne 0 ] ; then
+            record_rootfs_image_status
+            return 1
+        fi
     done
 
     return ${ret}
