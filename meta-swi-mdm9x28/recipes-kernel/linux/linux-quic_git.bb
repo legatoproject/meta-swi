@@ -55,6 +55,13 @@ do_install_append() {
     cp -fr ${B}/include/generated ${D}/usr/src/kernel/include
 }
 
+# The following was removed from the kernel class between Yocto 1.7 and 2.2.
+# We need our non-sanitized kernel headers in the sysroot it because our apps
+# need them.
+python sysroot_stage_all () {
+    oe.path.copyhardlinktree(d.expand("${D}${KERNEL_SRC_PATH}"), d.expand("${SYSROOT_DESTDIR}${KERNEL_SRC_PATH}"))
+}
+
 # Note that @{DATETIME} isn't a BitBake variable expansion;
 # see do_bootimg for the crude substitution we do with sed.
 # Originally we had the ${DATETIME} variable here.

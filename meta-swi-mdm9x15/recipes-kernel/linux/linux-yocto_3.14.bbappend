@@ -32,6 +32,13 @@ KERNEL_EXTRA_FEATURES += " features/rfkill/rfkill.scc \
                            features/mac80211/mac80211.scc \
                            features/tiwifi/tiwifi.scc"
 
+# The following was removed from the kernel class between Yocto 1.7 and 2.2.
+# We need our non-sanitized kernel headers in the sysroot it because our apps
+# need them.
+python sysroot_stage_all () {
+    oe.path.copyhardlinktree(d.expand("${D}${KERNEL_SRC_PATH}"), d.expand("${SYSROOT_DESTDIR}${KERNEL_SRC_PATH}"))
+}
+
 do_patch_prepend(){
     if [ "${KBRANCH}" != "standard/base" ]; then
         updateme_flags="--branch ${KBRANCH}"
