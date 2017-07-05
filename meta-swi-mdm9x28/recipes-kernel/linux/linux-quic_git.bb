@@ -19,6 +19,19 @@ PR = "r1"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
+do_unpack_append() {
+    # We do the following for the sake of other recipes which require
+    # ${STAGING_KERNEL_DIR} to hold the kernel source tree. Because our
+    # "localgit" based recipe bypasses much of the Yocto-supplied kernel class
+    # (such as the unpack steps), Yocto ends up with STAGING_KERNEL_DIR
+    # pointing to an empty directory. Recipes which refer to it will break.
+    # Example: our embms-kernel package. Solution: replace the empty dir with a
+    # symlink to our kernel tree.
+    mkdir -p ${STAGING_KERNEL_DIR}
+    rm -rf ${STAGING_KERNEL_DIR}
+    ln -sf ${S} ${STAGING_KERNEL_DIR}
+}
+
 do_configure_prepend() {
     cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
 
