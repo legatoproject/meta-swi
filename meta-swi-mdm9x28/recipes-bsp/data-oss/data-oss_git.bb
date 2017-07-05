@@ -8,7 +8,7 @@ ${LICENSE};md5=3775480a712fc46a69647678acb234cb"
 PR = "r1"
 DEPENDS += "virtual/kernel glib-2.0"
 
-EXTRA_OECONF = "--with-sanitized-headers=${STAGING_KERNEL_DIR}/usr/include \
+EXTRA_OECONF = "--with-sanitized-headers=${STAGING_DIR_TARGET}${KERNEL_SRC_PATH}/usr/include \
                 --with-glib"
 
 # Tag LE.BR.1.2.1-64400-9x07
