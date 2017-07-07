@@ -1,0 +1,100 @@
+Index: git/libalsa-intf/aplay.c
+===================================================================
+--- git.orig/libalsa-intf/aplay.c
++++ git/libalsa-intf/aplay.c
+@@ -284,10 +284,12 @@ static int play_file(unsigned rate, unsi
+            case SND_AUDIOCODEC_MP3:
+                compr_params.codec.id = SND_AUDIOCODEC_MP3;
+                break;
++#ifdef SND_AUDIOCODEC_AC3_PASS_THROUGH
+            case SND_AUDIOCODEC_AC3_PASS_THROUGH:
+                compr_params.codec.id = SND_AUDIOCODEC_AC3_PASS_THROUGH;
+                printf("codec -d = %x\n", SND_AUDIOCODEC_AC3_PASS_THROUGH);
+                break;
++#endif
+            case SND_AUDIOCODEC_AAC:
+                compr_params.codec.id = SND_AUDIOCODEC_AAC;
+                printf("codec -d = %x\n", SND_AUDIOCODEC_AAC);
+@@ -477,7 +479,7 @@ static int play_file(unsigned rate, unsi
+         if (ioctl(pcm->fd, SNDRV_COMPRESS_TSTAMP, &tstamp))
+       fprintf(stderr, "Aplay: failed SNDRV_COMPRESS_TSTAMP\n");
+                     else
+-                  fprintf(stderr, "timestamp = %lld\n", tstamp.timestamp);
++                  fprintf(stderr, "frames rendered = %lu\n", (unsigned long) tstamp.pcm_io_frames);
+     }
+              }
+              /*
+Index: git/libalsa-intf/alsa_pcm.c
+===================================================================
+--- git.orig/libalsa-intf/alsa_pcm.c
++++ git/libalsa-intf/alsa_pcm.c
+@@ -137,12 +137,18 @@ const char *formats_list[][2] = {
+ enum decoder_alias {
+     FORMAT_MP3              = SND_AUDIOCODEC_MP3,
+     FORMAT_AAC              = SND_AUDIOCODEC_AAC,
++#ifdef SND_AUDIOCODEC_AC3_PASS_THROUGH
+     FORMAT_AC3_PASS_THROUGH = SND_AUDIOCODEC_AC3_PASS_THROUGH,
++#endif
+     FORMAT_WMA              = SND_AUDIOCODEC_WMA,
++#ifdef SND_AUDIOCODEC_WMA_PRO
+     FORMAT_WMA_PRO          = SND_AUDIOCODEC_WMA_PRO,
++#endif
++#ifdef SND_AUDIOCODEC_DTS
+     FORMAT_DTS              = SND_AUDIOCODEC_DTS,
+     FORMAT_DTS_LBR          = SND_AUDIOCODEC_DTS_LBR,
+     FORMAT_DTS_PASS_THROUGH = SND_AUDIOCODEC_DTS_PASS_THROUGH,
++#endif
+     FORMAT_AMRWB            = SND_AUDIOCODEC_AMRWB,
+     FORMAT_AMRWB_PLUS       = SND_AUDIOCODEC_AMRWBPLUS
+ };
+@@ -153,27 +159,30 @@ int get_compressed_format(const char *fo
+         if (strcmp(ch, "MP3") == 0) {
+                 printf("MP3 is selected\n");
+                 return FORMAT_MP3;
++#ifdef SND_AUDIOCODEC_AC3_PASS_THROUGH
+         } else if (strcmp(ch, "AC3_PASS_THROUGH") == 0) {
+                 printf("AC3 PASS THROUGH is selected\n");
+                 return FORMAT_AC3_PASS_THROUGH;
++#endif
+         } else if (strcmp(ch, "AAC") == 0) {
+                 printf("AAC is selected\n");
+                 return FORMAT_AAC;
+-        } else if (strcmp(ch, "AC3_PASS_THROUGH") == 0) {
+-                printf("AC3_PASS_THROUGH is selected\n");
+-                return FORMAT_AC3_PASS_THROUGH;
+         } else if (strcmp(ch, "WMA") == 0) {
+                 printf("WMA is selected\n");
+                 return FORMAT_WMA;
++#ifdef SND_AUDIOCODEC_WMA_PRO
+         }else if (strcmp(ch, "WMA_PRO") == 0) {
+                 printf("WMA_PRO is selected\n");
+                 return FORMAT_WMA_PRO;
++#endif
++#ifdef SND_AUDIOCODEC_DTS
+         }else if (strcmp(ch, "DTS") == 0) {
+                 printf("DTS is selected\n");
+                 return FORMAT_DTS;
+         } else if (strcmp(ch, "DTS_LBR") == 0) {
+                 printf("DTS_LBR is selected\n");
+                 return FORMAT_DTS_LBR;
++#endif
+         } else if (strcmp(ch, "AMR_WB") == 0) {
+                 printf("AMR_WB is selected\n");
+                 return FORMAT_AMRWB;
+Index: git/libalsa-intf/arec.c
+===================================================================
+--- git.orig/libalsa-intf/arec.c
++++ git/libalsa-intf/arec.c
+@@ -236,10 +236,12 @@ int record_file(unsigned rate, unsigned
+            case SND_AUDIOCODEC_MP3:
+                compr_params.codec.id = SND_AUDIOCODEC_MP3;
+                break;
++#ifdef SND_AUDIOCODEC_AC3_PASS_THROUGH
+            case SND_AUDIOCODEC_AC3_PASS_THROUGH:
+                compr_params.codec.id = SND_AUDIOCODEC_AC3_PASS_THROUGH;
+                printf("codec -d = %x\n", compr_params.codec.id);
+                break;
++#endif
+            case SND_AUDIOCODEC_AMRWB:
+                compr_params.codec.id = SND_AUDIOCODEC_AMRWB;
+                compr_params.codec.options.generic.reserved[0] = 8; /*band mode - 23.85 kbps*/

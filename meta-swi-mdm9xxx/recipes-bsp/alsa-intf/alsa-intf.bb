@@ -12,11 +12,10 @@ SRCREV = "e9a91a6cbea03dcd8cbd97cf50844ea3e557790a"
 ALSAINTF_REPO = "git://codeaurora.org/platform/vendor/qcom-opensource/kernel-tests/mm-audio;branch=ics_strawberry"
 
 SRC_URI  = "${ALSAINTF_REPO}"
-prefix="/etc"
 
 S = "${WORKDIR}/git"
 
-SANITIZED_HEADERS ?= "${STAGING_KERNEL_DIR}/include"
+SANITIZED_HEADERS ?= "${STAGING_DIR_TARGET}${KERNEL_SRC_PATH}/usr/include"
 
 EXTRA_OECONF += "--prefix=/etc \
                  --with-sanitized-headers=${SANITIZED_HEADERS} \
