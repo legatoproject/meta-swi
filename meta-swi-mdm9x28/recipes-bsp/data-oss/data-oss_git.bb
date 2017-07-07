@@ -15,7 +15,7 @@ EXTRA_OECONF = "--with-sanitized-headers=${STAGING_KERNEL_DIR}/usr/include \
 SRCREV = "21e5e4454102134ee837827edbf6a390da0fd7ef"
 DATAOSS_REPO ?= "git://codeaurora.org/platform/vendor/qcom-opensource/dataservices;branch=master"
 
-SRC_URI = "${DATAOSS_REPO}"
+SRC_URI = "${DATAOSS_REPO} file://static-inline.patch"
 S = "${WORKDIR}/git"
 
 EXTRA_OEMAKE = "INCLUDES='-I${S}/rmnetctl/inc'"
