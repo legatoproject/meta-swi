@@ -35,6 +35,11 @@ do_install_append() {
 
     # Copy headers back to $(D) folder, it should be done at upper command, but not
     cp -fr ${B}/usr/include ${D}/usr/src/kernel/usr/
+
+    # Copy generated headers also
+    mkdir -p ${D}/usr/src/kernel/include/generated
+    cp -fr ${B}/include/generated ${D}/usr/src/kernel/include
+
     oe_runmake -C $kerneldir CC="${KERNEL_CC}" LD="${KERNEL_LD}" clean _mrproper_scripts
 }
 
