@@ -149,6 +149,22 @@ prepare_ubi_ps() {
     done
 }
 
+yocto_squashfs_duct_tape() {
+    # Hack: make symlink from our traditional deploy image
+    # location that we had under Yocto 1.7 to the new squashfs
+    # location established by Yocto 2.2's do_squashfs_image.
+    # Why: without this, prepare_ubi_ps cannot find
+    # ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs
+    # The real fix is probably to standardize our custom image recipes
+    # to all use IMGDEPLOYDIR.
+
+    ln -sf \
+        ${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.squashfs \
+        ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs
+}
+
+do_image_complete[postfuncs] += "yocto_squashfs_duct_tape"
+
 # Create UBI images
 prepare_ubi() {
     prepare_ubi_ps '2k'
