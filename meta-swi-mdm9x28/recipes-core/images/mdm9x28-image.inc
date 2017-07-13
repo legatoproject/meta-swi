@@ -186,7 +186,7 @@ prepare_ubi() {
     ln -s $(basename $ubi_link_path_def) $ubi_link_path
 }
 
-do_rootfs[postfuncs] += "prepare_ubi"
+do_image_complete[postfuncs] += "prepare_ubi"
 
 default_rootfs_ps() {
     # Default rootfs to ubi for 4k
@@ -196,7 +196,7 @@ default_rootfs_ps() {
     ln -sf ${IMAGE_LINK_NAME}.4k.default ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
 }
 
-do_rootfs[postfuncs] += "default_rootfs_ps"
+do_image_complete[postfuncs] += "default_rootfs_ps"
 
 # Re-enable fetch & unpack tasks, because of bug(s) in Yocto 1.6 .
 do_fetch2[dirs] = "${DL_DIR}"
