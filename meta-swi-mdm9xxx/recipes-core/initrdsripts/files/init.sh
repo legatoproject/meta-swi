@@ -29,6 +29,11 @@ DEVDIR_SIZE=262144
 # Current boot system flag in dual system
 DS_LINUX_SUB_SYSTEM_FLAG=0
 
+# Partitions_name is used to mark which partition needs to swap system.
+# The partitions_name will be written to the proc_buffer.
+# Use proc node "proc_buffer" to management these partitions name
+partitions_name="system,system2,modem,modem2,lefwkro,lefwkro2"
+
 # swidssd is used during boot sequence to aid image swap.
 # 'swidssd read' will return 100 if system is booting up using boot image set one,
 # or 200 if system is booting up using boot image set two.
@@ -379,6 +384,8 @@ record_rootfs_image_status()
     elif [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_1_FLAG ]; then
         # Set rootfs_1 bad flag to shared memory
         ${SWIDSSD} write $DS_BAD_ROOTFS_1_MASK
+    else
+        echo "It is not dual system"
     fi
 }
 
@@ -389,6 +396,13 @@ set_boot_dev()
     local mtd_part_name='(rootfs|system)'
     local boot_opt=''
     local secure=${SWI_ERR}
+
+    # Write partitions name to proc node.
+    if [ -e "/proc/proc_buffer" ] ; then
+        echo $partitions_name > /proc/proc_buffer
+    else
+        echo "The proc node does not exist"
+    fi
 
     # ROOTFS image location
     local ubi_img_dev=/dev/ubi${UBI_ROOTFS_DEVNUM}_${UBI_IMAGE_VOLNUM}
