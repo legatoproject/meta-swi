@@ -142,6 +142,7 @@ do_bootimg() {
     cd ${DEPLOY_DIR_IMAGE}
     ln -sf boot-yocto-mdm9x15.4k.img boot-yocto-mdm9x15.img
     ln -sf boot-yocto-mdm9x15.img kernel
+    echo "${KERNEL_VERSION} $(date +'%Y/%m/%d %H:%M:%S')" >> kernel.version
 }
 
 addtask bootimg after do_deploy before do_build

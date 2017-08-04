@@ -137,6 +137,8 @@ do_bootimg() {
         gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x50.4k masterDTB.4k 4096
         ln -sf ${BOOTIMG_NAME_4k}.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x50.img
     fi
+
+    echo "${PV} $(date +'%Y/%m/%d %H:%M:%S')" >> ${DEPLOY_DIR_IMAGE}/kernel.version
 }
 
 do_add_mbnhdr_and_hash() {
