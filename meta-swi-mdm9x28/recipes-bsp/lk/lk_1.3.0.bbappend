@@ -23,4 +23,5 @@ do_deploy() {
         install ${B}/../../appsboot_rw.mbn ${B}/build-${LK_TARGET}/
         install ${B}/build-${LK_TARGET}/appsboot_rw.mbn ${DEPLOY_DIR_IMAGE}
     fi
+    cp ${B}/build-${LK_TARGET}/lkversion ${DEPLOY_DIR_IMAGE}/lk.version
 }
