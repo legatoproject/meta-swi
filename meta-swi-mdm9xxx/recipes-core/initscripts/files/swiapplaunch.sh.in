@@ -5,8 +5,14 @@
 
 # Set environment vaiables to tell swiapp where to get/put its data
 export SWIAPP_USERDIR="/mnt/flash"
-export SIERRA_ABORTDIR="/mnt/flash/swiabort"
 
+mkdir -p /mnt/flash/swiabort
+if [ $? -eq 0 ]
+then
+    export SIERRA_ABORTDIR="/mnt/flash/swiabort"
+else
+    export SIERRA_ABORTDIR="/tmp/swiabort"
+fi
 
 # detect the power key path - on PMIC
 export SIERRA_PWR_KEY="/dev/input/`basename /sys/bus/platform/devices/pm8xxx-pwrkey/input/inp*/even*`"

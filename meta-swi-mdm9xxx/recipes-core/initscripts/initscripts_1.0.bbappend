@@ -63,7 +63,8 @@ do_install () {
     chmod a+x ${WORKDIR}/prepro.awk
 
     for file in ${WORKDIR}/*.in ; do
-        ${WORKDIR}/prepro.awk -v CPPFLAGS=-D${MACH#swi-}=1 $file > ${file%.in}
+        DMACH=${MACH#swi-}
+        ${WORKDIR}/prepro.awk -v CPPFLAGS=-D${DMACH//-/_}=1 $file > ${file%.in}
     done
 
     #

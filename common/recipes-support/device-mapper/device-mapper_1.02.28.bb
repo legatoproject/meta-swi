@@ -20,6 +20,9 @@ S = "${WORKDIR}/device-mapper.${PV}"
 B = "${S}"
 O = "${S}"
 
+# Fix the error of "No GNU_HASH in the elf binary: '<file>' [ldflags]"
+TARGET_CC_ARCH += "${LDFLAGS}"
+
 do_install() {
     install -d ${D}${sbindir}
     install -d ${D}${libdir}

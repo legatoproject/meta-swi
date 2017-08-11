@@ -16,35 +16,67 @@ this_e=$( basename $0 )
 UBI_MNTOPT_DEFAULT="sync,smackfsdef=_"
 UBI_MNT_OPT_QUOTA="usrquota,grpquota"
 
-@if !mdm9x15
-# Is YAFFS2 supported by the system ?
-# Auto support detection can be overriden in run.env
-if [ -z "$YAFFS2_SUPPORT" ]; then
-    if zcat /proc/config.gz | grep "YAFFS_YAFFS2=y"; then
-        YAFFS2_SUPPORT=true
-    else
-        YAFFS2_SUPPORT=false
-    fi
-fi
-
-@endif
 # YAFFS2 FS mount options. Do not change ecc for tags, you may break YAFFS2
 # file systems on various platforms.
 YAFFS2_MNTOPT="rw,tags-ecc-off,smackfsdef=_"
 
-@if !mdm9x15
 # Current boot system flag in dual system
 DS_LINUX_SUB_SYSTEM_FLAG=0
-@endif
+
+# The definition DS_SYSTEM_1_FLAG/DS_SYSTEM_2_FLAG are used to determine which partition is going to
+# be used, lefwkro or lefwkro2.
+# DS_BAD_LEGATO_1_MASK/DS_BAD_LEGATO_2_MASK are used to mark the status of the Legato partition.
+# If the partition cannot be mounted successfully, mark it as bad image by using
+# DS_BAD_LEGATO_1_MASK or DS_BAD_LEGATO_2_MASK.
+# 100 - Currently is running at system 1
+# 200 - Currently is running at system 2
+# 20000 - Marks the image in lefwkro partition bad
+# 40000 - Marks the image in lefwkro2 partition bad
+DS_SYSTEM_1_FLAG=100
+DS_SYSTEM_2_FLAG=200
+DS_BAD_LEGATO_1_MASK=20000
+DS_BAD_LEGATO_2_MASK=40000
+
+# Dual system do not cover WP project.
+WP_PROJECT=5
+
+# Get ASCII of UBI magic number.
+# Parameters:
+#   $1 - mtd partition number
+#
+get_asc_of_ubi_magic_num()
+{
+    local mtd_dev_num=${1}
+    local ret=${SWI_FALSE}
+
+    if dd if=/dev/mtd${mtd_dev_num} count=1 bs=4 2>/dev/null | grep 'UBI#' > /dev/null; then
+        ret=${SWI_TRUE}
+    fi
+    return ${ret}
+}
+
+# Initialize YAFFS2 support related variables.
+# Auto support detection can be overriden in run.env
+yaffs2_kern_supported_init()
+{
+    if [ -z "$YAFFS2_KERN_SUPPORT" ] ; then
+        if zcat /proc/config.gz | grep "YAFFS_YAFFS2=y" ; then
+            YAFFS2_KERN_SUPPORT=true
+        else
+            YAFFS2_KERN_SUPPORT=false
+        fi
+    fi
+}
+
 
 # Wait until file shows up. Note that this will wait on any file and there
 # will be no distinction between regular or device file. While covering wide
 # range of cases, we may need to restrict this to device files in the future.
-# Limit the time spent here to about 1 sec. If file does not show up for 1 sec.
+# Limit the time spent here to about 3 sec. If file does not show up for 3 sec.
 # it will probably never show up.
 wait_on_file()
 {
-    local cntmax=50
+    local cntmax=150
     local ret=${SWI_OK}
 
     while [ ! -e "$1" ] ; do
@@ -69,7 +101,7 @@ get_mtdpart_dev_num()
 {
     local mtd_part_name=${1}
     local mtd_dev_num=
-    local err=-1
+    local err=$SWI_ERR_MAX
 
     if [ -z ${mtd_part_name} ] ; then
         swi_log "MTD partition name is empty."
@@ -149,7 +181,7 @@ create_single_ubi_vol()
 
     get_mtdpart_dev_num ${mtd_part_name}
     mtd_dev_num=$?
-    if [ ${mtd_dev_num} -lt 0 ] ; then
+    if [ ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
         # Error obtaining mtd device number, get out.
         return ${SWI_ERR}
     fi
@@ -228,7 +260,7 @@ is_yaffs2_empty()
     local cdir=$( pwd )
     local var=
 
-    # If file system is empty, it will have it its root the following entries:
+    # If file system is empty, it will have in its root the following entries:
     #   .
     #   ..
     #   lost+found
@@ -338,45 +370,48 @@ quotacheck_ug()
 #   $2 - ubi logical volume number for raw image
 #   $3 - ubi logical volume number for hash bin
 #   $4 - ubi logical volume number for root hash
-#   $5 - DM verity nod name for the partition
-#   $6 - file system mount point
+#   $5 - DM verity device name for the partition
 mount_as_dm_verity() {
     local ubi_dev_num=$1
     local ubi_vol_num_image=$2
     local ubi_vol_num_hash=$3
     local ubi_vol_num_rhash=$4
-    local dm_nod_name=$5
-    local mntpt=$6
+    local dm_device_name=$5
+    local root_hash=
 
-    # Char device path
+    # UBI partitions for squashfs image, hash and root-hash
     local ubi_img_dev=/dev/ubi${ubi_dev_num}_${ubi_vol_num_image}
     local ubi_hash_dev=/dev/ubi${ubi_dev_num}_${ubi_vol_num_hash}
     local ubi_rhash_dev=/dev/ubi${ubi_dev_num}_${ubi_vol_num_rhash}
 
-    # Block device path
-    local ubi_hash_block_dev=/dev/ubiblock${ubi_dev_num}_${ubi_vol_num_hash}
     local ubi_img_block_dev=/dev/ubiblock${ubi_dev_num}_${ubi_vol_num_image}
+    local ubi_hash_block_dev=/dev/ubiblock${ubi_dev_num}_${ubi_vol_num_hash}
 
     if grep 'verity=on' /proc/cmdline > /dev/null; then
         DM_VERITY_ENCRYPT="on"
     fi
 
-    if [ "$DM_VERITY_ENCRYPT" != "on" ]; then
-        swi_log "DM verity is not enabled!"
+    if [ "x$DM_VERITY_ENCRYPT" != "xon" ]; then
+        swi_log "DM verity is not enabled."
         return ${SWI_ERR}
     fi
 
-    DM_FLAG=$(dd if=/dev/ubi${ubi_dev_num}_${UBI_HASH_VOLNUM} count=4 bs=1 2>/dev/null)
-    if [ "$DM_FLAG" != "veri" ]; then
-        swi_log "Hash volume is not found for DM verity!"
+    if ! [ -c "${ubi_rhash_dev}" ]; then
+        swi_log "Cannot find root hash volume ${ubi_rhash_dev}."
+        return ${SWI_ERR}
+    fi
+
+    DM_FLAG=$(dd if=${ubi_hash_dev} count=1 bs=4 2>/dev/null)
+    if [ "x$DM_FLAG" != "xveri" ]; then
+        swi_log "Cannot find hash volume ${ubi_hash_dev}."
         return ${SWI_ERR}
     fi
 
     # Create UBI block device for squashfs image
-    if ! [ -e "${ubi_img_block_dev}" ]; then
+    if ! [ -b "${ubi_img_block_dev}" ]; then
         ubiblkvol -a ${ubi_img_dev}
         if [ $? -ne 0 ] ; then
-            swi_log "Unable to create ${ubi_img_block_dev}"
+            swi_log "Unable to create ${ubi_img_block_dev}."
             return ${SWI_ERR}
         fi
         wait_on_file "${ubi_img_block_dev}"
@@ -386,11 +421,11 @@ mount_as_dm_verity() {
         fi
     fi
 
-    # Dm-verity hash tree table is localed at this volume, check and prepare to use it.
-    if ! [ -e "${ubi_hash_block_dev}" ]; then
+    # Dm-verity hash tree table is located on this volume, check it and prepare it for use.
+    if ! [ -b "${ubi_hash_block_dev}" ]; then
         ubiblkvol -a ${ubi_hash_dev}
         if [ $? -ne 0 ] ; then
-            swi_log "Unable to create ${ubi_hash_block_dev}"
+            swi_log "Unable to create ${ubi_hash_block_dev}."
             return ${SWI_ERR}
         fi
         wait_on_file "${ubi_hash_block_dev}"
@@ -401,14 +436,14 @@ mount_as_dm_verity() {
     fi
 
     # Get the root hash from rhash volume
-    ROOTHASH=$(dd if=${ubi_rhash_dev} count=64 bs=1 2>/dev/null)
+    root_hash=$(dd if=${ubi_rhash_dev} count=1 bs=64 2>/dev/null)
 
     # Create Dm-verity layer
-    veritysetup create ${dm_nod_name} ${ubi_img_block_dev} ${ubi_hash_block_dev} ${ROOTHASH}
+    veritysetup create ${dm_device_name} ${ubi_img_block_dev} ${ubi_hash_block_dev} ${root_hash}
     if [ $? -ne 0 ] ; then
-        swi_log "nod: ${dm_nod_name} ubiImgBlock:${ubi_img_block_dev} hashBlock:${ubi_hash_block_dev}"
-        swi_log "ROOTHASH:${ROOTHASH}"
-        swi_log "Dm-verity partition create fail!"
+        swi_log "Device: ${dm_device_name} ubiImgBlock:${ubi_img_block_dev} hashBlock:${ubi_hash_block_dev}"
+        swi_log "root_hash:${root_hash}"
+        swi_log "Dm-verity partition creation failed."
         return ${SWI_ERR}
     fi
     return ${SWI_OK}
@@ -424,7 +459,7 @@ mount_as_dm_verity() {
 #   $6 - ubifs mount options (default ones should be excluded)
 @if !mdm9x15
 # Other parameters for DM verity and security
-#   $7 - DM verity nod name for the partition
+#   $7 - DM verity device name for the partition
 #   $8 - Security check status
 @endif
 mount_ubifs()
@@ -438,36 +473,31 @@ mount_ubifs()
 
 @if !mdm9x15
     # Parameters for DM verity
-    local dm_nod_name=$7
+    local dm_device_name=$7
     local ubi_hash_dev=/dev/ubi${ubi_dev_num}_${UBI_HASH_VOLNUM}
-    local dm_mount_name=
 
     # Parameters for security check status
     local secure=$8
-
+    local dm_mount_point=
 @endif
     local mtd_dev_num=
-    local ubi_devvol_pair=${ubi_dev_num}_${ubi_vol_num}
+    local ubi_dev_vol_pair=${ubi_dev_num}_${ubi_vol_num}
     local ret=${SWI_OK}
     local ubidev_name=ubi
 
     # Get mtd device number
     get_mtdpart_dev_num ${mtd_part_name}
     mtd_dev_num=$?
-    if [ ${mtd_dev_num} -lt 0 ] ; then
+    if [ ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
         # Error obtaining mtd device number, get out.
         return ${SWI_ERR}
     fi
 
 @if !mdm9x15
-    # Scurity version already check that condition, Save boot up time.
-    if [ "${secure}" != "{SWI_AUTH_PASS}" ] ; then
-        if ! dd if=/dev/mtd${mtd_dev_num} count=1 bs=4 2>/dev/null | grep 'UBI#' > /dev/null; then
-            swi_log "UBI: mtd ${mtd_dev_num} it not UBI."
-            return ${SWI_ERR}
-        else
-            swi_log "UBI: mtd ${mtd_dev_num} is UBI."
-        fi
+    get_asc_of_ubi_magic_num ${mtd_dev_num}
+    if [ $? -ne ${SWI_TRUE} ] ; then
+        swi_log "UBI: mtd ${mtd_dev_num} does not contain UBI container."
+        return ${SWI_ERR}
     fi
 
 @endif
@@ -486,15 +516,15 @@ mount_ubifs()
     fi
 @else
     # If device exist do not detach and then attach again - save boot up time
-    if ! [ -e "/dev/ubi${ubi_dev_num}" ]; then
+    if ! [ -c "/dev/ubi${ubi_dev_num}" ]; then
         ubiattach -m ${mtd_dev_num} -d ${ubi_dev_num}
         if [ $? -ne 0 ] ; then
             swi_log "Unable to attach mtd partition ${mtd_part_name} to UBI logical device ${ubi_dev_num}"
             return ${SWI_ERR}
         fi
-        wait_on_file "/dev/ubi${ubi_dev_num}"
+        wait_on_file "/dev/ubi${ubi_dev_vol_pair}"
         if [ $? -ne ${SWI_OK} ] ; then
-            swi_log "Tired of waiting on /dev/ubi${ubi_dev_num}, exiting."
+            swi_log "Tired of waiting on /dev/ubi${ubi_dev_vol_pair}, exiting."
             return ${SWI_ERR}
         fi
     fi
@@ -523,42 +553,36 @@ mount_ubifs()
     fi
 @else
     if [ "${fstype}" == "squashfs" ] ; then
-        SQFS_FLAG=$(dd if=/dev/ubi${ubi_devvol_pair} count=1 bs=4 2>/dev/null)
+        SQFS_FLAG=$(dd if=/dev/ubi${ubi_dev_vol_pair} count=1 bs=4 2>/dev/null)
         if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
             # squashfs volume, create UBI block device
-            if ! [ -e "/dev/ubiblock${ubi_devvol_pair}" ]; then
-                ubiblkvol -a /dev/ubi${ubi_devvol_pair}
+            if ! [ -b "/dev/ubiblock${ubi_dev_vol_pair}" ]; then
+                ubiblkvol -a /dev/ubi${ubi_dev_vol_pair}
                 if [ $? -ne 0 ] ; then
                     swi_log "Unable to use ubi${ubi_dev_num} partition ${ubi_vol_num}"
                     ubidetach -m ${mtd_dev_num}
                     return ${SWI_ERR}
                 fi
-                wait_on_file "/dev/ubiblock${ubi_devvol_pair}"
+                wait_on_file "/dev/ubiblock${ubi_dev_vol_pair}"
                 if [ $? -ne ${SWI_OK} ] ; then
-                    swi_log "Tired of waiting on /dev/ubiblock${ubi_devvol_pair}, exiting."
+                    swi_log "Tired of waiting on /dev/ubiblock${ubi_dev_vol_pair}, exiting."
                     return ${SWI_ERR}
                 fi
 
             fi
 
-            if [ -e "${ubi_hash_dev}" -a -n "${dm_nod_name}" ]; then
-                # Both hash vol and nod name are exist,Try to run DM verity.
+            # Check the UBI volume which may contain the hash for DM verity.
+            if [ -c "${ubi_hash_dev}" -a -n "${dm_device_name}" ]; then
+                # Try to enable DM verity.
                 mount_as_dm_verity ${ubi_dev_num}      \
-                                   ${ubi_vol_num}      \
+                                   ${UBI_IMAGE_VOLNUM}      \
                                    ${UBI_HASH_VOLNUM}  \
                                    ${UBI_RHASH_VOLNUM} \
-                                   ${dm_nod_name}      \
-                                   ${mntpt}
-                 if [ $? -ne ${SWI_OK} ] ; then
-                     # DM verity not working clear the nod name
-                    if [ "${secure}" == "{SWI_AUTH_PASS}" ] ; then
-                       # Any error should stop for security version.
-                       return ${SWI_ERR}
-                    fi
-                else
-                    # All DM verity will mount at this folder "/dev/mapper" with
-                    # different nod name
-                    dm_mount_name="/dev/mapper/${dm_nod_name}"
+                                   ${dm_device_name}
+                if [ $? -eq ${SWI_OK} ] ; then
+                    # All DM-Verity mount points will use /dev/mapper as their root directory (e.g.
+                    # /dev/mapper/<mount-point>).
+                    dm_mount_point="/dev/mapper/${dm_device_name}"
                 fi
             fi
 
@@ -580,21 +604,27 @@ mount_ubifs()
         return ${SWI_ERR}
     fi
 @else
-    if [ -e "${dm_mount_name}" ]; then
-        mount -t ${fstype} ${dm_mount_name} ${mntpt} \
+    if [ -b "${dm_mount_point}" ]; then
+        mount -t ${fstype} ${dm_mount_point} ${mntpt} \
               -oro,${UBI_MNTOPT_DEFAULT}
         if [ $? -ne 0 ] ; then
-            # Remove DM nod to release the device
-            swi_log "Unable to mount DM: ${dm_mount_name} onto ${mntpt}."
-            veritysetup remove ${dm_nod_name}
+            swi_log "Unable to mount ${dm_mount_point} onto ${mntpt}."
+            veritysetup remove ${dm_device_name}
             return ${SWI_ERR}
         fi
     else
-        mount -t ${fstype} /dev/${ubidev_name}${ubi_devvol_pair} ${mntpt} \
+        # Secure version should work with UBI + squashfs + dm-verity,
+        # so return SWI_ERR when it is secure version and dm-verity cannot work.
+        if [ "x${secure}" == "x${SWI_AUTH_PASS}" ]; then
+            swi_log "Security authentication failure."
+            return ${SWI_ERR}
+        fi
+
+        mount -t ${fstype} /dev/${ubidev_name}${ubi_dev_vol_pair} ${mntpt} \
           -o${UBI_MNTOPT_DEFAULT},${ubifs_mnt_options}
         if [ $? -ne 0 ] ; then
             # detach will release block device as well.
-            swi_log "Unable to mount /dev/ubiblock${ubi_devvol_pair} onto ${mntpt}."
+            swi_log "Unable to mount /dev/ubiblock${ubi_dev_vol_pair} onto ${mntpt}."
             ubidetach -m ${mtd_dev_num}
             return ${SWI_ERR}
         fi
@@ -669,7 +699,7 @@ mount_yaffs_fs()
     local mntpt=$2
 
 @if !mdm9x15
-    if ! ${YAFFS2_SUPPORT}; then
+    if ! ${YAFFS2_KERN_SUPPORT}; then
         swi_log "Trying to mount as yaffs2 while there is no support, aborting."
         return ${SWI_ERR}
     fi
@@ -678,7 +708,7 @@ mount_yaffs_fs()
     # Get the device number
     get_mtdpart_dev_num ${mtd_part_name}
     mtd_dev_num=$?
-    if [ ${mtd_dev_num} -lt 0 ] ; then
+    if [ ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
         # Error obtaining mtd device number, get out.
         return ${SWI_ERR}
     fi
@@ -704,9 +734,14 @@ mount_early_user_start()
     local mtd_part_size=0
     local var=""
 
+    is_fudge_ro_rootfs_allowed
+    if [ $? -ne ${SWI_TRUE} ] ; then
+        swi_log "Not allowed to fudge rootfs."
+        return ${SWI_OK}
+    fi
+
 @if !mdm9x15
     if [ -z "$mtd_part_name" ]; then
-        swi_log "User part name does not exist"
         return ${SWI_OK}
     fi
 @endif
@@ -801,7 +836,7 @@ mount_early_user_start()
         fi
     fi
 @else
-    if ${YAFFS2_SUPPORT}; then
+    if ${YAFFS2_KERN_SUPPORT}; then
         # Mount YAFFS2 partition. If empty, we may as well have it as UBIFS.
         mount_yaffs_fs ${mtd_part_name} ${FLASH_MOUNTPOINT}
         is_yaffs2_empty ${FLASH_MOUNTPOINT}
@@ -843,16 +878,23 @@ mount_early_user_stop()
     local mntpt=${FLASH_MOUNTPOINT}
     local is_ubifs=
     local mtd_dev_num=
+    local ret=${SWI_OK}
+
+    is_fudge_ro_rootfs_allowed
+    if [ $? -ne ${SWI_TRUE} ] ; then
+        swi_log "Nothing to do (fudging of rootfs is not allowed)."
+        return ${ret}
+    fi
 
     is_ubifs=$( grep -w "${FLASH_MOUNTPOINT} ubifs" /proc/mounts )
 
     # There is nothing we can do if umount fails, so do not check
     # the result of the operation. The same goes for ubidetach.
     umount -l ${mntpt}
-    if [ ! -z "${is_ubifs}" ] ; then
+    if [ ! -z ${is_ubifs} ] ; then
         get_mtdpart_dev_num ${USER_MTDEV_NAME}
         mtd_dev_num=$?
-        if [ ! ${mtd_dev_num} -lt 0 ] ; then
+        if [ ! ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
             # detach takes care of the block device as well.
             ubidetach -m ${mtd_dev_num}
         fi
@@ -862,83 +904,174 @@ mount_early_user_stop()
 }
 
 @if !mdm9x15
-# For security version, cert chain is store at
-# UBI volume, So it should work with UBI system
-# Check scurity authenticate. Parameters:
+# This function is used to check secure mode or do security authentication
+# according to the input parameters.
+#
+# Check secure mode:
+# The utility swi_auth read the fuse from specify register, and return
+# secure or non-secure.
+#
+# Security authentication:
+# The utility will verify the signature of the image in the ubi partitions
+# ubix_2 ~ ubix_4.
+#
+# If in secure mode, the following images format is expected.
+# ubix_0 -- file system squashfs image (squashfs on top of UBI).
+# ubix_1 -- hash tree of squashfs image (binary,generated by veritysetup)
+# ubix_2 -- root hash (ascii hex,generated by veritysetup)
+# ubix_3 -- root hash after signature (binary)
+# ubix_4 -- cert chain (some of the keys, used for signature)
+#
+# Here is the usage for the utility swi_auth
+# swi_auth [fuse|nfuse] [ubi_dev_num] [platform]
+#    fuse - only check secure mode, return secure or non-secure
+#    nfuse - skip checking secure mode, only do security authentication
+#    ubi_dev_num - ubix (do security authentication need this parameter)
+#    platform - 9x40,9x28,9x15. default is 9x40
+# return:
+#    1 ~ 3 - error code
+#    4 - non-secure mode
+#    5 - secure mode
+#    6 - authentication successful
+#
+# Check security authentication. Parameters:
 #   $1 - ubi logical device number
-#   $2 - mtd partition name
+#   $2 - mtd partition number
+#   $3 - support not UBI image in this mtd partition:
+#      - ${SWI_TRUE}: Only check security when it is UBI image
+#      - ${SWI_FALSE}:Not UBI image is not allowed for security CUP
 check_security_auth()
 {
     local ubi_dev_num=$1
-    local mtd_part_name=$2
-    local mtd_dev_num=
-    local ubi_work_well=${SWI_TRUE}
+    local mtd_dev_num=$2
+    local support_not_ubi=$3
+    local ret_auth=${SWI_AUTH_FAIL}
+    local ubi_vol_total_num=0
+    local auth_cmd="/usr/bin/swi_auth"
 
-    # Get mtd device number
-    get_mtdpart_dev_num ${mtd_part_name}
-    mtd_dev_num=$?
-    if [ ${mtd_dev_num} -lt 0 ] ; then
-        # Error obtaining mtd device number, get out.
+    # UBI volume devices for root-hash, signature-root-hash and cert-chain
+    local ubi_rhash_dev=/dev/ubi${ubi_dev_num}_${UBI_RHASH_VOLNUM}
+    local ubi_srh_dev=/dev/ubi${ubi_dev_num}_${UBI_SRH_VOLNUM}
+    local ubi_cert_dev=/dev/ubi${ubi_dev_num}_${UBI_CERT_VOLNUM}
+    local ubi_dev_list=
+
+    if ! [ -x ${auth_cmd} ] ; then
+        swi_log "File ${auth_cmd} does not exist or is not executable."
         return ${SWI_ERR}
     fi
 
-    if ! dd if=/dev/mtd${mtd_dev_num} count=1 bs=4 2>/dev/null | grep 'UBI#' > /dev/null; then
-        swi_log "Secure: mtd ${mtd_dev_num} it not UBI."
-        ubi_work_well=${SWI_FALSE}
+    # Read fuse from register to get secure mode.
+    ${auth_cmd} fuse
+    ret_auth=$?
+    if [ ${ret_auth} -eq 4 ] ; then
+        # Any other errors should continue to avoid secure hole.
+        swi_log "Non-secure."
+        return ${SWI_SEC_NONE}
     fi
 
-    if [ ${ubi_work_well} -eq ${SWI_TRUE} ] ; then
-        # Make link between physical and logical UBI device. If device does not
-        # show up, we need to exit.
-        # If device exist do not detach and then attach again - save boot up time
-        if ! [ -e "/dev/ubi${ubi_dev_num}" ]; then
-            ubiattach -m ${mtd_dev_num} -d ${ubi_dev_num}
-            if [ $? -ne 0 ] ; then
-                swi_log "Unable to attach mtd partition ${mtd_part_name} to UBI logical device ${ubi_dev_num}"
-                ubi_work_well=${SWI_FALSE}
-            fi
-            wait_on_file "/dev/ubi${ubi_dev_num}"
-            if [ $? -ne ${SWI_OK} ] ; then
-                swi_log "Tired of waiting on /dev/ubi${ubi_dev_num}, exiting."
-                ubi_work_well=${SWI_FALSE}
-            fi
+    # Secure version should work with UBI, Otherwise, return authentication fail.
+    # But some of the partitions allow customers not to use, E.g legato, for these
+    # kinds of partition,if it is not UBI format we won't do security authentication
+    # for it.
+    get_asc_of_ubi_magic_num ${mtd_dev_num}
+    if [ $? -ne ${SWI_TRUE} ] ; then
+        if [ ${support_not_ubi} -eq ${SWI_TRUE} ] ; then
+            return ${SWI_ERR}
+        else
+            swi_log "Cannot find UBI container on MTD ${mtd_dev_num}."
+            return ${SWI_AUTH_FAIL}
         fi
     fi
 
-    swi_auth "ubi${ubi_dev_num}"
-    ret_auth=$?
-    case "$ret_auth" in
-        4)
-            # This is non-secure version do nothing!
-            swi_log "Non-secure !"
-            return ${SWI_NONE_SECU}
-        ;;
-        6)
-            # This is secure version must work with UBI+SQUASHFS+DMverity!
-            swi_log "Security !"
-            if [ ${ubi_work_well} -ne ${SWI_TRUE} ] ; then
-                # Security work with UBI. if not, stop! Avoid secure hole.
-                swi_log "Authenticate fail!"
-                return ${SWI_AUTH_FAIL}
-            fi
+    # Make link between physical and logical UBI device.
+    ubiattach -m ${mtd_dev_num} -d ${ubi_dev_num}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to attach mtd ${mtd_dev_num} to UBI logical device ${ubi_dev_num}."
+        return ${SWI_AUTH_FAIL}
+    fi
 
-            UBI_VOL_COUNT=$(cat /sys/class/ubi/ubi${ubi_dev_num}/volumes_count)
-            if [ ${UBI_VOL_COUNT} != "${DM_SECU_UBI_VOL_COUNT}" ] ; then
-                swi_log "DM verity with security version should has $DM_SECU_UBI_VOL_COUNT UBI volumes!"
-                ubidetach -m ${mtd_dev_num}
+    # Important:
+    # After ubiattach, for multi volumes UBI image, we need to wait for all the UBI
+    # volumes ready which are needed at the following step. There is a low probability
+    # that when the last volume is ready but some of the other volumes are not ready.
+    # E.g ubix_4 is ready, but ubix_2 or ubix_3 is not ready.
+    # Wait for all the UBI volumes that used for security authentication.
+    ubi_dev_list="
+                  ${ubi_rhash_dev}
+                  ${ubi_srh_dev}
+                  ${ubi_cert_dev}
+                  "
+    for ubi_dev in ${ubi_dev_list} ; do
+        wait_on_file "${ubi_dev}"
+        if [ $? -ne ${SWI_OK} ] ; then
+            swi_log "Tired of waiting on ${ubi_dev}."
+            return ${SWI_AUTH_FAIL}
+        fi
+    done
+
+    # Do authentication and handle the result.
+    ${auth_cmd} nfuse ubi${ubi_dev_num}
+    ret_auth=$?
+    case "${ret_auth}" in
+        6)
+            # This is secure version should work with UBI.
+            swi_log "Secure version."
+            ubi_vol_total_num=$(cat /sys/class/ubi/ubi${ubi_dev_num}/volumes_count)
+            if [ ${ubi_vol_total_num} != "${DM_SEC_UBI_VOL_COUNT}" ] ; then
+                swi_log "DM verity with secure version should has $DM_SEC_UBI_VOL_COUNT UBI volumes."
                 return ${SWI_AUTH_FAIL}
             fi
             return ${SWI_AUTH_PASS}
         ;;
         *)
-        # Any other error means fail !
-            swi_log "Authenticate fail! error: ${ret_auth}"
-            ubidetach -m ${mtd_dev_num}
+            swi_log "Authentication failure, error: ${ret_auth}"
             return  ${SWI_AUTH_FAIL}
         ;;
     esac
 }
 
+# According to the status to do some actions E.g:
+# swap to another system, reboot or do nothing.
+# Parameters:
+#   $1 - mtd partition number
+#   $2 - Security check status
+handle_legato_fail_issue()
+{
+   local mtd_dev_num=$1
+   local secure=$2
+   local req_reboot=$SWI_FALSE
+
+    #Check dual system status
+    if [ $DS_LINUX_SUB_SYSTEM_FLAG -ne $WP_PROJECT ] ; then
+        get_asc_of_ubi_magic_num $mtd_dev_num
+        if [ $? -eq $SWI_TRUE ]; then
+            swi_log "There are something wrong with legato partition."
+            #Regard it as bad legato, reboot and swap system
+            if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
+                /usr/bin/swidssd write $DS_BAD_LEGATO_2_MASK
+            else
+                /usr/bin/swidssd write $DS_BAD_LEGATO_1_MASK
+            fi
+            req_reboot=$SWI_TRUE
+        fi
+    fi
+
+    #Check secure boot status
+    if [ ${secure} -eq ${SWI_AUTH_FAIL} ] || [ ${secure} -eq ${SWI_AUTH_PASS} ]; then
+        req_reboot=$SWI_TRUE
+    fi
+
+    if [ $req_reboot = $SWI_TRUE ]; then
+        sync
+        sys_reboot
+        #Sleep in here in order to stop the following modem
+        #mount in 'find_partitions.sh' after legato failed.
+        while true
+        do
+            sleep 1
+        done
+    fi
+}
 @endif
 # Mount user0 Legato "backup" partition. This partition may be squashfs or
 # yaffs2. Since yaffs2 does not recognize any other file systems, try to
@@ -947,34 +1080,45 @@ mount_early_legato_start()
 {
     local ret=${SWI_OK}
 @if !mdm9x15
-    local secure=
+    local secure=${SWI_AUTH_FAIL}
+    local mtd_dev_num=0
 
-    if [ -e /usr/bin/swidssd ]; then
+    if [ -x /usr/bin/swidssd ]; then
         /usr/bin/swidssd read linux
         DS_LINUX_SUB_SYSTEM_FLAG=$?
     fi
 
-    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq 200 ]; then
+    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
         LEGATO_MTDEV_NAME=${LEGATO_MTDEV_NAME}2
     fi
     echo "mount Legato from partition $LEGATO_MTDEV_NAME"
 @endif
 
-    if [ ! -e ${FLASH_MOUNTPOINT_LEGATO} ]; then
+    if [ ! -d ${FLASH_MOUNTPOINT_LEGATO} ]; then
         mkdir -p ${FLASH_MOUNTPOINT_LEGATO}
         if [ $? -ne 0 ]; then
-            swi_log "Unable to create ${FLASH_MOUNTPOINT_LEGATO}"
+            swi_log "Unable to create mount point ${FLASH_MOUNTPOINT_LEGATO}"
             return ${SWI_ERR}
         fi
     fi
 
 @if !mdm9x15
-    check_security_auth ${UBI_USER0_DEVNUM}        \
-                   ${LEGATO_MTDEV_NAME}
+    # Get mtd device number
+    get_mtdpart_dev_num ${LEGATO_MTDEV_NAME}
+    mtd_dev_num=$?
+    if [ ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
+        # Error obtaining mtd device number, get out.
+        return ${SWI_ERR}
+    fi
+
+    check_security_auth ${UBI_USER0_DEVNUM}  \
+                        ${mtd_dev_num}       \
+                        ${SWI_TRUE}
     secure=$?
     if [ ${secure} -eq ${SWI_AUTH_FAIL} ]; then
-        #  If auth fail for secure version must stop going on!
-        return ${SWI_ERR}
+        # Security authentication failure, get out.
+        swi_log "Security authentication failure."
+        handle_legato_fail_issue ${mtd_dev_num} ${secure}
     fi
 
 @endif
@@ -993,17 +1137,18 @@ mount_early_legato_start()
     if [ ${ret} -eq ${SWI_OK} ]; then
         swi_log "SQUASHFS successfully mounted on ${FLASH_MOUNTPOINT_LEGATO}"
         return ${ret}
+    else
+@if mdm9x15
+        # Mounting of squashfs failed. YAFFS2 "takes no prisoners" and it will mount
+        # even if that means wiping out existing file system(s).
+        mount_yaffs_fs ${LEGATO_MTDEV_NAME} ${FLASH_MOUNTPOINT_LEGATO}
+        return $?
+    fi
+@else
+        handle_legato_fail_issue ${mtd_dev_num} ${secure}
     fi
 
-@if !mdm9x15
-
-    if [ "${secure}" == "{SWI_AUTH_PASS}" ] ; then
-        # If auth pass means this is security version!
-        # Any error at mount_ubifs is not allowed for security.
-        return ${SWI_ERR}
-    fi
-
-    if ${YAFFS2_SUPPORT}; then
+    if ${YAFFS2_KERN_SUPPORT}; then
         # Mounting of squashfs failed. YAFFS2 "takes no prisoners" and it will mount
         # even if that means wiping out existing file system(s).
         mount_yaffs_fs ${LEGATO_MTDEV_NAME} ${FLASH_MOUNTPOINT_LEGATO}
@@ -1012,11 +1157,6 @@ mount_early_legato_start()
         swi_log "Unable to find a way to mount ${LEGATO_MTDEV_NAME} to ${FLASH_MOUNTPOINT_LEGATO}"
         return ${SWI_OK} # Mounting legato partition is not compulsory for the system to boot
     fi
-@else
-    # Mounting of squashfs failed. YAFFS2 "takes no prisoners" and it will mount
-    # even if that means wiping out existing file system(s).
-    mount_yaffs_fs ${LEGATO_MTDEV_NAME} ${FLASH_MOUNTPOINT_LEGATO}
-    return $?
 @endif
 }
 
@@ -1026,7 +1166,19 @@ mount_early_legato_stop()
 {
     local ret=${SWI_OK}
     local mntpt=${FLASH_MOUNTPOINT_LEGATO}
+    local dm_device_name=${DM_LGT_NOD_NAME}
+    local le_parti_name=${LEGATO_MTDEV_NAME}
+    local mtd_dev_num=
     local is_squashfs=
+    local is_dm_verity=
+
+    if [ ! -e "$mntpt/start" ]; then
+        return ${ret}
+    fi
+
+    if [ ! -z "$dm_device_name" ]; then
+        is_dm_verity=$( mount | grep "${mntpt}" | grep "/dev/mapper/${dm_device_name}" )
+    fi
 
     is_squashfs=$( mount | grep "${mntpt}" | grep "type squashfs" | \
                    grep "ubiblock" )
@@ -1034,10 +1186,20 @@ mount_early_legato_stop()
     # There is nothing we can do if umount fails, so do not check
     # the result of the operation. The same is true for ubidetach.
     umount -l ${mntpt}
-    if [ ! -z "${is_squashfs}" ] ; then
-        get_mtdpart_dev_num ${LEGATO_MTDEV_NAME}
+
+    if [ ! -z "${is_dm_verity}" ] ; then
+        veritysetup remove ${dm_device_name}
+        get_mtdpart_dev_num ${le_parti_name}
         mtd_dev_num=$?
-        if [ ! ${mtd_dev_num} -lt 0 ] ; then
+        if [ ! ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
+            ubidetach -m ${mtd_dev_num}
+        fi
+    fi
+
+    if [ ! -z "${is_squashfs}" ] ; then
+        get_mtdpart_dev_num ${le_parti_name}
+        mtd_dev_num=$?
+        if [ ! ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
             ubidetach -m ${mtd_dev_num}
         fi
     fi
@@ -1054,15 +1216,17 @@ mount_early_userrw_start()
 {
     local mtd_part_name=${USERRW_MTDEV_NAME}
     local mntpt=${USERRW_MTDEV_MOUNTPOINT}
-@if mdm9x15
     local mtd_dev_num=
-@endif
+
+    if [ -z "$mntpt" ]; then
+        return ${SWI_OK}
+    fi
 
 @if mdm9x15
     # Get the device number
     get_mtdpart_dev_num ${mtd_part_name}
     mtd_dev_num=$?
-    if [ ${mtd_dev_num} -lt 0 ] ; then
+    if [ ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
         # Error obtaining mtd device number, get out.
         return ${SWI_ERR}
     fi
@@ -1119,6 +1283,7 @@ mount_early_userrw_start()
     # user partition is ubifs now.
     swi_log "${mtd_part_name} mounted to ${mntpt}"
 @endif
+
     return ${SWI_OK}
 }
 
@@ -1172,11 +1337,11 @@ mount_early_pseudo()
     local ret=0
 
     # mount mdev.
-    mount -t tmpfs mdev /dev -o rw,relatime,size=${DEVDIR_SIZE},mode=0755,smackfsdef='*'
+    mount -t tmpfs mdev /dev -o rw,relatime,size=${DEVDIR_SIZE},mode=0755,smackfsdef=*
 
     # Show mqueue stuff.
     mkdir -p /dev/mqueue
-    mount -t mqueue none /dev/mqueue -o smackfsdef='*'
+    mount -t mqueue none /dev/mqueue -o smackfsdef=*
 
     # Create multiplexor device
     mknod -m 666 /dev/ptmx c 5 2
@@ -1184,12 +1349,12 @@ mount_early_pseudo()
     # mount devpts for consoles and such.
     mkdir -p /dev/pts
     # mount -t devpts devpts /dev/pts
-    mount -t devpts none /dev/pts -o mode=0620,gid=5,smackfsdef='*'
+    mount -t devpts none /dev/pts -o mode=0620,gid=5,smackfsdef=*
 
     # DM, FIXME: Restrict the size of this volume.
     # Mount shared memory.
     mkdir -p /dev/shm
-    mount -t tmpfs tmpfs /dev/shm -o mode=0777,smackfsdef='*'
+    mount -t tmpfs tmpfs /dev/shm -o mode=0777,smackfsdef=*
 
     # Kick hotplugging and start mdev.
     echo "/sbin/mdev" > /proc/sys/kernel/hotplug
@@ -1223,7 +1388,9 @@ mount_early_create_dirs()
     mkdir -p /var/lock/subsys
     mkdir -p /var/log
     mkdir -p /var/lib/urandom
-
+@if mdm9x28_ar758x
+    touch /var/resolv.conf
+@endif
     return ${ret}
 }
 
@@ -1244,6 +1411,9 @@ mount_early_start()
     fi
 
     local method_list="
+@if !mdm9x15
+                       yaffs2_kern_supported_init
+@endif
                        mount_early_user_start
                        mount_early_legato_start
                        mount_early_userrw_start

@@ -26,6 +26,39 @@ DEVDIR_SIZE=262144
 # This executable
 #this_e=$( basename $0 )
 
+# Current boot system flag in dual system
+DS_LINUX_SUB_SYSTEM_FLAG=0
+
+# swidssd is used during boot sequence to aid image swap.
+# 'swidssd read' will return 100 if system is booting up using boot image set one,
+# or 200 if system is booting up using boot image set two.
+# 'swidssd write' is used to indicate bad image set using bad image set flag
+# (please see DS_BAD_ROOTFS_1_MASK and DS_BAD_ROOTFS_2_MASK).
+# 'swidssd write' will return 0 on successful write, (-1) otherwise.
+# If swidssd is missing, stub executable will always return (1) to indicate that
+# swidssd is not available on the system.
+
+# If swidssd is missing, it will be replaced with '/bin/false'
+# which will always return '1' to indicate that swidssd is not
+# available. So, return code '1' must be treated as special,
+# and cannot be used by swidssd .
+SWIDSSD=/usr/bin/swidssd
+if [ ! -x ${SWIDSSD} ] ; then
+   SWIDSSD="/bin/false"
+fi
+
+# Flag to mount system 1
+DS_SYSTEM_1_FLAG=100
+
+# Flag to mount system 2
+DS_SYSTEM_2_FLAG=200
+
+# Mask of bad rootfs 1
+DS_BAD_ROOTFS_1_MASK=8000
+
+# Mask of bad rootfs 2
+DS_BAD_ROOTFS_2_MASK=10000
+
 # Set some important global variables.
 SWI_OK=0
 SWI_ERR=1
@@ -333,6 +366,22 @@ mount_as_dm_verity() {
     return ${SWI_OK}
 }
 
+#Update rootfs image status to share memory for dual system.
+#Otherwise, it will do nothing.
+record_rootfs_image_status()
+{
+    # If there is something wrong in rootfs image, regard it as bad rootfs.
+    # Update it's status to shared memory. Swap system and reboot.
+    # Don't need to check return value in this case.
+    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
+        # Set rootfs_2 bad flag to shared memory
+        ${SWIDSSD} write $DS_BAD_ROOTFS_2_MASK
+    elif [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_1_FLAG ]; then
+        # Set rootfs_1 bad flag to shared memory
+        ${SWIDSSD} write $DS_BAD_ROOTFS_1_MASK
+    fi
+}
+
 # root file system partition must be called rootfs
 set_boot_dev()
 {
@@ -348,6 +397,14 @@ set_boot_dev()
     # ROOTFS hash location
     local ubi_hash_dev=/dev/ubi${UBI_ROOTFS_DEVNUM}_${UBI_HASH_VOLNUM}
 
+    # Get dual system flag from shared memory if swidssd exists
+    ${SWIDSSD} read linux
+    DS_LINUX_SUB_SYSTEM_FLAG=$?
+
+    # Mount rootfs_2 if system_2 flag is set
+    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
+        mtd_part_name='(rootfs2|system2)'
+    fi
     echo "mount root fs from partition $mtd_part_name"
 
     if grep 'rootfs.type=' /proc/cmdline > /dev/null; then
@@ -612,7 +669,10 @@ init_main()
     for method in ${method_list} ; do
         # echo "${this_e}: Executing ${method}... "
         ${method}
-        if [ $? -ne 0 ] ; then return 1 ; fi
+        if [ $? -ne 0 ] ; then
+            record_rootfs_image_status
+            return 1
+        fi
     done
 
     return ${ret}
