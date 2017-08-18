@@ -363,7 +363,7 @@ function build_openssl()
     [ -z $NO_CONFIG ] && ./Configure linux-generic32
     [ -z $NO_CLEAN ] && make clean
     [ -z $NO_CLEAN ] && assert_no_error
-    make
+    LDFLAGS+=" ${YOCTO_LDFLAGS}" make CC="${YOCTO_CC}"
     assert_no_error
     make install_sw
     assert_no_error
@@ -376,7 +376,7 @@ function build_iw()
     cd_repo iw
     [ -z $NO_CLEAN ] && make clean
     [ -z $NO_CLEAN ] && assert_no_error
-    CC=${CROSS_COMPILE}gcc LIBS+=" -lpthread -lm" make V=1
+    CC=${YOCTO_CC} LIBS+=" -lpthread -lm" LDFLAGS+=" ${YOCTO_LDFLAGS}" make V=1
     assert_no_error
     DESTDIR=`path filesystem` make install
     assert_no_error
@@ -386,7 +386,7 @@ function build_libnl()
 {
     cd_repo libnl
     [ -z $NO_CONFIG ] && ./autogen.sh
-    [ -z $NO_CONFIG ] && ./configure --prefix=`path filesystem` --host=${ARCH} CC=${CROSS_COMPILE}gcc AR=${CROSS_COMPILE}ar
+    [ -z $NO_CONFIG ] && ./configure --prefix=`path filesystem` --host=${ARCH} CC="${YOCTO_CC}" AR=${CROSS_COMPILE}ar
     ([ -z $NO_CONFIG ] || [ -z $NO_CLEAN ]) && make clean
     [ -z $NO_CLEAN ] && assert_no_error
     make
@@ -403,7 +403,7 @@ function build_wpa_supplicant()
     [ -n "$SYSLOG_EN" ] && echo "Enable DEBUG_SYSLOG config" && sed -i "/#CONFIG_DEBUG_SYSLOG=y/ s/# *//" .config
     CONFIG_LIBNL32=y DESTDIR=`path filesystem` make clean
     assert_no_error
-    CONFIG_LIBNL32=y DESTDIR=`path filesystem` CFLAGS+=" -I`path filesystem`/usr/local/ssl/include -I`repo_path libnl`/include" LIBS+=" -L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" LIBS_p+=" -L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" make -j${PROCESSORS_NUMBER} CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
+    CONFIG_LIBNL32=y DESTDIR=`path filesystem` CFLAGS+=" -I`path filesystem`/usr/local/ssl/include -I`repo_path libnl`/include" LDFLAGS+=" ${YOCTO_LDFLAGS}" LIBS+=" -L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" LIBS_p+=" -L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" make -j${PROCESSORS_NUMBER} CC="${YOCTO_CC}" LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
     assert_no_error
     CONFIG_LIBNL32=y DESTDIR=`path filesystem` make install
     assert_no_error
@@ -418,7 +418,7 @@ function build_hostapd()
     [ -z $NO_UPNP ] && echo "Enable UPNP config" && sed -i "/#CONFIG_WPS_UPNP=y/ s/# *//" .config
     CONFIG_LIBNL32=y DESTDIR=`path filesystem` make clean
     assert_no_error
-    CONFIG_LIBNL32=y DESTDIR=`path filesystem` CFLAGS+=" -I`path filesystem`/usr/local/ssl/include -I`repo_path libnl`/include" LIBS+=" -L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" LIBS_p+=" -L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" make -j${PROCESSORS_NUMBER} CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
+    CONFIG_LIBNL32=y DESTDIR=`path filesystem` CFLAGS+=" -I`path filesystem`/usr/local/ssl/include -I`repo_path libnl`/include" LDFLAGS+=" ${YOCTO_LDFLAGS}" LIBS+=" -L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" LIBS_p+=" -L`path filesystem`/lib -L`path filesystem`/usr/local/ssl/lib -lssl -lcrypto -lm -ldl -lpthread" make -j${PROCESSORS_NUMBER} CC="${YOCTO_CC}" LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
     assert_no_error
     CONFIG_LIBNL32=y DESTDIR=`path filesystem` make install
     assert_no_error
@@ -434,7 +434,9 @@ function build_crda()
 
     [ -z $NO_CLEAN ] && DESTDIR=`path filesystem` make clean
     [ -z $NO_CLEAN ] && assert_no_error
-        PKG_CONFIG_LIBDIR="`path filesystem`/lib/pkgconfig" PKG_CONFIG_PATH="`path filesystem`/usr/local/ssl/lib/pkgconfig" DESTDIR=`path filesystem` CFLAGS+=" -I`path filesystem`/usr/local/ssl/include -I`path filesystem`/include -L`path filesystem`/usr/local/ssl/lib -L`path filesystem`/lib" LDLIBS+=" "-lpthread V=1 USE_OPENSSL=1 make -j${PROCESSORS_NUMBER} all_noverify CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
+    PKG_CONFIG_LIBDIR="`path filesystem`/lib/pkgconfig" PKG_CONFIG_PATH="`path filesystem`/usr/local/ssl/lib/pkgconfig" DESTDIR=`path filesystem` CFLAGS+=" -I`path filesystem`/usr/local/ssl/include -I`path filesystem`/include -L`path filesystem`/usr/local/ssl/lib -L`path filesystem`/lib" LDFLAGS+=" ${YOCTO_LDFLAGS}" LDLIBS+=" "-lpthread V=1 USE_OPENSSL=1 make -j${PROCESSORS_NUMBER} all_noverify CC="${YOCTO_CC}" LD=${CROSS_COMPILE}ld AR=${CROSS_COMPILE}ar
+    rm libreg.so
+    CFLAGS+=" -I`path filesystem`/usr/local/ssl/include -I`path filesystem`/include -L`path filesystem`/usr/local/ssl/lib -L`path filesystem`/lib ${YOCTO_LDFLAGS}" make libreg.so CC="${YOCTO_CC}"
     assert_no_error
         DESTDIR=`path filesystem` make install
         assert_no_error
@@ -446,7 +448,7 @@ function build_calibrator()
     cd_repo ti_utils
     [ -z $NO_CLEAN ] && NFSROOT=`path filesystem` make clean
     [ -z $NO_CLEAN ] && assert_no_error
-    NLVER=3 NLROOT=`repo_path libnl`/include NFSROOT=`path filesystem` LIBS+=" "-lpthread make
+    NLVER=3 NLROOT=`repo_path libnl`/include NFSROOT=`path filesystem` LDFLAGS+=" ${YOCTO_LDFLAGS}" LIBS+=" "-lpthread make CC="${YOCTO_CC}"
     assert_no_error
     NFSROOT=`path filesystem` make install
     #assert_no_error
@@ -466,7 +468,7 @@ function build_wlconf()
         done
         rm -f `path filesystem`/usr/sbin/wlconf/official_inis/*
     fi
-    NFSROOT=`path filesystem` make CC=${CROSS_COMPILE}gcc LD=${CROSS_COMPILE}ld
+    NFSROOT=`path filesystem` LDFLAGS+=" ${YOCTO_LDFLAGS}" make CC="${YOCTO_CC}" LD=${CROSS_COMPILE}ld
     assert_no_error
 
     # install
@@ -514,7 +516,7 @@ function build_uim()
     cd_repo uim
     [ -z $NO_CLEAN ] && NFSROOT=`path filesystem` make clean
     [ -z $NO_CLEAN ] && assert_no_error
-    make CC=${CROSS_COMPILE}gcc
+    LDFLAGS+=" ${YOCTO_LDFLAGS}" make CC="${YOCTO_CC}"
     assert_no_error
         install -m 0755 uim `path filesystem`/usr/bin
     install -m 0755 `repo_path uim`/scripts/uim-sysfs `path filesystem`/etc/init.d/

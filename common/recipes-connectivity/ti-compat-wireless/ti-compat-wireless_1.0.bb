@@ -10,12 +10,15 @@ SRC_URI = "http://downloads.sierrawireless.com/yocto/ti-compat-wireless-8.5.tar.
            file://gentree.py \
            file://swi_build_wl18xx.sh"
 
+TI_KERNEL_DIR = "${WORKDIR}/kernel-source"
+
 SRC_URI[md5sum] = "e4f8572b46ee101eb39e5b091aba0856"
 SRC_URI[sha256sum] = "60ddaaf2a9aab9fad475bcd1a5d837eb840c2e93332b7d1d11e9843dece88cd2"
 
 S = "${WORKDIR}/ti-compat-wireless"
 
-DEPENDS += "virtual/kernel"
+do_configure[depends] += "linux-yocto:do_populate_sysroot"
+
 DEPENDS += "openssl"
 DEPENDS += "libgcrypt"
 DEPENDS += "python-m2crypto-native"
@@ -44,21 +47,27 @@ do_patch() {
 do_configure() {
     cd ${S}
     cp setup-env.sample setup-env
+
+    # We copy the entire kernel tree and add the .config into the copy;
+    # ti-compat-wireless needs a kernel tree with a .config in it.
+    mkdir -p ${TI_KERNEL_DIR}
+    cp -a ${STAGING_KERNEL_DIR}/. ${TI_KERNEL_DIR}/.
+    cp ${KBUILD_OUTPUT}/.config ${TI_KERNEL_DIR}
+
     sed -i 's,TOOLCHAIN_PATH=DEFAULT,TOOLCHAIN_PATH='`which "${OBJDUMP}" | sed 's/'"${OBJDUMP}"'//'`',' setup-env
-    sed -i 's,KERNEL_PATH=DEFAULT,KERNEL_PATH='"${STAGING_KERNEL_DIR}"',' setup-env
+    sed -i 's,KERNEL_PATH=DEFAULT,KERNEL_PATH='"${TI_KERNEL_DIR}"',' setup-env
     sed -i 's,CROSS_COMPILE=.*$,CROSS_COMPILE='"${TARGET_SYS}-"',' setup-env
     PATH=.:$PATH ./swi_build_wl18xx.sh init
     PATH=.:$PATH CFLAGS= CC= ./swi_build_wl18xx.sh update ${TIWIFI_RELEASE}
     sed -i 's,WL1271_WAKEUP_TIMEOUT 500,WL1271_WAKEUP_TIMEOUT 2500,' src/driver/drivers/net/wireless/ti/wlcore/ps.c
-    sed -i 's,-Werror=date-time,-Wnoerror=date-time,' ${STAGING_KERNEL_DIR}/Makefile
-    yes | ./verify_kernel_config.sh "${STAGING_KERNEL_DIR}"/.config || true
+    sed -i 's,-Werror=date-time,-Wnoerror=date-time,' ${TI_KERNEL_DIR}/Makefile
+    yes | ./verify_kernel_config.sh "${TI_KERNEL_DIR}"/.config || true
 }
 
 do_compile() {
     cd ${S}
     export PATH=.:$PATH
     export PYTHONPATH=${STAGING_LIBDIR_NATIVE}/python${PYTHON_BASEVERSION}/site-packages
-    export LD_LIBRARY_PATH="${STAGING_BASE_LIBDIR_NATIVE}:${STAGING_LIBDIR_NATIVE}"
 
     # CC CFLAGS LDFLAGS LIBS and PKG_CONFIG_SYSROOT_DIR varibles need to be overwritten
     # before calling build_wl18xx.sh because of some disturbances between Yocto and TI SDK
@@ -68,6 +77,9 @@ do_compile() {
     # Compile, install and deploy to ROOTFS the TI wlxxxx drivers from TI build tree instead
     # of them provided in the Linux-3.14 kernel tree
     CC=gcc ./swi_build_wl18xx.sh modules
+
+    export YOCTO_CC=$CC
+    export YOCTO_LDFLAGS=${LDFLAGS/ -Wl,--as-needed/}
 
     CC= ./swi_build_wl18xx.sh libnl
     LDFLAGS= \
@@ -126,13 +138,16 @@ do_install() {
     cp -a ${S}/fs/lib/firmware ${D}/lib/
     cp -a ${S}/fs/usr/bin ${D}/usr
     cp -a ${S}/fs/usr/sbin ${D}/usr
-    install -m 0644 ${S}/fs/usr/lib/libreg.so ${D}/lib
+    install -m 0644 ${S}/fs/usr/lib/libreg.so ${D}/lib/libreg.so.0
+    ln -s libreg.so.0 ${D}/lib/libreg.so
     install -m 0644 ${S}/fs/usr/lib/crda/regulatory.bin ${D}/usr/lib/crda/
     install -m 0644 ${S}/fs/usr/lib/crda/pubkeys/* ${D}/etc/wireless-regdb/pubkeys/
     cp -a ${S}/fs/sbin ${D}/
     cp -a ${S}/fs/usr/local/bin ${D}/
     cp -a ${S}/fs/usr/local/sbin ${D}/
     cp -a ${WORKDIR}/wl18xx-conf.bin ${D}/lib/firmware/ti-connectivity/
+    chown -R --reference=${D}/usr ${D}
+    chmod -R u+rwX,go-w ${D}
 }
 
 INSANE_SKIP_${PN} = "dev-deps"
