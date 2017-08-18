@@ -65,7 +65,7 @@ do_install() {
     install -d ${D}/usr/share/legato/src
     cd ${S}/framework/c/src
     for file in eventLoop.h log.h args.h; do
-        install $file ${D}/usr/share/legato/src/
+        [ -e $file ] && install $file ${D}/usr/share/legato/src/
     done
 
     # liblegato
