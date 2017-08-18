@@ -1,7 +1,8 @@
+require recipes-kernel/linux/linux-yocto.inc
+
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 LINUX_VERSION = "3.14.29"
-LINUX_VERSION_EXTENSION = "${PV}"
 
 PR := "${PR}.1"
 
@@ -21,16 +22,8 @@ COMPATIBLE_MACHINE_swi-mdm9x15 = "(swi-mdm9x15)"
 # uncomment and replace these SRCREVs with the real commit ids once you've had
 # the appropriate changes committed to the upstream linux-yocto repo
 SRCREV_machine = "${SRCREV}"
-SRCREV_machine_pn-linux-yocto_swi-mdm9x15 ?= "${AUTOREV}"
-SRCREV_meta_pn-linux-yocto_swi-mdm9x15 ?= "${AUTOREV}"
-
-# Tell yocto to build device tree.
-KERNEL_DEVICETREE = "${KERNEL_DEVICE_TREE_BLOB_NAME}"
-
-# WiFi specific features
-KERNEL_EXTRA_FEATURES += " features/rfkill/rfkill.scc \
-                           features/mac80211/mac80211.scc \
-                           features/tiwifi/tiwifi.scc"
+SRCREV_machine_pn-linux-yocto-rt_swi-mdm9x15 ?= "${AUTOREV}"
+SRCREV_meta_pn-linux-yocto-rt_swi-mdm9x15 ?= "${AUTOREV}"
 
 # The following was removed from the kernel class between Yocto 1.7 and 2.2.
 # We need our non-sanitized kernel headers in the sysroot it because our apps
@@ -70,7 +63,6 @@ gen_bootimg() {
     kernel_size=$(awk --non-decimal-data '/ _end/ {end="0x" $1} /_stext/ {beg="0x" $1} END {size1=end-beg+'$page_size'; size=and(size1,compl('$page_size2')); printf("%#x",size)}' $system_map_path)
     kernel_img=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}
     kernel_img=$(readlink -f $kernel_img)
-    kernel_img_dtree=${kernel_img}
     ls -al $kernel_img
 
     if ! [ -e "${DEPLOY_DIR_IMAGE}" ]; then
@@ -80,23 +72,10 @@ gen_bootimg() {
     if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
         kernel_img_initramfs=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
         kernel_img_initramfs=$(readlink -f $kernel_img_initramfs)
-        kernel_img_dtree=${kernel_img_initramfs}
         ls -al $kernel_img_initramfs
-    fi
-
-    # If blob name is empty, there is no device tree support.
-    # If there is device tree support, run the command only
-    # if blob needs to be attached to the kernel.
-    if [ "${KERNEL_DEVICE_TREE_BLOB_NAME}" != "" -a \
-         "${KERNEL_ATTACHED_DEVICE_TREE}" -eq 1 ] ; then
-
-        cat ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${KERNEL_DEVICE_TREE_BLOB_NAME} >>${kernel_img_dtree}
-    fi
-
-    if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
 
         # Initramfs
-        ${STAGING_BINDIR_NATIVE}/mkbootimg \
+        ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg \
             --kernel $kernel_img_initramfs \
             --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
             --base 0x40800000 \
@@ -112,7 +91,7 @@ gen_bootimg() {
         ln -sf ${image_name}.img ${DEPLOY_DIR_IMAGE}/${image_link}.img
     else
         # No ramdisk
-        ${STAGING_BINDIR_NATIVE}/mkbootimg \
+        ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg \
             --kernel $kernel_img \
             --cmdline "${KERNEL_BOOT_OPTIONS}" \
             --base 0x40800000 \
@@ -124,7 +103,7 @@ gen_bootimg() {
         ln -sf ${image_name}.noramdisk.img ${DEPLOY_DIR_IMAGE}/${image_link}.noramdisk.img
 
         # With ramdisk
-        ${STAGING_BINDIR_NATIVE}/mkbootimg \
+        ${STAGING_DIR_NATIVE}/usr/bin/mkbootimg \
             --kernel $kernel_img \
             --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
             --base 0x40800000 \
@@ -158,3 +137,4 @@ do_tag_config() {
 }
 
 addtask tag_config after do_configure before do_kernel_configcheck
+
