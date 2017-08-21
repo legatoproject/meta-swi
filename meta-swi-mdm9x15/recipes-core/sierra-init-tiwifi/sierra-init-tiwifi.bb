@@ -3,7 +3,7 @@ DESCRIPTION = "Sierra Wireless Initialization of TI WL18XX wireless"
 HOMEPAGE = "http://www.sierrawireless.com"
 
 LICENSE = "MPL-2.0"
-LIC_FILES_CHKSUM = "file://../tiwifi.sh;startline=2;endline=2;md5=a4e10fb5509b38e2c8b19b82d1d832f6"
+LIC_FILES_CHKSUM = "file://../tiwifi.sh;startline=2;endline=2;md5=4ab7b147102bbb17e696589e8e19383e"
 
 SRC_URI = "file://tiwifi.sh \
            file://gpioexp.c \
