@@ -31,7 +31,18 @@ PR = "r0"
 
 TIWIFI_DEFAULT_AP_NAME ?= "SierraWP85"
 
-inherit module-base
+inherit module-base update-alternatives
+
+# The pktloc and classid files clash clash against libnl-3 in Yocto,
+
+ALTERNATIVE_PRIORITY = "100"
+ALTERNATIVE_${PN} = "pktloc classid"
+
+ALTERNATIVE_LINK_NAME[pktloc] = "/etc/libnl/pktloc"
+ALTERNATIVE_TARGET[pktloc] = "/etc/libnl/pktloc.${PN}"
+
+ALTERNATIVE_LINK_NAME[classid] = "/etc/libnl/classid"
+ALTERNATIVE_TARGET[classid] = "/etc/libnl/classid.${PN}"
 
 addtask make_scripts after do_patch before do_compile
 do_make_scripts[lockfiles] = "${TMPDIR}/kernel-scripts.lock"
@@ -148,6 +159,10 @@ do_install() {
     cp -a ${WORKDIR}/wl18xx-conf.bin ${D}/lib/firmware/ti-connectivity/
     chown -R --reference=${D}/usr ${D}
     chmod -R u+rwX,go-w ${D}
+
+    # Move libnl-3 clashing files
+    mv ${D}/etc/libnl/{pktloc,pktloc.${PN}}
+    mv ${D}/etc/libnl/{classid,classid.${PN}}
 }
 
 INSANE_SKIP_${PN} = "dev-deps"
