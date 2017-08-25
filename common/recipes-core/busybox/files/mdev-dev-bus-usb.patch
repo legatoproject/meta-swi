@@ -15,9 +15,9 @@ against the maxdepth value in actiondata.
 (mdev_main): Prepare the maxdepth parameter in the scratch
 structure, which is cast to a struct actiondata for this purpose.
 Pass the actiondata pointer to the recursive_action calls.  Add a
-new recursive_action call to process /sys/devices.  For that, we use
-a max depth of 9, and disable the following of symlinks, since that
-*will* get into a loop.
+new recursive_action call to process /sys/devices/platform. For that,
+we use a max depth of 9, and disable the following of symlinks, since
+that *will* get into a loop.
 
 * include/libbb.h (RESERVE_CONFIG_BUFFER, RESERVE_CONFIG_UBUFFER):
 Add some align attributes to the stack and static versions of these
@@ -107,7 +107,7 @@ Index: busybox-1.22.1/util-linux/mdev.c
 +			fileAction, dirAction, ad, 0);
 +
 +		ad->maxdepth = MAX_SYSFS_DEVICES_DEPTH;
-+		recursive_action("/sys/devices",
++		recursive_action("/sys/devices/platform",
 +			ACTION_RECURSE, /* Note: no symlink following here */
 +			fileAction, dirAction, ad, 0);
  	} else {
