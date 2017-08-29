@@ -1,14 +1,14 @@
-From e5694763643c4e4cc417c2a15ee9216c727d86c4 Mon Sep 17 00:00:00 2001
-From: Yan Kong <ykong@sierrawireless.com>
-Date: Mon, 12 Sep 2016 13:53:08 +0800
-Subject: [PATCH] mm-audio: offer aplay, arec, amix dynamic libraries
+From 9be028eeb967435654e2b819012bedb0430839c4 Mon Sep 17 00:00:00 2001
+From: kehuang <KeHuang@sierrawireless.com>
+Date: Tue, 29 Aug 2017 19:07:31 +0800
+Subject: [PATCH] 0002-mm-audio-offer-aplay-arec-amix-dynamic-libraries
 
 ---
  libalsa-intf/Makefile.am |  23 +++
  libalsa-intf/amix.c      |   4 +
- libalsa-intf/aplay.c     | 250 +++++++++++++++++++----------
- libalsa-intf/arec.c      | 398 ++++++++++++++++++++++++++++-------------------
- 4 files changed, 433 insertions(+), 242 deletions(-)
+ libalsa-intf/aplay.c     | 287 +++++++++++++++++++++++---------
+ libalsa-intf/arec.c      | 422 +++++++++++++++++++++++++++++------------------
+ 4 files changed, 493 insertions(+), 243 deletions(-)
  mode change 100644 => 100755 libalsa-intf/Makefile.am
  mode change 100644 => 100755 libalsa-intf/amix.c
  mode change 100644 => 100755 libalsa-intf/aplay.c
@@ -69,7 +69,7 @@ index b425ed5..757aac5
 diff --git a/libalsa-intf/aplay.c b/libalsa-intf/aplay.c
 old mode 100644
 new mode 100755
-index e4bbcce..afaf5f1
+index 47b8c74..47acd5c
 --- a/libalsa-intf/aplay.c
 +++ b/libalsa-intf/aplay.c
 @@ -25,6 +25,7 @@
@@ -180,15 +180,17 @@ index e4bbcce..afaf5f1
  {
      struct pcm *pcm;
      struct mixer *mixer;
-@@ -253,23 +261,26 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -253,23 +261,30 @@ static int play_file(unsigned rate, unsigned channels, int fd,
      pcm = pcm_open(flags, device);
      if (pcm < 0)
          return pcm;
 +    aplay_attr->pcm = pcm;
  
      if (!pcm_ready(pcm)) {
++#ifndef ALSA_FUNC_CALL
          pcm_close(pcm);
 +        close(fd);
++#endif
          return -EBADFD;
      }
  
@@ -198,8 +200,10 @@ index e4bbcce..afaf5f1
         struct snd_compr_params compr_params;
         if (ioctl(pcm->fd, SNDRV_COMPRESS_GET_CAPS, &compr_cap)) {
            fprintf(stderr, "Aplay: SNDRV_COMPRESS_GET_CAPS, failed Error no %d \n", errno);
++#ifndef ALSA_FUNC_CALL
            pcm_close(pcm);
 +          close(fd);
++#endif
            return -errno;
         }
 -       if (!period)
@@ -211,11 +215,14 @@ index e4bbcce..afaf5f1
             case SND_AUDIOCODEC_MP3:
                 compr_params.codec.id = SND_AUDIOCODEC_MP3;
                 break;
-@@ -287,25 +298,27 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -286,34 +301,45 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+            }
         if (ioctl(pcm->fd, SNDRV_COMPRESS_SET_PARAMS, &compr_params)) {
            fprintf(stderr, "Aplay: SNDRV_COMPRESS_SET_PARAMS,failed Error no %d \n", errno);
++#ifndef ALSA_FUNC_CALL
            pcm_close(pcm);
 +          close(fd);
++#endif
            return -errno;
         }
 -       outputMetadataLength = sizeof(struct output_metadata_handle_t);
@@ -235,8 +242,10 @@ index e4bbcce..afaf5f1
 +    pcm->format = aplay_attr->format;
 +    if (set_params(pcm, aplay_attr)) {
          fprintf(stderr, "Aplay:params setting failed\n");
++#ifndef ALSA_FUNC_CALL
          pcm_close(pcm);
 +        close(fd);
++#endif
          return -errno;
      }
  
@@ -244,46 +253,62 @@ index e4bbcce..afaf5f1
 +    if (!aplay_attr->pcm_flag) {
         if (pcm_prepare(pcm)) {
            fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
++#ifndef ALSA_FUNC_CALL
            pcm_close(pcm);
-@@ -314,6 +327,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
-        if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_START)) {
-           fprintf(stderr, "Aplay: Hostless IOCTL_START Error no %d \n", errno);
-           pcm_close(pcm);
-+          close(fd);
++#endif
            return -errno;
         }
-        while(1) {
-@@ -329,11 +343,13 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+        if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_START)) {
+           fprintf(stderr, "Aplay: Hostless IOCTL_START Error no %d \n", errno);
++#ifndef ALSA_FUNC_CALL
+           pcm_close(pcm);
++          close(fd);
++#endif
+           return -errno;
+        }
+ /* SWISTART */
+@@ -333,12 +359,18 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+         struct snd_pcm_sync_ptr *sync_ptr1 = pcm->sync_ptr;
          if (mmap_buffer(pcm)) {
               fprintf(stderr, "Aplay:params setting failed\n");
++#ifndef ALSA_FUNC_CALL
               pcm_close(pcm);
 +             close(fd);
++#endif
               return -errno;
          }
          if (pcm_prepare(pcm)) {
            fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
++#ifndef ALSA_FUNC_CALL
            pcm_close(pcm);
 +          close(fd);
++#endif
            return -errno;
          }
  
-@@ -350,6 +366,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -354,7 +386,10 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+              if (!pcm->running) {
                    if (pcm_prepare(pcm)) {
                        fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
++#ifndef ALSA_FUNC_CALL
                        pcm_close(pcm);
 +                      close(fd);
++#endif
                        return -errno;
                    }
                    pcm->running = 1;
-@@ -373,6 +390,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -377,7 +412,10 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+              avail = pcm_avail(pcm);
               if (avail < 0) {
                   fprintf(stderr, "Aplay:Failed in pcm_avail\n");
++#ifndef ALSA_FUNC_CALL
                   pcm_close(pcm);
 +                 close(fd);
++#endif
                   return avail;
               }
               if (avail < pcm->sw_p->avail_min) {
-@@ -401,27 +419,29 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -406,27 +444,29 @@ static int play_file(unsigned rate, unsigned channels, int fd,
                */
               memset(dst_addr, 0x0, bufsize);
  
@@ -321,7 +346,7 @@ index e4bbcce..afaf5f1
                   remainingData -= bufsize;
                   if (remainingData <= 0)
                       break;
-@@ -447,7 +467,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -452,7 +492,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
                   fprintf(stderr, "Aplay:sync_ptr->s.status.hw_ptr %ld  sync_ptr->c.control.appl_ptr %ld\n",
                              pcm->sync_ptr->s.status.hw_ptr,
                              pcm->sync_ptr->c.control.appl_ptr);
@@ -330,15 +355,18 @@ index e4bbcce..afaf5f1
                      struct snd_compr_tstamp tstamp;
          if (ioctl(pcm->fd, SNDRV_COMPRESS_TSTAMP, &tstamp))
        fprintf(stderr, "Aplay: failed SNDRV_COMPRESS_TSTAMP\n");
-@@ -472,6 +492,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -476,7 +516,10 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+                          continue;
                      } else {
                          fprintf(stderr, "Aplay:Error no %d \n", errno);
++#ifndef ALSA_FUNC_CALL
                          pcm_close(pcm);
 +                        close(fd);
++#endif
                          return -errno;
                      }
                  } else
-@@ -493,7 +514,7 @@ start_done:
+@@ -498,7 +541,7 @@ start_done:
                             pcm->sync_ptr->s.status.hw_ptr,
                             pcm->sync_ptr->c.control.appl_ptr);
  
@@ -347,19 +375,25 @@ index e4bbcce..afaf5f1
                      fprintf(stderr,"Audio Drain DONE ++\n");
                      if ( ioctl(pcm->fd, SNDRV_COMPRESS_DRAIN) < 0 ) {
                          fprintf(stderr,"Audio Drain failed\n");
-@@ -508,6 +529,7 @@ start_done:
+@@ -512,7 +555,10 @@ start_done:
+     } else {
          if (pcm_prepare(pcm)) {
              fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
++#ifndef ALSA_FUNC_CALL
              pcm_close(pcm);
 +            close(fd);
++#endif
              return -errno;
          }
  
-@@ -517,10 +539,13 @@ start_done:
+@@ -521,11 +567,16 @@ start_done:
+         data = calloc(1, bufsize);
          if (!data) {
              fprintf(stderr, "Aplay:could not allocate %d bytes\n", bufsize);
++#ifndef ALSA_FUNC_CALL
              pcm_close(pcm);
 +            close(fd);
++#endif
              return -ENOMEM;
          }
 +        else
@@ -370,11 +404,14 @@ index e4bbcce..afaf5f1
              if (remainingData < bufsize)
                  bufsize = remainingData;
          }
-@@ -530,11 +555,12 @@ start_done:
+@@ -534,12 +585,15 @@ start_done:
+             if (pcm_write(pcm, data, bufsize)){
                  fprintf(stderr, "Aplay: pcm_write failed\n");
                  free(data);
++#ifndef ALSA_FUNC_CALL
                  pcm_close(pcm);
 +                close(fd);
++#endif
                  return -errno;
              }
              memset(data, 0, bufsize);
@@ -384,11 +421,17 @@ index e4bbcce..afaf5f1
                  remainingData -= bufsize;
                  if (remainingData <= 0)
                      break;
-@@ -546,49 +572,52 @@ start_done:
+@@ -548,52 +602,58 @@ start_done:
+             }
+         }
+         free(data);
++        data = NULL;
      }
      fprintf(stderr, "Aplay: Done playing\n");
++#ifndef ALSA_FUNC_CALL
      pcm_close(pcm);
-+	close(fd);
++    close(fd);
++#endif
      return 0;
  }
  
@@ -448,7 +491,7 @@ index e4bbcce..afaf5f1
          } else {
              fd = open(fn, O_RDONLY);
              if (fd < 0) {
-@@ -596,7 +625,7 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+@@ -601,7 +661,7 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
                  return fd;
              }
          }
@@ -457,7 +500,7 @@ index e4bbcce..afaf5f1
              hdr.sample_rate = rate;
              hdr.num_channels = ch;
              hdr.data_sz = 0;
-@@ -605,7 +634,8 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+@@ -610,7 +670,8 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
  
          if (read(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
              fprintf(stderr, "Aplay:aplay: cannot read header\n");
@@ -467,7 +510,7 @@ index e4bbcce..afaf5f1
          }
  
          if ((hdr.riff_id != ID_RIFF) ||
-@@ -614,20 +644,23 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+@@ -619,20 +680,23 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
               if (fn != NULL)
                   fprintf(stderr, "Aplay:aplay: '%s' is not a riff/wave file\n",
                           fn);
@@ -494,7 +537,7 @@ index e4bbcce..afaf5f1
          }
      } else {
          fd = -EBADFD;
-@@ -636,16 +669,23 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+@@ -641,16 +705,23 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
          hdr.data_sz = 0;
      }
  
@@ -520,7 +563,7 @@ index e4bbcce..afaf5f1
  }
  
  char get_channel_map_val(char *string)
-@@ -687,7 +727,11 @@ char get_channel_map_val(char *string)
+@@ -692,7 +763,11 @@ char get_channel_map_val(char *string)
      return retval;
  }
  
@@ -532,7 +575,7 @@ index e4bbcce..afaf5f1
  {
      int option_index = 0;
      int c,i;
-@@ -700,6 +744,12 @@ int main(int argc, char **argv)
+@@ -705,6 +780,12 @@ int main(int argc, char **argv)
      int rc = 0;
      char *cformat = NULL;
      char *temp_ptr;
@@ -545,7 +588,7 @@ index e4bbcce..afaf5f1
  
      if (argc <2) {
            printf("\nUsage: aplay [options] <file>\n"
-@@ -727,10 +777,15 @@ int main(int argc, char **argv)
+@@ -732,10 +813,15 @@ int main(int argc, char **argv)
             fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
             return 0;
       }
@@ -562,7 +605,7 @@ index e4bbcce..afaf5f1
            break;
         case 'V':
            debug = 1;
-@@ -749,24 +804,24 @@ int main(int argc, char **argv)
+@@ -754,24 +840,24 @@ int main(int argc, char **argv)
            break;
         case 'F':
            printf("optarg = %s\n", optarg);
@@ -597,7 +640,7 @@ index e4bbcce..afaf5f1
                    break;
                }
                ptr = strtok_r(NULL, ",", &temp_ptr); i++;
-@@ -797,10 +852,17 @@ int main(int argc, char **argv)
+@@ -802,10 +888,17 @@ int main(int argc, char **argv)
                     fprintf(stderr, "%s ", cformat);
             }
             fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
@@ -615,7 +658,7 @@ index e4bbcce..afaf5f1
      filename = (char*) calloc(1, 30);
      if (!filename) {
            fprintf(stderr, "Aplay:Failed to allocate filename!");
-@@ -813,17 +875,45 @@ int main(int argc, char **argv)
+@@ -818,17 +911,49 @@ int main(int argc, char **argv)
         strlcpy(filename, argv[optind++], 30);
      }
  
@@ -639,12 +682,15 @@ index e4bbcce..afaf5f1
 +        rc = play_wav(mmap, rate, ch, device, "dummy", aplay_attr);
      }
      if (filename)
-         free(filename);
- 
+-        free(filename);
++    {
++      free(filename);
++      filename = NULL;
++    }
 +#ifdef ALSA_FUNC_CALL
-+    pthread_cleanup_pop(0);
++    pthread_cleanup_pop(1);
 +#endif
-+
+ 
      return rc;
  }
  
@@ -653,8 +699,10 @@ index e4bbcce..afaf5f1
 +    if (aplay_attr->data != NULL)
 +        free(aplay_attr->data);
 +
-+    if (aplay_attr->pcm->fd > 0)
-+        pcm_close(aplay_attr->pcm);	
++    if(aplay_attr->pcm != NULL)
++    {
++        pcm_close(aplay_attr->pcm);
++    }
 +
 +    if (aplay_attr->fd > 0)
 +        close(aplay_attr->fd);
@@ -669,7 +717,7 @@ index e4bbcce..afaf5f1
 diff --git a/libalsa-intf/arec.c b/libalsa-intf/arec.c
 old mode 100644
 new mode 100755
-index 6316cfa..33fe67e
+index d7a641d..fe0e483
 --- a/libalsa-intf/arec.c
 +++ b/libalsa-intf/arec.c
 @@ -27,6 +27,7 @@
@@ -749,7 +797,7 @@ index 6316cfa..33fe67e
  {
      unsigned xfer, bufsize, framesize;
      int r, avail;
-@@ -207,24 +215,24 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+@@ -207,24 +215,28 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
      else
          flags |= PCM_STEREO;
  
@@ -758,7 +806,9 @@ index 6316cfa..33fe67e
 -        pcm_close(pcm);
 +    arec_attr->pcm = pcm_open(flags, device);
 +    if (!pcm_ready(arec_attr->pcm)) {
++#ifndef ALSA_FUNC_CALL
 +        pcm_close(arec_attr->pcm);
++#endif
          goto fail;
      }
  
@@ -771,7 +821,9 @@ index 6316cfa..33fe67e
 +       if (ioctl(arec_attr->pcm->fd, SNDRV_COMPRESS_GET_CAPS, &compr_cap)) {
            fprintf(stderr, "AREC: SNDRV_COMPRESS_GET_CAPS, failed Error no %d \n", errno);
 -          pcm_close(pcm);
++#ifndef ALSA_FUNC_CALL
 +          pcm_close(arec_attr->pcm);
++#endif
            return -errno;
         }
 -       if (!period)
@@ -783,7 +835,7 @@ index 6316cfa..33fe67e
             case SND_AUDIOCODEC_MP3:
                 compr_params.codec.id = SND_AUDIOCODEC_MP3;
                 break;
-@@ -241,31 +249,31 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+@@ -241,31 +253,39 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
             default:
                 break;
             }
@@ -791,7 +843,9 @@ index 6316cfa..33fe67e
 +       if (ioctl(arec_attr->pcm->fd, SNDRV_COMPRESS_SET_PARAMS, &compr_params)) {
            fprintf(stderr, "AREC: SNDRV_COMPRESS_SET_PARAMS,failed Error no %d \n", errno);
 -          pcm_close(pcm);
++#ifndef ALSA_FUNC_CALL
 +          pcm_close(arec_attr->pcm);
++#endif
            return -errno;
         }
      }
@@ -807,7 +861,9 @@ index 6316cfa..33fe67e
 +    if (set_params(arec_attr->pcm, arec_attr)) {
          fprintf(stderr, "Arec:params setting failed\n");
 -        pcm_close(pcm);
++#ifndef ALSA_FUNC_CALL
 +        pcm_close(arec_attr->pcm);
++#endif
          return -EINVAL;
      }
  
@@ -817,18 +873,22 @@ index 6316cfa..33fe67e
 +        if (pcm_prepare(arec_attr->pcm)) {
              fprintf(stderr, "Arec:Failed in pcm_prepare\n");
 -            pcm_close(pcm);
++#ifndef ALSA_FUNC_CALL
 +            pcm_close(arec_attr->pcm);
++#endif
              return -errno;
          }
 -	if (ioctl(pcm->fd, SNDRV_PCM_IOCTL_START)) {
-+    if (ioctl(arec_attr->pcm->fd, SNDRV_PCM_IOCTL_START)) {
++	if (ioctl(arec_attr->pcm->fd, SNDRV_PCM_IOCTL_START)) {
              fprintf(stderr, "Arec: Hostless IOCTL_START Error no %d \n", errno);
 -            pcm_close(pcm);
++#ifndef ALSA_FUNC_CALL
 +            pcm_close(arec_attr->pcm);
++#endif
              return -errno;
  	}
-         while(1) {
-@@ -275,80 +283,80 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+ /* SWISTART */
+@@ -280,80 +300,84 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
  
      if (flags & PCM_MMAP) {
          u_int8_t *dst_addr = NULL;
@@ -840,7 +900,9 @@ index 6316cfa..33fe67e
 +        if (mmap_buffer(arec_attr->pcm)) {
               fprintf(stderr, "Arec:params setting failed\n");
 -             pcm_close(pcm);
++#ifndef ALSA_FUNC_CALL
 +             pcm_close(arec_attr->pcm);
++#endif
               return -EINVAL;
          }
          if (debug)
@@ -850,7 +912,9 @@ index 6316cfa..33fe67e
 +        if (pcm_prepare(arec_attr->pcm)) {
              fprintf(stderr, "Arec:Failed in pcm_prepare\n");
 -            pcm_close(pcm);
++#ifndef ALSA_FUNC_CALL
 +            pcm_close(arec_attr->pcm);
++#endif
              return -errno;
          }
  
@@ -932,7 +996,7 @@ index 6316cfa..33fe67e
                          poll(pfd, nfds, TIMEOUT_INFINITE);
                          continue;
                  }
-@@ -359,8 +367,8 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+@@ -364,8 +388,8 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
                  * to be read we need to calcutate the buffer offset where we can
                  * start reading from.
                  */
@@ -943,7 +1007,7 @@ index 6316cfa..33fe67e
                      framesize =  (unsigned)(dst_addr[3] << 24) + (unsigned)(dst_addr[2] << 16) +
                          (unsigned) (dst_addr[1] << 8) + (unsigned)dst_addr[0];
                      if (debug)
-@@ -383,22 +391,22 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+@@ -388,22 +412,22 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
                      return -errno;
                  }
                  x.frames -= frames;
@@ -975,7 +1039,7 @@ index 6316cfa..33fe67e
                          lseek(fd, 0, SEEK_END);
                      }
                  }
-@@ -406,150 +414,155 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+@@ -411,150 +435,160 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
                        break;
             }
      } else {
@@ -985,7 +1049,9 @@ index 6316cfa..33fe67e
 +            if (pcm_prepare(arec_attr->pcm)) {
                  fprintf(stderr, "Arec:Failed in pcm_prepare\n");
 -                pcm_close(pcm);
++#ifndef ALSA_FUNC_CALL
 +                pcm_close(arec_attr->pcm);
++#endif
                  return -errno;
              }
  
@@ -1025,13 +1091,16 @@ index 6316cfa..33fe67e
                      break;
  	    }
 +        free(arec_attr->data);
++        arec_attr->data = NULL;
      }
      fprintf(stderr, " rec_size =%d count =%d\n", rec_size, count);
++#ifndef ALSA_FUNC_CALL
      close(fd);
 -    free(data);
 -    pcm_close(pcm);
 -    return hdr.data_sz;
 +    pcm_close(arec_attr->pcm);
++#endif
 +    return arec_attr->hdr.data_sz;
  
  fail:
@@ -1189,7 +1258,7 @@ index 6316cfa..33fe67e
  }
  
  static void signal_handler(int sig)
-@@ -558,27 +571,31 @@ static void signal_handler(int sig)
+@@ -563,27 +597,31 @@ static void signal_handler(int sig)
      FILE *fp;
  
      fprintf(stderr, "Arec:Aborted by signal %s...\n", strsignal(sig));
@@ -1233,7 +1302,7 @@ index 6316cfa..33fe67e
  {
      int rate = 48000;
      int ch = 1;
-@@ -590,6 +607,12 @@ int main(int argc, char **argv)
+@@ -595,6 +633,12 @@ int main(int argc, char **argv)
      struct sigaction sa;
      int rc = 0;
      char *cformat = NULL;
@@ -1246,7 +1315,7 @@ index 6316cfa..33fe67e
  
      if (argc < 2) {
          printf("\nUsage: arec [options] <file>\n"
-@@ -613,10 +636,16 @@ int main(int argc, char **argv)
+@@ -618,10 +662,16 @@ int main(int argc, char **argv)
             fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
            return 0;
      }
@@ -1264,7 +1333,7 @@ index 6316cfa..33fe67e
            break;
         case 'V':
            debug = 1;
-@@ -634,18 +663,18 @@ int main(int argc, char **argv)
+@@ -639,18 +689,18 @@ int main(int argc, char **argv)
            ch  = (int)strtol(optarg, NULL, 0);
            break;
         case 'T':
@@ -1288,7 +1357,7 @@ index 6316cfa..33fe67e
            break;
         default:
            printf("\nUsage: arec [options] <file>\n"
-@@ -666,37 +695,82 @@ int main(int argc, char **argv)
+@@ -671,37 +721,85 @@ int main(int argc, char **argv)
                 if (cformat != NULL)
                     fprintf(stderr, "%s ", cformat);
             }
@@ -1345,11 +1414,14 @@ index 6316cfa..33fe67e
      }
 -    if (filename)
 -        free(filename);
-+    if (arec_attr->filename)
-+        free(arec_attr->filename);
 +
++    if (arec_attr->filename)
++    {
++      free(arec_attr->filename);
++      arec_attr->filename = NULL;
++    }
 +#ifdef ALSA_FUNC_CALL
-+    pthread_cleanup_pop(0);
++    pthread_cleanup_pop(1);
 +#endif
  
      return rc;
