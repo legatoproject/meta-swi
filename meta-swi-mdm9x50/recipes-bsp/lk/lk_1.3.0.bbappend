@@ -13,7 +13,9 @@ do_install() {
 
 do_deploy() {
     install -d ${DEPLOY_DIR_IMAGE}
-    install ${B}/../../appsboot.mbn ${B}/build-${LK_TARGET}/
     install ${B}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
     cp ${B}/build-${LK_TARGET}/lkversion ${DEPLOY_DIR_IMAGE}/lk.version
 }
+
+# Dependency because do_deploy copies files created by do_install.
+addtask deploy after do_install
