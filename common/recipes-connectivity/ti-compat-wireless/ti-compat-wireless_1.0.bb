@@ -17,8 +17,6 @@ SRC_URI[sha256sum] = "60ddaaf2a9aab9fad475bcd1a5d837eb840c2e93332b7d1d11e9843dec
 
 S = "${WORKDIR}/ti-compat-wireless"
 
-do_configure[depends] += "linux-yocto:do_populate_sysroot"
-
 DEPENDS += "openssl"
 DEPENDS += "libgcrypt"
 DEPENDS += "python-m2crypto-native"
@@ -47,6 +45,7 @@ ALTERNATIVE_TARGET[classid] = "/etc/libnl/classid.${PN}"
 addtask make_scripts after do_patch before do_compile
 do_make_scripts[lockfiles] = "${TMPDIR}/kernel-scripts.lock"
 do_make_scripts[deptask] = "do_populate_sysroot"
+do_make_scripts[depends] += "virtual/kernel:do_shared_workdir"
 
 do_patch() {
     cd ${S}
