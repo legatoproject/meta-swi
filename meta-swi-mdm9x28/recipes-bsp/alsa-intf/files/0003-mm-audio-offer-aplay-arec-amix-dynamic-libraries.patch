@@ -1,4 +1,4 @@
-From 9be028eeb967435654e2b819012bedb0430839c4 Mon Sep 17 00:00:00 2001
+From 35644b98763553a945e5f5ac8ea54e1cb63d9b2a Mon Sep 17 00:00:00 2001
 From: kehuang <KeHuang@sierrawireless.com>
 Date: Tue, 29 Aug 2017 19:07:31 +0800
 Subject: [PATCH] 0002-mm-audio-offer-aplay-arec-amix-dynamic-libraries
@@ -6,9 +6,9 @@ Subject: [PATCH] 0002-mm-audio-offer-aplay-arec-amix-dynamic-libraries
 ---
  libalsa-intf/Makefile.am |  23 +++
  libalsa-intf/amix.c      |   4 +
- libalsa-intf/aplay.c     | 287 +++++++++++++++++++++++---------
+ libalsa-intf/aplay.c     | 333 +++++++++++++++++++++++++------------
  libalsa-intf/arec.c      | 422 +++++++++++++++++++++++++++++------------------
- 4 files changed, 493 insertions(+), 243 deletions(-)
+ 4 files changed, 515 insertions(+), 267 deletions(-)
  mode change 100644 => 100755 libalsa-intf/Makefile.am
  mode change 100644 => 100755 libalsa-intf/amix.c
  mode change 100644 => 100755 libalsa-intf/aplay.c
@@ -69,7 +69,7 @@ index b425ed5..757aac5
 diff --git a/libalsa-intf/aplay.c b/libalsa-intf/aplay.c
 old mode 100644
 new mode 100755
-index 47b8c74..47acd5c
+index 47b8c74..c96d421
 --- a/libalsa-intf/aplay.c
 +++ b/libalsa-intf/aplay.c
 @@ -25,6 +25,7 @@
@@ -171,7 +171,7 @@ index 47b8c74..47acd5c
      if (ret < 0)
          fprintf(stderr, "could not set channel mask\n");
      mixer_close(mixer);
-@@ -215,7 +223,7 @@ void send_channel_map_driver(struct pcm *pcm)
+@@ -215,13 +223,12 @@ void send_channel_map_driver(struct pcm *pcm)
  }
  
  static int play_file(unsigned rate, unsigned channels, int fd,
@@ -180,7 +180,13 @@ index 47b8c74..47acd5c
  {
      struct pcm *pcm;
      struct mixer *mixer;
-@@ -253,23 +261,30 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+     struct pcm_ctl *ctl = NULL;
+     unsigned bufsize;
+-    char *data;
+     long avail;
+     long frames;
+     int nfds = 1;
+@@ -253,23 +260,30 @@ static int play_file(unsigned rate, unsigned channels, int fd,
      pcm = pcm_open(flags, device);
      if (pcm < 0)
          return pcm;
@@ -215,7 +221,7 @@ index 47b8c74..47acd5c
             case SND_AUDIOCODEC_MP3:
                 compr_params.codec.id = SND_AUDIOCODEC_MP3;
                 break;
-@@ -286,34 +301,45 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -286,34 +300,45 @@ static int play_file(unsigned rate, unsigned channels, int fd,
             }
         if (ioctl(pcm->fd, SNDRV_COMPRESS_SET_PARAMS, &compr_params)) {
            fprintf(stderr, "Aplay: SNDRV_COMPRESS_SET_PARAMS,failed Error no %d \n", errno);
@@ -267,7 +273,7 @@ index 47b8c74..47acd5c
            return -errno;
         }
  /* SWISTART */
-@@ -333,12 +359,18 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -333,12 +358,18 @@ static int play_file(unsigned rate, unsigned channels, int fd,
          struct snd_pcm_sync_ptr *sync_ptr1 = pcm->sync_ptr;
          if (mmap_buffer(pcm)) {
               fprintf(stderr, "Aplay:params setting failed\n");
@@ -286,7 +292,7 @@ index 47b8c74..47acd5c
            return -errno;
          }
  
-@@ -354,7 +386,10 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -354,7 +385,10 @@ static int play_file(unsigned rate, unsigned channels, int fd,
               if (!pcm->running) {
                    if (pcm_prepare(pcm)) {
                        fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
@@ -297,7 +303,7 @@ index 47b8c74..47acd5c
                        return -errno;
                    }
                    pcm->running = 1;
-@@ -377,7 +412,10 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -377,7 +411,10 @@ static int play_file(unsigned rate, unsigned channels, int fd,
               avail = pcm_avail(pcm);
               if (avail < 0) {
                   fprintf(stderr, "Aplay:Failed in pcm_avail\n");
@@ -308,7 +314,7 @@ index 47b8c74..47acd5c
                   return avail;
               }
               if (avail < pcm->sw_p->avail_min) {
-@@ -406,27 +444,29 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -406,27 +443,29 @@ static int play_file(unsigned rate, unsigned channels, int fd,
                */
               memset(dst_addr, 0x0, bufsize);
  
@@ -346,7 +352,7 @@ index 47b8c74..47acd5c
                   remainingData -= bufsize;
                   if (remainingData <= 0)
                       break;
-@@ -452,7 +492,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -452,7 +491,7 @@ static int play_file(unsigned rate, unsigned channels, int fd,
                   fprintf(stderr, "Aplay:sync_ptr->s.status.hw_ptr %ld  sync_ptr->c.control.appl_ptr %ld\n",
                              pcm->sync_ptr->s.status.hw_ptr,
                              pcm->sync_ptr->c.control.appl_ptr);
@@ -355,7 +361,7 @@ index 47b8c74..47acd5c
                      struct snd_compr_tstamp tstamp;
          if (ioctl(pcm->fd, SNDRV_COMPRESS_TSTAMP, &tstamp))
        fprintf(stderr, "Aplay: failed SNDRV_COMPRESS_TSTAMP\n");
-@@ -476,7 +516,10 @@ static int play_file(unsigned rate, unsigned channels, int fd,
+@@ -476,7 +515,10 @@ static int play_file(unsigned rate, unsigned channels, int fd,
                           continue;
                      } else {
                          fprintf(stderr, "Aplay:Error no %d \n", errno);
@@ -366,7 +372,7 @@ index 47b8c74..47acd5c
                          return -errno;
                      }
                  } else
-@@ -498,7 +541,7 @@ start_done:
+@@ -498,7 +540,7 @@ start_done:
                             pcm->sync_ptr->s.status.hw_ptr,
                             pcm->sync_ptr->c.control.appl_ptr);
  
@@ -375,7 +381,7 @@ index 47b8c74..47acd5c
                      fprintf(stderr,"Audio Drain DONE ++\n");
                      if ( ioctl(pcm->fd, SNDRV_COMPRESS_DRAIN) < 0 ) {
                          fprintf(stderr,"Audio Drain failed\n");
-@@ -512,7 +555,10 @@ start_done:
+@@ -512,34 +554,44 @@ start_done:
      } else {
          if (pcm_prepare(pcm)) {
              fprintf(stderr, "Aplay:Failed in pcm_prepare\n");
@@ -386,9 +392,12 @@ index 47b8c74..47acd5c
              return -errno;
          }
  
-@@ -521,11 +567,16 @@ start_done:
-         data = calloc(1, bufsize);
-         if (!data) {
+         bufsize = pcm->period_size;
+ 
+-        data = calloc(1, bufsize);
+-        if (!data) {
++        aplay_attr->data = calloc(1, bufsize);
++        if (!aplay_attr->data) {
              fprintf(stderr, "Aplay:could not allocate %d bytes\n", bufsize);
 +#ifndef ALSA_FUNC_CALL
              pcm_close(pcm);
@@ -396,36 +405,43 @@ index 47b8c74..47acd5c
 +#endif
              return -ENOMEM;
          }
-+        else
-+            aplay_attr->data = data;
- 
+-
 -        if (data_sz && !piped) {
++        
 +        if (data_sz && !aplay_attr->piped) {
              if (remainingData < bufsize)
                  bufsize = remainingData;
          }
-@@ -534,12 +585,15 @@ start_done:
-             if (pcm_write(pcm, data, bufsize)){
+ 
+-        while (read(fd, data, bufsize) > 0) {
+-            if (pcm_write(pcm, data, bufsize)){
++        while (read(fd, aplay_attr->data, bufsize) > 0) {
++            if (pcm_write(pcm, aplay_attr->data, bufsize)){
                  fprintf(stderr, "Aplay: pcm_write failed\n");
-                 free(data);
+-                free(data);
++                free(aplay_attr->data);
++                aplay_attr->data = NULL;
 +#ifndef ALSA_FUNC_CALL
                  pcm_close(pcm);
 +                close(fd);
 +#endif
                  return -errno;
              }
-             memset(data, 0, bufsize);
+-            memset(data, 0, bufsize);
++            memset(aplay_attr->data, 0, bufsize);
  
 -            if (data_sz && !piped) {
 +            if (data_sz && !aplay_attr->piped) {
                  remainingData -= bufsize;
                  if (remainingData <= 0)
                      break;
-@@ -548,52 +602,58 @@ start_done:
+@@ -547,27 +599,30 @@ start_done:
+                        bufsize = remainingData;
              }
          }
-         free(data);
-+        data = NULL;
+-        free(data);
++        free(aplay_attr->data);
++        aplay_attr->data = NULL;
      }
      fprintf(stderr, "Aplay: Done playing\n");
 +#ifndef ALSA_FUNC_CALL
@@ -438,7 +454,7 @@ index 47b8c74..47acd5c
 -int play_raw(const char *fg, int rate, int ch, const char *device, const char *fn)
 +int play_raw(const char *fg, int rate, int ch, const char *device, const char *fn, aplay_attr_t *aplay_attr)
  {
-     int fd;
+-    int fd;
      unsigned flag = 0;
      char *cformat = NULL;
  
@@ -457,10 +473,8 @@ index 47b8c74..47acd5c
 +            return aplay_attr->fd;
          }
      }
-+    aplay_attr->fd = fd;
  
-     if (!strncmp(fg, "M", sizeof("M")))
-         flag = PCM_MMAP;
+@@ -576,41 +631,42 @@ int play_raw(const char *fg, int rate, int ch, const char *device, const char *f
      else if (!strncmp(fg, "N", sizeof("N")))
          flag = PCM_NMMAP;
  
@@ -470,14 +484,14 @@ index 47b8c74..47acd5c
          fprintf(stderr, "aplay: Playing '%s': format %s ch = %d\n",
                  fn, cformat, ch );
 -    return play_file(rate, ch, fd, flag, device, 0);
-+    return play_file(rate, ch, fd, flag, device, 0, aplay_attr);
++    return play_file(rate, ch, aplay_attr->fd, flag, device, 0, aplay_attr);
  }
  
 -int play_wav(const char *fg, int rate, int ch, const char *device, const char *fn)
 +int play_wav(const char *fg, int rate, int ch, const char *device, const char *fn, aplay_attr_t *aplay_attr)
  {
      struct wav_header hdr;
-     int fd;
+-    int fd;
      unsigned flag = 0;
      char *cformat = NULL;
 +    int ret = -1;
@@ -485,14 +499,18 @@ index 47b8c74..47acd5c
 -    if (pcm_flag) {
 +    if (aplay_attr->pcm_flag) {
          if(!fn) {
-             fd = fileno(stdin);
+-            fd = fileno(stdin);
 -            piped = 1;
++            aplay_attr->fd = fileno(stdin);
 +            aplay_attr->piped = 1;
          } else {
-             fd = open(fn, O_RDONLY);
-             if (fd < 0) {
-@@ -601,7 +661,7 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
-                 return fd;
+-            fd = open(fn, O_RDONLY);
+-            if (fd < 0) {
++            aplay_attr->fd = open(fn, O_RDONLY);
++            if (aplay_attr->fd < 0) {
+                 fprintf(stderr, "Aplay:aplay: cannot open '%s'\n", fn);
+-                return fd;
++                return aplay_attr->fd;
              }
          }
 -        if (compressed) {
@@ -500,9 +518,11 @@ index 47b8c74..47acd5c
              hdr.sample_rate = rate;
              hdr.num_channels = ch;
              hdr.data_sz = 0;
-@@ -610,7 +670,8 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+             goto ignore_header;
+         }
  
-         if (read(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
+-        if (read(fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
++        if (read(aplay_attr->fd, &hdr, sizeof(hdr)) != sizeof(hdr)) {
              fprintf(stderr, "Aplay:aplay: cannot read header\n");
 -            return -errno;
 +            ret = -errno;
@@ -510,7 +530,7 @@ index 47b8c74..47acd5c
          }
  
          if ((hdr.riff_id != ID_RIFF) ||
-@@ -619,20 +680,23 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+@@ -619,23 +675,26 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
               if (fn != NULL)
                   fprintf(stderr, "Aplay:aplay: '%s' is not a riff/wave file\n",
                           fn);
@@ -536,15 +556,12 @@ index 47b8c74..47acd5c
 +            goto exit_close_fd;
          }
      } else {
-         fd = -EBADFD;
-@@ -641,16 +705,23 @@ int play_wav(const char *fg, int rate, int ch, const char *device, const char *f
+-        fd = -EBADFD;
++        aplay_attr->fd = -EBADFD;
+         hdr.sample_rate = rate;
+         hdr.num_channels = ch;
          hdr.data_sz = 0;
-     }
- 
-+    aplay_attr->fd = fd;
-+
- ignore_header:
-     if (!strncmp(fg, "M", sizeof("M")))
+@@ -646,11 +705,19 @@ ignore_header:
          flag = PCM_MMAP;
      else if (!strncmp(fg, "N", sizeof("N")))
          flag = PCM_NMMAP;
@@ -554,16 +571,19 @@ index 47b8c74..47acd5c
          fprintf(stderr, "aplay: Playing '%s':%s\n", fn, cformat);
  
 -    return play_file(hdr.sample_rate, hdr.num_channels, fd, flag, device, hdr.data_sz);
-+    return play_file(hdr.sample_rate, hdr.num_channels, fd, flag, device, hdr.data_sz, aplay_attr);
++    return play_file(hdr.sample_rate, hdr.num_channels, aplay_attr->fd, flag, device, hdr.data_sz, aplay_attr);
 +
 +exit_close_fd:
-+    if (fd > 0)
-+        close(fd);
++    if (aplay_attr->fd > 0)
++    {
++      close(aplay_attr->fd);
++      aplay_attr->fd = -1;
++    }
 +	return ret;
  }
  
  char get_channel_map_val(char *string)
-@@ -692,7 +763,11 @@ char get_channel_map_val(char *string)
+@@ -692,7 +759,11 @@ char get_channel_map_val(char *string)
      return retval;
  }
  
@@ -575,7 +595,12 @@ index 47b8c74..47acd5c
  {
      int option_index = 0;
      int c,i;
-@@ -705,6 +780,12 @@ int main(int argc, char **argv)
+@@ -700,11 +771,16 @@ int main(int argc, char **argv)
+     int rate = 44100;
+     char *mmap = "N";
+     char *device = "hw:0,0";
+-    char *filename;
+     char *ptr;
      int rc = 0;
      char *cformat = NULL;
      char *temp_ptr;
@@ -588,7 +613,7 @@ index 47b8c74..47acd5c
  
      if (argc <2) {
            printf("\nUsage: aplay [options] <file>\n"
-@@ -732,10 +813,15 @@ int main(int argc, char **argv)
+@@ -732,10 +808,15 @@ int main(int argc, char **argv)
             fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
             return 0;
       }
@@ -605,7 +630,7 @@ index 47b8c74..47acd5c
            break;
         case 'V':
            debug = 1;
-@@ -754,24 +840,24 @@ int main(int argc, char **argv)
+@@ -754,24 +835,24 @@ int main(int argc, char **argv)
            break;
         case 'F':
            printf("optarg = %s\n", optarg);
@@ -640,7 +665,7 @@ index 47b8c74..47acd5c
                    break;
                }
                ptr = strtok_r(NULL, ",", &temp_ptr); i++;
-@@ -802,10 +888,17 @@ int main(int argc, char **argv)
+@@ -802,33 +883,75 @@ int main(int argc, char **argv)
                     fprintf(stderr, "%s ", cformat);
             }
             fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
@@ -651,42 +676,51 @@ index 47b8c74..47acd5c
         }
  
      }
+-    filename = (char*) calloc(1, 30);
+-    if (!filename) {
 +#ifdef ALSA_FUNC_CALL
 +    if (arg_mutex_x != NULL) pthread_mutex_unlock(arg_mutex_x);
 +#endif
 +
-     filename = (char*) calloc(1, 30);
-     if (!filename) {
++    aplay_attr->filename = (char*) calloc(1, 30);
++    if (!aplay_attr->filename) {
            fprintf(stderr, "Aplay:Failed to allocate filename!");
-@@ -818,17 +911,49 @@ int main(int argc, char **argv)
-        strlcpy(filename, argv[optind++], 30);
+           return -ENOMEM;
+     }
+     if (optind > argc - 1) {
+-       free(filename);
+-       filename = NULL;
++       free(aplay_attr->filename);
++       aplay_attr->filename = NULL;
+     } else {
+-       strlcpy(filename, argv[optind++], 30);
++       strlcpy(aplay_attr->filename, argv[optind++], 30);
      }
  
 -    if (pcm_flag) {
 -   if (format == SNDRV_PCM_FORMAT_S16_LE && filename != NULL)
 -             rc = play_wav(mmap, rate, ch, device, filename);
-+    aplay_attr->filename = filename;
-+
 +#ifdef ALSA_FUNC_CALL
 +    pthread_cleanup_push(aplay_cleanup, aplay_attr);
 +#endif
 +
 +    if (aplay_attr->pcm_flag) {
-+   if (aplay_attr->format == SNDRV_PCM_FORMAT_S16_LE && filename != NULL)
-+             rc = play_wav(mmap, rate, ch, device, filename, aplay_attr);
++   if (aplay_attr->format == SNDRV_PCM_FORMAT_S16_LE && aplay_attr->filename != NULL)
++             rc = play_wav(mmap, rate, ch, device, aplay_attr->filename, aplay_attr);
           else
 -             rc = play_raw(mmap, rate, ch, device, filename);
-+             rc = play_raw(mmap, rate, ch, device, filename, aplay_attr);
++             rc = play_raw(mmap, rate, ch, device, aplay_attr->filename, aplay_attr);
      } else {
 -        rc = play_wav(mmap, rate, ch, device, "dummy");
 +        rc = play_wav(mmap, rate, ch, device, "dummy", aplay_attr);
-     }
-     if (filename)
--        free(filename);
-+    {
-+      free(filename);
-+      filename = NULL;
 +    }
++    if (aplay_attr->filename)
++    {
++      free(aplay_attr->filename);
++      aplay_attr->filename = NULL;
+     }
+-    if (filename)
+-        free(filename);
 +#ifdef ALSA_FUNC_CALL
 +    pthread_cleanup_pop(1);
 +#endif
@@ -705,10 +739,15 @@ index 47b8c74..47acd5c
 +    }
 +
 +    if (aplay_attr->fd > 0)
-+        close(aplay_attr->fd);
++    {
++      close(aplay_attr->fd);
++      aplay_attr->fd = -1;
++    }
 +
 +    if (aplay_attr->filename != NULL)
-+        free(aplay_attr->filename);
++    {
++      free(aplay_attr->filename);
++    }
 +
 +    return;
 +}
