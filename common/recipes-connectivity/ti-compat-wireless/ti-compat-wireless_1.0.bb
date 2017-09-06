@@ -77,7 +77,7 @@ do_configure() {
 do_compile() {
     cd ${S}
     export PATH=.:$PATH
-    export PYTHONPATH=${STAGING_LIBDIR_NATIVE}/python${PYTHON_BASEVERSION}/site-packages
+    export PYTHONPATH=${STAGING_LIBDIR_NATIVE}/python2.7/site-packages
 
     # CC CFLAGS LDFLAGS LIBS and PKG_CONFIG_SYSROOT_DIR varibles need to be overwritten
     # before calling build_wl18xx.sh because of some disturbances between Yocto and TI SDK
