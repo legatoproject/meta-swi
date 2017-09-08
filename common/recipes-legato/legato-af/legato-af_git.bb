@@ -56,14 +56,22 @@ do_install() {
 
     # headers
     install -d ${D}${includedir}
-    for file in $(find ${S}/framework/c/inc -type f); do
+    local liblegato_inc="${S}/framework/include"
+    if [ ! -e "${liblegato_inc}" ]; then
+        liblegato_inc="${S}/framework/c/inc"
+    fi
+    for file in $(find "${liblegato_inc}" -type f); do
         echo "Installing header: $file"
         install $file ${D}${includedir}
     done
 
     # private headers required by _main.c
     install -d ${D}/usr/share/legato/src
-    cd ${S}/framework/c/src
+    local liblegato_src="${S}/framework/liblegato"
+    if [ ! -e "${liblegato_src}" ]; then
+        liblegato_src="${S}/framework/c/src"
+    fi
+    cd "${liblegato_src}"
     for file in eventLoop.h log.h args.h; do
         [ -e $file ] && install $file ${D}/usr/share/legato/src/
     done
