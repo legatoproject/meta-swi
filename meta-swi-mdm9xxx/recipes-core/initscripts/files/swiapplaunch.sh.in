@@ -13,6 +13,7 @@ then
 else
     export SIERRA_ABORTDIR="/tmp/swiabort"
 fi
+STARTUP_TIMER="/sys/module/sierra_monitor/parameters/startup_timer"
 
 # detect the power key path - on PMIC
 export SIERRA_PWR_KEY="/dev/input/`basename /sys/bus/platform/devices/pm8xxx-pwrkey/input/inp*/even*`"
@@ -41,6 +42,10 @@ case "$1" in
 @if !mdm9x15
         killall -q -HUP restart_at_uart
 @endif
+        if [ -e ${STARTUP_TIMER} ]; then
+            # disable startup monitor when shutdown
+            echo 0 > ${STARTUP_TIMER}
+        fi
         ;;
     *)
         exit 1
