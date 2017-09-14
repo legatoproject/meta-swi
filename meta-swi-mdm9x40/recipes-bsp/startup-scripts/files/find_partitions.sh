@@ -148,6 +148,5 @@ fi
 echo "mount modem from partition $MODEM_PARTITION"
 
 eval FindAndMount${fstype} ${MODEM_PARTITION} /firmware
-mount -o bind /firmware/image /lib/firmware/
 
 exit 0
