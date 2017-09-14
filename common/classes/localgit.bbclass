@@ -19,7 +19,7 @@ O = "${WORKDIR}/${PN}-obj"
 # other stages for things like the autotools stuff works like it's supposed
 # to without too many extra special interventions...
 
-python do_fetch() {
+python do_fetch_prepend() {
     import shutil
 
     target = d.getVar("SRC_DIR", expand=True)
@@ -37,14 +37,6 @@ python do_fetch() {
       os.remove(link)
 
     os.symlink(target, link)
-}
-
-# Suppress do_unpack and do_patch logic.
-# Local symlinked checkouts don't require unpacking and patching.
-do_unpack () {
-}
-
-do_patch () {
 }
 
 # base.bbclass contains logic which checks for the

@@ -10,7 +10,6 @@ KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
 B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
 
-SRC_URI = "file://${LINUX_REPO_DIR}/../"
 SRC_DIR = "${LINUX_REPO_DIR}/.."
 
 LINUX_VERSION ?= "3.18.20"
@@ -19,20 +18,20 @@ PR = "r1"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
-do_unpack_append() {
-    # We do the following for the sake of other recipes which require
-    # ${STAGING_KERNEL_DIR} to hold the kernel source tree. Because our
-    # "localgit" based recipe bypasses much of the Yocto-supplied kernel class
-    # (such as the unpack steps), Yocto ends up with STAGING_KERNEL_DIR
-    # pointing to an empty directory. Recipes which refer to it will break.
-    # Example: our embms-kernel package. Solution: replace the empty dir with a
-    # symlink to our kernel tree.
-    mkdir -p ${STAGING_KERNEL_DIR}
-    rm -rf ${STAGING_KERNEL_DIR}
-    ln -sf ${S} ${STAGING_KERNEL_DIR}
-}
-
 do_configure_prepend() {
+    # When SRC_URI contains something, the Yocto kernel.bbclass creates
+    # ${STAGING_KERNEL_DIR} as a symlink to the local git repo; due to similar
+    # reasons that also motivate our localgit class. This is in the do_unpack
+    # step. When SRC_URI is empty, ${STAGING_KERNEL_DIR} ends up an empty
+    # directory rather than a symlink. We check for this and create the
+    # symlink anyway.
+    if [ ! -L ${STAGING_KERNEL_DIR} ] ; then
+      rm -rf ${STAGING_KERNEL_DIR}
+      mkdir -p ${STAGING_KERNEL_DIR}
+      rmdir ${STAGING_KERNEL_DIR}
+      ln -sf ${SRC_DIR} ${STAGING_KERNEL_DIR}
+    fi
+
     cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
 
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper

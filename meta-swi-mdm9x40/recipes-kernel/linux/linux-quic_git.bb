@@ -10,7 +10,6 @@ KERNEL_DEFCONFIG ?= "mdm9640_defconfig"
 B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
 
-SRC_URI = "file://${LINUX_REPO_DIR}/../"
 SRC_DIR = "${LINUX_REPO_DIR}/.."
 
 LINUX_VERSION ?= "3.18.31"
@@ -20,6 +19,19 @@ PR = "r1"
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
 do_configure_prepend() {
+    # When SRC_URI contains something, the Yocto kernel.bbclass creates
+    # ${STAGING_KERNEL_DIR} as a symlink to the local git repo; due to similar
+    # reasons that also motivate our localgit class. This is in the do_unpack
+    # step. When SRC_URI is empty, ${STAGING_KERNEL_DIR} ends up an empty
+    # directory rather than a symlink. We check for this and create the
+    # symlink anyway.
+    if [ ! -L ${STAGING_KERNEL_DIR} ] ; then
+      rm -rf ${STAGING_KERNEL_DIR}
+      mkdir -p ${STAGING_KERNEL_DIR}
+      rmdir ${STAGING_KERNEL_DIR}
+      ln -sf ${SRC_DIR} ${STAGING_KERNEL_DIR}
+    fi
+
     cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
 
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper
