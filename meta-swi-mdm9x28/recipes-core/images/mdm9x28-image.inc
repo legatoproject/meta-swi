@@ -31,9 +31,6 @@ def check_legato_pkg(d):
 
 DEPENDS += "${@check_legato_pkg(d)}"
 
-# Stubs
-IMAGE_INSTALL += "bsinfo-stub"
-
 # Add some extra packages for tool integration
 IMAGE_INSTALL += "lttng-ust"
 #IMAGE_INSTALL += "lttng-modules"
