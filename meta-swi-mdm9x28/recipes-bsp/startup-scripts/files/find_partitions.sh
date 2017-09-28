@@ -32,6 +32,18 @@
 # import run environment
 source /etc/run.env
 
+# Flag to mount system 1
+DS_SYSTEM_1_FLAG=100
+
+# Flag to mount system 2
+DS_SYSTEM_2_FLAG=200
+
+# Mask of bad modem 1
+DS_BAD_MODEM_1_MASK=200
+
+# Mask of bad modem 2
+DS_BAD_MODEM_2_MASK=400
+
 # Wait until device shows up. After testing, it spent about 6 msec to
 # find the devices of /dev/ubi1_0 and /dev/ubiblock1_0. So, limit the
 # maximum time spent here to about 60 msec.
@@ -69,6 +81,10 @@ FindAndMountUBI () {
         if ! [ -e "/dev/ubi1_0" ]; then
             # UBI partition, attach device
             ubiattach -m ${mtd_block_number} -d 1 /dev/ubi_ctrl
+            if [ $? -ne 0 ] ; then
+                swi_log "Unable to attach mtd partition ${partition} to UBI logical device ${mtd_block_number}"
+                return ${SWI_ERR}
+            fi
             # Need to wait for the /dev/ubi1_0 device ready
             wait_on_dev "-c" "/dev/ubi1_0"
             if [ $? -ne ${SWI_OK} ]; then
@@ -103,6 +119,10 @@ FindAndMountUBI () {
     fi
 
     mount -t ${BOOTTYPE} ${BOOTDEV} $dir -o ${BOOTOPTS}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to mount ${BOOTTYPE} onto ${BOOTDEV}."
+        return ${SWI_ERR}
+    fi
 }
 
 FindAndMountVolumeUBI () {
@@ -120,6 +140,25 @@ FindAndMountEXT4 () {
    mkdir -p $dir
    mount -t ext4 $mmc_block_device $dir -o relatime,data=ordered,noauto_da_alloc,discard
    echo "EMMC : Mounting of $mmc_block_device on $dir done"
+}
+
+# Update modem image status to share memory for dual system.
+# Otherwise, it will do nothing.
+SwapDualSystem()
+{
+    # If there is something wrong in modem image, regard it as bad rootfs.
+    # Update it's status to shared memory. Swap system and reboot.
+    # Don't need to check return value in this case.
+    # Reboot by "echo 'b' > /proc/sysrq-trigger".
+    if [ $DS_MODEM_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
+        /usr/bin/swidssd write $DS_BAD_MODEM_2_MASK
+    elif [ $DS_MODEM_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_1_FLAG ]; then
+        /usr/bin/swidssd write $DS_BAD_MODEM_1_MASK
+    else
+        swi_log "It is not dual system"
+    fi
+    echo '1' > /proc/sys/kernel/sysrq
+    echo 'b' > /proc/sysrq-trigger
 }
 
 emmc_dir=/dev/block/bootdevice/by-name
@@ -148,5 +187,9 @@ fi
 echo "mount modem from partition $MODEM_PARTITION"
 
 eval FindAndMount${fstype} ${MODEM_PARTITION} /firmware
+if [ $? -ne ${SWI_OK} ]; then
+    swi_log "Failed to mount file system."
+    SwapDualSystem
+fi
 
 exit 0
