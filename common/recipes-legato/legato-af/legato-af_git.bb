@@ -84,7 +84,7 @@ do_install() {
         if [ -e "${B}/build/$first_target/bin/lib/liblegato.so" ]; then
             install ${B}/build/$first_target/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
         else
-            install ${B}/build/$first_target/staging/system/lib/liblegato.so ${D}${libdir}/liblegato.so
+            install ${B}/build/$first_target/framework/lib/liblegato.so ${D}${libdir}/liblegato.so
         fi
     fi
 
@@ -95,7 +95,7 @@ do_install() {
             install ${B}/build/$target/bin/lib/liblegato.so \
                     ${D}/usr/share/legato/build/$target/framework/lib/liblegato.so
         else
-            install ${B}/build/$target/staging/system/lib/liblegato.so \
+            install ${B}/build/$target/framework/lib/liblegato.so \
                     ${D}/usr/share/legato/build/$target/framework/lib/liblegato.so
         fi
     done
@@ -121,8 +121,13 @@ do_install_image() {
         mkdir -p ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}
         if [ -d ${B}/build/${target}/readOnlyStaging/legato ]; then
             cp -R ${B}/build/${target}/readOnlyStaging/legato/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
-        else
+        elif [ -d ${B}/build/${target}/staging ]; then
             cp -R ${B}/build/${target}/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
+        elif [ -d ${B}/build/${target}/_staging_system.${target}.update ]; then
+            cp -R ${B}/build/${target}/_staging_system.${target}.update/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
+        else
+            echo "Unable to find staging directory"
+            exit 1
         fi
     done
 }
