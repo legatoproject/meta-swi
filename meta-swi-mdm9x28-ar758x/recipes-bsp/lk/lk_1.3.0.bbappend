@@ -1,5 +1,15 @@
 INSANE_SKIP_${PN} += "already-stripped"
 
+do_tag_lk() {
+    if [ -n "${FW_VERSION}" ]; then
+        echo "#define LKVERSION  \"${FW_VERSION}\"" >${S}/app/aboot/sierra_lkversion.h
+    else
+        echo "#define LKVERSION  \"unknown\"" >${S}/app/aboot/sierra_lkversion.h
+    fi
+}
+
+addtask tag_lk before do_compile after do_configure
+
 add_hash_segment() {
     IMAGE_NAME=$1
     if [ -f "${B}/../../$IMAGE_NAME.mbn" ] ; then
