@@ -24,11 +24,11 @@ LK_DEBUG ?= "0"
 EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' ${LK_TARGET} DEBUG=${LK_DEBUG} BOOTLOADER_OUT='${B}'"
 
 do_tag_lk() {
-	# We remove the sierra_lkversion.h to avoid this file to be counted in sha1
-	( cd ${S}; \
-		echo "#define LKVERSION  \"${PV}_"`for file in $(find -type f -not -regex '.*\(pc\|git\|build-\|patches\).*'); do \
-		sha256sum $file; done | \
-		sort | grep -v sierra_lkversion.h | awk '{print $1}' | sha256sum | cut -c 1-10 -`"\"" ) >${S}/app/aboot/sierra_lkversion.h
+    if [ -n "${FW_VERSION}" ]; then
+        echo "#define LKVERSION  \"${FW_VERSION}\"" >${S}/app/aboot/sierra_lkversion.h
+    else
+        echo "#define LKVERSION  \"unknown\"" >${S}/app/aboot/sierra_lkversion.h
+    fi
 }
 
 addtask tag_lk before do_compile after do_configure
@@ -36,17 +36,17 @@ addtask tag_lk before do_compile after do_configure
 do_compile[dirs] = "${S}"
 
 do_install() {
-	install -d ${D}/boot
-	install ${B}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
-	install ${B}/build-${LK_TARGET}/appsboot.raw ${D}/boot
+    install -d ${D}/boot
+    install ${B}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
+    install ${B}/build-${LK_TARGET}/appsboot.raw ${D}/boot
 }
 
 FILES_${PN} = "/boot"
 
 do_deploy() {
-	install -d ${DEPLOY_DIR_IMAGE}
-	install ${B}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
-	install ${B}/build-${LK_TARGET}/appsboot.raw ${DEPLOY_DIR_IMAGE}
+    install -d ${DEPLOY_DIR_IMAGE}
+    install ${B}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
+    install ${B}/build-${LK_TARGET}/appsboot.raw ${DEPLOY_DIR_IMAGE}
 }
 
 do_deploy[dirs] = "${S}"
