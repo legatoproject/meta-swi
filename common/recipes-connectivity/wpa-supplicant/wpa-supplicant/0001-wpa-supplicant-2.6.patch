@@ -1,0 +1,80 @@
+diff -ru a/src/ap/ap_drv_ops.c b/src/ap/ap_drv_ops.c
+--- a/src/ap/ap_drv_ops.c	2014-06-04 06:26:14.000000000 -0700
++++ b/src/ap/ap_drv_ops.c	2017-08-25 14:00:26.840631158 -0700
+@@ -569,6 +569,9 @@
+ {
+ 	struct hostapd_freq_params data;
+ 
++	if (hapd->iface->current_mode == NULL)
++                return 0;
++
+ 	if (hostapd_set_freq_params(&data, mode, freq, channel, ht_enabled,
+ 				    vht_enabled, sec_channel_offset,
+ 				    vht_oper_chwidth,
+diff -ru a/src/ap/dfs.c b/src/ap/dfs.c
+--- a/src/ap/dfs.c	2014-06-04 06:26:14.000000000 -0700
++++ b/src/ap/dfs.c	2017-08-25 14:08:49.964623145 -0700
+@@ -607,6 +607,9 @@
+ 	int res, n_chans, start_chan_idx;
+ 	int skip_radar = 0;
+ 
++	if (!iface->current_mode)
++                return 1;
++
+ 	iface->cac_started = 0;
+ 
+ 	do {
+diff -ru a/src/drivers/driver_wext.c b/src/drivers/driver_wext.c
+--- a/src/drivers/driver_wext.c	2014-06-04 06:26:14.000000000 -0700
++++ b/src/drivers/driver_wext.c	2017-08-25 14:17:52.208614509 -0700
+@@ -1562,6 +1562,9 @@
+ 			drv->capa.enc |= WPA_DRIVER_CAPA_ENC_CCMP;
+ 		if (range->enc_capa & IW_ENC_CAPA_4WAY_HANDSHAKE)
+ 			drv->capa.flags |= WPA_DRIVER_FLAGS_4WAY_HANDSHAKE;
++
++                drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
++
+ 		drv->capa.auth = WPA_DRIVER_AUTH_OPEN |
+ 			WPA_DRIVER_AUTH_SHARED |
+ 			WPA_DRIVER_AUTH_LEAP;
+@@ -2165,7 +2168,21 @@
+ 	struct wpa_driver_wext_data *drv = priv;
+ 	struct iwreq iwr;
+ 	int ret = -1;
+-	unsigned int new_mode = mode ? IW_MODE_ADHOC : IW_MODE_INFRA;
++	unsigned int new_mode;
++
++	switch (mode) {
++        case 2://WPAS_MODE_AP:
++                new_mode = IW_MODE_MASTER;
++                break;
++
++        case 0://WPAS_MODE_INFRA:
++                new_mode = IW_MODE_INFRA;
++                break;
++
++        default:
++                new_mode = IW_MODE_ADHOC;
++                break;
++        }
+ 
+ 	os_memset(&iwr, 0, sizeof(iwr));
+ 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+diff -ru a/wpa_supplicant/ap.c b/wpa_supplicant/ap.c
+--- a/wpa_supplicant/ap.c	2014-06-04 06:26:14.000000000 -0700
++++ b/wpa_supplicant/ap.c	2017-08-25 14:13:45.552618437 -0700
+@@ -555,6 +555,14 @@
+ 	else
+ 		params.uapsd = -1;
+ 
++	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE) &&
++            (params.key_mgmt_suite == WPA_KEY_MGMT_PSK ||
++             params.key_mgmt_suite == WPA_KEY_MGMT_FT_PSK)) {
++                params.passphrase = ssid->passphrase;
++                if (ssid->psk_set)
++                        params.psk = ssid->psk;
++        }
++
+ 	if (wpa_drv_associate(wpa_s, &params) < 0) {
+ 		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
+ 		return -1;
