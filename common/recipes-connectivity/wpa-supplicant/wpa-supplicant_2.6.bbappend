@@ -1,8 +1,8 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS_prepend := "${THISDIR}/wpa-supplicant:"
 
 SRC_URI += " \
             file://defconfig \
-            file://0001-wpa-supplicant-2.5.patch \
+            file://0001-wpa-supplicant-2.6.patch \
          "
 
 do_install_append() {
