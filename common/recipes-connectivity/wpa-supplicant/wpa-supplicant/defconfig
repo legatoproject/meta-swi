@@ -92,7 +92,7 @@ CONFIG_DRIVER_NL80211=y
 # you may need to point hostapd to your version of libnl.
 #
 #CFLAGS += -I$<path to libnl include files>
-#LIBS += -L$<path to libnl lib files>
+#LIBS += -L$<path to libnl library files>
 
 # Use libnl v2.0 (or 3.0) libraries.
 #CONFIG_LIBNL20=y
@@ -206,9 +206,9 @@ CONFIG_EAP_LEAP=y
 # Wi-Fi Protected Setup (WPS)
 CONFIG_WPS=y
 # Enable WSC 2.0 support
-#CONFIG_WPS2=y
+CONFIG_WPS2=y
 # Enable WPS external registrar functionality
-#CONFIG_WPS_ER=y
+CONFIG_WPS_ER=y
 # Disable credentials for an open network by default when acting as a WPS
 # registrar.
 #CONFIG_WPS_REG_DISABLE_OPEN=y
@@ -341,7 +341,7 @@ CONFIG_PEERKEY=y
 # gnutls = GnuTLS
 # internal = Internal TLSv1 implementation (experimental)
 # none = Empty template
-#CONFIG_TLS=openssl
+CONFIG_TLS=openssl
 
 # TLS-based EAP methods require at least TLS v1.0. Newer version of TLS (v1.1)
 # can be enabled to get a stronger construction of messages when block ciphers
@@ -418,7 +418,7 @@ CONFIG_PEERKEY=y
 #CONFIG_DEBUG_FILE=y
 
 # Send debug messages to syslog instead of stdout
-#CONFIG_DEBUG_SYSLOG=y
+CONFIG_DEBUG_SYSLOG=y
 # Set syslog facility for debug messages
 #CONFIG_DEBUG_SYSLOG_FACILITY=LOG_DAEMON
 
@@ -453,7 +453,7 @@ CONFIG_PEERKEY=y
 #LIBS_p += -lbfd -liberty -lz
 #LIBS_c += -lbfd -liberty -lz
 
-CONFIG_TLS = gnutls
+#CONFIG_TLS = %ssl%
 #CONFIG_CTRL_IFACE_DBUS=y
 #CONFIG_CTRL_IFACE_DBUS_NEW=y
 
@@ -489,7 +489,7 @@ CONFIG_TLS = gnutls
 #CONFIG_NO_RANDOM_POOL=y
 
 # IEEE 802.11n (High Throughput) support (mainly for AP mode)
-#CONFIG_IEEE80211N=y
+CONFIG_IEEE80211N=y
 
 # IEEE 802.11ac (Very High Throughput) support (mainly for AP mode)
 # (depends on CONFIG_IEEE80211N)

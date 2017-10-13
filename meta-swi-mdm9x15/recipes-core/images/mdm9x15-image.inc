@@ -40,6 +40,11 @@ IMAGE_INSTALL += "lttng-modules"
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL += "linkmon"
 
+# Add WiFi tools and scripts
+IMAGE_INSTALL += "hostapd"
+IMAGE_INSTALL += "wpa-supplicant"
+IMAGE_INSTALL += "sierra-init-tiwifi"
+
 # Create UBI images for ROOT and USER1 partitions. If it becomes longer, this
 # function should be optimized (creation of sub-methods, etc.)
 prepare_ubi_ps() {
