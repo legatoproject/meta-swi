@@ -1,5 +1,5 @@
 
-# Tag LNX.LE.5.3-79192-9x40
+# Tag LNX.LE.5.3-76324-9x40
 SRCREV = "9cc863d799891aba8ac6af6ab761a2a1e6efea10"
 ALSAINTF_REPO = "git://codeaurora.org/platform/vendor/qcom-opensource/kernel-tests/mm-audio;branch=LNX.LE.5.3_1"
 
