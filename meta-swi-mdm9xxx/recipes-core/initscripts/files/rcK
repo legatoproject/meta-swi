@@ -13,6 +13,12 @@ source /etc/run.env
 # The name of this script
 this_e=$( basename $0 )
 
+# The script of control msm_watchdog
+CONTROL_WDT=/etc/init.d/control_msm_watchdog.sh
+if [ ! -x ${CONTROL_WDT} ] ; then
+   CONTROL_WDT="/bin/false"
+fi
+
 #
 # Helper functions
 #
@@ -25,12 +31,20 @@ run_K_scripts()
     local root_path=""
     local file=""
 
+    # When systme shutdown, set MSM_WATCHDOG barktime to 25s
+    # and stop to kick MSM_WATCHDOG, When a rcK script is finished,
+    # kick MSM_WATCHDOG one time.
+    ${CONTROL_WDT} setbarktime 25
+    ${CONTROL_WDT} stopautokick
+
     # Execute all 'K' scripts. It is assumed that 'K' scripts
     # are soft links to the executable scripts elsewhere.
     for k in ${root_path}/etc/rcS.d/K* ; do
         file=$( realpath ${k} )
         if [ -x ${file} ] ; then
             ${k} stop
+            # Feed MSM_WATCHDOG one time.
+            ${CONTROL_WDT} kick
         fi
     done
 

@@ -12,6 +12,12 @@ source /etc/run.env
 # The name of this script
 this_e=$( basename $0 )
 
+# The script of control msm_watchdog
+CONTROL_WDT=/etc/init.d/control_msm_watchdog.sh
+if [ ! -x ${CONTROL_WDT} ] ; then
+   CONTROL_WDT="/bin/false"
+fi
+
 #
 # Helper functions
 #
@@ -62,11 +68,19 @@ run_S_scripts()
         file=$( realpath ${s} )
         if [ -x ${file} ] ; then
             ${s} start
+            # Kick MSM_WATCHDOG one time.
+            ${CONTROL_WDT} kick
         else
             echo "${this_e}: Not starting ${s}, it is not executable."
         fi
     done
 
+    # By default, kernel doesn't kick MSM_WATCHDOG durning bootup automatically.
+    # During system startup, we need to kick WDT when every rcS script is done to
+    # protect module out of stuck. When system has started ok, we need to set barktime
+    # back to 11s and start to kick MSM_WATCHDOG in kernel.
+    ${CONTROL_WDT} setbarktime 11
+    ${CONTROL_WDT} startautokick
     return ${ret}
 }
 
