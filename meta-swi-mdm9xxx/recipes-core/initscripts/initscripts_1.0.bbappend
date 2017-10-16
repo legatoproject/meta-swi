@@ -27,11 +27,16 @@ SRC_URI = "file://functions \
            file://run_getty.sh.in \
            file://mount_unionfs.in \
            file://mount_early.in \
-           file://loginNagger\
+           file://loginNagger \
            "
 
 SRC_URI_append_swi-mdm9x28 = "\
            file://restart_at_uart \
+           "
+
+SRC_URI_append_swi-mdm9x28-ar758x = "\
+           file://restart_at_uart \
+           file://control_msm_watchdog.sh \
            "
 
 SRC_URI_append_swi-mdm9x50 = "\
@@ -113,6 +118,10 @@ do_install () {
 
     case "${MACH}" in
     swi-mdm9x28 | swi-mdm9x50 )
+        install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
+        ;;
+    swi-mdm9x28-ar758x)
+        install -m 0755 ${WORKDIR}/control_msm_watchdog.sh -D ${D}${sysconfdir}/init.d/control_msm_watchdog.sh
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
         ;;
     esac
