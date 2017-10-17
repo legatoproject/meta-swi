@@ -1,0 +1,28 @@
+From 942326181ab105c660eea2f638f21aa6b8663278 Mon Sep 17 00:00:00 2001
+From: Betty Zhuo <bzhuo@sierrawireless.com>
+Date: Mon, 16 Oct 2017 16:30:17 +0800
+Subject: [PATCH] Disable ADB TCP by default.
+
+Revert "Allow adb to listen over TCP in addition to USB by default."
+
+This reverts commit 8110d90d7d652dc23a1659fed7c89e196f6125b5.
+---
+ adb/adb.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/adb/adb.c b/adb/adb.c
+index 0d48e46..bb1761c 100755
+--- a/adb/adb.c
++++ b/adb/adb.c
+@@ -1350,7 +1350,7 @@ int adb_main(int is_daemon, int server_port)
+         printf("using port=%d\n", port);
+         // listen on TCP port specified by service.adb.tcp.port property
+         local_init(port);
+-    } else {
++    } else if (!usb) {
+         // listen on default port
+         local_init(DEFAULT_ADB_LOCAL_TRANSPORT_PORT);
+     }
+-- 
+1.9.1
+
