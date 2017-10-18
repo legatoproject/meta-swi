@@ -371,13 +371,14 @@ mount_as_dm_verity() {
     return ${SWI_OK}
 }
 
-#Update rootfs image status to share memory for dual system.
-#Otherwise, it will do nothing.
+# Update rootfs image status to share memory for dual system.
+# Otherwise, it will do nothing.
 record_rootfs_image_status()
 {
     # If there is something wrong in rootfs image, regard it as bad rootfs.
     # Update it's status to shared memory. Swap system and reboot.
-    # Don't need to check return value in this case.
+    # It doesn't need to check return value in this case.
+    # Reboot by "echo 'b' > /proc/sysrq-trigger".
     if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
         # Set rootfs_2 bad flag to shared memory
         ${SWIDSSD} write $DS_BAD_ROOTFS_2_MASK
@@ -387,6 +388,11 @@ record_rootfs_image_status()
     else
         echo "It is not dual system"
     fi
+
+    # echo 1 to sysrq to enable all functions of sysrq
+    echo '1' > /proc/sys/kernel/sysrq
+    # immediately reboot system without syncing or unmounting disk
+    echo 'b' > /proc/sysrq-trigger
 }
 
 # root file system partition must be called rootfs
