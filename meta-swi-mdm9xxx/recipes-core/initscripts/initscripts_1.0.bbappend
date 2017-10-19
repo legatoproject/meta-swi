@@ -30,6 +30,34 @@ SRC_URI = "file://functions \
            file://loginNagger \
            "
 
+SRC_URI_swi-mdm9x28-ar758x = "\
+           file://functions \
+           file://devpts \
+           file://mountall.sh \
+           file://bootmisc.sh \
+           file://checkfs.sh \
+           file://single \
+           file://urandom \
+           file://volatiles \
+           file://inittab \
+           file://mdev.conf \
+           file://usb.sh \
+           file://find-touchscreen.sh \
+           file://rcS \
+           file://rcK \
+           file://GPLv2.patch \
+           file://prepro.awk \
+           file://confighw.sh \
+           file://swiapplaunch.sh.in \
+           file://restart_swi_apps.in \
+           file://restartNMEA \
+           file://run.env.in \
+           file://run_getty.sh.in \
+           file://mount_unionfs.in \
+           file://mount_early.in \
+           file://loginNagger\
+           "
+
 SRC_URI_append_swi-mdm9x28 = "\
            file://restart_at_uart \
            "
@@ -88,8 +116,10 @@ do_install () {
     install -m 0755    ${WORKDIR}/find-touchscreen.sh   ${D}${sysconfdir}/mdev/find-touchscreen.sh
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
+    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ]; then
     install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
+    fi
     install -m 0755    ${WORKDIR}/mountall.sh   ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/single        ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/urandom       ${D}${sysconfdir}/init.d
@@ -138,7 +168,9 @@ do_install () {
     update-rc.d -r ${D} urandom start 08 S .
     update-rc.d -r ${D} mountall.sh start 07 S .
     update-rc.d -r ${D} bootmisc.sh start 55 S .
+    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ]; then
     update-rc.d -r ${D} bringup_ecm.sh start 95 S .
+    fi
     if [ "${TARGET_ARCH}" = "arm" ]; then
         update-rc.d -r ${D} alignment.sh start 06 S .
     fi
