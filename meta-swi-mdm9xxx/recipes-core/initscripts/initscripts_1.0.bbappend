@@ -5,8 +5,6 @@ SRC_URI = "file://functions \
            file://devpts \
            file://mountall.sh \
            file://bootmisc.sh \
-           file://bringup_ecm.sh \
-           file://bridge_ecm.sh \
            file://checkfs.sh \
            file://single \
            file://urandom \
@@ -19,6 +17,9 @@ SRC_URI = "file://functions \
            file://rcK \
            file://GPLv2.patch \
           "
+SRC_URI_append_swi-mdm9x15 += "file://bringup_ecm.sh \
+                               file://bridge_ecm.sh \
+                              "
 
 SRC_URI_append_arm = " file://alignment.sh"
 
@@ -53,8 +54,10 @@ do_install () {
 	install -m 0755    ${WORKDIR}/find-touchscreen.sh	${D}${sysconfdir}/mdev/find-touchscreen.sh
 	install -m 0644    ${WORKDIR}/functions		${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/bootmisc.sh	${D}${sysconfdir}/init.d
-	install -m 0755    ${WORKDIR}/bringup_ecm.sh	${D}${sysconfdir}/init.d
-	install -m 0755    ${WORKDIR}/bridge_ecm.sh	${D}${sysconfdir}/init.d
+	if [ "${MACHINE}" = "swi-mdm9x15" ]; then
+		install -m 0755    ${WORKDIR}/bringup_ecm.sh	${D}${sysconfdir}/init.d
+		install -m 0755    ${WORKDIR}/bridge_ecm.sh	${D}${sysconfdir}/init.d
+	fi
 	install -m 0755    ${WORKDIR}/mountall.sh	${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/single		${D}${sysconfdir}/init.d
 	install -m 0755    ${WORKDIR}/urandom		${D}${sysconfdir}/init.d
@@ -79,7 +82,10 @@ do_install () {
         update-rc.d -r ${D} urandom start 08 S .
         update-rc.d -r ${D} mountall.sh start 07 S .
         update-rc.d -r ${D} bootmisc.sh start 55 S .
-        update-rc.d -r ${D} bringup_ecm.sh start 95 S .
+	if [ "${MACHINE}" = "swi-mdm9x15" ]; then
+	        update-rc.d -r ${D} bringup_ecm.sh start 95 S .
+	fi
+
 	if [ "${TARGET_ARCH}" = "arm" ]; then
 	        update-rc.d -r ${D} alignment.sh start 06 S .
 	fi
