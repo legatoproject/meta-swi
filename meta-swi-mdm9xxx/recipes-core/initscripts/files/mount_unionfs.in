@@ -15,35 +15,6 @@ root_firmware_g=/lib/firmware
 overlayfs_sig_g=${OVERLAYFS_SIGNATURE}
 ufs_type=${UFS_T}
 
-# Returns SWI_TRUE if unionfs should fudge rootfs.
-is_fudge_ro_rootfs_allowed()
-{
-    local ret=${SWI_FALSE}
-    local A=$( cat /proc/cmdline | grep -oe "fudge_ro_rootfs=\S*" )
-    if [ "x${A}" == "xfudge_ro_rootfs=true" ] ; then
-        ret=${SWI_TRUE}
-    elif [ "x${A}" == "xfudge_ro_rootfs=false" ] ; then
-        ret=${SWI_FALSE}
-    else
-        # Allow mount if rootfs is RO and flash mountpoint is RW
-        local rootfs_ro=`mount | grep " on / " | grep -w ro`
-        local flashfs_rw=`mount | grep " on $FLASH_MOUNTPOINT " | grep -w rw`
-        if [ -z rootfs_ro ] || [ -z flashfs_rw ] ; then
-            ret=${SWI_FALSE}
-        else
-            ret=${SWI_TRUE}
-        fi
-    fi
-
-    if [ $ret -eq ${SWI_TRUE} ] ; then
-        swi_log "RO rootfs fudge allowed."
-    else
-        swi_log "RO rootfs fudge NOT allowed."
-    fi
-
-    return ${ret}
-}
-
 mount_unionfs_dir()
 {
     local root_g=$1
