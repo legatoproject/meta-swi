@@ -534,15 +534,15 @@ mount_ubifs()
     # but it is needed for volumes containg file systems like squashfs.
     # If device does not show up for whatever reason, we need to exit.
 @if mdm9x15
-    ubiblkvol -a /dev/ubi${ubi_devvol_pair}
+    ubiblkvol -a /dev/ubi${ubi_dev_vol_pair}
     if [ $? -ne 0 ] ; then
         swi_log "Unable to use ubi${ubi_dev_num} partition ${ubi_vol_num}"
         ubidetach -m ${mtd_dev_num}
         return ${SWI_ERR}
     fi
-    wait_on_file "/dev/ubiblock${ubi_devvol_pair}"
+    wait_on_file "/dev/ubiblock${ubi_dev_vol_pair}"
     if [ $? -ne ${SWI_OK} ] ; then
-        swi_log "Tired of waiting on /dev/ubiblock${ubi_devvol_pair}, exiting."
+        swi_log "Tired of waiting on /dev/ubiblock${ubi_dev_vol_pair}, exiting."
         return ${SWI_ERR}
     fi
 
@@ -595,11 +595,11 @@ mount_ubifs()
 @endif
 
 @if mdm9x15
-    mount -t ${fstype} /dev/${ubidev_name}${ubi_devvol_pair} ${mntpt} \
+    mount -t ${fstype} /dev/${ubidev_name}${ubi_dev_vol_pair} ${mntpt} \
           -o${UBI_MNTOPT_DEFAULT},${ubifs_mnt_options}
     if [ $? -ne 0 ] ; then
         # detach will release block device as well.
-        swi_log "Unable to mount /dev/ubiblock${ubi_devvol_pair} onto ${mntpt}."
+        swi_log "Unable to mount /dev/ubiblock${ubi_dev_vol_pair} onto ${mntpt}."
         ubidetach -m ${mtd_dev_num}
         return ${SWI_ERR}
     fi
