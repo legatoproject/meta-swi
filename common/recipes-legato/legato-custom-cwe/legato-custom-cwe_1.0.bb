@@ -3,7 +3,6 @@ HOMEPAGE = "http://legato.io"
 LICENSE = "MPL-2.0"
 
 DEPENDS = "cwetool"
-DEPENDS += "yaffs2-utils"
 DEPENDS += "legato-af"
 
 INC_PR = "r0"
@@ -25,7 +24,6 @@ fakeroot do_generate_custom_cwe() {
     COMPAT_BYTE=00000001
     IMG_TYPE=yaffs2
 
-    MKYAFFS2IMAGE=`which mkyaffs2image`
     HDRCNV=`which hdrcnv`
     CWEZIP=`which cwezip`
 
@@ -75,12 +73,6 @@ fakeroot do_generate_custom_cwe() {
         rm -f tmp_${target}/opt/legato/builtInVersion
 
         case $IMG_TYPE in
-            yaffs2)
-                # Need "root" access to make the yaffs2 image
-                ${MKYAFFS2IMAGE} -c $PAGE_SIZE -s $OOB_SIZE "${LEGATO_DIR}" "$LEGATO_IMG"
-                chmod 644 "$LEGATO_IMG"
-                VERSION=$(cat ${LEGATO_DIR}/opt/legato/version)
-                ;;
             *)
                 echo "Unknown image type '$IMG_TYPE'"
                 exit 1

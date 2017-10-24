@@ -96,7 +96,7 @@ generate_cwe_pid() {
     if [ "$LEGATO_IMAGE" = "true" ]; then
         LEGATO_IMG=$(readlink -f ${DEPLOY_DIR_IMAGE}/legato-image.${TARGET}.default)
         if ! [ -e "$LEGATO_IMG" ]; then
-            LEGATO_IMG=$(readlink -f ${DEPLOY_DIR_IMAGE}/legato-image.${TARGET}.yaffs2)
+            exit 1
         fi
 
         echo "Legato: $LEGATO_IMG"

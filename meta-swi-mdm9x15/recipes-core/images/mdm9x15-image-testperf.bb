@@ -22,7 +22,7 @@ do_rootfs[depends] += "mdm9x15-image-minimal:do_rootfs"
 
 rootfs_symlink() {
     # Provide minimal image as rootfs symlink
-    ln -sf ${IMAGE_LINK_NAME}.2k.yaffs2 ${DEPLOY_DIR_IMAGE}/rootfs-${IMAGE_TYPE}
+    ln -sf ${IMAGE_LINK_NAME}.2k.ubi ${DEPLOY_DIR_IMAGE}/rootfs-${IMAGE_TYPE}
 }
 
 do_rootfs[postfuncs] += "rootfs_symlink"

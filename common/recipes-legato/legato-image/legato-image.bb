@@ -2,7 +2,6 @@ DESCRIPTION = "Legato Image"
 HOMEPAGE = "http://www.legato.io/"
 LICENSE = "MPL-2.0"
 
-DEPENDS += "yaffs2-utils-native"
 DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"
 
@@ -57,36 +56,16 @@ generate_images_mklegatoimg() {
     done
 }
 
-generate_image_yaffs2() {
-    yaffs2_opts="-c 4096 -s 160"
-
-    if [[ "$LEGATO_TARGET" == "wp85" ]]; then
-        yaffs2_opts=""
-    fi
-
-    # Generate the framework image
-    mkyaffs2image $yaffs2_opts "${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET" "${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.yaffs2"
-}
-
 compile_target() {
     if [ -z "${LEGATO_VERSION}" ]; then
         get_legato_version
     fi
 
-    # Check if legato version is recent enough to use mklegatoimg
-    if grep BASH_SOURCE $(which mklegatoimg); then
-        generate_images_mklegatoimg
-    else
-        generate_image_yaffs2
-        ln -sf "${PN}.$LEGATO_TARGET.yaffs2" "${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.default"
-    fi
+    generate_images_mklegatoimg
 }
 
 do_compile[deptask] = "do_install_image"
 
 do_configure[noexec] = "1"
 do_install[noexec] = "1"
-
-# To add legato applications to the image, add them as dependencies using legato-image.bbappend files
-#DEPENDS += "legato-modemdemo"
 

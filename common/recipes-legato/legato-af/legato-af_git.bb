@@ -8,7 +8,6 @@ require legato.inc
 
 # Host dependencies
 DEPENDS = "legato-tools"
-DEPENDS += "yaffs2-utils-native"
 DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"
 DEPENDS += "ima-support-tools-native"
