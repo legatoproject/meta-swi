@@ -17,6 +17,11 @@ SRC_URI = " \
     file://init \
     file://hostapd.service \
     file://0001-hostapd-Avoid-key-reinstallation-in-FT-handshake.patch \
+    file://0002-Prevent-reinstallation-of-an-already-in-use-group-ke.patch \
+    file://0003-Extend-protection-of-GTK-IGTK-reinstallation-of-WNM-.patch \
+    file://0004-Prevent-installation-of-an-all-zero-TK.patch \
+    file://0005-Fix-PTK-rekeying-to-generate-a-new-ANonce.patch \
+    file://0006-TDLS-Reject-TPK-TK-reconfiguration.patch \
 "
 
 S = "${WORKDIR}/hostapd-${PV}"
