@@ -22,6 +22,7 @@ SRC_URI = " \
     file://0004-Prevent-installation-of-an-all-zero-TK.patch \
     file://0005-Fix-PTK-rekeying-to-generate-a-new-ANonce.patch \
     file://0006-TDLS-Reject-TPK-TK-reconfiguration.patch \
+    file://0008-FT-Do-not-allow-multiple-Reassociation-Response-fram.patch \
 "
 
 S = "${WORKDIR}/hostapd-${PV}"
