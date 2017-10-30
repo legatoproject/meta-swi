@@ -1,12 +1,11 @@
 
-# Tag LE.BR.1.2.1-44100-9x07
-SRCREV = "95852f8b85a9b2d190b395aaf9621fb6cca90dc6"
+# Tag LE.BR.1.2.1-59300-9x07
+SRCREV = "dd72ed8c45bb873f7159a94fb30269b6f1a216af"
 SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=mdm"
 
 DEPENDS += "zlib openssl libcap"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
-SRC_URI += "file://0001-Fix-build-without-liblog.patch"
 SRC_URI += "file://composition-sierra_dev"
 SRC_URI += "file://start_usb"
 SRC_URI += "file://0001-Disable-ADB-TCP-by-default.patch"

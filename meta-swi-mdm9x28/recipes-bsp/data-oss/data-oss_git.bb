@@ -11,7 +11,7 @@ DEPENDS += "virtual/kernel glib-2.0"
 EXTRA_OECONF = "--with-sanitized-headers=${STAGING_KERNEL_DIR}/usr/include \
                 --with-glib"
 
-# Tag LE.BR.1.2.1-64400-9x07
+# Tag LE.BR.1.2.1-59300-9x07
 SRCREV = "21e5e4454102134ee837827edbf6a390da0fd7ef"
 DATAOSS_REPO ?= "git://codeaurora.org/platform/vendor/qcom-opensource/dataservices;branch=master"
 

@@ -1,5 +1,5 @@
 
-# Tag LE.BR.1.2.1-44100-9x07
+# Tag LE.BR.1.2.1-59300-9x07
 SRCREV = "1ec3812e95b2541dce8a1a0130c29be766edae99"
 REBOOTD_REPO = "git://codeaurora.org/quic/le/mdm/reboot-daemon;branch=master"
 
