@@ -40,18 +40,44 @@ DS_BAD_LEGATO_2_MASK=40000
 # Dual system do not cover WP project.
 WP_PROJECT=5
 
-# Get ASCII of UBI magic number.
+# Check if this partition is erased by checking
+# whether a few data is 0xff or not. If these data is 0xff,
+# this partition is erased and return SWI_TRUE, otherwise,
+# return SWI_FALSE.
+#
+# In principle we need to check all data in the mtd partition.
+# But checking whole device is time consuming, so in this method,
+# we only check the first three blocks data.
+#
 # Parameters:
 #   $1 - mtd partition number
 #
-get_asc_of_ubi_magic_num()
+is_partition_erased()
 {
     local mtd_dev_num=${1}
-    local ret=${SWI_FALSE}
+    local ret=${SWI_TRUE}
+    local check_size=0
 
-    if dd if=/dev/mtd${mtd_dev_num} count=1 bs=4 2>/dev/null | grep 'UBI#' > /dev/null; then
-        ret=${SWI_TRUE}
+    if [ -x /usr/bin/swimtd ]; then
+        # swimtd will check three blocks data. Return 0 if the
+        # first three blocks have non 0xff data.
+        /usr/bin/swimtd ${mtd_dev_num}
+        if [ $? -eq 0 ]; then
+            ret=${SWI_FALSE}
+        fi
+    else
+        # check_size should be 3*block_size
+        check_size=$(mtdinfo /dev/mtd${mtd_dev_num} | grep -i "Eraseblock size" | awk '{print $3}' | xargs expr 3 \*)
+
+        # In order to be compatiable with the platform that doesn't have swimtd,
+        # check whether the first three blocks of this partition is 0xff or not.
+        nanddump /dev/mtd${mtd_dev_num} -l $check_size --bb=skipbad -p 2>/dev/null \
+            | grep -v -q "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff" > /dev/null
+        if [ $? -eq 0 ]; then
+            ret=${SWI_FALSE}
+        fi
     fi
+
     return ${ret}
 }
 
@@ -494,8 +520,8 @@ mount_ubifs()
     fi
 
 @if !mdm9x15
-    get_asc_of_ubi_magic_num ${mtd_dev_num}
-    if [ $? -ne ${SWI_TRUE} ] ; then
+    is_partition_erased ${mtd_dev_num}
+    if [ $? -eq ${SWI_TRUE} ] ; then
         swi_log "UBI: mtd ${mtd_dev_num} does not contain UBI container."
         return ${SWI_ERR}
     fi
@@ -969,12 +995,13 @@ check_security_auth()
         return ${SWI_SEC_NONE}
     fi
 
-    # Secure version should work with UBI, Otherwise, return authentication fail.
-    # But some of the partitions allow customers not to use, E.g legato, for these
-    # kinds of partition,if it is not UBI format we won't do security authentication
-    # for it.
-    get_asc_of_ubi_magic_num ${mtd_dev_num}
-    if [ $? -ne ${SWI_TRUE} ] ; then
+    # We need to allow module to boot up in the case partition(e.g. legato)
+    # doesn't have any data even if the module has been fused.
+    # As a result, ${support_not_ubi} is used to specify this partition
+    # in this case. The caller of this function only take ${SWI_AUTH_FAIL}
+    # as authentication failure which need futher action.
+    is_partition_erased ${mtd_dev_num}
+    if [ $? -eq ${SWI_TRUE} ] ; then
         if [ ${support_not_ubi} -eq ${SWI_TRUE} ] ; then
             return ${SWI_ERR}
         else
@@ -1043,8 +1070,8 @@ handle_legato_fail_issue()
 
     #Check dual system status
     if [ $DS_LINUX_SUB_SYSTEM_FLAG -ne $WP_PROJECT ] ; then
-        get_asc_of_ubi_magic_num $mtd_dev_num
-        if [ $? -eq $SWI_TRUE ]; then
+        is_partition_erased $mtd_dev_num
+        if [ $? -ne $SWI_TRUE ]; then
             swi_log "There are something wrong with legato partition."
             #Regard it as bad legato, reboot and swap system
             if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
