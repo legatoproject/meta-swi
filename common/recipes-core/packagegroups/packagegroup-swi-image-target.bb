@@ -46,7 +46,6 @@ RDEPENDS_${PN} += "legato-init"
 # Add some extra packages for tool integration
 RDEPENDS_${PN} += "dropbear"
 RDEPENDS_${PN} += "strace"
-RDEPENDS_${PN} += "gdbserver"
 RDEPENDS_${PN} += "python-core"
 
 RDEPENDS_${PN} += "iproute2"
