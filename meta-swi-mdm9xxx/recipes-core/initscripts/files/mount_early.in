@@ -1057,35 +1057,61 @@ check_security_auth()
     esac
 }
 
-# According to the status to do some actions E.g:
-# swap to another system, reboot or do nothing.
+# This method should be called in case where there is a Legato image mount
+# failure for whatever reason. The reason may be:
+# a. Authentication of Legato image failed
+# b. Mounting of Legato image failed
+#
+# If Legato image is bad, and this is dual boot system, this method would never
+# return (system will reboot). The same is true for authentication failure.
+# If this is not dual boot system, or there is no authentication failure, this
+# method will return SWI_FALSE.
+#
 # Parameters:
 #   $1 - mtd partition number
 #   $2 - Security check status
 handle_legato_fail_issue()
 {
-   local mtd_dev_num=$1
-   local secure=$2
-   local req_reboot=$SWI_FALSE
+    local mtd_dev_num=$1
+    local secure=$2
+    local req_reboot=$SWI_FALSE
 
-    #Check dual system status
-    if [ $DS_LINUX_SUB_SYSTEM_FLAG -ne $WP_PROJECT ] ; then
-        is_partition_erased $mtd_dev_num
-        if [ $? -ne $SWI_TRUE ]; then
-            swi_log "There are something wrong with legato partition."
-            #Regard it as bad legato, reboot and swap system
+    # ${secure} is the return value of check_security_auth(), which is the authentication
+    # return value. ${SWI_AUTH_FAIL} means authentication failure, we need to reboot system
+    # surely. In the other case is that, secure authentication is passed with ${SWI_AUTH_PASS}
+    # but mount falied (so go into this function), we also need to reboot system.
+    if [ ${secure} -eq ${SWI_AUTH_FAIL} ] || [ ${secure} -eq ${SWI_AUTH_PASS} ]; then
+        req_reboot=$SWI_TRUE
+    fi
+
+    # If mount failed and the legato partition is not empty, need to reboot module.
+    is_partition_erased $mtd_dev_num
+    if [ $? -ne $SWI_TRUE ]; then
+        req_reboot=$SWI_TRUE
+    fi
+
+    # /proc/proc_buffer exists in dual boot systems only. It contains
+    # partition names which have backup images (e.g. lefwkro and lefwkro2).
+    # In case of dual boot systems, we need to check if we need to swap to
+    # backup image if "running" image could not be mounted for whatever
+    # reason.
+    if [ req_reboot=$SWI_TRUE ] && [ -e "/proc/proc_buffer" ] ; then
+        # This is dual boot system, and primary Legato image failed to
+        # mount. Let's see if there is really Legato backup image.
+        if cat /proc/proc_buffer | grep -w "lefwkro2\|lefwkro" > /dev/null ; then
+            swi_log "dual system proc buffer include legato"
+
+            # There is a Legato backup image. We do not need to investigate
+            # failure reason, because partition failed to mount. We need
+            # to swap this Legato image with good one.
             if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
                 /usr/bin/swidssd write $DS_BAD_LEGATO_2_MASK
             else
                 /usr/bin/swidssd write $DS_BAD_LEGATO_1_MASK
             fi
-            req_reboot=$SWI_TRUE
         fi
-    fi
-
-    #Check secure boot status
-    if [ ${secure} -eq ${SWI_AUTH_FAIL} ] || [ ${secure} -eq ${SWI_AUTH_PASS} ]; then
-        req_reboot=$SWI_TRUE
+    else
+        echo "It doesn't need to set swidssd flag."
     fi
 
     if [ $req_reboot = $SWI_TRUE ]; then
@@ -1098,8 +1124,11 @@ handle_legato_fail_issue()
             sleep 1
         done
     fi
+
+    return ${SWI_FALSE}
 }
 @endif
+
 # Mount user0 Legato "backup" partition. This partition may be squashfs or
 # yaffs2. Since yaffs2 does not recognize any other file systems, try to
 # mount all other file systems first. If all fails, mount yaffs2 partition.
