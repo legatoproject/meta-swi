@@ -1,0 +1,53 @@
+From 557c5c9e619d156e55cc7d6eb5f3c6eb4ec2bc89 Mon Sep 17 00:00:00 2001
+From: Betty Zhuo <bzhuo@sierrawireless.com>
+Date: Wed, 8 Nov 2017 14:32:32 +0800
+Subject: [PATCH] Fix adbd crash issue.
+
+Signed-off-by: Betty Zhuo <bzhuo@sierrawireless.com>
+---
+ adb/transport_local.c | 8 ++------
+ 1 file changed, 2 insertions(+), 6 deletions(-)
+
+diff --git a/adb/transport_local.c b/adb/transport_local.c
+index 9749e54..9a18b86 100755
+--- a/adb/transport_local.c
++++ b/adb/transport_local.c
+@@ -337,7 +337,7 @@ void local_init(int port)
+                     HOST ? "client" : "server");
+     }
+ }
+-#ifdef ADB_QEMU
++
+ static void remote_kick(atransport *t)
+ {
+     int fd = t->sfd;
+@@ -359,14 +359,11 @@ static void remote_kick(atransport *t)
+     }
+ #endif
+ }
+-#endif
+ 
+-#ifdef ADB_QEMU
+ static void remote_close(atransport *t)
+ {
+     adb_close(t->fd);
+ }
+-#endif
+ 
+ #if ADB_HOST
+ /* Only call this function if you already hold local_transports_lock. */
+@@ -413,10 +410,9 @@ int get_available_local_transport_index()
+ int init_socket_transport(atransport *t, int s, int adb_port, int local)
+ {
+     int  fail = 0;
+-#ifdef ADB_QEMU
++
+     t->kick = remote_kick;
+     t->close = remote_close;
+-#endif
+     t->read_from_remote = remote_read;
+     t->write_to_remote = remote_write;
+     t->sfd = s;
+-- 
+1.9.1
+

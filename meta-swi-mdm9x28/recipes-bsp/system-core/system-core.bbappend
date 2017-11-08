@@ -8,6 +8,7 @@ DEPENDS += "zlib openssl libcap"
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://composition-sierra_dev"
 SRC_URI += "file://start_usb"
+SRC_URI += "file://0001-Fix-adbd-crash-issue.patch"
 
 do_install_append() {
     install -m 0755 ${WORKDIR}/composition-sierra_dev -D ${D}${bindir}/usb/compositions/sierra_dev
