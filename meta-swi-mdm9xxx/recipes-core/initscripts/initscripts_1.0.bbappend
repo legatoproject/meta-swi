@@ -125,7 +125,7 @@ do_install () {
     install -m 0755    ${WORKDIR}/find-touchscreen.sh   ${D}${sysconfdir}/mdev/find-touchscreen.sh
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
-    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ]; then
+    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ]; then
         install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
         install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
     fi
@@ -156,10 +156,10 @@ do_install () {
     install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sysconfdir}/profile.d/loginNagger
 
     case "${MACH}" in
-    swi-mdm9x28 | swi-mdm9x50)
+    swi-mdm9x28 | swi-mdm9x50 | swi-mdm9x28-qemu)
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
         ;;
-    swi-mdm9x28-ar758x)
+    swi-mdm9x28-ar758x | swi-mdm9x28-ar758x-qemu)
         install -m 0755 ${WORKDIR}/control_msm_watchdog.sh -D ${D}${sysconfdir}/init.d/control_msm_watchdog.sh
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
         ;;
@@ -177,7 +177,7 @@ do_install () {
     update-rc.d -r ${D} urandom start 08 S .
     update-rc.d -r ${D} mountall.sh start 07 S .
     update-rc.d -r ${D} bootmisc.sh start 55 S .
-    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ]; then
+    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ]; then
         update-rc.d -r ${D} bringup_ecm.sh start 95 S .
     fi
     if [ "${TARGET_ARCH}" = "arm" ]; then
