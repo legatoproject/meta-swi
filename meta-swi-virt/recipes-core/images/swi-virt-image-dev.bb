@@ -13,11 +13,11 @@ IMAGE_INSTALL += "util-linux-blkid"
 IMAGE_INSTALL += "util-linux-mount"
 IMAGE_INSTALL += "nfs-utils-client"
 
-# Add some things for dev & system intg
-IMAGE_INSTALL += "cmake"
-
 # Tool to recognize the platform
 IMAGE_INSTALL += "bsinfo-stub"
+
+# Kernel modules
+IMAGE_INSTALL += "kernel-module-softdog"
 
 # Only depend on legato-af if this is a LEGATO_BUILD
 def check_legato_dep(d):
