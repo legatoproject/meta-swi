@@ -69,6 +69,10 @@ FindAndMountUBI () {
         if ! [ -e "/dev/ubi1_0" ]; then
             # UBI partition, attach device
             ubiattach -m ${mtd_block_number} -d 1 /dev/ubi_ctrl
+            if [ $? -ne 0 ] ; then
+                swi_log "Unable to attach mtd partition ${partition} to UBI logical device ${mtd_block_number}"
+                return ${SWI_ERR}
+            fi
             # Need to wait for the /dev/ubi1_0 device ready
             wait_on_dev "-c" "/dev/ubi1_0"
             if [ $? -ne ${SWI_OK} ]; then
@@ -103,6 +107,10 @@ FindAndMountUBI () {
     fi
 
     mount -t ${BOOTTYPE} ${BOOTDEV} $dir -o ${BOOTOPTS}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to mount ${BOOTTYPE} onto ${BOOTDEV}."
+        return ${SWI_ERR}
+    fi
 }
 
 FindAndMountVolumeUBI () {
@@ -135,6 +143,25 @@ else
         eval FindAndMountVolume${fstype} usrfs /usr
 fi
 
-eval FindAndMount${fstype} modem /firmware
+MODEM_PARTITION=modem
+
+is_dual_system
+if [ $? -eq ${SWI_TRUE} ]; then
+    /usr/bin/swidssd read modem
+    DS_MODEM_SUB_SYSTEM_FLAG=$?
+fi
+
+if [ $DS_MODEM_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
+    MODEM_PARTITION=modem2
+fi
+echo "mount modem from partition $MODEM_PARTITION"
+
+eval FindAndMount${fstype} ${MODEM_PARTITION} /firmware
+if [ $? -ne ${SWI_OK} ]; then
+    is_dual_system
+    if [ $? -eq ${SWI_TRUE} ]; then
+        swap_dual_system ${mtd_block_number}
+    fi
+fi
 
 exit 0

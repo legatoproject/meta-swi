@@ -1,5 +1,8 @@
 #!/bin/busybox sh
 
+# import run environment
+source /etc/run.env
+
 # Real root file system mount point.
 ROOTFS_MNTPT="/mnt/rootfs"
 
@@ -29,28 +32,10 @@ DEVDIR_SIZE=262144
 # Current boot system flag in dual system
 DS_LINUX_SUB_SYSTEM_FLAG=0
 
-# Partitions_name is used to mark which partition needs to swap system.
-# The partitions_name will be written to the proc_buffer.
+# dual_system_pnp is used to mark which partition needs to swap system.
+# The dual_system_pnp will be written to the proc_buffer.
 # Use proc node "proc_buffer" to management these partitions name
-partitions_name="system,system2,modem,modem2,lefwkro,lefwkro2"
-
-# swidssd is used during boot sequence to aid image swap.
-# 'swidssd read' will return 100 if system is booting up using boot image set one,
-# or 200 if system is booting up using boot image set two.
-# 'swidssd write' is used to indicate bad image set using bad image set flag
-# (please see DS_BAD_ROOTFS_1_MASK and DS_BAD_ROOTFS_2_MASK).
-# 'swidssd write' will return 0 on successful write, (-1) otherwise.
-# If swidssd is missing, stub executable will always return (1) to indicate that
-# swidssd is not available on the system.
-
-# If swidssd is missing, it will be replaced with '/bin/false'
-# which will always return '1' to indicate that swidssd is not
-# available. So, return code '1' must be treated as special,
-# and cannot be used by swidssd .
-SWIDSSD=/usr/bin/swidssd
-if [ ! -x ${SWIDSSD} ] ; then
-   SWIDSSD="/bin/false"
-fi
+dual_system_pnp="system,system2,modem,modem2,lefwkro,lefwkro2"
 
 # Flag to mount system 1
 DS_SYSTEM_1_FLAG=100
@@ -375,24 +360,8 @@ mount_as_dm_verity() {
 # Otherwise, it will do nothing.
 record_rootfs_image_status()
 {
-    # If there is something wrong in rootfs image, regard it as bad rootfs.
-    # Update it's status to shared memory. Swap system and reboot.
-    # It doesn't need to check return value in this case.
-    # Reboot by "echo 'b' > /proc/sysrq-trigger".
-    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
-        # Set rootfs_2 bad flag to shared memory
-        ${SWIDSSD} write $DS_BAD_ROOTFS_2_MASK
-    elif [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_1_FLAG ]; then
-        # Set rootfs_1 bad flag to shared memory
-        ${SWIDSSD} write $DS_BAD_ROOTFS_1_MASK
-    else
-        echo "It is not dual system"
-    fi
-
-    # echo 1 to sysrq to enable all functions of sysrq
-    echo '1' > /proc/sys/kernel/sysrq
-    # immediately reboot system without syncing or unmounting disk
-    echo 'b' > /proc/sysrq-trigger
+    swap_dual_system ${mtd_dev_num}
+    return $?
 }
 
 # root file system partition must be called rootfs
@@ -404,8 +373,9 @@ set_boot_dev()
     local secure=${SWI_ERR}
 
     # Write partitions name to proc node.
-    if [ -e "/proc/proc_buffer" ] ; then
-        echo $partitions_name > /proc/proc_buffer
+    is_dual_system
+    if [ $? -eq ${SWI_TRUE} ]; then
+        echo $dual_system_pnp > /proc/proc_buffer
     else
         echo "The proc node does not exist"
     fi
@@ -418,8 +388,11 @@ set_boot_dev()
     local ubi_hash_dev=/dev/ubi${UBI_ROOTFS_DEVNUM}_${UBI_HASH_VOLNUM}
 
     # Get dual system flag from shared memory if swidssd exists
-    ${SWIDSSD} read linux
-    DS_LINUX_SUB_SYSTEM_FLAG=$?
+    is_dual_system
+    if [ $? -eq ${SWI_TRUE} ]; then
+        /usr/bin/swidssd read linux
+        DS_LINUX_SUB_SYSTEM_FLAG=$?
+    fi
 
     # Mount rootfs_2 if system_2 flag is set
     if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then

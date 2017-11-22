@@ -20,66 +20,6 @@ UBI_MNT_OPT_QUOTA="usrquota,grpquota"
 # file systems on various platforms.
 YAFFS2_MNTOPT="rw,tags-ecc-off,smackfsdef=_"
 
-# Current boot system flag in dual system
-DS_LINUX_SUB_SYSTEM_FLAG=0
-
-# The definition DS_SYSTEM_1_FLAG/DS_SYSTEM_2_FLAG are used to determine which partition is going to
-# be used, lefwkro or lefwkro2.
-# DS_BAD_LEGATO_1_MASK/DS_BAD_LEGATO_2_MASK are used to mark the status of the Legato partition.
-# If the partition cannot be mounted successfully, mark it as bad image by using
-# DS_BAD_LEGATO_1_MASK or DS_BAD_LEGATO_2_MASK.
-# 100 - Currently is running at system 1
-# 200 - Currently is running at system 2
-# 20000 - Marks the image in lefwkro partition bad
-# 40000 - Marks the image in lefwkro2 partition bad
-DS_SYSTEM_1_FLAG=100
-DS_SYSTEM_2_FLAG=200
-DS_BAD_LEGATO_1_MASK=20000
-DS_BAD_LEGATO_2_MASK=40000
-
-# Dual system do not cover WP project.
-WP_PROJECT=5
-
-# Check if this partition is erased by checking
-# whether a few data is 0xff or not. If these data is 0xff,
-# this partition is erased and return SWI_TRUE, otherwise,
-# return SWI_FALSE.
-#
-# In principle we need to check all data in the mtd partition.
-# But checking whole device is time consuming, so in this method,
-# we only check the first three blocks data.
-#
-# Parameters:
-#   $1 - mtd partition number
-#
-is_partition_erased()
-{
-    local mtd_dev_num=${1}
-    local ret=${SWI_TRUE}
-    local check_size=0
-
-    if [ -x /usr/bin/swimtd ]; then
-        # swimtd will check three blocks data. Return 0 if the
-        # first three blocks have non 0xff data.
-        /usr/bin/swimtd ${mtd_dev_num}
-        if [ $? -eq 0 ]; then
-            ret=${SWI_FALSE}
-        fi
-    else
-        # check_size should be 3*block_size
-        check_size=$(mtdinfo /dev/mtd${mtd_dev_num} | grep -i "Eraseblock size" | awk '{print $3}' | xargs expr 3 \*)
-
-        # In order to be compatiable with the platform that doesn't have swimtd,
-        # check whether the first three blocks of this partition is 0xff or not.
-        nanddump /dev/mtd${mtd_dev_num} -l $check_size --bb=skipbad -p 2>/dev/null \
-            | grep -v -q "ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff" > /dev/null
-        if [ $? -eq 0 ]; then
-            ret=${SWI_FALSE}
-        fi
-    fi
-
-    return ${ret}
-}
 
 # Initialize YAFFS2 support related variables.
 # Auto support detection can be overriden in run.env
@@ -93,7 +33,6 @@ yaffs2_kern_supported_init()
         fi
     fi
 }
-
 
 # Wait until file shows up. Note that this will wait on any file and there
 # will be no distinction between regular or device file. While covering wide
@@ -1095,34 +1034,15 @@ handle_legato_fail_issue()
     # In case of dual boot systems, we need to check if we need to swap to
     # backup image if "running" image could not be mounted for whatever
     # reason.
-    if [ req_reboot=$SWI_TRUE ] && [ -e "/proc/proc_buffer" ] ; then
-        # This is dual boot system, and primary Legato image failed to
-        # mount. Let's see if there is really Legato backup image.
-        if cat /proc/proc_buffer | grep -w "lefwkro2\|lefwkro" > /dev/null ; then
-            swi_log "dual system proc buffer include legato"
-
-            # There is a Legato backup image. We do not need to investigate
-            # failure reason, because partition failed to mount. We need
-            # to swap this Legato image with good one.
-            if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
-                /usr/bin/swidssd write $DS_BAD_LEGATO_2_MASK
-            else
-                /usr/bin/swidssd write $DS_BAD_LEGATO_1_MASK
-            fi
-        fi
-    else
-        echo "It doesn't need to set swidssd flag."
-    fi
-
     if [ $req_reboot = $SWI_TRUE ]; then
-        sync
-        sys_reboot
-        #Sleep in here in order to stop the following modem
-        #mount in 'find_partitions.sh' after legato failed.
-        while true
-        do
-            sleep 1
-        done
+        # There is a Legato backup image. We do not need to investigate
+        # failure reason, because partition failed to mount. We need
+        # to swap this Legato image with good one.
+        swap_dual_system $mtd_dev_num
+        if [ $? -ne ${SWI_TRUE}]; then
+            echo "The partition should not be handled"
+            return ${SWI_FALSE}
+        fi
     fi
 
     return ${SWI_FALSE}
@@ -1139,7 +1059,8 @@ mount_early_legato_start()
     local secure=${SWI_AUTH_FAIL}
     local mtd_dev_num=0
 
-    if [ -x /usr/bin/swidssd ]; then
+    is_dual_system
+    if [ $? -eq ${SWI_TRUE} ]; then
         /usr/bin/swidssd read linux
         DS_LINUX_SUB_SYSTEM_FLAG=$?
     fi
