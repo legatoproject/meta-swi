@@ -1,14 +1,14 @@
-From 2fc563286b71b7625933fa10787879b5bd969bbf Mon Sep 17 00:00:00 2001
-From: shwu <ShWu@sierrawireless.com>
-Date: Tue, 26 Sep 2017 18:59:24 +0800
-Subject: [PATCH] Add sierra_mixer_set() function
+From 78c7a57b8199e9e55d4a437b66eff51cf1b63129 Mon Sep 17 00:00:00 2001
+From: kehuang <KeHuang@sierrawireless.com>
+Date: Wed, 22 Nov 2017 11:27:58 +0800
+Subject: [PATCH] mm audio offer aplay arec amix dynami libraries
 
 ---
  libalsa-intf/Makefile.am |  23 +++
  libalsa-intf/amix.c      |  41 +++++
  libalsa-intf/aplay.c     | 333 +++++++++++++++++++++++++------------
- libalsa-intf/arec.c      | 422 +++++++++++++++++++++++++++++------------------
- 4 files changed, 552 insertions(+), 267 deletions(-)
+ libalsa-intf/arec.c      | 425 +++++++++++++++++++++++++++++------------------
+ 4 files changed, 555 insertions(+), 267 deletions(-)
  mode change 100644 => 100755 libalsa-intf/Makefile.am
  mode change 100644 => 100755 libalsa-intf/amix.c
  mode change 100644 => 100755 libalsa-intf/aplay.c
@@ -51,7 +51,7 @@ index 8efee28..97eda94
 diff --git a/libalsa-intf/amix.c b/libalsa-intf/amix.c
 old mode 100644
 new mode 100755
-index b425ed5..5e3d467
+index b425ed5..466b7b0
 --- a/libalsa-intf/amix.c
 +++ b/libalsa-intf/amix.c
 @@ -48,7 +48,11 @@ struct mixer_ctl *get_ctl(struct mixer *mixer, char *name)
@@ -797,7 +797,7 @@ index 47b8c74..c96d421
 diff --git a/libalsa-intf/arec.c b/libalsa-intf/arec.c
 old mode 100644
 new mode 100755
-index d7a641d..fe0e483
+index d7a641d..ac824d5
 --- a/libalsa-intf/arec.c
 +++ b/libalsa-intf/arec.c
 @@ -27,6 +27,7 @@
@@ -1119,7 +1119,7 @@ index d7a641d..fe0e483
                          lseek(fd, 0, SEEK_END);
                      }
                  }
-@@ -411,150 +435,160 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+@@ -411,150 +435,163 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
                        break;
             }
      } else {
@@ -1150,7 +1150,9 @@ index d7a641d..fe0e483
 +    memcpy(&arec_attr_signal, arec_attr, sizeof(arec_attr_t));
 +#endif
 +
-+	    while (!pcm_read(arec_attr->pcm, arec_attr->data, bufsize)) {
++	    while (1) {
++             err = pcm_read(arec_attr->pcm, arec_attr->data, bufsize);
++             if (!err) {
 +		if (write(fd, arec_attr->data, bufsize) != bufsize) {
  		    fprintf(stderr, "Arec:could not write %d bytes\n", bufsize);
  		    break;
@@ -1169,6 +1171,7 @@ index d7a641d..fe0e483
                  }
                  if (rec_size >= count)
                      break;
++             }
  	    }
 +        free(arec_attr->data);
 +        arec_attr->data = NULL;
@@ -1338,7 +1341,7 @@ index d7a641d..fe0e483
  }
  
  static void signal_handler(int sig)
-@@ -563,27 +597,31 @@ static void signal_handler(int sig)
+@@ -563,27 +600,31 @@ static void signal_handler(int sig)
      FILE *fp;
  
      fprintf(stderr, "Arec:Aborted by signal %s...\n", strsignal(sig));
@@ -1382,7 +1385,7 @@ index d7a641d..fe0e483
  {
      int rate = 48000;
      int ch = 1;
-@@ -595,6 +633,12 @@ int main(int argc, char **argv)
+@@ -595,6 +636,12 @@ int main(int argc, char **argv)
      struct sigaction sa;
      int rc = 0;
      char *cformat = NULL;
@@ -1395,7 +1398,7 @@ index d7a641d..fe0e483
  
      if (argc < 2) {
          printf("\nUsage: arec [options] <file>\n"
-@@ -618,10 +662,16 @@ int main(int argc, char **argv)
+@@ -618,10 +665,16 @@ int main(int argc, char **argv)
             fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
            return 0;
      }
@@ -1413,7 +1416,7 @@ index d7a641d..fe0e483
            break;
         case 'V':
            debug = 1;
-@@ -639,18 +689,18 @@ int main(int argc, char **argv)
+@@ -639,18 +692,18 @@ int main(int argc, char **argv)
            ch  = (int)strtol(optarg, NULL, 0);
            break;
         case 'T':
@@ -1437,7 +1440,7 @@ index d7a641d..fe0e483
            break;
         default:
            printf("\nUsage: arec [options] <file>\n"
-@@ -671,37 +721,85 @@ int main(int argc, char **argv)
+@@ -671,37 +724,85 @@ int main(int argc, char **argv)
                 if (cformat != NULL)
                     fprintf(stderr, "%s ", cformat);
             }
