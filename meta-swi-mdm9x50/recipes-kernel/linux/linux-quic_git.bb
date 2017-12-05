@@ -1,5 +1,7 @@
 inherit kernel localgit
 
+require recipes-kernel/kernel-src-install.inc
+
 DESCRIPTION = "QuIC Linux Kernel"
 LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
@@ -43,15 +45,7 @@ do_compile_append() {
 }
 
 do_install_append() {
-    oe_runmake headers_install O=${D}/usr/src/kernel
-
-    # Copy headers back to $(D) folder, it should be done at upper command, but not
-    mkdir -p ${D}/usr/src/kernel/usr
-    cp -fr ${B}/usr/include ${D}/usr/src/kernel/usr/
-
-    # Copy generated headers also
-    mkdir -p ${D}/usr/src/kernel/include/generated
-    cp -fr ${B}/include/generated ${D}/usr/src/kernel/include
+    kernel_src_install
 }
 
 # The following was removed from the kernel class between Yocto 1.7 and 2.2.

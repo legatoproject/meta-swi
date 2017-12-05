@@ -1,5 +1,7 @@
 inherit kernel localgit
 
+require recipes-kernel/kernel-src-install.inc
+
 DESCRIPTION = "QuIC Linux Kernel"
 LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
@@ -43,11 +45,7 @@ do_compile_append() {
 }
 
 do_install_append() {
-    oe_runmake headers_install O=${D}/usr/src/kernel
-
-    # Copy headers back to $(D) folder, it should be done at upper command, but not
-    cp -fr ${B}/usr/include ${D}/usr/src/kernel/usr/
-    oe_runmake -C $kerneldir CC="${KERNEL_CC}" LD="${KERNEL_LD}" clean _mrproper_scripts
+    kernel_src_install
 }
 
 BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x40-${DATETIME}.2k"
