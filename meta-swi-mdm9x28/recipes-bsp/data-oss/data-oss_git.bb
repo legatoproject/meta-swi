@@ -11,11 +11,8 @@ DEPENDS += "virtual/kernel glib-2.0"
 EXTRA_OECONF = "--with-sanitized-headers=${STAGING_DIR_TARGET}${KERNEL_SRC_PATH}/usr/include \
                 --with-glib"
 
-# Tag LE.BR.1.2.1-64400-9x07
+# Tag LE.UM.1.1-23600-9x07
 SRCREV = "21e5e4454102134ee837827edbf6a390da0fd7ef"
-# Tag LE.BR.1.2.1-59300-9x07
-SRCREV_swi-mdm9x28-ar758x = "21e5e4454102134ee837827edbf6a390da0fd7ef"
-
 DATAOSS_REPO ?= "git://codeaurora.org/platform/vendor/qcom-opensource/dataservices;branch=master"
 
 SRC_URI = "${DATAOSS_REPO} file://static-inline.patch"

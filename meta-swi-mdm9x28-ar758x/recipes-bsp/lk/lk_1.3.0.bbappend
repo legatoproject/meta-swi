@@ -1,5 +1,11 @@
 INSANE_SKIP_${PN} += "already-stripped"
 
+LIBGCC = "${STAGING_LIBDIR}/${TARGET_SYS}/6.2.0/libgcc.a"
+
+EXTRA_OEMAKE += "ARCH='${TARGET_ARCH}' CC='${CC}' LIBGCC='${LIBGCC}'"
+#enable hardfloat
+EXTRA_OEMAKE_append = " ${@base_conditional('ARM_FLOAT_ABI', 'hard', 'ENABLE_HARD_FPU=1', '', d)}"
+
 do_tag_lk() {
     if [ -n "${FW_VERSION}" ]; then
         echo "#define LKVERSION  \"${FW_VERSION}\"" >${S}/app/aboot/sierra_lkversion.h
