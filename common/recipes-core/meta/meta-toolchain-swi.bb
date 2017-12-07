@@ -7,6 +7,12 @@ TOOLCHAIN_OUTPUTNAME = "${SDK_NAME}-toolchain-swi-${DISTRO_VERSION}"
 SDK_PACKAGING_FUNC_ORIG = "create_shar"
 SDK_PACKAGING_FUNC = "create_sdk_pkgs"
 
+SDK_POST_INSTALL_COMMAND = \
+    "( if cd ${SDKTARGETSYSROOT}${KERNEL_SRC_PATH} && [ -e Makefile ] ; then \
+         . ${SDKPATH}/environment-setup-${REAL_MULTIMACH_TARGET_SYS}; \
+         make ARCH=${ARCH} scripts; \
+       fi )"
+
 repack_tarball() {
     TARBALL_BZ="${SDK_DEPLOY}/${TOOLCHAIN_OUTPUTNAME}.tar.bz2"
     TARBALL="${SDK_DEPLOY}/${TOOLCHAIN_OUTPUTNAME}.tar"
