@@ -50,7 +50,9 @@ do_deploy() {
 	install -d ${DEPLOY_DIR_IMAGE}
 	install ${B}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
 	install ${B}/build-${LK_TARGET}/appsboot.raw ${DEPLOY_DIR_IMAGE}
-	cp ${B}/build-${LK_TARGET}/lkversion ${DEPLOY_DIR_IMAGE}/lk.version
+	if [ -f "${B}/build-${LK_TARGET}/lkversion" ] ; then
+		cp ${B}/build-${LK_TARGET}/lkversion ${DEPLOY_DIR_IMAGE}/lk.version
+	fi
 }
 
 do_deploy[dirs] = "${S}"

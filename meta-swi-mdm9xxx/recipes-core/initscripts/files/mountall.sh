@@ -2,7 +2,7 @@
 ### BEGIN INIT INFO
 # Provides:          mountall
 # Required-Start:    mountvirtfs
-# Required-Stop: 
+# Required-Stop:
 # Default-Start:     S
 # Default-Stop:
 # Short-Description: Mount all filesystems.

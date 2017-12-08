@@ -31,7 +31,9 @@ do_deploy() {
         install ${B}/build-${LK_TARGET}/appsboot_rw.mbn ${DEPLOY_DIR_IMAGE}
     fi
 
-    cp ${B}/build-${LK_TARGET}/lkversion ${DEPLOY_DIR_IMAGE}/lk.version
+    if [ -f "${B}/build-${LK_TARGET}/lkversion" ] ; then
+        cp ${B}/build-${LK_TARGET}/lkversion ${DEPLOY_DIR_IMAGE}/lk.version
+    fi
 }
 
 # Dependency because do_deploy copies files created by do_install.

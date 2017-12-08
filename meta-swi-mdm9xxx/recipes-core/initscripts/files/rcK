@@ -3,8 +3,9 @@
 # This script will execute system shutdown ('K') scripts and
 # other shutdown executables.
 #
-# Copyright (C) 2014 Sierra Wireless, Inc
 # Author: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+#
+# Copyright (C) Sierra Wireless, Inc
 ###############################################################
 
 # Import runtime environment
@@ -12,6 +13,14 @@ source /etc/run.env
 
 # The name of this script
 this_e=$( basename $0 )
+
+# The script of control msm_watchdog
+CONTROL_WDT=/etc/init.d/control_msm_watchdog.sh
+if [ ! -x ${CONTROL_WDT} ] ; then
+    # If the script is not present, use /bin/false instead to have a failed return code
+    # but do not stop the rcK script as it considered as a minor error.
+    CONTROL_WDT="/bin/false"
+fi
 
 #
 # Helper functions
@@ -25,12 +34,20 @@ run_K_scripts()
     local root_path=""
     local file=""
 
+    # When system shutdown, set MSM_WATCHDOG barktime to 25s
+    # and stop to kick MSM_WATCHDOG, When a rcK script is finished,
+    # kick MSM_WATCHDOG one time.
+    ${CONTROL_WDT} setbarktime 25
+    ${CONTROL_WDT} stopautokick
+
     # Execute all 'K' scripts. It is assumed that 'K' scripts
     # are soft links to the executable scripts elsewhere.
     for k in ${root_path}/etc/rcS.d/K* ; do
         file=$( realpath ${k} )
         if [ -x ${file} ] ; then
             ${k} stop
+            # Feed MSM_WATCHDOG one time.
+            ${CONTROL_WDT} kick
         fi
     done
 
@@ -42,7 +59,7 @@ umount_fs_generic()
 {
     local ret=0
 
-	# Make sure that root file system is remounted read-only
+    # Make sure that root file system is remounted read-only
     # before shutdown (well, bad things could and will happen).
     mount -n -o remount,ro / 2>/dev/null
 

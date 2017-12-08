@@ -2,7 +2,7 @@
 # --------------------------------------------------------------
 # Copyright (c) 2012 Sierra Wireless. All Rights Reserved.
 # --------------------------------------------------------------
-# restartNMEA: Simple script to restart NMEA port bridging 
+# restartNMEA: Simple script to restart NMEA port bridging
 # on USB disconnect/reconnect
 
 # start ttyGS0 minitoring and bridging
@@ -13,7 +13,7 @@ do
     # remember 'cat /dev/nmea' pid so it can be killed later
     nmeapid=$!
     cat /dev/ttyGS0 > /dev/nmea
-    # cat /dev/ttyGS0 exit, kill 'cat /dev/nmea' too   
+    # cat /dev/ttyGS0 exit, kill 'cat /dev/nmea' too
     kill $nmeapid
     # wait 15s for ttyGS0 re-enumeration
     sleep 15
