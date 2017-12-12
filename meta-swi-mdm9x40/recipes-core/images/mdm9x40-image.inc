@@ -33,9 +33,6 @@ IMAGE_INSTALL += "pciutils"
 # Stubs
 IMAGE_INSTALL += "bsinfo-stub"
 
-# Add some extra packages for tool integration
-IMAGE_INSTALL += "lttng-ust"
-#IMAGE_INSTALL += "lttng-modules"
 IMAGE_INSTALL += "kernel-modules"
 
 # Add linkmon app to monitor USB link

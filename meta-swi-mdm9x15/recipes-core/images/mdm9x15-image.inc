@@ -30,10 +30,6 @@ IMAGE_INSTALL += "kernel-modules"
 # Install device trees to rootfs (/boot directory is default location).
 IMAGE_INSTALL += "kernel-devicetree"
 
-# Add some extra packages for tool integration
-IMAGE_INSTALL += "lttng-ust"
-IMAGE_INSTALL += "lttng-modules"
-
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL += "linkmon"
 

@@ -30,10 +30,6 @@ DEPENDS += "${@check_legato_pkg(d)}"
 # Stubs
 IMAGE_INSTALL += "bsinfo-stub"
 
-# Add some extra packages for tool integration
-IMAGE_INSTALL += "lttng-ust"
-#IMAGE_INSTALL += "lttng-modules"
-
 IMAGE_INSTALL += "embms-kernel"
 IMAGE_INSTALL += "kernel-modules"
 

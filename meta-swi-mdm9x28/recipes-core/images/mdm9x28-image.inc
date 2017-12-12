@@ -36,10 +36,6 @@ def check_legato_pkg(d):
 
 DEPENDS += "${@check_legato_pkg(d)}"
 
-# Add some extra packages for tool integration
-IMAGE_INSTALL += "lttng-ust"
-#IMAGE_INSTALL += "lttng-modules"
-
 IMAGE_INSTALL += "embms-kernel"
 IMAGE_INSTALL += "kernel-modules"
 
