@@ -7,8 +7,10 @@ DEPENDS = "acdbloader glib-2.0"
 
 EXTRA_OECONF += "--with-acdb"
 
+FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI = "${ALSAINTF_REPO} \
             file://0001-Fix-build-without-QC-headers.patch \
+            file://0002-Fix-build-without-acdb-loader.patch \
             file://0003-mm-audio-offer-aplay-arec-amix-dynamic-libraries.patch \
             file://0004-Add-backtrace-compiling-options.patch \
             file://0005-Yocto-2.2-fixes.patch"
