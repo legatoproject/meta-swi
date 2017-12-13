@@ -18,14 +18,12 @@ SRC_URI = "file://functions \
            file://rcS \
            file://rcK \
            file://GPLv2.patch \
-           file://prepro.awk \
            file://confighw.sh \
            file://swiapplaunch.sh.in \
            file://restart_swi_apps.in \
            file://restartNMEA \
            file://run.env.in \
            file://run_getty.sh.in \
-           file://mount_unionfs.in \
            file://mount_early.in \
            file://loginNagger \
            "
@@ -46,14 +44,12 @@ SRC_URI_swi-mdm9x28-ar758x = "\
            file://rcS \
            file://rcK \
            file://GPLv2.patch \
-           file://prepro.awk \
            file://confighw.sh \
            file://swiapplaunch.sh.in \
            file://restart_swi_apps.in \
            file://restartNMEA \
            file://run.env.in \
            file://run_getty.sh.in \
-           file://mount_unionfs.in \
            file://mount_early.in \
            file://loginNagger\
            "
@@ -75,7 +71,6 @@ SRC_URI_swi-mdm9x28-ar758x-rcy = "file://functions \
            file://rcS \
            file://rcK \
            file://GPLv2.patch \
-           file://prepro.awk \
            file://run.env.in \
            file://run_getty.sh.in \
            file://control_msm_watchdog.sh \
@@ -111,17 +106,8 @@ do_configure () {
 }
 
 do_install () {
-    #
-    # Preprocess *.in files with @if directives.
-    #
-    MACH=${MACHINE}
 
-    chmod a+x ${WORKDIR}/prepro.awk
-
-    for file in ${WORKDIR}/*.in ; do
-        DMACH=${MACH#swi-}
-        ${WORKDIR}/prepro.awk -v CPPFLAGS=-D${DMACH//-/_}=1 $file > ${file%.in}
-    done
+    process_templates
 
     #
     # Create directories and install device independent scripts
@@ -140,8 +126,8 @@ do_install () {
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
     if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ]; then
-    install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
-    install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
+        install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
+        install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
     fi
     install -m 0755    ${WORKDIR}/mountall.sh   ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/single        ${D}${sysconfdir}/init.d
@@ -170,7 +156,7 @@ do_install () {
     install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sysconfdir}/profile.d/loginNagger
 
     case "${MACH}" in
-    swi-mdm9x28 | swi-mdm9x50 )
+    swi-mdm9x28 | swi-mdm9x50)
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
         ;;
     swi-mdm9x28-ar758x)
@@ -192,7 +178,7 @@ do_install () {
     update-rc.d -r ${D} mountall.sh start 07 S .
     update-rc.d -r ${D} bootmisc.sh start 55 S .
     if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ]; then
-    update-rc.d -r ${D} bringup_ecm.sh start 95 S .
+        update-rc.d -r ${D} bringup_ecm.sh start 95 S .
     fi
     if [ "${TARGET_ARCH}" = "arm" ]; then
         update-rc.d -r ${D} alignment.sh start 06 S .
@@ -209,17 +195,8 @@ do_install () {
 }
 
 do_install_swi-mdm9x28-ar758x-rcy() {
-    #
-    # Preprocess *.in files with @if directives.
-    #
-    MACH=${MACHINE}
 
-    chmod a+x ${WORKDIR}/prepro.awk
-
-    for file in ${WORKDIR}/*.in ; do
-        DMACH=${MACH#swi-}
-        ${WORKDIR}/prepro.awk -v CPPFLAGS=-D${DMACH//-/_}=1 $file > ${file%.in}
-    done
+    process_templates
 
     #
     # Create directories and install device independent scripts
