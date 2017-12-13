@@ -53,12 +53,12 @@ do_prepare_virt() {
     # QEmu Config
     touch $CFG
     if [[ "${VIRT_ARCH}" == "x86" ]]; then
-        echo 'CMDLINE="root=/dev/hda1 console=ttyS0 rw mem=128M"' >> $CFG
+        echo 'CMDLINE="root=/dev/hda console=ttyS0 rw mem=128M"' >> $CFG
         echo 'ARG_TARGET=""' >> $CFG
         echo 'ROOTFS_METHOD=-hda' >> $CFG
 
     elif [[ "${VIRT_ARCH}" == "arm" ]]; then
-        echo 'CMDLINE="root=/dev/sda1 console=ttyS0 rootwait mem=128M"' >> $CFG
+        echo 'CMDLINE="root=/dev/sda console=ttyS0 rootwait mem=128M"' >> $CFG
         echo 'ARG_TARGET="-M versatilepb -m 128"' >> $CFG
         echo 'ROOTFS_METHOD=-hda' >> $CFG
     fi
@@ -67,49 +67,10 @@ do_prepare_virt() {
     cp -H ${ELF_KERNEL} ${VIRT_DIR}/kernel
 
     # Hard drive
-    dd if=/dev/zero of=hda.raw bs=1M count=1k
-
-    # Partitions
-    touch part.sch
-    # part 1 = rootfs
-    echo ",512M,L,*" >> part.sch
-    # part 2 = /mnt/flash
-    echo ",+,L,-" >> part.sch
-    sfdisk --force hda.raw < part.sch
-
-    fdisk -l hda.raw
-
-    sfdisk -d hda.raw
-
-    OFFSET_1=$(sfdisk -d hda.raw |grep hda.raw1 |awk '{print $4}' |sed 's/,//g')
-    SIZE_1=$(sfdisk -d hda.raw |grep hda.raw1 |awk '{print $6}' |sed 's/,//g')
-
-    echo "Part 1 | of $OFFSET_1 | sz $SIZE_1"
-
-    OFFSET_2=$(sfdisk -d hda.raw |grep hda.raw2 |awk '{print $4}' |sed 's/,//g')
-    SIZE_2=$(sfdisk -d hda.raw |grep hda.raw2 |awk '{print $6}' |sed 's/,//g')
-
-    echo "Part 2 | of $OFFSET_2 | sz $SIZE_2"
-
-    SECTOR_SZ=512
-
     ROOTFS_IMG="${PN}-${MACHINE}.${FSTYPE_VIRT}"
     echo "Managing rootfs: ${ROOTFS_IMG}"
-    cp ${DEPLOY_DIR_IMAGE}/${ROOTFS_IMG} rootfs.${FSTYPE_VIRT}
-    e2fsck -p rootfs.${FSTYPE_VIRT}
-    resize2fs rootfs.${FSTYPE_VIRT} "$SIZE_1"s
 
-    dd if=rootfs.${FSTYPE_VIRT} conv=notrunc of=hda.raw bs=$SECTOR_SZ seek=$OFFSET_1 count=$SIZE_1
-
-    echo "Generating /mnt/flash"
-    dd if=/dev/zero of=flash.${FSTYPE_VIRT} bs=$SECTOR_SZ count=$SIZE_2
-    mkfs.${FSTYPE_VIRT} -F flash.${FSTYPE_VIRT}
-
-    dd if=flash.${FSTYPE_VIRT} conv=notrunc of=hda.raw bs=$SECTOR_SZ seek=$OFFSET_2 count=$SIZE_2
-
-    fdisk -l hda.raw
-
-    qemu-img convert -f raw -O qcow2 hda.raw rootfs.qcow2
+    qemu-img convert -f raw -O qcow2 ${DEPLOY_DIR_IMAGE}/${ROOTFS_IMG} rootfs.qcow2
 
     # release
     tar jcf $VIRT_NAME $CFG $KERNEL $ROOTFS
