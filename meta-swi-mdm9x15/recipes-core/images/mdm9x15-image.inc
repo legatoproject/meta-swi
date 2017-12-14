@@ -15,16 +15,13 @@ inherit ubi-image
 # manual installation of mdev.
 # IMAGE_INSTALL += "busybox-mdev"
 
-# Tools and helpers for i2c development
-IMAGE_INSTALL += "i2cgpioctl"
-IMAGE_INSTALL += "i2c-tools"
-
 # Add WiFi TI drivers, tools, and scripts
 IMAGE_INSTALL += "wpa-supplicant"
 IMAGE_INSTALL += "hostapd"
 IMAGE_INSTALL += "iw"
 IMAGE_INSTALL += "ti-wifi-utils-wl18xx"
 IMAGE_INSTALL += "crda"
+IMAGE_INSTALL += "i2cgpioctl"
 IMAGE_INSTALL += "sierra-init-tiwifi"
 
 # Install kernel modules

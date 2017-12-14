@@ -36,9 +36,6 @@ RDEPENDS_${PN} += "attr"
 # Adds an alternative to tar (bsdtar)
 RDEPENDS_${PN} += "libarchive"
 
-# Enable (de)compression with bz2
-RDEPENDS_${PN} += "bzip2"
-
 # Provide base support for Legato
 RDEPENDS_${PN} += "legato-init"
 
