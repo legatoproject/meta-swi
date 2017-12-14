@@ -36,8 +36,6 @@ else
         mode="hsusb"
 fi
 
-pkill adbd
-
 vid=$(/usr/bin/ud_getusbinfo VID)
 if [ $? -ne 0 ];
 then
@@ -139,8 +137,12 @@ echo $manufacturer > /sys/class/android_usb/android$num/iManufacturer
 echo $product > /sys/class/android_usb/android$num/iProduct
 echo $serial > /sys/class/android_usb/android$num/iSerial
 
+compstr=`grep -w ffs /sys/class/android_usb/android0/functions || true`
+if [[ $mode = "hsusb" && ! -z "$compstr" && -d /sys/class/android_usb/android0/f_ffs ]] ; then
+    echo adb > /sys/class/android_usb/android0/f_ffs/aliases
+fi
+
 echo 1 > /sys/class/android_usb/android$num/enable
 
-/etc/init.d/adbd start
 
 

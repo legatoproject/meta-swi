@@ -414,7 +414,7 @@ if [ -n "${PROD}" ]; then
     if [ -n "$ENABLE_RECOVERY" ]; then
         if ! set_machine "${MACH}-${PROD}-rcy"; then
             # If <MACH>-<PROD> is not available, fallback to <MACH>
-            set_machine "${MACH}"
+            set_machine "${MACH}-rcy"
         fi
     elif ! set_machine "${MACH}-${PROD}"; then
         # If <MACH>-<PROD> is not available, fallback to <MACH>

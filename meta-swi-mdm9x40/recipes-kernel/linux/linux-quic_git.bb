@@ -49,8 +49,24 @@ do_install_append() {
     kernel_src_install
 }
 
-BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x40-${DATETIME}.2k"
-BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x40-${DATETIME}.4k"
+# The following was removed from the kernel class between Yocto 1.7 and 2.2.
+# We need our non-sanitized kernel headers in the sysroot it because our apps
+# need them.
+python sysroot_stage_all () {
+    oe.path.copyhardlinktree(d.expand("${D}${KERNEL_SRC_PATH}"), d.expand("${SYSROOT_DESTDIR}${KERNEL_SRC_PATH}"))
+}
+
+# Note that @{DATETIME} isn't a BitBake variable expansion;
+# see do_bootimg for the crude substitution we do with sed.
+# Originally we had the ${DATETIME} variable here.
+# What this "fake variable" achieves is a stable base hash across reparses:
+# BitBake only ever sees the literal text @{DATETIME},
+# so the hash doesn't change. In Yocto 1.7 we didn't see a
+# problem, but newer Yocto diagnoses situations when the inputs
+# to a task appear to change upon a second parse, changing the
+# hash, which occurs if ${DATETIME} is mixed in.
+BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x40-@{DATETIME}.2k"
+BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x40-@{DATETIME}.4k"
 
 MACHINE_KERNEL_BASE = "0x81800000"
 MACHINE_KERNEL_TAGS_OFFSET = "0x81700000"
@@ -128,10 +144,13 @@ gen_bootimg() {
 }
 
 do_bootimg() {
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x40.2k masterDTB.2k 2048
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x40.4k masterDTB.4k 4096
-    ln -sf ${BOOTIMG_NAME_4k}.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.img
-    echo "${PV} $(date +'%Y/%m/%d %H:%M:%S')" >> ${DEPLOY_DIR_IMAGE}/kernel.version
+    date=$(date +"%Y%m%d%H%M%S")
+    image_name_2k=$(echo ${BOOTIMG_NAME_2k} | sed -e s/@{DATETIME}/$date/)
+    image_name_4k=$(echo ${BOOTIMG_NAME_4k} | sed -e s/@{DATETIME}/$date/)
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" $image_name_2k boot-yocto-mdm9x40.2k masterDTB.2k 2048
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" $image_name_4k boot-yocto-mdm9x40.4k masterDTB.4k 4096
+    ln -sf $image_name_4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.img
+    echo "${PV} $date" >> ${DEPLOY_DIR_IMAGE}/kernel.version
 }
 
 do_add_mbnhdr_and_hash() {

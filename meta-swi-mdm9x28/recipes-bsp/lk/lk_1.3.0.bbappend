@@ -11,29 +11,9 @@ do_patch() {
     fi
 }
 
-do_install() {
-    install -d ${D}/boot
+do_install_prepend() {
     install ${B}/../../appsboot.mbn ${B}/build-${LK_TARGET}/
-    install ${B}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
     if [ -f "${B}/../../appsboot_rw.mbn" ] ; then
         install ${B}/../../appsboot_rw.mbn ${B}/build-${LK_TARGET}/
-        install ${B}/build-${LK_TARGET}/appsboot_rw.mbn ${D}/boot
     fi
 }
-
-do_deploy() {
-    install -d ${DEPLOY_DIR_IMAGE}
-
-    install ${B}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
-
-    if [ -f "${B}/build-${LK_TARGET}/appsboot_rw.mbn" ] ; then
-        install ${B}/build-${LK_TARGET}/appsboot_rw.mbn ${DEPLOY_DIR_IMAGE}
-    fi
-
-    if [ -f "${B}/build-${LK_TARGET}/lkversion" ] ; then
-        cp ${B}/build-${LK_TARGET}/lkversion ${DEPLOY_DIR_IMAGE}/lk.version
-    fi
-}
-
-# Dependency because do_deploy copies files created by do_install.
-addtask deploy after do_install
