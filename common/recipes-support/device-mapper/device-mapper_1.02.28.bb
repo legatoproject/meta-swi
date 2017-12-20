@@ -20,6 +20,8 @@ S = "${WORKDIR}/device-mapper.${PV}"
 B = "${S}"
 O = "${S}"
 
+EXTRA_OECONF = " --disable-selinux"
+
 # Fix the error of "No GNU_HASH in the elf binary: '<file>' [ldflags]"
 TARGET_CC_ARCH += "${LDFLAGS}"
 

@@ -31,6 +31,9 @@ do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_po
 
 DEPENDS += "ima-support-tools-native gcc"
 
+do_patch() {
+}
+
 do_configure_prepend() {
     # When SRC_URI contains something, the Yocto kernel.bbclass creates
     # ${STAGING_KERNEL_DIR} as a symlink to the local git repo; due to similar

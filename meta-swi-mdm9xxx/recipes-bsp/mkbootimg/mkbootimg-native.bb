@@ -30,6 +30,6 @@ copy_makefile() {
 do_patch[postfuncs] += "copy_makefile"
 
 do_install() {
-	install -d ${D}${bindir}
-	install ${MY_PN} ${D}${bindir}
+    install -d ${D}${bindir}
+    install ${MY_PN} ${D}${bindir}
 }

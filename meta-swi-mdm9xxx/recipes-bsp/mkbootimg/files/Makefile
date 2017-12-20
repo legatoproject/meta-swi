@@ -6,3 +6,6 @@ mkbootimg: mkbootimg.o
 
 mkbootimg.o: mkbootimg.c bootimg.h
 	$(CC) $(INCLUDES) $(CFLAGS) -c $<
+
+clean:
+	rm -f *.o mkbootimg

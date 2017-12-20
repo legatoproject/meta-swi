@@ -31,3 +31,4 @@ do_install() {
     install ${WORKDIR}/git/include/${MY_PN}/*.h ${D}${includedir}/${MY_PN}
     install ${MY_LPN}.a ${D}${libdir}/${MY_PN}
 }
+

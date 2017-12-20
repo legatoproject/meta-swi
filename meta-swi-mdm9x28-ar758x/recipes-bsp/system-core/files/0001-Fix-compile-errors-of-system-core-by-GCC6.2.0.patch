@@ -1,0 +1,76 @@
+From 696494102a710cf96533b330ca1d10c085242289 Mon Sep 17 00:00:00 2001
+From: Lucy He <LHe@sierrawireless.com>
+Date: Thu, 21 Dec 2017 04:41:36 +0800
+Subject: [PATCH] Fix compile errors of system-core by GCC6.2.0
+(1) Some header files had been install in "libcutils", so delete
+ the repetitive files path setting.
+(2) When compiling by GCC6.2.0, and include the file of "memory"
+in the "LogStatistics.h" file, will have the following compile error:
+"
+ In file included from /mnt/sda3/lhe/work/MDM9x28_2.2_ref/build_src/tmp/sysroots/swi-mdm9x28-ar758x/usr/include/c++/6.2.0/memory:83:0,
+                 from ../../git/logd/LogStatistics.h:20,
+                 from ../../git/logd/LogBuffer.h:31,
+                 from ../../git/logd/LogReader.h:21,
+                 from ../../git/logd/FlushCommand.cpp:22:
+/mnt/sda3/lhe/work/MDM9x28_2.2_ref/build_src/tmp/sysroots/swi-mdm9x28-ar758x/usr/include/c++/6.2.0/bits/shared_ptr_atomic.h:71:58: error: macro "atomic_is_lock_free" passed 2 arguments, but takes just 1
+     atomic_is_lock_free(const __shared_ptr<_Tp, _Lp>* __p)
+                                                          ^
+/mnt/sda3/lhe/work/MDM9x28_2.2_ref/build_src/tmp/sysroots/swi-mdm9x28-ar758x/usr/include/c++/6.2.0/bits/shared_ptr_atomic.h:111:73: error: macro "atomic_load_explicit" passed 3 arguments, but takes just 2
+     atomic_load_explicit(const __shared_ptr<_Tp, _Lp>* __p, memory_order)
+	 .............
+	 .........
+"
+ It was because the "memory" quoted the "shared_ptr_atomic.h",
+ but the function of "atomic_is_lock_XXX" has different number
+ of parameters in the file, will show error during parsing.
+
+ Because the function of "atomic_is_lock_XXX" were not used,
+ so don't include the "memory", but when remove it, would have
+ another error, so include the file of "unique_ptr.h" to resolve it.
+
+Change-Id: I80f184656c151950120243e73429f001b138f513
+Signed-off-by: Lucy He <LHe@sierrawireless.com>
+Signed-off-by: Betty Zhuo <bzhuo@sierrawireless.com>
+---
+ include/Makefile.am  | 7 +++++--
+ logd/LogStatistics.h | 5 +++++
+ 2 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/include/Makefile.am b/include/Makefile.am
+index 4628d4e..9324e5d 100644
+--- a/include/Makefile.am
++++ b/include/Makefile.am
+@@ -5,8 +5,11 @@ systemheaders_include_HEADERS += $(top_srcdir)/include/system/graphics.h
+ systemheaders_include_HEADERS += $(top_srcdir)/include/system/thread_defs.h
+ systemheaders_include_HEADERS += $(top_srcdir)/include/system/window.h
+
+-privateheaders_includedir=$(includedir)/private
+-privateheaders_include_HEADERS := $(top_srcdir)/include/private/android_filesystem_config.h
++# SWISTART
++# Remove following header since it is installed in libcutils.
++#privateheaders_includedir=$(includedir)/private
++#privateheaders_include_HEADERS := $(top_srcdir)/include/private/android_filesystem_config.h
++# SWISTOP
+
+ sysheaders_includedir=$(includedir)/sys
+ sysheaders_include_HEADERS := $(top_srcdir)/include/sys/system_properties.h
+diff --git a/logd/LogStatistics.h b/logd/LogStatistics.h
+index 6979331..16587c6 100644
+--- a/logd/LogStatistics.h
++++ b/logd/LogStatistics.h
+@@ -17,7 +17,12 @@
+ #ifndef _LOGD_LOG_STATISTICS_H__
+ #define _LOGD_LOG_STATISTICS_H__
+
++#ifdef SIERRA
++#include <bits/unique_ptr.h>
++#elif
+ #include <memory>
++#endif /* SIERRA */
++
+ #include <stdlib.h>
+ #include <string.h>
+ #include <sys/types.h>
+--
+1.9.1
+

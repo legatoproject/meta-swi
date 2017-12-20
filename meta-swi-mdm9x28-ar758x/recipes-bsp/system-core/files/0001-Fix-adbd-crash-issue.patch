@@ -1,0 +1,45 @@
+From 233f6b6d8d04a77e852cbe8b5da5074bf2ba1ad3 Mon Sep 17 00:00:00 2001
+From: Lucy He <LHe@sierrawireless.com>
+Date: Thu, 21 Dec 2017 00:06:53 +0800
+Subject: [PATCH] Fix adbd crash issue.
+
+Change-Id: I95dd09dd07a6484d01ef9f74cee051f172867702
+Signed-off-by: Lucy He <LHe@sierrawireless.com>
+---
+ adb/transport_local.cpp | 5 +----
+ 1 file changed, 1 insertion(+), 4 deletions(-)
+ mode change 100644 => 100755 adb/transport_local.cpp
+
+diff --git a/adb/transport_local.cpp b/adb/transport_local.cpp
+old mode 100644
+new mode 100755
+index dca3bf2..8db1ce0
+--- a/adb/transport_local.cpp
++++ b/adb/transport_local.cpp
+@@ -315,7 +315,7 @@ void local_init(int port)
+                     HOST ? "client" : "server");
+     }
+ }
+-#ifdef ADB_QEMU
++
+ static void remote_kick(atransport *t)
+ {
+     int fd = t->sfd;
+@@ -337,14 +337,11 @@ static void remote_kick(atransport *t)
+     }
+ #endif
+ }
+-#endif
+ 
+-#ifdef ADB_QEMU
+ static void remote_close(atransport *t)
+ {
+     adb_close(t->fd);
+ }
+-#endif
+ 
+ #if ADB_HOST
+ /* Only call this function if you already hold local_transports_lock. */
+-- 
+1.9.1
+
