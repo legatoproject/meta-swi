@@ -7,10 +7,14 @@ TOOLCHAIN_OUTPUTNAME = "${SDK_NAME}-toolchain-swi-${DISTRO_VERSION}"
 SDK_PACKAGING_FUNC_ORIG = "create_shar"
 SDK_PACKAGING_FUNC = "create_sdk_pkgs"
 
+# Note that $target_sdk_dir is doesn't use ${} syntax, and so
+# isn't expanded by Poky; it passes literally through to the shell script.
 SDK_POST_INSTALL_COMMAND = \
-    "( if cd ${SDKTARGETSYSROOT}${KERNEL_SRC_PATH} && [ -e Makefile ] ; then \
-         . ${SDKPATH}/environment-setup-${REAL_MULTIMACH_TARGET_SYS}; \
+    "( if cd $target_sdk_dir/sysroots/${REAL_MULTIMACH_TARGET_SYS}${KERNEL_SRC_PATH} && [ -e Makefile ] ; then \
+         . $target_sdk_dir/environment-setup-${REAL_MULTIMACH_TARGET_SYS}; \
+         [ -n "$SUDO_EXEC" ] && $SUDO_EXEC find scripts -type d -exec chown -R $(id -u) {} \; ; \
          make ARCH=${ARCH} scripts; \
+         [ -n "$SUDO_EXEC" ] && $SUDO_EXEC find scripts -exec chown -R 0 {} \; ; \
        fi )"
 
 repack_tarball() {
