@@ -67,5 +67,9 @@ RDEPENDS_${PN} += "usbutils"
 # Add rngd for entropy
 RDEPENDS_${PN} += "rng-tools"
 
-# Add tinucbor to all targets
+# Add tinycbor to all targets
 RDEPENDS_${PN} += "tinycbor"
+
+# Make sure to package libgcc in the rootfs
+# since Legato depends on it
+RDEPENDS_${PN} += "libgcc"
