@@ -155,7 +155,7 @@ do_install () {
     install -d -m 0755 ${D}${sysconfdir}/profile.d
     install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sysconfdir}/profile.d/loginNagger
 
-    case "${MACH}" in
+    case "${MACHINE}" in
     swi-mdm9x28 | swi-mdm9x50 | swi-mdm9x28-qemu)
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
         ;;
