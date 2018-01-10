@@ -15,3 +15,4 @@ RDEPENDS_${PN} += "tcf-agent"
 
 RDEPENDS_${PN} += "lttng-ust"
 # RDEPENDS_${PN} += "lttng-modules"
+RDEPENDS_${PN} += "lrzsz"
