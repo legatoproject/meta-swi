@@ -13,16 +13,16 @@ Signed-off-by: Patrick Ohly <patrick.ohly@intel.com>
 +++ openssl-1.0.2g/crypto/Makefile
 @@ -85,11 +85,11 @@
  	@if [ -z "$(THIS)" ]; then $(MAKE) -f $(TOP)/Makefile reflect THIS=$@; fi
- 
+
  subdirs:
 -	@target=all; $(RECURSIVE_MAKE)
 +	+@target=all; $(RECURSIVE_MAKE)
- 
+
  files:
  	$(PERL) $(TOP)/util/files.pl "CPUID_OBJ=$(CPUID_OBJ)" Makefile >> $(TOP)/MINFO
 -	@target=files; $(RECURSIVE_MAKE)
 +	+@target=files; $(RECURSIVE_MAKE)
- 
+
  links:
  	@$(PERL) $(TOP)/util/mklink.pl ../include/openssl $(EXHEADER)
 @@ -100,7 +100,7 @@
@@ -36,11 +36,11 @@ Signed-off-by: Patrick Ohly <patrick.ohly@intel.com>
  	$(RANLIB) $(LIB) || echo Never mind.
 @@ -111,7 +111,7 @@
  	fi
- 
+
  libs:
 -	@target=lib; $(RECURSIVE_MAKE)
 +	+@target=lib; $(RECURSIVE_MAKE)
- 
+
  install:
  	@[ -n "$(INSTALLTOP)" ] # should be set by top Makefile...
 @@ -120,7 +120,7 @@
@@ -49,27 +49,27 @@ Signed-off-by: Patrick Ohly <patrick.ohly@intel.com>
  	done;
 -	@target=install; $(RECURSIVE_MAKE)
 +	+@target=install; $(RECURSIVE_MAKE)
- 
+
  lint:
  	@target=lint; $(RECURSIVE_MAKE)
 --- openssl-1.0.2g/engines/Makefile
 +++ openssl-1.0.2g/engines/Makefile
 @@ -72,7 +72,7 @@
- 
+
  all:	lib subdirs
- 
+
 -lib:	$(LIBOBJ)
 +lib:	$(LIBOBJ) | subdirs
  	@if [ -n "$(SHARED_LIBS)" ]; then \
  		set -e; \
  		for l in $(LIBNAMES); do \
 @@ -89,7 +89,7 @@
- 
+
  subdirs:
  	echo $(EDIRS)
 -	@target=all; $(RECURSIVE_MAKE)
 +	+@target=all; $(RECURSIVE_MAKE)
- 
+
  files:
  	$(PERL) $(TOP)/util/files.pl Makefile >> $(TOP)/MINFO
 @@ -128,7 +128,7 @@
@@ -78,14 +78,14 @@ Signed-off-by: Patrick Ohly <patrick.ohly@intel.com>
  	fi
 -	@target=install; $(RECURSIVE_MAKE)
 +	+@target=install; $(RECURSIVE_MAKE)
- 
+
  tags:
  	ctags $(SRC)
 --- openssl-1.0.2g/Makefile.org
 +++ openssl-1.0.2g/Makefile.org
 @@ -279,17 +279,17 @@
  build_libssl: build_ssl libssl.pc
- 
+
  build_crypto:
 -	@dir=crypto; target=all; $(BUILD_ONE_CMD)
 +	+@dir=crypto; target=all; $(BUILD_ONE_CMD)
@@ -104,7 +104,7 @@ Signed-off-by: Patrick Ohly <patrick.ohly@intel.com>
  build_tools: build_libs
 -	@dir=tools; target=all; $(BUILD_ONE_CMD)
 +	+@dir=tools; target=all; $(BUILD_ONE_CMD)
- 
+
  all_testapps: build_libs build_testapps
  build_testapps:
 @@ -544,7 +544,7 @@
@@ -139,13 +139,13 @@ Signed-off-by: Patrick Ohly <patrick.ohly@intel.com>
 @@ -144,7 +144,7 @@
  tags:
  	ctags $(SRC)
- 
+
 -tests:	exe apps $(TESTS)
 +tests:	exe $(TESTS)
- 
+
  apps:
  	@(cd ..; $(MAKE) DIRS=apps all)
-@@ -438,136 +438,136 @@
+@@ -441,139 +441,139 @@
  		link_app.$${shlib_target}
  
  $(RSATEST)$(EXE_EXT): $(RSATEST).o $(DLIBCRYPTO)
@@ -316,6 +316,10 @@ Signed-off-by: Patrick Ohly <patrick.ohly@intel.com>
 -	@target=$(BADDTLSTEST) $(BUILD_CMD)
 +	+@target=$(BADDTLSTEST) $(BUILD_CMD)
  
+ $(FATALERRTEST)$(EXE_EXT): $(FATALERRTEST).o ssltestlib.o $(DLIBSSL) $(DLIBCRYPTO)
+-	@target=$(FATALERRTEST); exobj=ssltestlib.o; $(BUILD_CMD)
++	+@target=$(FATALERRTEST); exobj=ssltestlib.o; $(BUILD_CMD)
+ 
  $(SSLV2CONFTEST)$(EXE_EXT): $(SSLV2CONFTEST).o
 -	@target=$(SSLV2CONFTEST) $(BUILD_CMD)
 +	+@target=$(SSLV2CONFTEST) $(BUILD_CMD)
@@ -326,12 +330,12 @@ Signed-off-by: Patrick Ohly <patrick.ohly@intel.com>
  
  #$(AESTEST).o: $(AESTEST).c
  #	$(CC) -c $(CFLAGS) -DINTERMEDIATE_VALUE_KAT -DTRACE_KAT_MCT $(AESTEST).c
+
 @@ -580,6 +580,6 @@
  #	fi
- 
+
  dummytest$(EXE_EXT): dummytest.o $(DLIBCRYPTO)
 -	@target=dummytest; $(BUILD_CMD)
 +	+@target=dummytest; $(BUILD_CMD)
- 
- # DO NOT DELETE THIS LINE -- make depend depends on it.
- 
+
+# DO NOT DELETE THIS LINE -- make depend depends on it.
