@@ -73,3 +73,5 @@ RDEPENDS_${PN} += "tinycbor"
 # Make sure to package libgcc in the rootfs
 # since Legato depends on it
 RDEPENDS_${PN} += "libgcc"
+RDEPENDS_${PN} += "libstdc++"
+

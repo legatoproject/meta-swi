@@ -12,6 +12,10 @@ DEPENDS += "yaffs2-utils-native"
 DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"
 
+# Framework dependencies
+RDEPENDS_${PN} += "libgcc"
+RDEPENDS_${PN} += "libstdc++"
+
 # Target dependencies
 DEPENDS += "curl"
 DEPENDS += "zlib"
