@@ -1,0 +1,69 @@
+#
+# This is default IMA security policy. The real one should not be
+# shared with the public.
+#
+# Magics can be found in kernel/include/uapi/linux/magic.h
+# Default can be found in security/integrity/ima/ima_policy.c
+# SQUASH_SUPER_MAGIC = 0x73717368
+dont_measure fsmagic=0x73717368
+dont_appraise fsmagic=0x73717368
+# Magics can be found in kernel/include/uapi/linux/magic.h
+# Default can be found in security/integrity/ima/ima_policy.c
+# PROC_SUPER_MAGIC = 0x9fa0
+dont_measure fsmagic=0x9fa0
+dont_appraise fsmagic=0x9fa0
+# SYSFS_MAGIC = 0x62656572
+dont_measure fsmagic=0x62656572
+dont_appraise fsmagic=0x62656572
+# DEBUGFS_MAGIC = 0x64626720
+dont_measure fsmagic=0x64626720
+dont_appraise fsmagic=0x64626720
+# TMPFS_MAGIC = 0x01021994
+# dont_measure fsmagic=0x01021994
+# dont_appraise fsmagic=0x01021994
+# RAMFS_MAGIC = 0x858458f6
+dont_measure fsmagic=0x858458f6
+dont_appraise fsmagic=0x858458f6
+# V9FS_MAGIC = 0x01021997
+dont_measure fsmagic=0x01021997
+dont_appraise fsmagic=0x01021997
+# BDEVFS_MAGIC = 0x62646576
+dont_measure fsmagic=0x62646576
+dont_appraise fsmagic=0x62646576
+# DEVPTS_SUPER_MAGIC = 0x1cd1
+dont_measure fsmagic=0x1cd1
+dont_appraise fsmagic=0x1cd1
+# PIPEFS_MAGIC = 0x50495045
+dont_measure fsmagic=0x50495045
+dont_appraise fsmagic=0x50495045
+# SOCKFS_MAGIC = 0x534F434B
+dont_measure fsmagic=0x534F434B
+dont_appraise fsmagic=0x534F434B
+# BINFMTFS_MAGIC = 0x42494e4d
+dont_measure fsmagic=0x42494e4d
+dont_appraise fsmagic=0x42494e4d
+# SECURITYFS_MAGIC = 0x73636673
+dont_measure fsmagic=0x73636673
+dont_appraise fsmagic=0x73636673
+# SELINUX_MAGIC = 0xf97cff8c
+dont_measure fsmagic=0xf97cff8c
+dont_appraise fsmagic=0xf97cff8c
+# NFS_MAGIC = 0x6969
+dont_measure fsmagic=0x6969
+dont_appraise fsmagic=0x6969
+# USBDEVICE_SUPER_MAGIC = 0x9fa2
+dont_measure fsmagic=0x9fa2
+dont_appraise fsmagic=0x9fa2
+# CGROUP_SUPER_MAGIC = 0x27e0eb
+dont_appraise fsmagic=0x27e0eb
+# Some defaults for measurement
+measure func=FILE_MMAP mask=MAY_EXEC
+measure func=BPRM_CHECK mask=MAY_EXEC
+measure func=MODULE_CHECK
+# Do not measure all types that have the "logfile" SELinux attribute
+# You can use seinfo -alogfile -x to get an overview of all these types
+# Remainder of the defaults
+appraise func=MODULE_CHECK appraise_type=imasig
+appraise func=MMAP_CHECK appraise_type=imasig
+appraise func=BPRM_CHECK appraise_type=imasig
+appraise obj_user=M

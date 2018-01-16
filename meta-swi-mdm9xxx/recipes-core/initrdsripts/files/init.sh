@@ -642,6 +642,43 @@ switch_to_real_root()
     return ${ret}
 }
 
+ima_setup()
+{
+    local do_exec=""
+    local ima_policy_file=/etc/ima/ima.policy
+    local ret=0
+
+    echo "Setting up IMA subsystem..."
+
+    do_exec=$( cat /proc/cmdline | grep -ow "ima_appraise=fix\|ima_appraise=enforce" )
+
+    if [ -z $do_exec ] ; then
+        # Nothing we should do here, IMA is not enabled
+        echo "IMA is not supported."
+        return 0
+    fi
+
+    # IMA is supported, check if policy file is available. If not, refuse to boot.
+    if [ ! -f ${ima_policy_file} ] ; then
+        echo "IMA policy file is not available."
+        return 1
+    fi
+
+    # Mount linux security
+    mount -t securityfs security /sys/kernel/security
+
+    if [ -f /sys/kernel/security/ima/policy ] ; then
+        (set -e; while read i; do echo $i; done) <${ima_policy_file} >/sys/kernel/security/ima/policy
+    else
+        echo "Cannot update IMA policy, kernel policy entry is missing."
+        ret=1
+    fi
+
+    umount /sys/kernel/security
+
+    return $ret
+}
+
 init_main()
 {
     local ret=0
@@ -649,6 +686,7 @@ init_main()
     # list of methods to execute
     local method_list="
                        do_essential
+                       ima_setup
                        set_boot_dev
                        checkpoint_rootfs
                        remount_rootfs_ro
