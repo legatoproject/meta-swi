@@ -1,0 +1,1 @@
+TMPL_FLAGS ?= "-Dvirt"

@@ -29,7 +29,7 @@ legato_toolchain_env() {
 }
 
 get_legato_version() {
-    legato_version_file=$(find ${TMPDIR}/sysroots -wholename "*/legato/version")
+    legato_version_file=$(find ${PKG_CONFIG_SYSROOT_DIR} -wholename "*/legato/version")
     echo $legato_version_file
 
     export LEGATO_VERSION="$(cat $legato_version_file)"

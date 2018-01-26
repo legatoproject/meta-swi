@@ -11,7 +11,11 @@ SRC_URI_append = "\
            "
 
 do_install_append() {
-    install -D -m 0755 ${WORKDIR}/load_modem.sh -D ${D}${sysconfdir}/init.d/load_modem.sh
+
+    # if it is RAM image, don't need to load modem
+    if [ "${MACHINE}" != "swi-mdm9x28-ar758x-rcy" ]; then
+        install -D -m 0755 ${WORKDIR}/load_modem.sh -D ${D}${sysconfdir}/init.d/load_modem.sh
+    fi
 
     install -D -m 0664 ${WORKDIR}/etc/group -D ${D}${sysconfdir}/group
     install -D -m 0400 ${WORKDIR}/etc/gshadow -D ${D}${sysconfdir}/gshadow

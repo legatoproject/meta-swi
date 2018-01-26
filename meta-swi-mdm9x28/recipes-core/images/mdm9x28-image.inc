@@ -1,7 +1,8 @@
 DEPENDS += " \
         virtual/lk \
         mtd-utils-native \
-        cryptsetup-native"
+        cryptsetup-native \
+        ima-evm-utils-native"
 
 INC_PR = "r0"
 
@@ -18,17 +19,13 @@ IMAGE_INSTALL += "cryptsetup"
 # manual installation of mdev.
 # IMAGE_INSTALL += "busybox-mdev"
 
-# Tools and helpers for i2c development
-IMAGE_INSTALL += "i2cgpioctl"
-IMAGE_INSTALL += "i2c-tools"
-
 # Add WiFi tools and scripts
 IMAGE_INSTALL += "wpa-supplicant"
 IMAGE_INSTALL += "hostapd"
 IMAGE_INSTALL += "iw"
 IMAGE_INSTALL += "ti-wifi-utils-wl18xx"
 IMAGE_INSTALL += "crda"
-
+IMAGE_INSTALL += "i2cgpioctl"
 IMAGE_INSTALL += "sierra-init-tiwifi"
 
 # Only add Legato if this is a LEGATO_BUILD
@@ -40,15 +37,15 @@ def check_legato_pkg(d):
 
 DEPENDS += "${@check_legato_pkg(d)}"
 
-# Add some extra packages for tool integration
-IMAGE_INSTALL += "lttng-ust"
-#IMAGE_INSTALL += "lttng-modules"
-
 IMAGE_INSTALL += "embms-kernel"
 IMAGE_INSTALL += "kernel-modules"
 
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL += "linkmon"
+
+# Add IMA/EVM support tools
+IMAGE_INSTALL += "ima-evm-utils"
+IMAGE_INSTALL += "keyutils"
 
 create_ubinize_config() {
     local cfg_path=$1

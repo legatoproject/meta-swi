@@ -1,9 +1,6 @@
 
-# Tag LE.BR.1.2.1-44100-9x07
+# Tag LE.UM.1.1-23600-9x07
 SRCREV = "1ec3812e95b2541dce8a1a0130c29be766edae99"
-# Tag LE.BR.1.2.1-59300-9x07
-SRCREV_swi-mdm9x28-ar758x = "1ec3812e95b2541dce8a1a0130c29be766edae99"
-
 REBOOTD_REPO = "git://codeaurora.org/quic/le/mdm/reboot-daemon;branch=master"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"

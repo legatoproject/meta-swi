@@ -12,9 +12,7 @@ RDEPENDS_${PN} += "procps"
 RDEPENDS_${PN} += "mtd-utils"
 RDEPENDS_${PN} += "mtd-utils-ubifs"
 RDEPENDS_${PN} += "libopencore-amr"
-RDEPENDS_${PN} += "iperf"
 RDEPENDS_${PN} += "libvo-amrwbenc"
-RDEPENDS_${PN} += "tcpdump"
 
 RDEPENDS_${PN} += "conntrack-tools"
 
@@ -36,35 +34,28 @@ RDEPENDS_${PN} += "attr"
 # Adds an alternative to tar (bsdtar)
 RDEPENDS_${PN} += "libarchive"
 
-# Enable (de)compression with bz2
-RDEPENDS_${PN} += "bzip2"
-
 # Provide base support for Legato
 RDEPENDS_${PN} += "legato-init"
 
 # Add some extra packages for tool integration
 RDEPENDS_${PN} += "dropbear"
-RDEPENDS_${PN} += "strace"
 RDEPENDS_${PN} += "python-core"
 
 RDEPENDS_${PN} += "iproute2"
 RDEPENDS_${PN} += "iproute2-tc"
 RDEPENDS_${PN} += "iptables"
 
-RDEPENDS_${PN} += "opkg"
 RDEPENDS_${PN} += "openssl"
 RDEPENDS_${PN} += "ppp"
-
-# Required for some Developer Studio features.
-# Not needed for production builds
-RDEPENDS_${PN} += "openssh-sftp-server"
-RDEPENDS_${PN} += "tcf-agent"
-
-# Add usb utils to enable lsusb on the target
-RDEPENDS_${PN} += "usbutils"
 
 # Add rngd for entropy
 RDEPENDS_${PN} += "rng-tools"
 
-# Add tinucbor to all targets
+# Add tinycbor to all targets
 RDEPENDS_${PN} += "tinycbor"
+
+# Make sure to package libgcc in the rootfs
+# since Legato depends on it
+RDEPENDS_${PN} += "libgcc"
+RDEPENDS_${PN} += "libstdc++"
+

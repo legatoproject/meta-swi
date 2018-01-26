@@ -13,10 +13,10 @@ create_ubi_image() {
 
     case $page_size in
     2k)
-        ubinize_args='-m 2048 -p 128KiB -s 2048'
+        ubinize_args="${UBINIZE_ARGS_2k}"
         ;;
     4k)
-        ubinize_args='-m 4096 -p 256KiB -s 4096'
+        ubinize_args="${UBINIZE_ARGS_4k}"
         ;;
     *)
         exit 1

@@ -18,9 +18,6 @@ IMAGE_INSTALL += "cryptsetup"
 # manual installation of mdev.
 # IMAGE_INSTALL += "busybox-mdev"
 
-# Tools and helpers for i2c development
-IMAGE_INSTALL += "i2c-tools"
-
 # Only add Legato if this is a LEGATO_BUILD
 def check_legato_pkg(d):
     legato_build = d.getVar('LEGATO_BUILD', True) or "false"
@@ -36,9 +33,6 @@ IMAGE_INSTALL += "pciutils"
 # Stubs
 IMAGE_INSTALL += "bsinfo-stub"
 
-# Add some extra packages for tool integration
-IMAGE_INSTALL += "lttng-ust"
-#IMAGE_INSTALL += "lttng-modules"
 IMAGE_INSTALL += "kernel-modules"
 
 # Add linkmon app to monitor USB link

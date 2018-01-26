@@ -3,6 +3,8 @@ inherit android-signing
 
 require recipes-kernel/kernel-src-install.inc
 
+require recipes-kernel/kernel-src-install.inc
+
 DESCRIPTION = "QuIC Linux Kernel"
 LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
@@ -10,6 +12,13 @@ COMPATIBLE_MACHINE = "(swi-mdm9x28)"
 
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
+
+# Override for Qemu
+COMPATIBLE_MACHINE_swi-mdm928-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
+KERNEL_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
+COMPATIBLE_MACHINE_swi-mdm928-qemu = "swi-mdm9x28-qemu"
+KERNEL_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
+
 B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
 

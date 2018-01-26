@@ -1,4 +1,6 @@
-PACKAGE_INSTALL += "cryptsetup libgcrypt ossp-uuid"
+# We are not adding ima-policy globaly, because some of the
+# kernels may not fully support ima feature set (e.g. 9x15 kernel is 3.14).
+PACKAGE_INSTALL += "cryptsetup libgcrypt ossp-uuid ima-policy"
 
 fakeroot do_filter_rootfs () {
 
