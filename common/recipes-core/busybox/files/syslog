@@ -12,15 +12,6 @@ set -e
 
 SMACK_PATH=/legato/smack
 
-SetHostName()
-{
-    if test -f /etc/hostname
-    then
-        hostname -F /etc/hostname
-    fi
-}
-
-
 if [ -f /etc/syslog-startup.conf ]; then
         . /etc/syslog-startup.conf
         LOG_LOCAL=0
@@ -65,8 +56,6 @@ fi
 case "$1" in
   start)
         echo -n "Starting syslogd/klogd: "
-        # Set proper hostname so that syslog prints proper hostname in log message.
-        SetHostName
 
         if [ ! -e /legato/SMACK_DISABLED ]
         then

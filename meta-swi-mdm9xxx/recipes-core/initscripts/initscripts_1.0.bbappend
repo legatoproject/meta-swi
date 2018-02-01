@@ -4,6 +4,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI = "file://functions \
            file://devpts \
            file://mountall.sh \
+           file://hostname.sh \
            file://bootmisc.sh \
            file://bringup_ecm.sh \
            file://bridge_ecm.sh \
@@ -32,6 +33,7 @@ SRC_URI_swi-mdm9x28-ar758x = "\
            file://functions \
            file://devpts \
            file://mountall.sh \
+           file://hostname.sh \
            file://bootmisc.sh \
            file://checkfs.sh \
            file://single \
@@ -121,6 +123,7 @@ do_install () {
     install -m 0755    ${WORKDIR}/find-touchscreen.sh   ${D}${sysconfdir}/mdev/find-touchscreen.sh
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
+    install -m 0755    ${WORKDIR}/hostname.sh   ${D}${sysconfdir}/init.d
     if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ]; then
         install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
         install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
@@ -186,6 +189,8 @@ do_install () {
     update-rc.d $OPT confighw.sh start 03 S .
     update-rc.d $OPT -f mount_unionfs remove
     update-rc.d $OPT mount_unionfs start 04 S . stop 96 S .
+    update-rc.d $OPT -f hostname.sh remove
+    update-rc.d $OPT hostname.sh start 10 S .
     update-rc.d $OPT -f swiapplaunch.sh remove
     update-rc.d $OPT swiapplaunch.sh start 31 S . stop 69 S .
 }
