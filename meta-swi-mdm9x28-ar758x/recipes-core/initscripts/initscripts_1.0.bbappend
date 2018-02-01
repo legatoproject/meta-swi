@@ -15,6 +15,7 @@ do_install_append() {
     # if it is RAM image, don't need to load modem
     if [ "${MACHINE}" != "swi-mdm9x28-ar758x-rcy" ]; then
         install -D -m 0755 ${WORKDIR}/load_modem.sh -D ${D}${sysconfdir}/init.d/load_modem.sh
+        update-rc.d $OPT load_modem.sh start 09 S . stop 90 S .
     fi
 
     install -D -m 0664 ${WORKDIR}/etc/group -D ${D}${sysconfdir}/group
