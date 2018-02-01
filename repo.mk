@@ -14,8 +14,6 @@ ifeq ($(MACH),)
     PROD ?= ar758x
   else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
     MACH := mdm9x28
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x50-bin/files))
-    MACH := mdm9x50
   endif
 endif
 

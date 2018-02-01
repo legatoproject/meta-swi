@@ -85,10 +85,6 @@ SRC_URI_append_swi-mdm9x28-ar758x = "\
            file://control_msm_watchdog.sh \
            "
 
-SRC_URI_append_swi-mdm9x50 = "\
-           file://restart_at_uart \
-           "
-
 SRC_URI_append_arm = " file://alignment.sh"
 
 KERNEL_VERSION = ""
@@ -156,7 +152,7 @@ do_install () {
     install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sysconfdir}/profile.d/loginNagger
 
     case "${MACHINE}" in
-    swi-mdm9x28 | swi-mdm9x50 | swi-mdm9x28-qemu)
+    swi-mdm9x28 | swi-mdm9x28-qemu)
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
         ;;
     swi-mdm9x28-ar758x | swi-mdm9x28-ar758x-qemu)
