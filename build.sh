@@ -511,6 +511,9 @@ esac
 # Firmware Path
 set_option 'FIRMWARE_PATH' "${FIRMWARE_PATH}"
 
+# Remove GNUTLS
+set_option 'PACKAGECONFIG_remove' "gnutls"
+
 cd $BD
 
 # Command line
