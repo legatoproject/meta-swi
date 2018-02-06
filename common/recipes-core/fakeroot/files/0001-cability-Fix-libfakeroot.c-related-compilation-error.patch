@@ -1,0 +1,49 @@
+From 70361c6bfce51ec351c5c8f8be98e3cbf995ed44 Mon Sep 17 00:00:00 2001
+From: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+Date: Tue, 6 Feb 2018 09:29:22 -0800
+Subject: [PATCH] cability: Fix libfakeroot.c related compilation errors
+
+Newer versions of fakeroot depend on libcap. As a consequence,
+generated header wrapped.h have constructs which depend on
+capability.h header file.
+
+However, fakeroot build is trying to find capability.h in
+sys/capability.h instead of linux/capability.h . This patch
+attempts to rectify that problem.
+
+In addition, Yocto environment needs the following line to
+support this change:
+
+EXTRA_OEMAKE = "'CFLAGS=-I${STAGING_INCDIR} -DHAVE_LINUX_CAPABILITY_H'"
+
+Resolves: LXSWIREF-306
+
+Signed-off-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+---
+ libfakeroot.c | 7 +++++++
+ 1 file changed, 7 insertions(+)
+
+diff --git a/libfakeroot.c b/libfakeroot.c
+index f867758..ec94577 100644
+--- a/libfakeroot.c
++++ b/libfakeroot.c
+@@ -127,9 +127,16 @@
+ #ifdef HAVE_SYS_ACL_H
+ #include <sys/acl.h>
+ #endif /* HAVE_SYS_ACL_H */
++
+ #ifdef HAVE_SYS_CAPABILITY_H
+ #include <sys/capability.h>
++#else
++#ifdef HAVE_LINUX_CAPABILITY_H
++#include <linux/capability.h>
++#endif
+ #endif
++
++
+ #if HAVE_FTS_H
+ #include <fts.h>
+ #endif /* HAVE_FTS_H */
+-- 
+2.7.4
+
