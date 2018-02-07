@@ -76,10 +76,13 @@ mount_unionfs_start()
         return ${SWI_ERR}
     fi
 
-    # Try to make /etc writable.
-    mount_unionfs_dir ${root_etc_g}
-    if [ $? -ne ${SWI_OK} ] ; then
-        return ${SWI_ERR}
+    is_etc_overlay_disabled
+    if [ $? -ne ${SWI_TRUE} ] ; then
+        # Try to make /etc writable.
+        mount_unionfs_dir ${root_etc_g}
+        if [ $? -ne ${SWI_OK} ] ; then
+            return ${SWI_ERR}
+        fi
     fi
 
     # Try to make /data writable
