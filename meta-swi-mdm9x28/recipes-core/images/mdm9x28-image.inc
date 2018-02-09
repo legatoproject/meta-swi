@@ -3,7 +3,8 @@ DEPENDS += " \
         mtd-utils-native \
         cryptsetup-native \
         ima-evm-utils-native \
-        libarchive-native"
+        libarchive-native \
+        ima-support-tools-native"
 
 INC_PR = "r0"
 

@@ -44,10 +44,4 @@ S = "${WORKDIR}/git"
 # Need to find libkeyutils so library
 EXTRA_OEMAKE = "LDFLAGS=-L${STAGING_LIBDIR} -lkeyutils"
 
-do_install_append() {
-    # For now, just create empty  directories in /etc
-    install -d ${D}${sysconfdir}/ima
-    install -d ${D}${sysconfdir}/keys
-}
-
 BBCLASSEXTEND = "native nativesdk"
