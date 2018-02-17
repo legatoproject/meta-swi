@@ -63,15 +63,21 @@ TYPE="default"
 
 function version()
 {
-    echo " $0 version $VERSION"
+    echo ""
+    echo " $( basename $0 ) version $VERSION"
+    echo ""
+
+    return $SWI_OK
 }
 
 # How to use this tool.
 function usage()
 {
-    cat << EOF
 
-$0 version $VERSION
+# dump version
+    version
+
+    cat << EOF
 
 Usage:
  $0 <commands ...> <parameters ...>
@@ -90,6 +96,8 @@ Usage:
     -y, --type             Type of tarball (e.g. legato).
 
 EOF
+
+    return $SWI_OK
 }
 
 #
@@ -155,6 +163,8 @@ function parse_options()
         esac
 
     done
+
+    return $SWI_OK
 }
 
 # Sign files using IMA private key.
@@ -191,7 +201,7 @@ function ima_sign_files()
         cd $RDIR && \
         find . -print0 | LC_ALL=C sort -z |$TAR --no-recursion --null -T - -cjf - > $TARBALL
         ret=$?
-    else if [ "x$TYPE" == "xdefault" ] ; then
+    elif [ "x$TYPE" == "xdefault" ] ; then
         # Default tarball handling.
         $TAR -c -C $(dirname $RDIR) -jf $TARBALL $(basename $RDIR)
         ret=$?
@@ -230,6 +240,8 @@ function check_env()
         echo "Please, install $TAR."
         return $SWI_ERR
     fi
+
+    return $SWI_OK
 }
 
 function main()
@@ -245,8 +257,10 @@ function main()
 
     if [ "x$IMA_SIGN" == "xtrue" ] ; then
         ima_sign_files
+        if [ $? -ne $SWI_OK ] ; then return $SWI_ERR ; fi
     fi
 
+    return $SWI_OK
 }
 
 # This is where it all begins

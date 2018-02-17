@@ -72,15 +72,21 @@ KEY_EXP_DAYS=365
 # Dump version of this executable.
 function version()
 {
-    echo " $0 version $VERSION"
+    echo ""
+    echo " $( basename $0 ) version $VERSION"
+    echo ""
+
+    return $SWI_OK
 }
 
 # How to use this tool.
 function usage()
 {
-    cat << EOF
 
-$0 version $VERSION
+# dump version
+    version
+
+    cat << EOF
 
 Usage:
  $0 <commands ...> <parameters ...>
@@ -130,10 +136,12 @@ Usage:
 
 
 Some of the options may be specified together. For example:
-    $0 -si
+    $( basename $0 ) -si
 is equivalent to:
-    $0 -a
+    $( basename $0 ) -a
 EOF
+
+    return $SWI_OK
 }
 
 #
@@ -246,6 +254,8 @@ function parse_options()
         esac
 
     done
+
+    return $SWI_OK
 }
 
 # Generate all keys required by the system.
@@ -326,15 +336,11 @@ function create_all_keys()
 
     # Create ".system" keys
     create_system_keys
-    if [ $? -ne $SWI_OK ] ; then
-        return $SWI_ERR
-    fi
+    if [ $? -ne $SWI_OK ] ; then return $SWI_ERR ; fi
 
     # Create ".ima" keys
     create_ima_keys
-    if [ $? -ne $SWI_OK ] ; then
-        return $SWI_ERR
-    fi
+    if [ $? -ne $SWI_OK ] ; then return $SWI_ERR ; fi
 
     return $SWI_OK
 }
@@ -342,7 +348,6 @@ function create_all_keys()
 # Create ".system" key pair
 function create_system_keys()
 {
-    local ret=$SWI_OK
 
     # Generate private/public ".system" pair.
     openssl req -new -x509 -utf8 -sha1 -days $KEY_EXP_DAYS -batch -nodes \
@@ -350,33 +355,27 @@ function create_system_keys()
                 -outform DER \
                 -out $SYSTEM_PUB_CERT \
                 -keyout $SYSTEM_PRIV_KEY
+    if [ $? -ne $SWI_OK ] ; then return $SWI_ERR ; fi
 
     # Convert DER to PEM
     openssl x509 -inform DER -in $SYSTEM_PUB_CERT -out $SYSTEM_PUB_CERT_PEM
+    if [ $? -ne $SWI_OK ] ; then return $SWI_ERR ; fi
 
-    if [ $? -ne $SWI_OK ] ; then
-        ret=$SWI_ERR
-    fi
-
-    return $ret
+    return $SWI_OK
 }
 
 # Create ".ima" key pair. Public certificate will not be signed.
 function create_ima_keys()
 {
-    local ret=$SWI_OK
 
     # Generate private key and X509 public key certificate signing request
     openssl req -new -nodes -utf8 -sha1 -days $KEY_EXP_DAYS -batch \
             -config $IMA_CONF \
             -out $IMA_REQSIGN_CERT \
             -keyout $IMA_PRIV_KEY
+    if [ $? -ne $SWI_OK ] ; then return $SWI_ERR ; fi
 
-    if [ $? -ne $SWI_OK ] ; then
-        ret=$SWI_ERR
-    fi
-
-    return $ret
+    return $SWI_OK
 }
 
 # Sign ".ima" public key request for signing
@@ -436,7 +435,7 @@ function sign_ima_req()
             -extfile $IMA_CONF -extensions v3_usr \
              -CA $SYSTEM_PUB_CERT_PEM -CAkey $SYSTEM_PRIV_KEY -CAcreateserial \
              -outform DER -out $IMA_PUB_CERT
-    if [ $? -ne $SWI_OK ] ; then ret=$SWI_ERR ; fi
+    if [ $? -ne $SWI_OK ] ; then return $SWI_ERR ; fi
 
     return $SWI_OK
 }
@@ -455,6 +454,8 @@ function get_system_cert_pem()
     ret=$dir/$fname.pem
 
     echo "$ret"
+
+    return $SWI_OK
 }
 
 # Check the environment we run this executable in.
@@ -471,6 +472,8 @@ function check_env()
         echo "Please, install openssl."
         return $SWI_ERR
     fi
+
+    return $SWI_OK
 }
 
 function main()
@@ -507,6 +510,8 @@ function main()
         sign_ima_req
         if [ $? != $SWI_OK ] ; then return $SWI_ERR ; fi
     fi
+
+    return $SWI_OK
 }
 
 # This is where it all begins
