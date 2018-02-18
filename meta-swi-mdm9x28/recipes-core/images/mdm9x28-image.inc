@@ -1,8 +1,7 @@
 DEPENDS += " \
         virtual/lk \
         mtd-utils-native \
-        cryptsetup-native \
-        ima-evm-utils-native"
+        cryptsetup-native"
 
 INC_PR = "r0"
 
@@ -42,10 +41,6 @@ IMAGE_INSTALL += "kernel-modules"
 
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL += "linkmon"
-
-# Add IMA/EVM support tools
-IMAGE_INSTALL += "ima-evm-utils"
-IMAGE_INSTALL += "keyutils"
 
 create_ubinize_config() {
     local cfg_path=$1

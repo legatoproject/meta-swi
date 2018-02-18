@@ -13,5 +13,4 @@ RDEPENDS_${PN} += "mtd-utils-ubifs"
 RDEPENDS_${PN} += "attr"
 RDEPENDS_${PN} += "cryptsetup"
 RDEPENDS_${PN} += "qemu"
-RDEPENDS_${PN} += "ima-evm-utils"
-RDEPENDS_${PN} += "keyutils"
+
