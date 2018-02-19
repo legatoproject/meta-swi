@@ -37,6 +37,10 @@ VERSION="0.90"
 SWI_OK=0
 SWI_ERR=1
 
+# Some other global variables
+SWI_FALSE=0
+SWI_TRUE=1
+
 # Which tar utility we are going to use? Note that changing
 # tar utility here in not ehough, because some options differ.
 # One day, if required, we are going to handle multiple choices.
@@ -172,6 +176,13 @@ function ima_sign_files()
 {
     local ret=$SWI_OK
 
+    # We need to run as privileged user to execute this method.
+    is_privileged_user
+    if [ $? -ne $SWI_TRUE ] ; then
+        return $SWI_ERR
+    fi
+
+
     # Bit of error checking here. If parameters are missing, get out.
     if [ "x$IMA_PRIV_KEY" == "x" -o \
          "x$RDIR"         == "x" -o \
@@ -217,11 +228,6 @@ function ima_sign_files()
 # Check the environment we run this executable in.
 function check_env()
 {
-    # Must be root to run it on host.
-    if [ "$( whoami )" != "root" ] ; then
-        echo "  You must run this executable as privileged user (e.g. root), exiting."
-        return $SWI_ERR
-    fi
 
     # We really need getopt
     if [ "x$( which getopt )" == "x" ] ; then
@@ -242,6 +248,18 @@ function check_env()
     fi
 
     return $SWI_OK
+}
+
+# Check if we have elevated privileges.
+function is_privileged_user()
+{
+    # Must be root to run it on host.
+    if [ $( id -u ) -ne 0 ] ; then
+        echo "  You must run this command as privileged user (e.g. root), exiting."
+        return $SWI_FALSE
+    fi
+
+    return $SWI_TRUE
 }
 
 function main()

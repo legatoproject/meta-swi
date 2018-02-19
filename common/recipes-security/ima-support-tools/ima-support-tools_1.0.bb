@@ -27,10 +27,10 @@ SRC_URI += "file://ima-gen-keys.sh"
 SRC_URI += "file://ima-sign.sh"
 
 do_install() {
-    # Install policy file.
+    # Install key generation util.
     install -m 0755 ${WORKDIR}/ima-gen-keys.sh -D ${D}${bindir}/ima-gen-keys.sh
 
-    # Install policy file.
+    # Install signage util.
     install -m 0755 ${WORKDIR}/ima-sign.sh -D ${D}${bindir}/ima-sign.sh
 }
 
