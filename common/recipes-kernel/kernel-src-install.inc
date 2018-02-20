@@ -16,17 +16,18 @@ kernel_src_install() {
 
     ( cd ${STAGING_KERNEL_DIR}
 
-      find . \
+      ( find . \
           -type f \
           \( -name '*.h' -o \
              -name 'Makefile' -o \
              -name 'Makefile*' -o \
              -name 'Kconfig' -o \
              -name 'Kconfig*' -o \
-             -name '*.include' \) \
-          -exec sh -c "mkdir -p $dest/\$(dirname {}); cp -f {} $dest/{}" \;
-
-      cp -fr scripts $dest )
+             -name '*.include' \)
+        find scripts \
+          -type f ) | cpio -o ) | \
+     ( cd $dest
+       cpio -id --no-preserve-owner )
 
     # We get the generated materials from the build directory:
     # This includes generated headers, config include Makefiles,
@@ -34,16 +35,14 @@ kernel_src_install() {
 
     ( cd ${B}
 
-      find . \
+      ( find . \
           -type f \
           \( -name '*.conf' -o \
-             -name '*.conf.*' \) \
-          -exec sh -c "mkdir -p $dest/\$(dirname {}); cp -f {} $dest/{}" \;
-
-      find . \
-          -type d -a \
-          -name generated \
-          -exec sh -c "mkdir -p $dest/\$(dirname {}); cp -fr {} $dest/{}" \; )
+             -name '*.conf.*' \)
+        find $(find . -type d -name generated) \
+          -type f ) | cpio -o ) | \
+    ( cd $dest
+      cpio -id --no-preserve-owner )
 
     cp -f ${B}/.config ${B}/Module.symvers $dest
 
