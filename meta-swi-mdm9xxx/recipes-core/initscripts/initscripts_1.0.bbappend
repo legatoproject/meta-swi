@@ -76,6 +76,7 @@ SRC_URI_swi-mdm9x40-ar759x-rcy = "file://functions \
 
 SRC_URI_append_swi-mdm9x28 = "\
            file://restart_at_uart \
+           file://start_at_cmux_le \
            "
 
 SRC_URI_append_swi-mdm9x28-ar758x = "\
@@ -164,6 +165,7 @@ do_install () {
     case "${MACHINE}" in
     swi-mdm9x28 | swi-mdm9x28-qemu | swi-mdm9x28-wp)
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
+        install -m 0755 ${WORKDIR}/start_at_cmux_le -D ${D}${sbindir}/start_at_cmux_le
         ;;
     swi-mdm9x28-ar758x | swi-mdm9x28-ar758x-qemu | swi-mdm9x40-ar759x)
         install -m 0755 ${WORKDIR}/control_msm_watchdog.sh -D ${D}${sysconfdir}/init.d/control_msm_watchdog.sh

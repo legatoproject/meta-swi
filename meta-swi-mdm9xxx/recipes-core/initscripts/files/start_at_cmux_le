@@ -1,0 +1,53 @@
+#!/bin/sh
+# --------------------------------------------------------------
+# Copyright (c) 2017 Sierra Wireless. All Rights Reserved.
+# --------------------------------------------------------------
+# startAT: Simple script to start UART port bridging to AT_UART_DEVICE
+# if the specific UART is configured as AT service
+#
+#
+# DS_MUX   This is modified from Qualcomm file, mdm9x28\apps_proc\data\at-cmux\src\start_at_cmux_le,
+#          any update on that Qualcomm file should be updated here as well
+
+source /etc/run.env
+
+uart_get_srv
+
+DAEMON_OPT1_UART="1"
+DAEMON_OPT2_UART="/dev/ttyHS0"
+
+DAEMON_OPT1_USB="2"
+
+set -e
+
+case "$1" in
+  start)
+        swi_log "Starting DS_MUX: "
+        swi_log "UART1_SERVICE=${UART1_SERVICE}"
+        if  [ x${UART1_SERVICE} = "xAT" ]; then
+          # Start DS_MUX daemon if UART 1 is set to AT Service
+          swi_log "UART1 is AT Service"
+          start-stop-daemon -S -b -a DS_MUX -- $DAEMON_OPT1_UART $DAEMON_OPT2_UART
+       else
+          # Start DS_MUX daemon on USB if UART 1 is NOT set to AT Service
+          swi_log "DS_MUX daemon on USB"
+          start-stop-daemon -S -b -a DS_MUX -- $DAEMON_OPT1_USB
+        fi
+        swi_log "Done start_at_cmux_le script."
+        ;;
+  stop)
+        swi_log "Stopping DS_MUX: "
+        start-stop-daemon -K -n DS_MUX
+        swi_log "done"
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        ;;
+  *)
+        swi_log "Usage DS_MUX { start | stop | restart}"
+        exit 1
+        ;;
+esac
+
+exit 0

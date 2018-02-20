@@ -32,6 +32,7 @@ case "$1" in
         /usr/sbin/restartNMEA > /dev/null 2>&1 &
 @if !mdm9x15
         /usr/sbin/restart_at_uart > /dev/null 2>&1 &
+        /usr/sbin/start_at_cmux_le start &
 @endif
         ;;
     stop)
@@ -41,6 +42,7 @@ case "$1" in
         killall -q -HUP restartNMEA
 @if !mdm9x15
         killall -q -HUP restart_at_uart
+        killall -q -HUP start_at_cmux_le
 @endif
         if [ -e ${STARTUP_TIMER} ]; then
             # disable startup monitor when shutdown
