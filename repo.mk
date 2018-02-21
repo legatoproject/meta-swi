@@ -66,6 +66,19 @@ FIRMWARE_PATH ?= 0
 # Toolchain prefix
 SDK_PREFIX ?= 0
 
+# Do we have to enable IMA for this build. For now,
+# only ar758x should have IMA build enabled.
+IMA_BUILD ?= 0
+
+# Default location of the IMA configuration file. It is very difficult to
+# type number of parameters on make command line every time the build is run,
+# or remembering to source environment before the build. So, we make it
+# easy for everyone.
+IMA_CONFIG ?= $(PWD)/meta-swi/common/recipes-security/ima-support-tools/files/ima.conf
+
+# Default BB arguments
+BB_ARGS ?=
+
 all: image_bin
 
 clean:
@@ -89,6 +102,14 @@ ifeq ($(MANGOH_BUILD),1)
   MANGOH_WIFI_REPO := "$(PWD)/mangOH/WiFi"
   MANGOH_ARGS := -M \
                  -a "MANGOH_WIFI_REPO=${MANGOH_WIFI_REPO}"
+endif
+
+ifeq ($(IMA_BUILD),1)
+  ifneq ($(PROD),ar758x)
+    $(error "IMA is not supported for [${MACH}][${PROD}]"
+  else
+    IMA_ARGS := -i ${IMA_CONFIG}
+  endif
 endif
 
 ifneq ($(FIRMWARE_PATH),0)
@@ -118,6 +139,10 @@ endif
 
 ifeq ($(RECOVERY_BUILD),1)
   RCY_ARGS = -e
+endif
+
+ifdef BB_FLAGS
+    BB_ARGS := -B "${BB_FLAGS}"
 endif
 
 # Replaces this Makefile by a symlink to repo.mk
@@ -155,7 +180,9 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${LEGATO_ARGS} \
 				${FIRMWARE_PATH_ARGS} \
 				${SDK_PREFIX_ARGS} \
-				${HOSTNAME_ARGS}
+				${HOSTNAME_ARGS} \
+				${IMA_ARGS} \
+				${BB_ARGS}
 
 # Machine:
 

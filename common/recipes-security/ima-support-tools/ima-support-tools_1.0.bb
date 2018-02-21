@@ -9,7 +9,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 # Package revision number. Change "r" number if you change
 # anything in this package (e.g. add patch, remove patch,
 # change dependencies, etc.).
-PR = "r0"
+PR = "r1"
 
 HOMEPAGE = ""
 LICENSE = "GPLv2"
@@ -32,6 +32,11 @@ do_install() {
 
     # Install signage util.
     install -m 0755 ${WORKDIR}/ima-sign.sh -D ${D}${bindir}/ima-sign.sh
+
+    # Install IMA configuration file. This file is installed for reference only.
+    if [ "x${IMA_BUILD}" == "xtrue" ] ; then
+        install -m 0644 ${IMA_CONFIG} -D ${D}/${sysconfdir}/ima/config/$( basename ${IMA_CONFIG} )
+    fi
 }
 
 RDEPENDS_${PN} = "bsdtar attr ima-evm-utils openssl"

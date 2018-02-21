@@ -96,7 +96,7 @@ Usage:
 
     -p, --imaprivkey       Location of the .ima private key.
     -d, --rdir             Root directory of the files to sign.
-    -t, --tarball          Generated tarboll name including path
+    -t, --tarball          Generated tarball name including path
     -y, --type             Type of tarball (e.g. legato).
 
 EOF
@@ -229,6 +229,9 @@ function ima_sign_files()
 function check_env()
 {
 
+    local temp=""
+    local bin_required="bsdtar"
+
     # We really need getopt
     if [ "x$( which getopt )" == "x" ] ; then
         echo "Please, install GNU getopt."
@@ -241,9 +244,14 @@ function check_env()
         return $SWI_ERR
     fi
 
-    # ...and we need bsdtar
-    if [ "x$( which $TAR )" == "x" ] ; then
-        echo "Please, install $TAR."
+    # ...and we need bsdtar for IMA to work properly. The only way
+    # to know for sure is to execute it and check version string.
+    # Otherwise, someone may think it's clever to make bsdtar
+    # softlink to GNU tar, and work around the problem of not
+    # having bsdtar.
+    temp=$( $TAR --version 2>&1 | awk '{ print $1}' | head -1 | grep "$bin_required" )
+    if [ "x$temp" == "x" ] ; then
+        echo "error: $bin_required not found, please install it."
         return $SWI_ERR
     fi
 
