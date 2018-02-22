@@ -15,14 +15,8 @@ IMAGE_INSTALL += "bsinfo-stub"
 # Kernel modules
 IMAGE_INSTALL += "kernel-module-softdog"
 
-# Only depend on legato-af if this is a LEGATO_BUILD
-def check_legato_dep(d):
-    legato_build = d.getVar('LEGATO_BUILD', True) or "false"
-    if legato_build == "true":
-        return "legato-af"
-    return ""
-
-DEPENDS += "${@check_legato_dep(d)}"
+# Add eventual legato dependency
+DEPENDS += "${@check_legato_pkg(d)}"
 
 # Prepare a package with kernel + hdd image
 do_prepare_virt[depends] += "virtual/kernel:do_populate_sysroot"

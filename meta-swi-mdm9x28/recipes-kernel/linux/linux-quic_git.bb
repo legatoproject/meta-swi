@@ -1,9 +1,8 @@
 inherit kernel externalsrc
 
 require recipes-kernel/kernel-src-install.inc
+require recipes-kernel/linux-quic/linux-quic.inc
 
-DESCRIPTION = "QuIC Linux Kernel"
-LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 COMPATIBLE_MACHINE = "(swi-mdm9x28)"
 
@@ -15,16 +14,12 @@ EXTERNALSRC_BUILD_pn-${PN} = "${WORKDIR}/build"
 KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
 
 # Override for Qemu
-COMPATIBLE_MACHINE_swi-mdm928-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
+COMPATIBLE_MACHINE_swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
 KERNEL_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
-COMPATIBLE_MACHINE_swi-mdm928-qemu = "swi-mdm9x28-qemu"
+COMPATIBLE_MACHINE_swi-mdm9x28-qemu = "swi-mdm9x28-qemu"
 KERNEL_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
 
 KERNEL_EXTRA_ARGS        += "O=${B}"
-
-LINUX_VERSION ?= "3.18.48"
-PV = "${LINUX_VERSION}"
-PR = "r1"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 

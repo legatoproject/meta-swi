@@ -1,9 +1,8 @@
 inherit kernel externalsrc
 
 require recipes-kernel/kernel-src-install.inc
+require recipes-kernel/linux-quic/linux-quic.inc
 
-DESCRIPTION = "QuIC Linux Kernel"
-LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 COMPATIBLE_MACHINE = "(swi-mdm9x40)"
 
@@ -14,10 +13,6 @@ EXTERNALSRC_BUILD_pn-${PN} = "${WORKDIR}/build"
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9640_defconfig"
 KERNEL_EXTRA_ARGS        += "O=${B}"
-
-LINUX_VERSION ?= "3.18.31"
-PV = "${LINUX_VERSION}"
-PR = "r1"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
