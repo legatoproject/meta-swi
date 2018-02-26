@@ -21,9 +21,6 @@ IMAGE_INSTALL_append = " cryptsetup"
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 
-# AR8161
-IMAGE_INSTALL_append = " pciutils"
-
 # Stubs
 IMAGE_INSTALL_append = " bsinfo-stub"
 
