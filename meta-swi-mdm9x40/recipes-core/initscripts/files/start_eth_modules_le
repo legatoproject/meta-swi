@@ -1,6 +1,6 @@
 #! /bin/sh
 #
-# Copyright (c) 2014, The Linux Foundation. All rights reserved.
+# Copyright (c) 2018, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are met:
@@ -24,37 +24,53 @@
 # (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# ALX Ethernet Driver   init.d script to load ethernet driver
+# ALX and Neutrino Ethernet Driver   init.d script to load ethernet driver
+# according to the Ethernet chip detected on PCIe.
 
 export MODULE_BASE=/lib/modules/`uname -r`/
 set -e
 
-if `lspci | grep -q "Qualcomm Atheros AR8151"`; then
-    :
-else
-    exit 0
-fi
+for bus in /sys/bus/pci/devices/*:*:*/; do
+    dev=`cat $bus/subsystem_vendor`":"`cat $bus/device`
+    case "$dev" in
+        0x1969:0x1083)
+            module=$MODULE_BASE/kernel/drivers/net/ethernet/atheros/alx/alx.ko
+            module_name=ALX
+            module_arg=""
+            ;;
+        0x1179:0x021a)
+            module=$MODULE_BASE/kernel/drivers/net/ethernet/toshiba/neutrino/DWC_ETH_QOS.ko
+            module_name=NEUTRINO
+            module_arg="fw_filename=DWC_ETH_QOS_fw.bin"
+            ;;
+        *)
+            module=""
+            ;;
+    esac
 
-case "$1" in
-  start)
-        echo -n "Starting/Loading Ethernet Driver: "
-        echo "ALX:start/load" > /dev/kmsg
-        insmod $MODULE_BASE/kernel/drivers/net/ethernet/atheros/alx/alx.ko
-        echo "done loading ethernet driver"
-        ;;
-  stop)
-        echo -n "Unloading Ethernet Driver "
-        rmmod alx
-        echo "done unloading ethernet driver"
-        ;;
-  restart)
-        $0 stop
-        $0 start
-        ;;
-  *)
-        echo "Usage { start | stop | restart}" >&2
-        exit 1
-        ;;
-esac
+    if [ -n "$module" ]; then
+        case "$1" in
+          start)
+                echo -n "Starting/Loading Ethernet Driver: "
+                echo "$module_name:start/load" > /dev/kmsg
+                insmod $module $module_arg
+                echo "done loading ethernet driver"
+                ;;
+          stop)
+                echo -n "Unloading Ethernet Driver "
+                rmmod `basename $module .ko`
+                    echo "done unloading ethernet driver"
+                ;;
+          restart)
+                $0 stop
+                $0 start
+                ;;
+          *)
+                echo "Usage { start | stop | restart}" >&2
+                exit 1
+                ;;
+        esac
+    fi
+done
 
 exit 0
