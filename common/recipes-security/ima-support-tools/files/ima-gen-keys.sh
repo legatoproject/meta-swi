@@ -36,7 +36,7 @@ UMASK=022
 umask $UMASK
 
 # Version of this executable.
-VERSION="0.90"
+VERSION="0.91"
 
 # Global return types
 SWI_OK=0
@@ -89,7 +89,7 @@ function usage()
     cat << EOF
 
 Usage:
- $0 <commands ...> <parameters ...>
+ $( basename $0 ) <commands ...> <parameters ...>
 
  Key information:
     .system private key   Used to to sign .ima x509 public key certificate
@@ -349,6 +349,22 @@ function create_all_keys()
 function create_system_keys()
 {
 
+    # Bit of error checking. If parameters are missing, get out.
+    if [ "x$SYSTEM_CONF"         == "x" -o \
+         "x$SYSTEM_PRIV_KEY"     == "x" -o \
+         "x$SYSTEM_PUB_CERT"     == "x" -o \
+         "x$SYSTEM_PUB_CERT_PEM" == "x" ] ; then
+
+        echo "Missing parameters."
+        echo "Parameters dump:"
+        echo "    SYSTEM_CONF=[$SYSTEM_CONF]"
+        echo "    SYSTEM_PRIV_KEY=[$SYSTEM_PRIV_KEY]"
+        echo "    SYSTEM_PUB_CERT=[$SYSTEM_PUB_CERT]"
+        echo "    SYSTEM_PUB_CERT_PEM=[$SYSTEM_PUB_CERT_PEM]"
+
+        return $SWI_ERR
+    fi
+
     # Generate private/public ".system" pair.
     openssl req -new -x509 -utf8 -sha1 -days $KEY_EXP_DAYS -batch -nodes \
                 -config $SYSTEM_CONF \
@@ -367,6 +383,20 @@ function create_system_keys()
 # Create ".ima" key pair. Public certificate will not be signed.
 function create_ima_keys()
 {
+
+    # Bit of error checking. If parameters are missing, get out.
+    if [ "x$IMA_CONF"         == "x" -o \
+         "x$IMA_REQSIGN_CERT" == "x" -o \
+         "x$IMA_PRIV_KEY"     == "x" ] ; then
+
+        echo "Missing parameters."
+        echo "Parameters dump:"
+        echo "    IMA_CONF=[$IMA_CONF]"
+        echo "    IMA_REQSIGN_CERT=[$IMA_REQSIGN_CERT]"
+        echo "    IMA_PRIV_KEY=[$IMA_PRIV_KEY]"
+
+        return $SWI_ERR
+    fi
 
     # Generate private key and X509 public key certificate signing request
     openssl req -new -nodes -utf8 -sha1 -days $KEY_EXP_DAYS -batch \
