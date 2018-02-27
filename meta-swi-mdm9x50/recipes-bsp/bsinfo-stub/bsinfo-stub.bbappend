@@ -1,1 +1,0 @@
-TARGET_NAME = "EM77XX"

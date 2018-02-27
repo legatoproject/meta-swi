@@ -145,6 +145,10 @@ yocto_squashfs_duct_tape() {
     ln -sf \
         ${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.squashfs \
         ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs
+
+    ln -sf \
+        ${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubifs \
+        ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.ubifs
 }
 
 do_image_complete[postfuncs] += "yocto_squashfs_duct_tape"

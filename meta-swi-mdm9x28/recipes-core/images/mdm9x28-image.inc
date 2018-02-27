@@ -2,7 +2,9 @@ DEPENDS += " \
         virtual/lk \
         mtd-utils-native \
         cryptsetup-native \
-        ima-evm-utils-native"
+        ima-evm-utils-native \
+        libarchive-native \
+        ima-support-tools-native"
 
 INC_PR = "r0"
 
@@ -46,6 +48,10 @@ IMAGE_INSTALL += "linkmon"
 # Add IMA/EVM support tools
 IMAGE_INSTALL += "ima-evm-utils"
 IMAGE_INSTALL += "keyutils"
+
+# Add replacements for busybox utils in order to properly handle
+# extended file attributes.
+IMAGE_INSTALL += "libarchive"
 
 create_ubinize_config() {
     local cfg_path=$1

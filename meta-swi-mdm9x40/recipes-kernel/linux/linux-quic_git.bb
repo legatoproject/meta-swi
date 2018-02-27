@@ -1,4 +1,4 @@
-inherit kernel localgit
+inherit kernel externalsrc
 
 require recipes-kernel/kernel-src-install.inc
 
@@ -7,15 +7,16 @@ LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 COMPATIBLE_MACHINE = "(swi-mdm9x40)"
 
+# configuration variables for externalsrc class
+EXTERNALSRC_pn-${PN} = "${LINUX_REPO_DIR}/.."
+EXTERNALSRC_BUILD_pn-${PN} = "${WORKDIR}/build"
+
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9640_defconfig"
-B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
 
-SRC_DIR = "${LINUX_REPO_DIR}/.."
-
 LINUX_VERSION ?= "3.18.31"
-PV = "${LINUX_VERSION}+git${GITSHA}"
+PV = "${LINUX_VERSION}"
 PR = "r1"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
@@ -31,7 +32,7 @@ do_configure_prepend() {
       rm -rf ${STAGING_KERNEL_DIR}
       mkdir -p ${STAGING_KERNEL_DIR}
       rmdir ${STAGING_KERNEL_DIR}
-      ln -sf ${SRC_DIR} ${STAGING_KERNEL_DIR}
+      ln -sf ${LINUX_REPO_DIR}/.. ${STAGING_KERNEL_DIR}
     fi
 
     cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
@@ -48,8 +49,24 @@ do_install_append() {
     kernel_src_install
 }
 
-BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x40-${DATETIME}.2k"
-BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x40-${DATETIME}.4k"
+# The following was removed from the kernel class between Yocto 1.7 and 2.2.
+# We need our non-sanitized kernel headers in the sysroot it because our apps
+# need them.
+python sysroot_stage_all () {
+    oe.path.copyhardlinktree(d.expand("${D}${KERNEL_SRC_PATH}"), d.expand("${SYSROOT_DESTDIR}${KERNEL_SRC_PATH}"))
+}
+
+# Note that @{DATETIME} isn't a BitBake variable expansion;
+# see do_bootimg for the crude substitution we do with sed.
+# Originally we had the ${DATETIME} variable here.
+# What this "fake variable" achieves is a stable base hash across reparses:
+# BitBake only ever sees the literal text @{DATETIME},
+# so the hash doesn't change. In Yocto 1.7 we didn't see a
+# problem, but newer Yocto diagnoses situations when the inputs
+# to a task appear to change upon a second parse, changing the
+# hash, which occurs if ${DATETIME} is mixed in.
+BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x40-@{DATETIME}.2k"
+BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x40-@{DATETIME}.4k"
 
 MACHINE_KERNEL_BASE = "0x81800000"
 MACHINE_KERNEL_TAGS_OFFSET = "0x81700000"
@@ -127,10 +144,13 @@ gen_bootimg() {
 }
 
 do_bootimg() {
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x40.2k masterDTB.2k 2048
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x40.4k masterDTB.4k 4096
-    ln -sf ${BOOTIMG_NAME_4k}.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.img
-    echo "${PV} $(date +'%Y/%m/%d %H:%M:%S')" >> ${DEPLOY_DIR_IMAGE}/kernel.version
+    date=$(date +"%Y%m%d%H%M%S")
+    image_name_2k=$(echo ${BOOTIMG_NAME_2k} | sed -e s/@{DATETIME}/$date/)
+    image_name_4k=$(echo ${BOOTIMG_NAME_4k} | sed -e s/@{DATETIME}/$date/)
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" $image_name_2k boot-yocto-mdm9x40.2k masterDTB.2k 2048
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" $image_name_4k boot-yocto-mdm9x40.4k masterDTB.4k 4096
+    ln -sf $image_name_4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x40.img
+    echo "${PV} $date" >> ${DEPLOY_DIR_IMAGE}/kernel.version
 }
 
 do_add_mbnhdr_and_hash() {

@@ -55,7 +55,6 @@ wait_on_dev()
 FindAndMountUBI () {
    partition=$1
    dir=$2
-
    mtd_block_number=`cat $mtd_file | grep -iw $partition | sed 's/^mtd//' | awk -F ':' '{print $1}'`
    echo "MTD : Detected block device : $dir for $partition"
    mkdir -p $dir
@@ -70,6 +69,10 @@ FindAndMountUBI () {
         if ! [ -e "/dev/ubi1_0" ]; then
             # UBI partition, attach device
             ubiattach -m ${mtd_block_number} -d 1 /dev/ubi_ctrl
+            if [ $? -ne 0 ] ; then
+                swi_log "Unable to attach mtd partition ${partition} to UBI logical device ${mtd_block_number}"
+                return ${SWI_ERR}
+            fi
             # Need to wait for the /dev/ubi1_0 device ready
             wait_on_dev "-c" "/dev/ubi1_0"
             if [ $? -ne ${SWI_OK} ]; then
@@ -77,6 +80,7 @@ FindAndMountUBI () {
                 return ${SWI_ERR}
             fi
         fi
+
         SQFS_FLAG=$(dd if=/dev/ubi1_0 count=4 bs=1 2>/dev/null)
         if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
             # squashfs volume, create UBI block device
@@ -103,6 +107,10 @@ FindAndMountUBI () {
     fi
 
     mount -t ${BOOTTYPE} ${BOOTDEV} $dir -o ${BOOTOPTS}
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to mount ${BOOTTYPE} onto ${BOOTDEV}."
+        return ${SWI_ERR}
+    fi
 }
 
 FindAndMountVolumeUBI () {
@@ -125,13 +133,6 @@ FindAndMountEXT4 () {
 emmc_dir=/dev/block/bootdevice/by-name
 mtd_file=/proc/mtd
 
-MODEM_PARTITION=modem
-DS_MODEM_SUB_SYSTEM_FLAG=0
-if [ -e /usr/bin/swidssd ]; then
-    /usr/bin/swidssd read modem
-    DS_MODEM_SUB_SYSTEM_FLAG=$?
-fi
-
 if [ -d $emmc_dir ]
 then
         fstype="EXT4"
@@ -142,11 +143,25 @@ else
         eval FindAndMountVolume${fstype} usrfs /usr
 fi
 
-if [ $DS_MODEM_SUB_SYSTEM_FLAG -eq 200 ]; then
+MODEM_PARTITION=modem
+
+is_dual_system
+if [ $? -eq ${SWI_TRUE} ]; then
+    /usr/bin/swidssd read modem
+    DS_MODEM_SUB_SYSTEM_FLAG=$?
+fi
+
+if [ $DS_MODEM_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
     MODEM_PARTITION=modem2
 fi
 echo "mount modem from partition $MODEM_PARTITION"
 
 eval FindAndMount${fstype} ${MODEM_PARTITION} /firmware
+if [ $? -ne ${SWI_OK} ]; then
+    is_dual_system
+    if [ $? -eq ${SWI_TRUE} ]; then
+        swap_dual_system ${mtd_block_number}
+    fi
+fi
 
 exit 0

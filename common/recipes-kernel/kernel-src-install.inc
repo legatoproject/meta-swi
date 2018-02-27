@@ -14,7 +14,7 @@ kernel_src_install() {
 
     # We get some of this material from the pristine source tree:
 
-    ( cd ${SRC_DIR}
+    ( cd ${STAGING_KERNEL_DIR}
 
       find . \
           -type f \

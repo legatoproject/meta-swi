@@ -24,35 +24,56 @@ LK_DEBUG ?= "0"
 EXTRA_OEMAKE = "TOOLCHAIN_PREFIX='${TARGET_PREFIX}' TOOLCHAIN_OPTIONS='${TOOLCHAIN_OPTIONS}' ${LK_TARGET} DEBUG=${LK_DEBUG} BOOTLOADER_OUT='${B}'"
 
 do_tag_lk() {
-	# We remove the sierra_lkversion.h to avoid this file to be counted in sha1
-	( cd ${S}; \
-		LK_VERSION="${PV}_"`for file in $(find -type f -not -regex '.*\(pc\|git\|build-\|patches\).*'); do \
-			sha256sum $file; done | \
-			sort | grep -v sierra_lkversion.h | awk '{print $1}' | sha256sum | cut -c 1-10 -`""
-		echo "#define LKVERSION  \"${LK_VERSION}\"" > ${S}/app/aboot/sierra_lkversion.h
-		mkdir -p ${B}/build-${LK_TARGET}
-		echo "${LK_VERSION} $(date +'%Y/%m/%d %H:%M:%S')" >> ${B}/build-${LK_TARGET}/lkversion )
+    cd ${S}
+
+    # Use FW_VERSION as lk version if available, otherwise provide a x.x.x_<hash> as version
+    if [ -n "${FW_VERSION}" ]; then
+        LK_VERSION="${FW_VERSION}"
+    else
+        # We remove the sierra_lkversion.h to avoid this file to be counted in sha1
+        LK_VERSION="${PV}_"`for file in $(find -type f -not -regex '.*\(pc\|git\|build-\|patches\).*'); do \
+            sha256sum $file; done | \
+            sort | \
+            grep -v sierra_lkversion.h | \
+            awk '{print $1}' | \
+            sha256sum | \
+            cut -c 1-10 -`""
+    fi
+
+    echo "#define LKVERSION  \"${LK_VERSION}\"" > ${S}/app/aboot/sierra_lkversion.h
+    mkdir -p ${B}/build-${LK_TARGET}
+    echo "${LK_VERSION} $(date +'%Y/%m/%d %H:%M:%S')" >> ${B}/build-${LK_TARGET}/lk.version
 }
 
 addtask tag_lk before do_compile after do_configure
 
 do_compile[dirs] = "${S}"
-
-do_install() {
-	install -d ${D}/boot
-	install ${B}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
-	install ${B}/build-${LK_TARGET}/appsboot.raw ${D}/boot
+do_compile_prepend() {
+    export NOECHO=""
 }
 
-FILES_${PN} = "/boot"
+do_install() {
+    install -d ${D}/boot
+    install ${B}/build-${LK_TARGET}/appsboot.mbn ${D}/boot
+    if [ -f "${B}/build-${LK_TARGET}/appsboot.raw" ] ; then
+        install ${B}/build-${LK_TARGET}/appsboot.raw ${D}/boot
+    fi
+    if [ -f "${B}/build-${LK_TARGET}/appsboot_rw.mbn" ] ; then
+        install ${B}/build-${LK_TARGET}/appsboot_rw.mbn ${D}/boot
+    fi
+    cp ${B}/build-${LK_TARGET}/lk.version ${D}/boot
+}
 
 do_deploy() {
-	install -d ${DEPLOY_DIR_IMAGE}
-	install ${B}/build-${LK_TARGET}/appsboot.mbn ${DEPLOY_DIR_IMAGE}
-	install ${B}/build-${LK_TARGET}/appsboot.raw ${DEPLOY_DIR_IMAGE}
-	if [ -f "${B}/build-${LK_TARGET}/lkversion" ] ; then
-		cp ${B}/build-${LK_TARGET}/lkversion ${DEPLOY_DIR_IMAGE}/lk.version
-	fi
+    install -d ${DEPLOY_DIR_IMAGE}
+    install ${D}/boot/appsboot.mbn ${DEPLOY_DIR_IMAGE}
+    if [ -f "${D}/boot/appsboot.raw" ] ; then
+        install ${D}/boot/appsboot.raw ${DEPLOY_DIR_IMAGE}
+    fi
+    if [ -f "${D}/boot/appsboot_rw.mbn" ] ; then
+        install ${D}/boot/appsboot_rw.mbn ${DEPLOY_DIR_IMAGE}
+    fi
+    cp ${D}/boot/lk.version ${DEPLOY_DIR_IMAGE}/lk.version
 }
 
 do_deploy[dirs] = "${S}"
