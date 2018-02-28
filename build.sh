@@ -460,11 +460,13 @@ set_ima()
 
             # Now, set some variables Legato build may need. Legato likes to use
             # different set of variables. This is perfectly fine, because we want
-            # to decouple Yocto from Legato, and use indipendently written
+            # to decouple system from Legato, and use indipendently written
             # interfaces.
 
             # Set this to 1 if ENABLE_IMA=true, 0 otherwise.
             set_option "ENABLE_IMA" 1
+            set_option "IMA_PUBLIC_CERT" $IMA_PUBLIC_CERT
+            set_option "IMA_PRIVATE_KEY" $IMA_PRIVATE_KEY
         else
             echo "error: IMA is enabled, but IMA config file [$IMA_CONFIG] does not exist."
             ret=$SWI_ERR
@@ -479,6 +481,8 @@ set_ima()
             set_option "IMA_PUB_CERT"
             set_option "IMA_KERNEL_CMDLINE_OPTIONS"
             set_option "ENABLE_IMA" 0
+            set_option "IMA_PUBLIC_CERT"
+            set_option "IMA_PRIVATE_KEY"
     fi
 
     return $ret
