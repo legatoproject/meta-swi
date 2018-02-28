@@ -196,3 +196,4 @@ IMAGE_PREPROCESS_COMMAND += "do_setfileattr; "
 
 addtask unpack2 before do_rootfs
 
+require mdm9x40-image-cwe.inc

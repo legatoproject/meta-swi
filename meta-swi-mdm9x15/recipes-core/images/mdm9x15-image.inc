@@ -101,3 +101,4 @@ python do_unpack2() {
 
 addtask unpack2 before do_rootfs
 
+require mdm9x15-image-cwe.inc
