@@ -13,6 +13,7 @@ IMAGE_LINGUAS = " "
 LICENSE = "MIT"
 
 inherit core-image
+inherit swi-version
 
 IMAGE_ROOTFS_SIZE ?= "8192"
 
