@@ -22,6 +22,10 @@ WS="$scriptdir/../poky"
 
 ALL_ARGS="$*"
 
+# Some useful global variables
+SWI_OK=0
+SWI_ERR=1
+
 usage()
 {
     cat << EOF
@@ -42,6 +46,8 @@ $0 <options ...>
     -a (pass extra options for recipes, key=value separated by ::)
     -K <kernel provider>
     -e (enable build recovery image or normal image)
+    -i <ima-config-file> (enable IMA build, pass full path to ima.conf as a parameter)
+    -B Pass flags directly to bitbake (e.g. -vvv for verbose build)
 
   Machine swi-mdmXXXX:
     -q (enable Qualcomm Proprietary bin)
@@ -88,8 +94,11 @@ X_OPTS=
 PROD=
 ENABLE_RECOVERY=
 QEMU=false
+ENABLE_IMA=false
+IMA_CONFIG=""
+BB_FLAGS=""
 
-while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:MecdrqsgkhQ" arg
+while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhQ" arg
 do
     case $arg in
     p)
@@ -179,6 +188,13 @@ do
         ;;
     Q)  QEMU=true
         echo "Building for QEMU"
+        ;;
+    i)  ENABLE_IMA=true
+        IMA_CONFIG=$OPTARG
+        echo "IMA is enabled."
+        ;;
+    B)  BB_FLAGS=$OPTARG
+        echo "bitbake flags: [$BB_FLAGS]"
         ;;
     ?)
         echo "$0: invalid option -$OPTARG" 1>&2
@@ -409,6 +425,65 @@ set_machine() {
     sed -e 's:^\(MACHINE\).*:\1 = \"'${MACH_LOCAL_CONF}'\":' -i $BD/conf/local.conf
 }
 
+# Set IMA options. If IMA build is required, we need to add number
+# of options to our global, static configuration file.
+set_ima()
+{
+    local ret=$SWI_OK
+
+    # Always set this option, because it may have been set to something
+    # else previously. This will enable or disable IMA build.
+    set_option "IMA_BUILD" $ENABLE_IMA
+
+    if [ "$ENABLE_IMA" == "true" ] ; then
+
+        # IMA build should be enabled, make sure we know what the IMA config is.
+        # Variable names here must match variable names in ima.conf .
+        # We are adding these to global conf file, because this is
+        # common information, and if we do not do it here, we would need
+        # to source $IMA_CONFIG on multiple places, which would slow
+        # down the build.
+
+        if [ -f $IMA_CONFIG ] ; then
+
+            echo "IMA config is set to [$IMA_CONFIG], setting IMA options..."
+
+            # Get variables from IMA configuration file.
+            source $IMA_CONFIG
+
+            # And write the ones we need to global configuration file.
+            set_option "IMA_CONFIG" $IMA_CONFIG
+            set_option "IMA_LOCAL_CA_X509" $IMA_LOCAL_CA_X509
+            set_option "IMA_PRIV_KEY" $IMA_PRIV_KEY
+            set_option "IMA_PUB_CERT" $IMA_PUB_CERT
+            set_option "IMA_KERNEL_CMDLINE_OPTIONS" "$IMA_KERNEL_CMDLINE_OPTIONS"
+
+            # Now, set some variables Legato build may need. Legato likes to use
+            # different set of variables. This is perfectly fine, because we want
+            # to decouple Yocto from Legato, and use indipendently written
+            # interfaces.
+
+            # Set this to 1 if ENABLE_IMA=true, 0 otherwise.
+            set_option "ENABLE_IMA" 1
+        else
+            echo "error: IMA is enabled, but IMA config file [$IMA_CONFIG] does not exist."
+            ret=$SWI_ERR
+        fi
+    else
+            # Unset everything. If not unset, some of these variables
+            # could create problems later on in the build, because
+            # they may get out of sync.
+            set_option "IMA_CONFIG"
+            set_option "IMA_LOCAL_CA_X509"
+            set_option "IMA_PRIV_KEY"
+            set_option "IMA_PUB_CERT"
+            set_option "IMA_KERNEL_CMDLINE_OPTIONS"
+            set_option "ENABLE_IMA" 0
+    fi
+
+    return $ret
+}
+
 # Tune local.conf file
 if [ -n "${PROD}" ]; then
     if [ -n "$ENABLE_RECOVERY" ]; then
@@ -432,6 +507,10 @@ sed -e 's:^#\(BB_NUMBER_THREADS\).*:\1 = \"'"$TASKS"'\":' -i $BD/conf/local.conf
 sed -e 's:^#\(PARALLEL_MAKE\).*:\1 = \"-j '"$THREADS"'\":' -i $BD/conf/local.conf
 
 set_option "LEGATO_BUILD" $ENABLE_LEGATO
+
+# Set all IMA related build options
+set_ima
+if [ $? != $SWI_OK ]; then exit 1 ; fi
 
 if [ -n "$FW_VERSION" ]; then
     FW_VERSION_ENTRY=$(grep "FW_VERSION =" $BD/conf/local.conf)
@@ -526,10 +605,10 @@ fi
 if [ $TOOLCHAIN = true ]; then
     case $MACH in
        swi-mdm* )
-           bitbake meta-toolchain-swi-ext
+           bitbake ${BB_FLAGS} meta-toolchain-swi-ext
            ;;
        * )
-           bitbake meta-toolchain-swi
+           bitbake ${BB_FLAGS} meta-toolchain-swi
            ;;
     esac
     exit $?
@@ -542,13 +621,13 @@ if [ $DEBUG = true ]; then
     sed -e 's:^\(PACKAGE_CLASSES\).*:\1 = \"package_rpm\":' -i $BD/conf/local.conf
     case $MACH in
         swi-mdm* )
-            bitbake ${MACH#swi-}-image-dev
+            bitbake ${BB_FLAGS} ${MACH#swi-}-image-dev
             ;;
         swi-virt* )
-            bitbake swi-virt-image-dev
+            bitbake ${BB_FLAGS} swi-virt-image-dev
             ;;
         * )
-            bitbake core-image-dev
+            bitbake ${BB_FLAGS} core-image-dev
             ;;
     esac
     exit $?
@@ -558,16 +637,16 @@ else
     case $MACH in
         swi-mdm* )
             if test x$ENABLE_RECOVERY = "xtrue"; then
-                bitbake mdm-image-recovery
+                bitbake ${BB_FLAGS} mdm-image-recovery
             else
-                bitbake ${MACH#swi-}-image-minimal
+                bitbake ${BB_FLAGS} ${MACH#swi-}-image-minimal
             fi
             ;;
         swi-virt* )
-            bitbake swi-virt-image-minimal
+            bitbake ${BB_FLAGS} swi-virt-image-minimal
             ;;
         * )
-            bitbake core-image-minimal
+            bitbake ${BB_FLAGS} core-image-minimal
             ;;
     esac
     exit $?

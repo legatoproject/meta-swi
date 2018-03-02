@@ -18,14 +18,8 @@ IMAGE_INSTALL += "cryptsetup"
 # manual installation of mdev.
 # IMAGE_INSTALL += "busybox-mdev"
 
-# Only add Legato if this is a LEGATO_BUILD
-def check_legato_pkg(d):
-    legato_build = d.getVar('LEGATO_BUILD', True) or "false"
-    if legato_build == "true":
-        return "legato-image"
-    return ""
-
-DEPENDS += "${@check_legato_pkg(d)}"
+# Add eventual legato dependency
+DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 
 # AR8161
 IMAGE_INSTALL += "pciutils"

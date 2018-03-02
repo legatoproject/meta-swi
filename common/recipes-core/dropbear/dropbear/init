@@ -30,6 +30,13 @@ test ! -h /var/service/dropbear || exit 0
 
 DROPBEAR_RSAKEY_DEFAULT="/etc/dropbear/dropbear_rsa_host_key"
 
+# Check if /etc overlay is mounted. If no, /etc is assumed R/O.
+(mount | grep -q " on /etc type ")
+if [ $? -ne 0 ]; then
+    DROPBEAR_RSAKEY_DEFAULT=/tmp/dropbear_rsa_host_key
+    DROPBEAR_DSSKEY_DEFAULT=/tmp/dropbear_dss_host_key
+fi
+
 test -z "$DROPBEAR_BANNER" || \
   DROPBEAR_EXTRA_ARGS="$DROPBEAR_EXTRA_ARGS -b $DROPBEAR_BANNER"
 test -n "$DROPBEAR_RSAKEY" || \

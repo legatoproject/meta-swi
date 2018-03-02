@@ -2,9 +2,8 @@ inherit kernel externalsrc
 inherit android-signing
 
 require recipes-kernel/kernel-src-install.inc
+require recipes-kernel/linux-quic/linux-quic.inc
 
-DESCRIPTION = "QuIC Linux Kernel"
-LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 COMPATIBLE_MACHINE = "(swi-mdm9x28)"
 
@@ -16,18 +15,16 @@ EXTERNALSRC_BUILD_pn-${PN} = "${WORKDIR}/build"
 KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
 
 # Override for Qemu
-COMPATIBLE_MACHINE_swi-mdm928-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
+COMPATIBLE_MACHINE_swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
 KERNEL_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
-COMPATIBLE_MACHINE_swi-mdm928-qemu = "swi-mdm9x28-qemu"
+COMPATIBLE_MACHINE_swi-mdm9x28-qemu = "swi-mdm9x28-qemu"
 KERNEL_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
 
 KERNEL_EXTRA_ARGS        += "O=${B}"
 
-LINUX_VERSION ?= "3.18.20"
-PV = "${LINUX_VERSION}"
-PR = "r1"
-
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
+
+DEPENDS += "ima-support-tools-native gcc"
 
 do_configure_prepend() {
     # When SRC_URI contains something, the Yocto kernel.bbclass creates
@@ -44,6 +41,13 @@ do_configure_prepend() {
     fi
 
     cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
+
+    # Add ".system" public cert into kernel build area. Kernel build
+    # will suck this cert in automatically.
+    if [ "x${IMA_BUILD}" == "xtrue" ] ; then
+        echo "IMA: Copying ${IMA_LOCAL_CA_X509} to ${B} ..."
+        cp -f ${IMA_LOCAL_CA_X509} ${B}/.
+    fi
 
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper
     oe_runmake_call -C ${S} ARCH=${ARCH} ${KERNEL_EXTRA_ARGS} ${KERNEL_DEFCONFIG}
@@ -126,8 +130,20 @@ gen_bootimg() {
     image_link=$3
     master_dtb_name=$4
     page_size=$5
+    ret_ok=0
+    ret_err=1
 
     set -xe
+
+    # If IMA_BUILD is requested, IMA kernel command line options
+    # must be available.
+    if [ "x${IMA_BUILD}" == "xtrue" -a "x${IMA_KERNEL_CMDLINE_OPTIONS}" == "x" ] ; then
+        echo "IMA build requested, but IMA_KERNEL_CMDLINE_OPTIONS variable is empty."
+        return $ret_err
+    fi
+
+    echo "Kernel command line IMA options: [${IMA_KERNEL_CMDLINE_OPTIONS}]"
+    echo "Kernel command line: [${KERNEL_BOOT_OPTIONS_RAMDISK}]"
 
     kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
     if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
@@ -156,7 +172,9 @@ do_bootimg() {
     image_name_2k=$(echo ${BOOTIMG_NAME_2k} | sed -e s/@{DATETIME}/$date/)
     image_name_4k=$(echo ${BOOTIMG_NAME_4k} | sed -e s/@{DATETIME}/$date/)
     gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x28.2k.unsigned masterDTB.2k 2048
+    if [ $? -ne 0 ] ; then exit 1 ; fi
     gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x28.4k.unsigned masterDTB.4k 4096
+    if [ $? -ne 0 ] ; then exit 1 ; fi
 
     # sign the image:
     android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.unsigned.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img

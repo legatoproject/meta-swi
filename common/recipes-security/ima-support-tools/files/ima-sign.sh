@@ -37,6 +37,10 @@ VERSION="0.90"
 SWI_OK=0
 SWI_ERR=1
 
+# Some other global variables
+SWI_FALSE=0
+SWI_TRUE=1
+
 # Which tar utility we are going to use? Note that changing
 # tar utility here in not ehough, because some options differ.
 # One day, if required, we are going to handle multiple choices.
@@ -92,7 +96,7 @@ Usage:
 
     -p, --imaprivkey       Location of the .ima private key.
     -d, --rdir             Root directory of the files to sign.
-    -t, --tarball          Generated tarboll name including path
+    -t, --tarball          Generated tarball name including path
     -y, --type             Type of tarball (e.g. legato).
 
 EOF
@@ -172,6 +176,13 @@ function ima_sign_files()
 {
     local ret=$SWI_OK
 
+    # We need to run as privileged user to execute this method.
+    is_privileged_user
+    if [ $? -ne $SWI_TRUE ] ; then
+        return $SWI_ERR
+    fi
+
+
     # Bit of error checking here. If parameters are missing, get out.
     if [ "x$IMA_PRIV_KEY" == "x" -o \
          "x$RDIR"         == "x" -o \
@@ -217,11 +228,9 @@ function ima_sign_files()
 # Check the environment we run this executable in.
 function check_env()
 {
-    # Must be root to run it on host.
-    if [ "$( whoami )" != "root" ] ; then
-        echo "  You must run this executable as privileged user (e.g. root), exiting."
-        return $SWI_ERR
-    fi
+
+    local temp=""
+    local bin_required="bsdtar"
 
     # We really need getopt
     if [ "x$( which getopt )" == "x" ] ; then
@@ -235,13 +244,30 @@ function check_env()
         return $SWI_ERR
     fi
 
-    # ...and we need bsdtar
-    if [ "x$( which $TAR )" == "x" ] ; then
-        echo "Please, install $TAR."
+    # ...and we need bsdtar for IMA to work properly. The only way
+    # to know for sure is to execute it and check version string.
+    # Otherwise, someone may think it's clever to make bsdtar
+    # softlink to GNU tar, and work around the problem of not
+    # having bsdtar.
+    temp=$( $TAR --version 2>&1 | awk '{ print $1}' | head -1 | grep "$bin_required" )
+    if [ "x$temp" == "x" ] ; then
+        echo "error: $bin_required not found, please install it."
         return $SWI_ERR
     fi
 
     return $SWI_OK
+}
+
+# Check if we have elevated privileges.
+function is_privileged_user()
+{
+    # Must be root to run it on host.
+    if [ $( id -u ) -ne 0 ] ; then
+        echo "  You must run this command as privileged user (e.g. root), exiting."
+        return $SWI_FALSE
+    fi
+
+    return $SWI_TRUE
 }
 
 function main()

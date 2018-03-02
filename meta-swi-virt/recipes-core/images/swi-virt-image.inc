@@ -15,14 +15,8 @@ IMAGE_INSTALL += "bsinfo-stub"
 # Kernel modules
 IMAGE_INSTALL += "kernel-module-softdog"
 
-# Only depend on legato-af if this is a LEGATO_BUILD
-def check_legato_dep(d):
-    legato_build = d.getVar('LEGATO_BUILD', True) or "false"
-    if legato_build == "true":
-        return "legato-af"
-    return ""
-
-DEPENDS += "${@check_legato_dep(d)}"
+# Add eventual legato dependency
+DEPENDS += "${@check_legato_pkg(d)}"
 
 # Prepare a package with kernel + hdd image
 do_prepare_virt[depends] += "virtual/kernel:do_populate_sysroot"
@@ -51,14 +45,16 @@ do_prepare_virt() {
     # QEmu Config
     touch $CFG
     if [[ "${VIRT_ARCH}" == "x86" ]]; then
-        echo 'CMDLINE="root=/dev/hda1 console=ttyS0 rw mem=128M"' >> $CFG
-        echo 'ARG_TARGET=""' >> $CFG
+        echo 'CMDLINE="root=/dev/sda1 rw"' >> $CFG
+        echo 'ARG_TARGET="-machine q35 -m 192M"' >> $CFG
         echo 'ROOTFS_METHOD=-hda' >> $CFG
+        echo 'CONSOLE_TTY=ttyS0' >> $CFG
 
     elif [[ "${VIRT_ARCH}" == "arm" ]]; then
-        echo 'CMDLINE="root=/dev/sda1 console=ttyS0 rootwait mem=128M"' >> $CFG
-        echo 'ARG_TARGET="-M versatilepb -m 128"' >> $CFG
+        echo 'CMDLINE="root=/dev/sda1 rootwait"' >> $CFG
+        echo 'ARG_TARGET="-machine versatilepb -m 192M"' >> $CFG
         echo 'ROOTFS_METHOD=-hda' >> $CFG
+        echo 'CONSOLE_TTY=ttyAMA0' >> $CFG
     fi
 
     # Kernel

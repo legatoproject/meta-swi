@@ -1,5 +1,7 @@
 require recipes-kernel/linux/linux-yocto.inc
 
+require recipes-kernel/kernel-src-install.inc
+
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 PV = "3.14.29"
@@ -180,22 +182,7 @@ do_kernel_configme() {
 }
 
 do_install_append() {
-    oe_runmake headers_install O=${D}/usr/src/kernel
-
-    # Copy headers back to $(D) folder, it should be done at upper command, but not
-    mkdir -p ${D}/usr/src/kernel/usr
-    cp -fr ${B}/usr/include ${D}/usr/src/kernel/usr/
-
-    # Copy generated headers also
-    mkdir -p ${D}/usr/src/kernel/include/generated
-    cp -fr ${B}/include/generated ${D}/usr/src/kernel/include
-
-    # Also System.map
-    cp -fr ${B}/System.map ${D}/usr/src/kernel/System.map-${KERNEL_VERSION}
-
-    # The main headers from the kernel source tree in ${S} are not in ${B};
-    # we must pull those from ${S}.
-    cp -fr ${S}/include/linux ${D}/usr/src/kernel/usr/include
+    kernel_src_install
 }
 
 addtask tag_config after do_configure before do_kernel_configcheck
