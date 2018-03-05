@@ -1408,7 +1408,7 @@ mount_early_create_dirs()
     mkdir -p /var/lock/subsys
     mkdir -p /var/log
     mkdir -p /var/lib/urandom
-@if mdm9x28_ar758x
+@if mdm9x28_ar758x || mdm9x40_ar759x
     touch /var/resolv.conf
 @endif
     return ${ret}
