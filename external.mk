@@ -24,6 +24,10 @@ else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files
     PROD = ar759x
   endif
 endif
+# If the build is for virt, override.
+ifneq (,$(findstring virt,$(MAKECMDGOALS)))
+  MACH := virt
+endif
 
 ifneq ($(MACH),)
   MACH_ARGS := -m swi-$(MACH)
@@ -113,7 +117,7 @@ ifeq ($(MANGOH_BUILD),1)
 endif
 
 ifeq ($(IMA_BUILD),1)
-  ifneq ($(PROD),ar758x)
+  ifeq (,$(filter $(MACH),virt)$(filter $(PROD),ar758x))
     $(error "IMA is not supported for [${MACH}][${PROD}]")
   else
     IMA_ARGS := -i ${IMA_CONFIG}

@@ -41,9 +41,9 @@ do_prepare_virt() {
     touch $CFG
 
     if [[ "${FSTYPE_VIRT}" == "squashfs"* ]]; then
-        echo 'CMDLINE="rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=squashfs"' >> $CFG
+        echo 'CMDLINE="rootfstype=ramfs rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=squashfs"' >> $CFG
     else
-        echo "CMDLINE='rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=${FSTYPE_VIRT}'" >> $CFG
+        echo "CMDLINE='rootfstype=ramfs rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=${FSTYPE_VIRT}'" >> $CFG
     fi
 
     if [[ "${VIRT_ARCH}" == "x86" ]]; then
@@ -55,6 +55,11 @@ do_prepare_virt() {
         echo 'ARG_TARGET="-machine versatilepb -m 192M"' >> $CFG
         echo 'ROOTFS_METHOD=-hda' >> $CFG
         echo 'CONSOLE_TTY=ttyS0' >> $CFG
+    fi
+    # ... IMA
+    if [[ "${IMA_BUILD}" == "true" ]]; then
+        echo 'IMA_BUILD=1' >> $CFG
+        echo "IMA_KERNEL_CMDLINE_OPTIONS=\"${IMA_KERNEL_CMDLINE_OPTIONS}\"" >> $CFG
     fi
 
     # Kernel
@@ -104,3 +109,47 @@ do_prepare_virt() {
 }
 
 addtask prepare_virt after do_image_complete before do_build
+
+## Sign rootfs using IMA/EVM tools
+# Highly inspired from https://github.com/intel/meta-intel-iot-security/blob/master/meta-integrity/classes/ima-evm-rootfs.bbclass
+
+# evmctl must have been installed first.
+do_rootfs[depends] += "ima-evm-utils-native:do_populate_sysroot"
+
+# Sign all regular files by default.
+IMA_EVM_ROOTFS_SIGNED ?= ". -type f"
+# Hash nothing by default.
+IMA_EVM_ROOTFS_HASHED ?= ". -maxdepth 0 -false"
+
+fakeroot ima_evm_sign_rootfs() {
+    if [[ "${IMA_BUILD}" != "true" ]]; then
+        return
+    fi
+
+    echo "Signing rootfs"
+
+    if [ -z "${IMA_PRIV_KEY}" ] || [ ! -e "${IMA_PRIV_KEY}" ]; then
+        echo "Missing IMA private key"
+        exit 1
+    fi
+
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${STAGING_LIBDIR_NATIVE}
+
+    cd "${IMAGE_ROOTFS}"
+
+    # Sign file with private IMA key. EVM not supported at the moment.
+    bbnote "IMA/EVM: signing files 'find ${IMA_EVM_ROOTFS_SIGNED}' with private key '${IMA_PRIV_KEY}'"
+    find ${IMA_EVM_ROOTFS_SIGNED} > "${B}/rootfs.signed"
+    while read -r -u 10 f; do
+        evmctl ima_sign --key ${IMA_PRIV_KEY} $f
+    done 10< "${B}/rootfs.signed"
+
+    bbnote "IMA/EVM: hashing files 'find ${IMA_EVM_ROOTFS_HASHED}'"
+    find ${IMA_EVM_ROOTFS_HASHED} > "${B}/rootfs.hashed"
+    while read -r -u 10 f; do
+        evmctl ima_hash $f
+    done 10< "${B}/rootfs.hashed"
+}
+
+IMAGE_PREPROCESS_COMMAND_append = " ima_evm_sign_rootfs; "
+

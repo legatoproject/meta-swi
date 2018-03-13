@@ -5,6 +5,8 @@ SRC_URI += "file://squashfs.cfg"
 SRC_URI += "file://smack.cfg"
 SRC_URI += "file://pm.cfg"
 SRC_URI += "file://overlayfs.cfg"
+SRC_URI += "file://ima.cfg"
+SRC_URI += "file://audit.cfg"
 
 RDEPENDS_${PN} += "kern-tools-native"
 
@@ -25,6 +27,50 @@ KMACHINE_swi-virt-arm = "qemuarm"
 KBRANCH_swi-virt-arm = "${KBRANCH_qemuarm}"
 
 SRCREV_machine_swi-virt-arm = "${SRCREV_machine_qemuarm}"
+
+# IMA
+DEPENDS += "ima-support-tools-native"
+
+do_configure_append() {
+    # Add ".system" public cert into kernel build area.
+    if [ "x${IMA_BUILD}" == "xtrue" ]; then
+
+        echo "IMA: Copying ${IMA_LOCAL_CA_X509} to ${B} ..."
+
+        # Convert certificate to PEM format
+        if [[ "${IMA_LOCAL_CA_X509}" != *.pem ]]; then
+            openssl x509 -inform der -in "${IMA_LOCAL_CA_X509}" -out "${B}/ima-system.pem" -outform pem
+        else
+            cp -f "${IMA_LOCAL_CA_X509}" "${B}/ima-system.pem"
+        fi
+
+        # Update config
+        echo 'CONFIG_SYSTEM_TRUSTED_KEYS="ima-system.pem"' >> ${B}/.config
+
+        # Reconfigure
+        ${KERNEL_CONFIG_COMMAND}
+    fi
+}
+
+# Needed to build extract-cert.c
+DEPENDS += "openssl-native"
+KERNEL_EXTRA_ARGS = " STAGING_LIBDIR_NATIVE=${STAGING_LIBDIR_NATIVE} STAGING_INCDIR_NATIVE=${STAGING_INCDIR_NATIVE} "
+
+do_patch_append() {
+    echo 'HOST_EXTRACFLAGS += -I$(STAGING_INCDIR_NATIVE)/'        >> "${S}/scripts/Makefile"
+    echo 'HOST_EXTRACFLAGS += -I$(STAGING_INCDIR_NATIVE)/openssl' >> "${S}/scripts/Makefile"
+    echo 'HOST_EXTRACFLAGS += -L$(STAGING_LIBDIR_NATIVE)/'        >> "${S}/scripts/Makefile"
+}
+
+# The LD_LIBRARY_PATH variable is not set when building kernel.
+# Work around this by adding the build's sysroot libraries to LD_LIBRARY_PATH.
+kernel_do_compile_prepend(){
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${STAGING_LIBDIR_NATIVE}:${STAGING_LIBDIR_NATIVE}/../../lib
+}
+
+do_install_prepend(){
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${STAGING_LIBDIR_NATIVE}:${STAGING_LIBDIR_NATIVE}/../../lib
+}
 
 do_install_append() {
     kernel_src_install

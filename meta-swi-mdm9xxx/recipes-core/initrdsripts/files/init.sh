@@ -651,19 +651,19 @@ ima_setup()
     local ima_policy_file=/etc/ima/ima.policy
     local ret=0
 
-    echo "Setting up IMA subsystem..."
+    echo "ima: setting up IMA subsystem..."
 
-    do_exec=$( cat /proc/cmdline | grep -ow "ima_appraise=fix\|ima_appraise=enforce" )
+    do_exec=$( cat /proc/cmdline | grep -ow "ima_appraise=\(fix\|enforce\|log\)" )
 
     if [ -z $do_exec ] ; then
         # Nothing we should do here, IMA is not enabled
-        echo "IMA is not supported."
+        echo "ima: feature not supported"
         return 0
     fi
 
     # IMA is supported, check if policy file is available. If not, refuse to boot.
     if [ ! -f ${ima_policy_file} ] ; then
-        echo "IMA policy file is not available."
+        echo "ima: policy file is not available"
         return 1
     fi
 
@@ -671,9 +671,23 @@ ima_setup()
     mount -t securityfs security /sys/kernel/security
 
     if [ -f /sys/kernel/security/ima/policy ] ; then
-        (set -e; while read i; do echo $i; done) <${ima_policy_file} >/sys/kernel/security/ima/policy
+        (   set -e; \
+            while read -r -u 10 i; do \
+                if ! echo "$i" | grep -q -e '^#' -e '^ *$'; then \
+                    if echo $i; then \
+                        sleep ${bootparam_ima_delay:-0}; \
+                    else \
+                        echo "ima: invalid line in IMA policy: $i" >&2; \
+                        exit 1; \
+                    fi; \
+                fi; \
+            done ) 10<${ima_policy_file} >/sys/kernel/security/ima/policy
+        if [ $? -ne 0 ]; then
+            echo "ima: error loading IMA policy"
+            ret=1
+        fi
     else
-        echo "Cannot update IMA policy, kernel policy entry is missing."
+        echo "ima: cannot update IMA policy, kernel policy entry is missing"
         ret=1
     fi
 
