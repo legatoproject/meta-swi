@@ -12,40 +12,40 @@ inherit ubi-image
 inherit dm-verity-hash
 inherit set-files-attr
 
-IMAGE_INSTALL += "start-scripts-find-partitions"
-IMAGE_INSTALL += "start-scripts-firmware-links"
-IMAGE_INSTALL += "cryptsetup"
+IMAGE_INSTALL_append = " start-scripts-find-partitions"
+IMAGE_INSTALL_append = " start-scripts-firmware-links"
+IMAGE_INSTALL_append = " cryptsetup"
 
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
 # manual installation of mdev.
-# IMAGE_INSTALL += "busybox-mdev"
+# IMAGE_INSTALL_append = " busybox-mdev"
 
 # Add WiFi tools and scripts
-IMAGE_INSTALL += "wpa-supplicant"
-IMAGE_INSTALL += "hostapd"
-IMAGE_INSTALL += "iw"
-IMAGE_INSTALL += "ti-wifi-utils-wl18xx"
-IMAGE_INSTALL += "crda"
-IMAGE_INSTALL += "i2cgpioctl"
-IMAGE_INSTALL += "sierra-init-tiwifi"
+IMAGE_INSTALL_append = " wpa-supplicant"
+IMAGE_INSTALL_append = " hostapd"
+IMAGE_INSTALL_append = " iw"
+IMAGE_INSTALL_append = " ti-wifi-utils-wl18xx"
+IMAGE_INSTALL_append = " crda"
+IMAGE_INSTALL_append = " i2cgpioctl"
+IMAGE_INSTALL_append = " sierra-init-tiwifi"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 
-IMAGE_INSTALL += "embms-kernel"
-IMAGE_INSTALL += "kernel-modules"
+IMAGE_INSTALL_append = " embms-kernel"
+IMAGE_INSTALL_append = " kernel-modules"
 
 # Add linkmon app to monitor USB link
-IMAGE_INSTALL += "linkmon"
+IMAGE_INSTALL_append = " linkmon"
 
 # Add IMA/EVM support tools
-IMAGE_INSTALL += "ima-evm-utils"
-IMAGE_INSTALL += "keyutils"
+IMAGE_INSTALL_append = " ima-evm-utils"
+IMAGE_INSTALL_append = " keyutils"
 
 # Add replacements for busybox utils in order to properly handle
 # extended file attributes.
-IMAGE_INSTALL += "libarchive"
+IMAGE_INSTALL_append = " libarchive"
 
 create_ubinize_config() {
     local cfg_path=$1

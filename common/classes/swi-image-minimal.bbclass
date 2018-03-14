@@ -6,7 +6,7 @@ EXTENDED_SWI_IMAGE ?= "packagegroup-swi-image-target-ext"
 IMAGE_INSTALL = "packagegroup-core-boot ${ROOTFS_PKGMANAGE_BOOTSTRAP} ${CORE_IMAGE_EXTRA_INSTALL} ${CORE_SWI_IMAGE}"
 
 # Uncomment the following line to add debug packages
-# IMAGE_INSTALL += " ${EXTENDED_SWI_IMAGE}"
+# IMAGE_INSTALL_append = "  ${EXTENDED_SWI_IMAGE}"
 
 IMAGE_LINGUAS = " "
 

@@ -1,4 +1,4 @@
-PACKAGE_INSTALL += "cryptsetup libgcrypt ossp-uuid"
+PACKAGE_INSTALL_append = " cryptsetup libgcrypt ossp-uuid"
 
 fakeroot do_filter_rootfs () {
 
