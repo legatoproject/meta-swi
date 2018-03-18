@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ###############################################################################
 # This executable will sign files using IMA private key. It must be run as
 # root or under fakeroot.

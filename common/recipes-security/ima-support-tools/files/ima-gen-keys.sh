@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ###############################################################################
 # This executable will generate various keys and certificates based on various
 # input options.
