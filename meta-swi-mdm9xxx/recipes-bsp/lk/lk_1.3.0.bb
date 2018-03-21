@@ -21,7 +21,7 @@ LK_TARGET ?= "mdm9615"
 # 2 - SPEW
 LK_DEBUG ?= "0"
 
-EXTRA_OEMAKE = "-j 1 TOOLCHAIN_PREFIX='${TARGET_PREFIX}' TOOLCHAIN_OPTIONS='${TOOLCHAIN_OPTIONS}' ${LK_TARGET} DEBUG=${LK_DEBUG} BOOTLOADER_OUT='${B}'"
+EXTRA_OEMAKE = "-j 1 TOOLCHAIN_PREFIX='${TARGET_PREFIX}' TOOLCHAIN_OPTIONS='${TOOLCHAIN_OPTIONS}' ${LK_TARGET} DEBUG=${LK_DEBUG} BOOTLOADER_OUT='${B}' ENABLE_IMA='${ENABLE_IMA}' IMA_KERNEL_CMDLINE_OPTIONS='${IMA_KERNEL_CMDLINE_OPTIONS}'"
 
 do_tag_lk() {
     cd ${S}
@@ -61,6 +61,9 @@ do_install() {
     if [ -f "${B}/build-${LK_TARGET}/appsboot_rw.mbn" ] ; then
         install ${B}/build-${LK_TARGET}/appsboot_rw.mbn ${D}/boot
     fi
+    if [ -f "${B}/build-${LK_TARGET}/appsboot_rw_ima.mbn" ] ; then
+        install ${B}/build-${LK_TARGET}/appsboot_rw_ima.mbn ${D}/boot
+    fi
     cp ${B}/build-${LK_TARGET}/lk.version ${D}/boot
 }
 
@@ -72,6 +75,9 @@ do_deploy() {
     fi
     if [ -f "${D}/boot/appsboot_rw.mbn" ] ; then
         install ${D}/boot/appsboot_rw.mbn ${DEPLOY_DIR_IMAGE}
+    fi
+    if [ -f "${D}/boot/appsboot_rw_ima.mbn" ] ; then
+        install ${D}/boot/appsboot_rw_ima.mbn ${DEPLOY_DIR_IMAGE}
     fi
     cp ${D}/boot/lk.version ${DEPLOY_DIR_IMAGE}/lk.version
 }
