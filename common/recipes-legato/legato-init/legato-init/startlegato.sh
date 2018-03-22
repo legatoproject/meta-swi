@@ -9,7 +9,6 @@ fi
 
 FLASH_MOUNTPOINT=${FLASH_MOUNTPOINT:-/mnt/flash}
 FLASH_MOUNTPOINT_LEGATO=${FLASH_MOUNTPOINT_LEGATO:-/mnt/legato}
-SMACK_PATH=/legato/smack
 
 if [ -e "${FLASH_MOUNTPOINT_LEGATO}/systems/current/read-only" ]
 then
@@ -31,8 +30,7 @@ case "$1" in
         umount /legato 2>/dev/null
         mount -o bind $LEGATO_MNT /legato
 
-        if [ ! -e /legato/SMACK_DISABLED ]
-        then
+        if is_legato_smack_enabled; then
             # Only allow the "framework" label to access the Legato directory.
             setfattr -n security.SMACK64 -v "framework" /legato
         else
