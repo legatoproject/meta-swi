@@ -18,6 +18,6 @@ do_compile() {
 do_install() {
     install -d ${D}${bindir}
     cd $(dirname ${D}${bindir})
-    tar jxvf ${S}/releases/legato-tools-$(uname -m).tar.bz2
+    tar jxvf ${S}/releases/legato-tools-$(uname -m).tar.bz2 --exclude="bin/ima-*"
 }
 

@@ -43,7 +43,7 @@ endif
 # Build for mangOH ?
 MANGOH_BUILD ?= $(shell [ -d meta-mangoh ] && echo -n 1)
 
-# Include prorpietary meta-swi-extras layer by default if existing
+# Include proprietary meta-swi-extras layer by default if existing
 PROPRIETARY_BUILD ?= $(shell [ -d meta-swi-extras ] && echo -n 1 || echo -n 0)
 
 # Use docker abstraction ?
@@ -57,6 +57,19 @@ FIRMWARE_PATH ?= 0
 
 # Toolchain prefix
 SDK_PREFIX ?= 0
+
+# Do we have to enable IMA for this build. For now,
+# only ar758x should have IMA build enabled.
+IMA_BUILD ?= 0
+
+# Default location of the IMA configuration file. It is very difficult to
+# type number of parameters on make command line every time the build is run,
+# or remembering to source environment before the build. So, we make it
+# easy for everyone.
+IMA_CONFIG ?= $(PWD)/meta-swi/common/recipes-security/ima-support-tools/files/ima.conf
+
+# Default BB arguments
+BB_ARGS ?=
 
 all: image_bin
 
@@ -83,6 +96,18 @@ ifeq ($(MANGOH_BUILD),1)
                  -a "MANGOH_WIFI_REPO=${MANGOH_WIFI_REPO}"
 endif
 
+ifeq ($(IMA_BUILD),1)
+  ifneq ($(PROD),ar758x)
+    $(error "IMA is not supported for [${MACH}][${PROD}]")
+  else
+    IMA_ARGS := -i ${IMA_CONFIG}
+  endif
+endif
+
+ifneq (,$(wildcard $(PWD)/legato/3rdParty/ima-support-tools/))
+  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REPO=file://$(PWD)/legato/3rdParty/ima-support-tools/"
+endif
+
 ifneq ($(FIRMWARE_PATH),0)
   FIRMWARE_PATH_ARGS := -F $(FIRMWARE_PATH)
 endif
@@ -91,6 +116,9 @@ ifneq ($(SDK_PREFIX),0)
   SDK_PREFIX_ARGS := -a "SDKPATH_PREFIX=${SDK_PREFIX}"
 endif
 
+ifdef TARGET_HOSTNAME
+  HOSTNAME_ARGS := -a "hostname_pn-base-files=${TARGET_HOSTNAME}"
+endif
 
 # Determine path for LK repository
 # On mdm9x15, lk is built using CAF revision + patches
@@ -101,6 +129,14 @@ ifneq (,$(LK_REPO))
   ifneq (mdm9x15,$(MACH))
     LK_ARGS := -a "LK_REPO=$(LK_REPO)"
   endif
+endif
+
+ifeq ($(RECOVERY_BUILD),1)
+  RCY_ARGS = -e
+endif
+
+ifdef BB_FLAGS
+  BB_ARGS := -B "${BB_FLAGS}"
 endif
 
 # Replaces this Makefile by a symlink to external.mk
@@ -114,7 +150,7 @@ ifeq ($(USE_DOCKER),1)
   UID := $(shell id -u)
   HOSTNAME := $(shell hostname)
   DOCKER_BIN ?= docker
-  DOCKER_IMG ?= "corfr/yocto-dev"
+  DOCKER_IMG ?= "quay.io/swi-infra/yocto-dev"
   DOCKER_RUN := ${DOCKER_BIN} run \
                     --rm \
                     --user=${UID} \
@@ -137,7 +173,10 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${ICECC_ARGS} \
 				${LEGATO_ARGS} \
 				${FIRMWARE_PATH_ARGS} \
-				${SDK_PREFIX_ARGS}
+				${SDK_PREFIX_ARGS} \
+				${HOSTNAME_ARGS} \
+				${IMA_ARGS} \
+				${BB_ARGS}
 
 # Machine: swi-mdm9x15
 
@@ -151,7 +190,8 @@ COMMON_MACH := \
 				$(MANGOH_ARGS) \
 				$(LK_ARGS) \
 				$(MACH_ARGS) \
-				${PROD_ARGS}
+				${PROD_ARGS} \
+				$(RCY_ARGS)
 
 COMMON_BIN := \
 				$(COMMON_MACH) \

@@ -106,10 +106,14 @@ endif
 
 ifeq ($(IMA_BUILD),1)
   ifneq ($(PROD),ar758x)
-    $(error "IMA is not supported for [${MACH}][${PROD}]"
+    $(error "IMA is not supported for [${MACH}][${PROD}]")
   else
     IMA_ARGS := -i ${IMA_CONFIG}
   endif
+endif
+
+ifneq (,$(wildcard $(PWD)/legato/3rdParty/ima-support-tools/))
+  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REPO=git://$(PWD)/legato/3rdParty/ima-support-tools/.git;protocol=file;rev=HEAD"
 endif
 
 ifneq ($(FIRMWARE_PATH),0)
@@ -142,7 +146,7 @@ ifeq ($(RECOVERY_BUILD),1)
 endif
 
 ifdef BB_FLAGS
-    BB_ARGS := -B "${BB_FLAGS}"
+  BB_ARGS := -B "${BB_FLAGS}"
 endif
 
 # Replaces this Makefile by a symlink to repo.mk
@@ -156,7 +160,7 @@ ifeq ($(USE_DOCKER),1)
   UID := $(shell id -u)
   HOSTNAME := $(shell hostname)
   DOCKER_BIN ?= docker
-  DOCKER_IMG ?= "corfr/yocto-dev"
+  DOCKER_IMG ?= "quay.io/swi-infra/yocto-dev"
   DOCKER_RUN := ${DOCKER_BIN} run \
                     --rm \
                     --user=${UID} \
