@@ -12,6 +12,11 @@ EXTERNALSRC_BUILD_pn-${PN} = "${WORKDIR}/build"
 
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9640_defconfig"
+KERNEL_DEFCONFIG_PATH = "${S}/arch/arm/configs/${KERNEL_DEFCONFIG}"
+
+# inform externalsrc about files whose changes must trigger do_configure
+CONFIGURE_FILES_pn-${PN} = "${KERNEL_DEFCONFIG_PATH}"
+
 KERNEL_EXTRA_ARGS        += "O=${B}"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
@@ -30,7 +35,7 @@ do_configure_prepend() {
       ln -sf ${LINUX_REPO_DIR}/.. ${STAGING_KERNEL_DIR}
     fi
 
-    cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
+    cp ${KERNEL_DEFCONFIG_PATH} ${WORKDIR}/defconfig
 
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper
     oe_runmake_call -C ${S} ARCH=${ARCH} ${KERNEL_EXTRA_ARGS} ${KERNEL_DEFCONFIG}

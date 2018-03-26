@@ -1,2 +1,2 @@
-IMAGE_INSTALL += "bsinfo-stub"
-IMAGE_INSTALL += "system-core-adbd"
+IMAGE_INSTALL_append = " bsinfo-stub"
+IMAGE_INSTALL_append = " system-core-adbd"

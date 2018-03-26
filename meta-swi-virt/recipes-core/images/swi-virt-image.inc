@@ -4,16 +4,16 @@ INC_PR = "r0"
 
 FSTYPE_VIRT ?= "ext4"
 
-IMAGE_INSTALL += "util-linux"
-IMAGE_INSTALL += "util-linux-blkid"
-IMAGE_INSTALL += "util-linux-mount"
-IMAGE_INSTALL += "nfs-utils-client"
+IMAGE_INSTALL_append = " util-linux"
+IMAGE_INSTALL_append = " util-linux-blkid"
+IMAGE_INSTALL_append = " util-linux-mount"
+IMAGE_INSTALL_append = " nfs-utils-client"
 
 # Tool to recognize the platform
-IMAGE_INSTALL += "bsinfo-stub"
+IMAGE_INSTALL_append = " bsinfo-stub"
 
 # Kernel modules
-IMAGE_INSTALL += "kernel-module-softdog"
+IMAGE_INSTALL_append = " kernel-module-softdog"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d)}"

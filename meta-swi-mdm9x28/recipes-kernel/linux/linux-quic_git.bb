@@ -13,6 +13,10 @@ EXTERNALSRC_BUILD_pn-${PN} = "${WORKDIR}/build"
 
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
+KERNEL_DEFCONFIG_PATH = "${S}/arch/arm/configs/${KERNEL_DEFCONFIG}"
+
+# inform externalsrc about files whose changes must trigger do_configure
+CONFIGURE_FILES_pn-${PN} = "${KERNEL_DEFCONFIG_PATH}"
 
 # Override for Qemu
 COMPATIBLE_MACHINE_swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
@@ -40,7 +44,7 @@ do_configure_prepend() {
       ln -sf ${LINUX_REPO_DIR}/.. ${STAGING_KERNEL_DIR}
     fi
 
-    cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
+    cp ${KERNEL_DEFCONFIG_PATH} ${WORKDIR}/defconfig
 
     # Add ".system" public cert into kernel build area. Kernel build
     # will suck this cert in automatically.

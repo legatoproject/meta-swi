@@ -19,6 +19,9 @@ do_install_prepend() {
     if [ -f "${B}/../../appsboot_rw.mbn" ] ; then
         install ${B}/../../appsboot_rw.mbn ${B}/build-${LK_TARGET}/
     fi
+    if [ -f "${B}/../../appsboot_rw_ima.mbn" ] ; then
+        install ${B}/../../appsboot_rw_ima.mbn ${B}/build-${LK_TARGET}/
+    fi
 }
 
 do_deploy_append() {

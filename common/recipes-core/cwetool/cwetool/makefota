@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Create a FOTA CWE image file for the given CWE image file
+#
+
+#
+# Define the various file names, stripping off the .cwe suffix on the original CWE file,
+# before using it in the derived file names.
+#
+CWE=$1
+CWEBASE=${CWE%.cwe}
+PSB=${CWEBASE}_fotapkg.psb
+HDR=${CWEBASE}_fotapkg.hdr
+FOTA=${CWEBASE}_fotapkg.cwe
+
+#echo $CWE
+#echo $PSB
+#echo $HDR
+#echo $FOTA
+
+# Package ID is optional and should be either A911 or 9X15; defaults to A911
+PKGID=$2
+if ! [ $PKGID ]
+then
+    PKGID=A911
+fi
+echo "Using package ID $PKGID"
+
+#
+# Cleanup the intermediate files, if they exist, before generating new ones
+#
+rm -fv $PSB $HDR
+
+#
+# Build the various files
+#
+fotapkghdrcat $CWE -OH $PSB -IT GNRC -GT FULL -V Test
+hdrcnv $CWE -OH $HDR -IT FOTO -PT $PKGID -PSB $PSB -V Test
+cat $HDR $CWE > $FOTA
+
+#
+# Cleanup the intermediate files
+#
+rm -v $PSB $HDR
+

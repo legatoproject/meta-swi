@@ -20,6 +20,7 @@ add_hash_segment() {
 do_add_hash() {
     add_hash_segment appsboot
     add_hash_segment appsboot_rw
+    add_hash_segment appsboot_rw_ima
 }
 
 addtask add_hash after do_compile before do_install

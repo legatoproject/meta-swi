@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 ###############################################################################
 # This executable will sign files using IMA private key. It must be run as
 # root or under fakeroot.
@@ -209,8 +209,8 @@ function ima_sign_files()
     cdir=$( pwd )
     if [ "x$TYPE" == "xlegato" ] ; then
         # Legato has a special way of handling tarball creation.
-        cd $RDIR && \
-        find . -print0 | LC_ALL=C sort -z |$TAR --no-recursion --null -T - -cjf - > $TARBALL
+        ( cd $RDIR && \
+        find . -print0 | LC_ALL=C sort -z |$TAR --no-recursion --null -T - -cjf - )> $TARBALL
         ret=$?
     elif [ "x$TYPE" == "xdefault" ] ; then
         # Default tarball handling.

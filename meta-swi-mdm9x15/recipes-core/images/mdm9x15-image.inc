@@ -13,25 +13,25 @@ inherit ubi-image
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
 # manual installation of mdev.
-# IMAGE_INSTALL += "busybox-mdev"
+# IMAGE_INSTALL_append = " busybox-mdev"
 
 # Add WiFi TI drivers, tools, and scripts
-IMAGE_INSTALL += "wpa-supplicant"
-IMAGE_INSTALL += "hostapd"
-IMAGE_INSTALL += "iw"
-IMAGE_INSTALL += "ti-wifi-utils-wl18xx"
-IMAGE_INSTALL += "crda"
-IMAGE_INSTALL += "i2cgpioctl"
-IMAGE_INSTALL += "sierra-init-tiwifi"
+IMAGE_INSTALL_append = " wpa-supplicant"
+IMAGE_INSTALL_append = " hostapd"
+IMAGE_INSTALL_append = " iw"
+IMAGE_INSTALL_append = " ti-wifi-utils-wl18xx"
+IMAGE_INSTALL_append = " crda"
+IMAGE_INSTALL_append = " i2cgpioctl"
+IMAGE_INSTALL_append = " sierra-init-tiwifi"
 
 # Install kernel modules
-IMAGE_INSTALL += "kernel-modules"
+IMAGE_INSTALL_append = " kernel-modules"
 
 # Install device trees to rootfs (/boot directory is default location).
-IMAGE_INSTALL += "kernel-devicetree"
+IMAGE_INSTALL_append = " kernel-devicetree"
 
 # Add linkmon app to monitor USB link
-IMAGE_INSTALL += "linkmon"
+IMAGE_INSTALL_append = " linkmon"
 
 # Create UBI images for ROOT and USER1 partitions. If it becomes longer, this
 # function should be optimized (creation of sub-methods, etc.)

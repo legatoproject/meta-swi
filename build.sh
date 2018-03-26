@@ -48,6 +48,7 @@ $0 <options ...>
     -e (enable build recovery image or normal image)
     -i <ima-config-file> (enable IMA build, pass full path to ima.conf as a parameter)
     -B Pass flags directly to bitbake (e.g. -vvv for verbose build)
+    -E Enable extended SWI image (add additional developer packages)
 
   Machine swi-mdmXXXX:
     -q (enable Qualcomm Proprietary bin)
@@ -86,6 +87,7 @@ TOOLCHAIN=false
 ENABLE_PROPRIETARY=false
 ENABLE_PROPRIETARY_SRC=false
 ENABLE_ICECC=false
+ENABLE_EXT_SWI_IMG=false
 ENABLE_LEGATO=false
 ENABLE_META_MANGOH=false
 DISTRO=poky-swi
@@ -98,7 +100,7 @@ ENABLE_IMA=false
 IMA_CONFIG=""
 BB_FLAGS=""
 
-while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhQ" arg
+while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQ" arg
 do
     case $arg in
     p)
@@ -175,6 +177,9 @@ do
         ;;
     h)  ENABLE_ICECC=true
         echo "Build using icecc"
+        ;;
+    E)  ENABLE_EXT_SWI_IMG=true
+        echo "Sierra Wireless extended packages are enabled"
         ;;
     F)  FIRMWARE_PATH=$(readlink -f $OPTARG)
         echo "Use FIRWARE_PATH=${FIRMWARE_PATH} to fetch ar_yocto-cwe.tar.bz2 binary"
@@ -446,7 +451,7 @@ set_ima()
 
         if [ -f $IMA_CONFIG ] ; then
 
-            echo "IMA config is set to [$IMA_CONFIG], setting IMA options..."
+            echo "IMA config is specified, setting IMA options..."
 
             # Get variables from IMA configuration file.
             source $IMA_CONFIG
@@ -460,11 +465,13 @@ set_ima()
 
             # Now, set some variables Legato build may need. Legato likes to use
             # different set of variables. This is perfectly fine, because we want
-            # to decouple Yocto from Legato, and use indipendently written
+            # to decouple system from Legato, and use indipendently written
             # interfaces.
 
             # Set this to 1 if ENABLE_IMA=true, 0 otherwise.
             set_option "ENABLE_IMA" 1
+            set_option "IMA_PUBLIC_CERT" $IMA_PUBLIC_CERT
+            set_option "IMA_PRIVATE_KEY" $IMA_PRIVATE_KEY
         else
             echo "error: IMA is enabled, but IMA config file [$IMA_CONFIG] does not exist."
             ret=$SWI_ERR
@@ -479,6 +486,8 @@ set_ima()
             set_option "IMA_PUB_CERT"
             set_option "IMA_KERNEL_CMDLINE_OPTIONS"
             set_option "ENABLE_IMA" 0
+            set_option "IMA_PUBLIC_CERT"
+            set_option "IMA_PRIVATE_KEY"
     fi
 
     return $ret
@@ -573,6 +582,13 @@ if [ $ENABLE_ICECC = true ]; then
         echo 'ICECC_PARALLEL_MAKE = "-j 20"' >> $BD/conf/local.conf
         echo 'ICECC_USER_PACKAGE_BL = "ncurses e2fsprogs libx11 gmp libcap perl busybox lk libgpg-error libarchive"' >> $BD/conf/local.conf
     fi
+fi
+
+# SWI extended packages.
+set_option "EXT_SWI_IMG" $ENABLE_EXT_SWI_IMG
+if [ $ENABLE_EXT_SWI_IMG = true ] ; then
+    # Not supported for deployment for various reasons, warn the users.
+    echo "warning: You are building debug image not intended for deployment. Use it at your own risk."
 fi
 
 # Initramfs

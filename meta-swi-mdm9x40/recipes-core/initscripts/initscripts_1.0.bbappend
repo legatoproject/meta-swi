@@ -7,7 +7,7 @@ SRC_URI_append = "\
            file://etc/gshadow \
            file://etc/passwd \
            file://etc/shadow \
-           file://start_alx_le \
+           file://start_eth_modules_le \
            "
 
 do_install_append() {
@@ -15,9 +15,9 @@ do_install_append() {
     # if it is RAM image, don't need to load modem
     if [ "${MACHINE}" != "swi-mdm9x40-ar759x-rcy" ]; then
         install -D -m 0755 ${WORKDIR}/load_modem.sh -D ${D}${sysconfdir}/init.d/load_modem.sh
-        install -D -m 0755 ${WORKDIR}/start_alx_le -D ${D}${sysconfdir}/init.d/start_alx_le
+        install -D -m 0755 ${WORKDIR}/start_eth_modules_le -D ${D}${sysconfdir}/init.d/start_eth_modules_le
         update-rc.d $OPT load_modem.sh start 09 S . stop 90 S .
-        update-rc.d $OPT start_alx_le start 26 S .
+        update-rc.d $OPT start_eth_modules_le start 26 S .
     fi
 
     install -D -m 0664 ${WORKDIR}/etc/group -D ${D}${sysconfdir}/group

@@ -9,28 +9,25 @@ inherit ubi-image
 inherit dm-verity-hash
 inherit set-files-attr
 
-IMAGE_INSTALL += "start-scripts-find-partitions"
-IMAGE_INSTALL += "start-scripts-firmware-links"
-IMAGE_INSTALL += "cryptsetup"
+IMAGE_INSTALL_append = " start-scripts-find-partitions"
+IMAGE_INSTALL_append = " start-scripts-firmware-links"
+IMAGE_INSTALL_append = " cryptsetup"
 
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
 # manual installation of mdev.
-# IMAGE_INSTALL += "busybox-mdev"
+# IMAGE_INSTALL_append = " busybox-mdev"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 
-# AR8161
-IMAGE_INSTALL += "pciutils"
-
 # Stubs
-IMAGE_INSTALL += "bsinfo-stub"
+IMAGE_INSTALL_append = " bsinfo-stub"
 
-IMAGE_INSTALL += "kernel-modules"
+IMAGE_INSTALL_append = " kernel-modules"
 
 # Add linkmon app to monitor USB link
-IMAGE_INSTALL += "linkmon"
+IMAGE_INSTALL_append = " linkmon"
 
 create_ubinize_config() {
     local cfg_path=$1
