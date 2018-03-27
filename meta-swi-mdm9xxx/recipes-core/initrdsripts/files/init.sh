@@ -118,7 +118,6 @@ wait_on_file()
     done
 
     return ${ret}
-
 }
 
 #
@@ -401,14 +400,14 @@ set_boot_dev()
     echo "mount root fs from partition $mtd_part_name"
 
     if grep 'rootfs.type=' /proc/cmdline > /dev/null; then
-        boot_opt=$(cat /proc/cmdline | sed -e 's/.* rootfs\.type=\([a-z0-9]*\) .*/\1/')
+        boot_opt=$(cat /proc/cmdline | sed -e 's/\(^\|.* \)rootfs\.type=\([a-z0-9]*\) .*/\2/')
         if [ -n "$boot_opt" ]; then
             BOOTTYPE=$boot_opt
         fi
     fi
 
     if grep 'rootfs.opts=' /proc/cmdline > /dev/null; then
-        boot_opt=$(cat /proc/cmdline | sed -e 's/.* rootfs\.opts=\([a-z0-9,-_=]*\) .*/\1/')
+        boot_opt=$(cat /proc/cmdline | sed -e 's/\(^\|.* \)rootfs\.opts=\([a-z0-9,-_=]*\) .*/\2/')
         if [ -n "$boot_opt" ]; then
             BOOTOPTS=$boot_opt
         fi
@@ -423,10 +422,12 @@ set_boot_dev()
     fi
 
     if grep 'rootfs.dev=' /proc/cmdline > /dev/null; then
-        BOOTDEV=$(cat /proc/cmdline | sed -e 's/.* rootfs\.dev=\([^ ]*\) .*/\1/')
-        if [ -n "$BOOTDEV" ]; then
-            return ${ret}
+        BOOTDEV=$(cat /proc/cmdline | sed -e 's/\(^\|.* \)rootfs\.dev=\([^ ]*\) .*/\2/')
+        if [ -z "$BOOTDEV" ] || [[ "$BOOTDEV" == *rootfs.dev* ]]; then
+            return ${SWI_ERR}
         fi
+
+        return ${SWI_OK}
     fi
 
     mtd_dev_num=$( cat /proc/mtd | \
@@ -509,12 +510,14 @@ checkpoint_rootfs()
     mkdir -p ${ROOTFS_MNTPT}
 
     if [ $BOOTWAIT -eq 1 ]; then
-        echo "Waiting for ${BOOTDEV}"
+        echo "rootfs: waiting for ${BOOTDEV}"
         while [ 1 ]; do
-            if ! [ -e $BOOTDEV ]; then
-                sleep 1
-                echo -n '.'
+            if [ -e $BOOTDEV ]; then
+                break
             fi
+
+            sleep 1
+            echo -n '.'
         done
         echo
     fi

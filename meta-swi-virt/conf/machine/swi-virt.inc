@@ -12,3 +12,5 @@ DISTRO_FEATURES_remove = "x11"
 
 # To prevent busy-box hwclock dependency creation
 MACHINE_FEATURES_BACKFILL_CONSIDERED = "rtc"
+
+IMAGE_FSTYPES += "squashfs-lzo"

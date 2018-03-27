@@ -2,7 +2,7 @@ inherit swi-image-minimal
 
 INC_PR = "r0"
 
-FSTYPE_VIRT ?= "ext4"
+FSTYPE_VIRT ?= "squashfs-lzo"
 
 # Tool to recognize the platform
 IMAGE_INSTALL_append = " bsinfo-stub"
@@ -14,7 +14,7 @@ IMAGE_INSTALL_append = " kernel-module-softdog"
 DEPENDS += "${@check_legato_pkg(d)}"
 
 # Prepare a package with kernel + hdd image
-do_prepare_virt[depends] += "virtual/kernel:do_populate_sysroot"
+do_prepare_virt[depends] += "virtual/kernel:do_deploy"
 do_prepare_virt() {
     VIRT_DIR=${WORKDIR}/virt
 
@@ -39,21 +39,26 @@ do_prepare_virt() {
 
     # QEmu Config
     touch $CFG
+
+    if [[ "${FSTYPE_VIRT}" == "squashfs"* ]]; then
+        echo 'CMDLINE="rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=squashfs"' >> $CFG
+    else
+        echo "CMDLINE='rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=${FSTYPE_VIRT}'" >> $CFG
+    fi
+
     if [[ "${VIRT_ARCH}" == "x86" ]]; then
-        echo 'CMDLINE="root=/dev/sda1 rw"' >> $CFG
         echo 'ARG_TARGET="-machine q35 -m 192M"' >> $CFG
         echo 'ROOTFS_METHOD=-hda' >> $CFG
         echo 'CONSOLE_TTY=ttyS0' >> $CFG
 
     elif [[ "${VIRT_ARCH}" == "arm" ]]; then
-        echo 'CMDLINE="root=/dev/sda1 rootwait"' >> $CFG
         echo 'ARG_TARGET="-machine versatilepb -m 192M"' >> $CFG
         echo 'ROOTFS_METHOD=-hda' >> $CFG
-        echo 'CONSOLE_TTY=ttyAMA0' >> $CFG
+        echo 'CONSOLE_TTY=ttyS0' >> $CFG
     fi
 
     # Kernel
-    cp -H ${ELF_KERNEL} ${VIRT_DIR}/kernel
+    cp -H "${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin" ${VIRT_DIR}/kernel
 
     # Hard drive
     dd if=/dev/zero of=hda.raw bs=1M count=1k
@@ -78,8 +83,10 @@ do_prepare_virt() {
     ROOTFS_IMG="${PN}-${MACHINE}.${FSTYPE_VIRT}"
     echo "Managing rootfs: ${ROOTFS_IMG}"
     cp ${DEPLOY_DIR_IMAGE}/${ROOTFS_IMG} rootfs.${FSTYPE_VIRT}
-    e2fsck -p rootfs.${FSTYPE_VIRT}
-    resize2fs rootfs.${FSTYPE_VIRT} "$SIZE_1"s
+    if [[ "${FSTYPE_VIRT}" == "ext"* ]]; then
+        e2fsck -p rootfs.${FSTYPE_VIRT}
+        resize2fs rootfs.${FSTYPE_VIRT} "$SIZE_1"s
+    fi
 
     dd if=rootfs.${FSTYPE_VIRT} conv=notrunc of=hda.raw bs=$SECTOR_SZ seek=$OFFSET_1 count=$SIZE_1
 
@@ -96,6 +103,4 @@ do_prepare_virt() {
     ln -sf $VIRT_NAME $IMG_NAME.tar.bz2
 }
 
-addtask prepare_virt after do_image_qa before do_build
-
-
+addtask prepare_virt after do_image_complete before do_build
