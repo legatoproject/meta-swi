@@ -1,0 +1,27 @@
+#!/bin/sh
+# Copyright 2018 Sierra Wireless
+#
+# mount QCT configuration file as RW
+
+SWI_QCT_CFG_DIR="/tmp/SWI_qct_cfg/"
+ETC_DIR="/etc/"
+ETC_SWI_DIR="/etc/qct_cfg/"
+
+QCT_CFG_FILE="
+              mobileap_cfg.xml
+              mobileap_firewall.xml
+              IPACM_cfg.xml
+              qti_socksv5_auth.xml
+              qti_socksv5_conf.xml
+              l2tp_cfg.xml
+              qmi_ip_cfg.xml
+             "
+
+mkdir -p ${SWI_QCT_CFG_DIR}
+
+for file in ${QCT_CFG_FILE}
+do
+  cp ${ETC_DIR}${file} ${SWI_QCT_CFG_DIR}
+done
+
+mount --bind -rw ${SWI_QCT_CFG_DIR} ${ETC_SWI_DIR}

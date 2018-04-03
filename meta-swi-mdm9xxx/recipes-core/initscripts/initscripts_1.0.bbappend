@@ -143,6 +143,7 @@ do_install () {
     install -d ${D}${sysconfdir}/default/volatiles
     # Holds state information pertaining to urandom
     install -d ${D}/var/lib/urandom
+    install -d ${D}${sysconfdir}/qct_cfg
 
     install -m 0644    ${WORKDIR}/inittab   ${D}${sysconfdir}/inittab
     install -m 0644    ${WORKDIR}/mdev.conf ${D}${sysconfdir}/mdev.conf
