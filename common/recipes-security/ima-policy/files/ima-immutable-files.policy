@@ -1,0 +1,2 @@
+# Rule to protect immutable files using SMACK labeling.
+appraise obj_user=@@IMA_SMACK_IMMUTABLE_FILES_LABEL@@ appraise_type=imasig

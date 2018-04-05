@@ -472,6 +472,7 @@ set_ima()
             set_option "ENABLE_IMA" 1
             set_option "IMA_PUBLIC_CERT" $IMA_PUBLIC_CERT
             set_option "IMA_PRIVATE_KEY" $IMA_PRIVATE_KEY
+            set_option "IMA_SMACK" $IMA_SMACK
         else
             echo "error: IMA is enabled, but IMA config file [$IMA_CONFIG] does not exist."
             ret=$SWI_ERR
@@ -488,6 +489,7 @@ set_ima()
             set_option "ENABLE_IMA" 0
             set_option "IMA_PUBLIC_CERT"
             set_option "IMA_PRIVATE_KEY"
+            set_option "IMA_SMACK"
     fi
 
     return $ret
