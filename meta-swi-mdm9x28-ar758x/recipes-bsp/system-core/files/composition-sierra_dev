@@ -94,6 +94,11 @@ then
   compstr='diag,ffs,serial'
 fi
 
+# Filter out adb gadget if adbd is not installed
+if [ ! -x /sbin/adbd ]; then
+  compstr=`echo $compstr | sed -e s/^ffs,//g -e s/,ffs//g -e s/^ffs$//g`
+fi
+
 remotewakeup=$(/usr/bin/ud_getusbinfo REM)
 if [ $? -ne 0 ];
 then
