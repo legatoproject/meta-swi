@@ -91,6 +91,10 @@ then
   echo "ud_getusbinfo gets COMPSTR failed"
   compstr='diag,ffs,serial'
 fi
+# filter out adb gadget if adbd is not installed
+if [ ! -x /sbin/adbd ]; then
+  compstr=`echo $compstr | sed -e s/^ffs,//g -e s/,ffs//g -e s/^ffs$//g`
+fi
 
 remotewakeup=$(/usr/bin/ud_getusbinfo REM)
 if [ $? -ne 0 ];
