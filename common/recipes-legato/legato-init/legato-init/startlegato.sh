@@ -30,13 +30,6 @@ case "$1" in
         umount /legato 2>/dev/null
         mount -o bind $LEGATO_MNT /legato
 
-        if is_legato_smack_enabled; then
-            # Only allow the "framework" label to access the Legato directory.
-            setfattr -n security.SMACK64 -v "framework" /legato
-        else
-            setfattr -n security.SMACK64 -v "_" /legato
-        fi
-
         $LEGATO_START
         ;;
 
