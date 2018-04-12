@@ -2,26 +2,39 @@
 # --------------------------------------------------------------
 # Copyright (c) 2012 Sierra Wireless. All Rights Reserved.
 # --------------------------------------------------------------
-# restartNMEA: Simple script to restart NMEA port bridging
-# on USB disconnect/reconnect
+# restartNMEA: Simple script to start NMEA port bridging to
+# UART if the specific UART is configured as NMEA service
 
-# start ttyGS0 minitoring and bridging
+source /etc/run.env
+
+uart_get_srv
+
+unset NMEA_SERVICE_DEVICE
+
+if  [ ${UART1_SERVICE} = "NMEA" ]; then
+  NMEA_SERVICE_DEVICE=${UART1_DEVICE}
+elif [ ${UART2_SERVICE} = "NMEA" ]; then
+  NMEA_SERVICE_DEVICE=${UART2_DEVICE}
+fi
+
+
+# start NMEA_SERVICE_DEVICE minitoring and bridging if variable ${NMEA_SERVICE_DEVICE} exists
 while [ 1 ]
 do
-  if [ -e /dev/ttyGS0 ] && [ -e /dev/nmea ]; then
-    cat /dev/nmea > /dev/ttyGS0 &
+  if [ -e ${NMEA_SERVICE_DEVICE} ] && [ -e /dev/nmea ]; then
+    cat /dev/nmea > ${NMEA_SERVICE_DEVICE} &
     # remember 'cat /dev/nmea' pid so it can be killed later
     nmeapid=$!
-    cat /dev/ttyGS0 > /dev/nmea
-    # cat /dev/ttyGS0 exit, kill 'cat /dev/nmea' too
+    cat ${NMEA_SERVICE_DEVICE} > /dev/nmea
+    # cat NMEA_SERVICE_DEVICE exit, kill 'cat /dev/nmea' too
     kill $nmeapid
-    # wait 15s for ttyGS0 re-enumeration
+    # wait 15s for NMEA_SERVICE_DEVICE re-enumeration
     sleep 15
-  elif [ -e /dev/nmea ]; then
-    # wait 15s for ttyGS0 show up, in case SWOC enumeration at startup
+  elif [ ! -z ${NMEA_SERVICE_DEVICE} ]; then
+    # wait 15s for NMEA_SERVICE_DEVICE show up, in case SWOC enumeration at startup
     sleep 15
   else
-    # /dev/nmea not exist, might not be enabled, exit
+    # if ${NMEA_SERVICE_DEVICE} is not requested, exit
     break
   fi
 done
