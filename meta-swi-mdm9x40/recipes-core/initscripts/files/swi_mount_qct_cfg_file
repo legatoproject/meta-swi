@@ -24,7 +24,9 @@ mkdir -p ${SWI_QCT_CFG_DIR}
 
 for file in ${QCT_CFG_FILE}
 do
-  cp -n ${ETC_DIR}${file} ${SWI_QCT_CFG_DIR}
+  if [ ! -e ${SWI_QCT_CFG_DIR}${file} ]; then
+    cp ${ETC_DIR}${file} ${SWI_QCT_CFG_DIR}
+  fi
 done
 
 mount --bind -rw ${SWI_QCT_CFG_DIR} ${ETC_SWI_DIR}
