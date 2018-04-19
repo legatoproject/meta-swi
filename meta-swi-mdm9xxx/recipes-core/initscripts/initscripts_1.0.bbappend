@@ -27,33 +27,7 @@ SRC_URI = "file://functions \
            file://run_getty.sh.in \
            file://mount_early.in \
            file://loginNagger \
-           "
-
-SRC_URI_swi-mdm9x28-ar758x = "\
-           file://functions \
-           file://devpts \
-           file://mountall.sh \
-           file://hostname.sh \
-           file://bootmisc.sh \
-           file://checkfs.sh \
-           file://single \
-           file://urandom \
-           file://volatiles \
-           file://inittab \
-           file://mdev.conf \
-           file://usb.sh \
-           file://find-touchscreen.sh \
-           file://rcS \
-           file://rcK \
-           file://GPLv2.patch \
-           file://confighw.sh \
-           file://swiapplaunch.sh.in \
-           file://restart_swi_apps.in \
-           file://restartNMEA \
-           file://run.env.in \
-           file://run_getty.sh.in \
-           file://mount_early.in \
-           file://loginNagger\
+           file://load_modem.sh \
            "
 
 SRC_URI_swi-mdm9x28-ar758x-rcy = "file://functions \
@@ -178,6 +152,7 @@ do_install () {
 
     install -D -m 0755 ${WORKDIR}/mount_unionfs -D ${D}${sysconfdir}/init.d/mount_unionfs
     install -D -m 0755 ${WORKDIR}/mount_early -D ${D}${sysconfdir}/init.d/mount_early
+    install -D -m 0755 ${WORKDIR}/load_modem.sh -D ${D}${sysconfdir}/init.d/load_modem.sh
 
     install -d -m 0755 ${D}${sysconfdir}/profile.d
     install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sysconfdir}/profile.d/loginNagger
@@ -221,6 +196,7 @@ do_install () {
     update-rc.d $OPT hostname.sh start 10 S .
     update-rc.d $OPT -f swiapplaunch.sh remove
     update-rc.d $OPT swiapplaunch.sh start 31 S . stop 69 S .
+    update-rc.d $OPT load_modem.sh start 09 S . stop 90 S .
 }
 
 do_install_swi-mdm9x28-ar758x-rcy() {
