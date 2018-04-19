@@ -147,8 +147,6 @@ generate_cwe_target() {
                 PLATFORM='9X28' ;;
         wp76xx | wp77xx)
                 PID[0]='Y921'
-                PID[1]='Y922'
-                PAGE_SIZE[1]=2k
                 PLATFORM='9X28' ;;
         *)
             echo "Unknown product '$TARGET'"
