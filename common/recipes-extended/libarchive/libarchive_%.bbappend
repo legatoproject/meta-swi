@@ -9,3 +9,18 @@ RDEPENDS_${PN}_append_class-nativesdk = " bsdtar"
 PACKAGECONFIG_append = " xattr"
 TARGET_CFLAGS += "-I${WORKDIR}/extra-includes"
 EXTRA_OEMAKE += "CFLAGS='${TARGET_CFLAGS}'"
+FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+
+python() {
+    import re
+
+    pv = d.getVar('PV', True)
+    srcuri = d.getVar('SRC_URI', True)
+
+    # Handle versions < 3.3.2
+    if re.match('3.[12]', pv):
+           d.setVar('SRC_URI', srcuri + \
+                    ' file://non-recursive-extract-and-list.patch' \
+                    ' file://0001-archive_write_disk_posix.c-make-_fsobj-functions-mor.patch' \
+                    ' file://0002-Fix-extracting-hardlinks-over-symlinks.patch')
+}
