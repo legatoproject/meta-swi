@@ -13,10 +13,13 @@ case "$1" in
             subsys_temp=`cat $search_dir/$entry/name`
             if [ "$subsys_temp" == "modem" ]
             then
-                # Send '1' to firmware_load to trigger Kernel load modem image to Q6.
-                # The whole operation will take about 6s, running in background so that it will not
-                # block the following startup scripts.
-                echo 1 > $search_dir/$entry/firmware_load &
+                if [ -w $search_dir/$entry/firmware_load ]; then
+                    # Send '1' to firmware_load to trigger Kernel load modem
+                    # image to Q6. The whole operation will take about 6s,
+                    # running in background so that it will not block the
+                    # following startup scripts.
+                    echo 1 > $search_dir/$entry/firmware_load &
+                fi
             fi
 done
         ;;
