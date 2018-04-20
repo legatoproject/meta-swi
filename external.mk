@@ -123,11 +123,15 @@ endif
 # Determine path for LK repository
 # On mdm9x15, lk is built using CAF revision + patches
 ifneq (,$(wildcard $(PWD)/lk/))
-  LK_REPO ?= "$(PWD)/lk"
-endif
-ifneq (,$(LK_REPO))
-  ifneq (mdm9x15,$(MACH))
+  LK_REPO := "$(PWD)/lk"
+  # Append LK_REPO argument for 9x28 and 9x40 targets
+  ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
     LK_ARGS := -a "LK_REPO=$(LK_REPO)"
+  endif
+else
+  # Enforce existence of LK for 9x28 and 9x40; optional for others
+  ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
+    $(error Missing LK directory $(PWD)/lk)
   endif
 endif
 
