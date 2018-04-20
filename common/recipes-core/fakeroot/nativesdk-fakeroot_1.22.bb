@@ -17,7 +17,7 @@ PROVIDES += "nativesdk-fakeroot"
 
 inherit nativesdk
 
-EXTRA_OECONF = "--program-prefix="
+EXTRA_OECONF = " --with-ipc=tcp --program-prefix="
 
 S = "${WORKDIR}/fakeroot-${PV}"
 
