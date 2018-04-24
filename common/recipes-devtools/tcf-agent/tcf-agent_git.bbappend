@@ -25,3 +25,7 @@ do_install_append() {
     rm -rf ${D}${sysconfdir}/init.d/
     rm -rf ${D}${systemd_unitdir}/system
 }
+
+SYSTEMD_SERVICE_${PN} = ""
+
+FILES_${PN} += "/lib"

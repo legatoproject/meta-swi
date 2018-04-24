@@ -49,6 +49,7 @@ $0 <options ...>
     -i <ima-config-file> (enable IMA build, pass full path to ima.conf as a parameter)
     -B Pass flags directly to bitbake (e.g. -vvv for verbose build)
     -E Enable extended SWI image (add additional developer packages)
+    -D Build debug image (with additional developer packages)
 
   Machine swi-mdmXXXX/swi-sdxXX:
     -q (enable Qualcomm Proprietary bin)
@@ -90,6 +91,7 @@ ENABLE_ICECC=false
 ENABLE_EXT_SWI_IMG=false
 ENABLE_LEGATO=false
 ENABLE_META_MANGOH=false
+ENABLE_DEBUG_IMG=false
 DISTRO=poky-swi
 KERNEL_PROVIDER=
 X_OPTS=
@@ -102,7 +104,8 @@ IMA_CONFIG=""
 BB_FLAGS=""
 SHARED_SSTATE=false
 
-while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQGS" arg
+
+while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEDQGS" arg
 do
     case $arg in
     p)
@@ -189,6 +192,11 @@ do
         ENABLE_EXT_SWI_IMG=true
         echo "Sierra Wireless extended packages are enabled"
         ;;
+    D)
+        ENABLE_DEBUG_IMG=true
+        echo "Build and generate debug image"
+        ;;
+
     F)
         FIRMWARE_PATH=$(readlink -f $OPTARG)
         echo "Use FIRWARE_PATH=${FIRMWARE_PATH} to fetch ar_yocto-cwe.tar.bz2 binary"
@@ -819,6 +827,18 @@ else
             bitbake ${BB_FLAGS} core-image-minimal
             ;;
     esac
+
+    # Build debug image if ENABLE_DEBUG_IMG is true.
+    if [ $ENABLE_DEBUG_IMG = true ]; then
+        case $MACH in
+            swi-* )
+                if test x$ENABLE_RECOVERY != "xtrue"; then
+                    echo -n "Build image of debug (for $MACH)."
+                    bitbake ${BB_FLAGS} debug-image
+                fi
+                ;;
+        esac
+    fi
     exit $?
 fi
 
