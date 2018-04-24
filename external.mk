@@ -59,6 +59,9 @@ USE_DOCKER ?= 0
 # Use distributed building ?
 USE_ICECC ?= 0
 
+# Enable extended package group (mostly to aid debugging)
+USE_UNSUPPORTED_DEBUG_IMG ?= 0
+
 # Firmware path pointing to ar_yocto-cwe.tar.bz2
 FIRMWARE_PATH ?= 0
 
@@ -85,6 +88,11 @@ clean:
 
 ifeq ($(USE_ICECC),1)
   ICECC_ARGS = -h
+endif
+
+# Use extended image.
+ifeq ($(USE_UNSUPPORTED_DEBUG_IMG),1)
+  EXT_SWI_IMG_ARGS = -E
 endif
 
 ifdef FW_VERSION
@@ -187,7 +195,8 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${SDK_PREFIX_ARGS} \
 				${HOSTNAME_ARGS} \
 				${IMA_ARGS} \
-				${BB_ARGS}
+				${BB_ARGS} \
+				${EXT_SWI_IMG_ARGS}
 
 # Machine: swi-mdm9x15
 
@@ -256,10 +265,10 @@ COMMON_VIRT_X86 := \
 ## images
 
 image_virt_arm:
-	$(COMMON_VIRT_ARM) -d
+	$(COMMON_VIRT_ARM)
 
 image_virt_x86:
-	$(COMMON_VIRT_X86) -d
+	$(COMMON_VIRT_X86)
 
 image_virt: image_virt_arm
 

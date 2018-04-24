@@ -2,7 +2,11 @@
 NUM_THREADS ?= 9
 
 # Set workspace directory
+DEFAULT_MDM_BUILD := bin
 APPS_DIR ?= $(firstword $(wildcard $(PWD)/mdm*[0-9]/apps_proc))
+ifneq ($(APPS_DIR),)
+  DEFAULT_MDM_BUILD := src
+endif
 
 # Machine architecture
 MACH ?= $(patsubst $(PWD)/%/apps_proc,%,$(APPS_DIR))
@@ -31,11 +35,6 @@ endif
 # Try to get product name from manifest.xml
 ifeq ($(PROD),)
   PROD := $(shell sed -nr '/product name/{s/.*name="(.*)".*/\1/;p}' $(shell pwd)/.repo/manifest.xml)
-endif
-
-# Try to get a default product name based on the manifest name if failed to get it from manifest
-ifeq ($(PROD),)
-  PROD := $(basename $(notdir $(shell readlink -f $(shell pwd)/.repo/manifest.xml)))
 endif
 
 ifneq ($(PROD),)
@@ -315,6 +314,8 @@ image_bin: prepare
 image_src: prepare
 	$(COMMON_SRC)
 
+image: image_$(DEFAULT_MDM_BUILD)
+
 ## toolchains
 
 toolchain_bin: prepare
@@ -322,6 +323,8 @@ toolchain_bin: prepare
 
 toolchain_src: prepare
 	$(COMMON_SRC) -k
+
+toolchain: toolchain_$(DEFAULT_MDM_BUILD)
 
 ## dev shell
 
@@ -331,7 +334,7 @@ dev_bin: prepare
 dev_src: prepare
 	$(COMMON_SRC) -c
 
-dev: dev_bin
+dev: dev_$(DEFAULT_MDM_BUILD)
 
 # Machine: swi-virt
 
