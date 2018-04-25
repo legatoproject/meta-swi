@@ -9,22 +9,23 @@ ifneq ($(APPS_DIR),)
 endif
 
 # Machine architecture
+# Guess the architecture and product based on the availability of proprietary binaries.
+# If binaries are not available (FOSS build for instance), MACH= and PROD= have to be
+# provided when calling make.
 MACH ?= $(patsubst $(PWD)/%/apps_proc,%,$(APPS_DIR))
-ifeq ($(MACH),)
-  ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
-    MACH := mdm9x15
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
-    MACH := mdm9x28
-    ifeq ($(PROD),)
-      PROD = ar758x
-    endif
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
-    MACH := mdm9x28
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files))
-    MACH := mdm9x40
-    ifeq ($(PROD),)
-      PROD = ar759x
-    endif
+ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
+  MACH ?= mdm9x15
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
+  MACH ?= mdm9x28
+  ifeq ($(PROD),)
+    PROD = ar758x
+  endif
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
+  MACH ?= mdm9x28
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files))
+  MACH ?= mdm9x40
+  ifeq ($(PROD),)
+    PROD = ar759x
   endif
 endif
 

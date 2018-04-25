@@ -6,21 +6,22 @@ POKY_VERSION ?= bda51ee7821de9120f6f536fcabe592f2a0c8a37
 META_OE_VERSION ?= 8e6f6e49c99a12a0382e48451f37adac0181362f
 
 # Machine architecture
-ifeq ($(MACH),)
-  ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
-    MACH := mdm9x15
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
-    MACH := mdm9x28
-    ifeq ($(PROD),)
-      PROD = ar758x
-    endif
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
-    MACH := mdm9x28
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files))
-    MACH := mdm9x40
-    ifeq ($(PROD),)
-      PROD = ar759x
-    endif
+# Guess the architecture and product based on the availability of proprietary binaries.
+# If binaries are not available (FOSS build for instance), MACH= and PROD= have to be
+# provided when calling make.
+ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
+  MACH ?= mdm9x15
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
+  MACH ?= mdm9x28
+  ifeq ($(PROD),)
+    PROD = ar758x
+  endif
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
+  MACH ?= mdm9x28
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files))
+  MACH ?= mdm9x40
+  ifeq ($(PROD),)
+    PROD = ar759x
   endif
 endif
 
