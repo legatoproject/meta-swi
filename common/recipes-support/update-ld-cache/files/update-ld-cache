@@ -1,0 +1,211 @@
+#!/bin/sh
+
+###############################################################
+# Populate ld cache.
+#
+# LD cache will be updated with passed-in library path. For
+# the convenience of Legato developers, if library is not
+# passed in, /legato/systems/current/lib will be added to
+# ld.cache .
+#
+# System must contain /etc/ld/so.cache and /etc/ld.so.conf
+# already in place, otherwise whole operation will fail.
+#
+# This executable should be invoked as:
+#
+#    update-ld-cache [lib-path]
+#
+# Note naming standard:
+#    - Local method variables are all small caps.
+#    - Global module variables are all small caps, with '_g'
+#      suffix.
+#    - Global variables to the module are all uppercase.
+#
+#    Exception to this rule is "this_e", legacy variable
+#    used in swi_log globally.
+#
+# Author: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+#
+# Copyright (C) Sierra Wireless, Inc
+###############################################################
+
+# import run environment
+source /etc/run.env
+
+# This executable
+this_e=$( basename $0 )
+
+# Update operation is not atomic, and needs to be protected.
+lock_file_g=/tmp/.$this_e.lock
+
+# Real root of ld.so files
+real_root_g=/etc
+
+# Temporary root of ld.so files
+tmp_root_g=/tmp
+
+# Default library path in case no library path is passed in
+libs_default_g=/legato/systems/current/lib
+
+# Bind mount ld.so.cache and ld.so.conf. These two must
+# exist on original location for all of this to work.
+# If eerything is OK, this method will return SWI_OK,
+# SWI_ERR otherwise.
+bmount_files()
+{
+    local ret=$SWI_OK
+
+    # List of the files to take care of.
+    local flist="ld.so.conf ld.so.cache"
+
+    # Make sure that there are no stale mounts.
+    for file in $flist ; do
+        mount | grep -owq "^tmpfs on $real_root_g/$file (deleted)"
+        if [ $? -eq 0 ] ; then
+            swi_log "Removing stale mount [$real_root_g/$file]..."
+            umount -l $real_root_g/$file
+        fi
+    done
+
+    # Do bind mounts.
+    for file in $flist ; do
+        # If bind mounts are already in place, do nothing.
+        mount | grep -owq "^tmpfs on $real_root_g/$file type tmpfs"
+        if [ $? -ne 0 ] ; then
+            # Make sure that original file already exists. If not,
+            # there is nothing we could do further more.
+            if [ ! -f $real_root_g/$file ] ; then
+                swi_log "[$real_root_g/$file] does not exist."
+                return $SWI_ERR
+            fi
+
+            # If file does not exist, it will be created.
+            touch $tmp_root_g/$file
+            mount --bind $tmp_root_g/$file $real_root_g/$file
+            if [ $? -ne 0 ] ; then
+                swi_log "Cannot bind mount [$real_root_g/$file]."
+                return $SWI_ERR
+            fi
+        fi
+    done
+
+    return $ret
+}
+
+# Execute cleanup after bmount_files execution.
+bmount_files_cleanup()
+{
+
+    # List if the files to take care of.
+    local flist="ld.so.conf ld.so.cache"
+
+    # Do it blindly, because there is nothing really we could
+    # do if umount fails.
+    for file in $flist ; do
+        umount -l $real_root_g/$file >/dev/null 2>&1
+        rm -f $tmp_root_g/$file
+    done
+
+    return $SWI_OK
+}
+
+#
+# Update the cache actually. If lib path is not passed in,
+# defaults will be used (e.g. /legato/systems/current/lib).
+# If everything is OK, this method will return 0, any other
+# number otherwise.
+update_ld_cache()
+{
+    local libs=$1
+    local libs_default=$libs_default_g
+    local ret=$SWI_OK
+
+    if [ -z $libs ] ; then
+        libs=$libs_default
+    fi
+
+    if [ ! -d $libs ] ; then
+       swi_log "[$libs] is not available."
+       return $SWI_ERR
+    fi
+
+    # Make sure that bind mounts are in place.
+    bmount_files
+    if [ $? -ne $SWI_OK ] ; then
+        bmount_files_cleanup
+        return $SWI_ERR
+    fi
+
+    swi_log "Updating ld.so.cache using [$libs]..."
+
+    # Now, update ld.so.cache ...
+    swi_log "Updating $real_root/ld.so.cache ..."
+    grep -q "^${libs}$" $tmp_root_g/ld.so.conf 2>/dev/null || \
+        echo $libs >>$tmp_root_g/ld.so.conf
+    ldconfig -f $tmp_root_g/ld.so.conf -C $tmp_root_g/ld.so.cache
+    if [ $? -ne 0 ] ; then
+        swi_log "ldconfig operation failed."
+        bmount_files_cleanup
+        ret=$SWI_ERR
+    else
+        # If files are mounted and then deleted (ldconfig deletes ldcache file in the
+        # process of its creation), "mount --bind" will not update the associated files,
+        # and mount will become stale. Do the mounting again, if needed.
+        bmount_files
+        if [ $? -ne $SWI_OK ] ; then
+            bmount_files_cleanup
+            ret=$SWI_ERR
+        fi
+    fi
+
+    return $ret
+}
+
+# ld cache update is not atomic, and we need a lock.
+lock_op()
+{
+    if [ -f $lock_file_g ] ; then
+        swi_log "Lock file $lock_file_g already exist, try later or remove it manually."
+        return $SWI_ERR
+    fi
+    touch $lock_file_g
+
+    return $SWI_OK
+}
+
+# Unlock the whole operation.
+unlock_op()
+{
+    rm -f $lock_file_g
+}
+
+# Main processing.
+main()
+{
+    local libs=$1
+    local ret=$SWI_OK
+    local cdir=$PWD
+
+    # Make sure that we are not on required mount paths, otherwise
+    # umounts could fail.
+    cd /
+
+    # Lock the entire operation
+    lock_op
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+
+    # Update cache
+    update_ld_cache $libs ; ret=$?
+
+    # Always unlock
+    unlock_op
+
+    cd $cdir
+
+    return $ret
+}
+
+##################
+# Main entry point
+##################
+main $1 ; exit $?

@@ -59,3 +59,5 @@ RDEPENDS_${PN} += "tinycbor"
 RDEPENDS_${PN} += "libgcc"
 RDEPENDS_${PN} += "libstdc++"
 
+# Transparently update ld cache.
+RDEPENDS_${PN} += "update-ld-cache"
