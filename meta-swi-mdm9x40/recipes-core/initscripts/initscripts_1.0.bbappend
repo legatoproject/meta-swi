@@ -7,6 +7,7 @@ SRC_URI_append = "\
            file://etc/passwd \
            file://etc/shadow \
            file://start_eth_modules_le \
+           file://swi_mount_qct_cfg_file \
            "
 
 do_install_append() {

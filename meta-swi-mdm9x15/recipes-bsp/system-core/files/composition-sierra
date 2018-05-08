@@ -39,11 +39,16 @@ if [ $mode = "hsusb" ]; then
         if [ $CFG2 -ne 0 ]; then
             # Need Both Configurations 1 and 2
             # echo "`/usr/bin/ud_getusbinfo COMPSTR 1`:`/usr/bin/ud_getusbinfo COMPSTR 2`" > /sys/class/android_usb/android0/functions
-            echo "`/usr/bin/ud_getusbinfo COMPSTR 1`:usb_mbim" > /sys/class/android_usb/android0/functions
+            compstr="`/usr/bin/ud_getusbinfo COMPSTR 1`,usb_mbim"
         else
             # Only need Configuration 1
-            /usr/bin/ud_getusbinfo COMPSTR 1 > /sys/class/android_usb/android0/functions
+            compstr=`/usr/bin/ud_getusbinfo COMPSTR 1`
         fi
+        # filter out adb gadget if adbd is not installed
+        if [ ! -x /sbin/adbd ]; then
+            compstr=`echo $compstr | sed -e s/^adb,//g -e s/,adb//g -e s/^adb$//g`
+        fi
+        echo $compstr > /sys/class/android_usb/android0/functions
     fi
 else
     # Only serial is yet supported on HSIC

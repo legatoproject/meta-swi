@@ -2,18 +2,30 @@
 NUM_THREADS ?= 9
 
 # Set workspace directory
+DEFAULT_MDM_BUILD := bin
 APPS_DIR ?= $(firstword $(wildcard $(PWD)/mdm*[0-9]/apps_proc))
+ifneq ($(APPS_DIR),)
+  DEFAULT_MDM_BUILD := src
+endif
 
 # Machine architecture
+# Guess the architecture and product based on the availability of proprietary binaries.
+# If binaries are not available (FOSS build for instance), MACH= and PROD= have to be
+# provided when calling make.
 MACH ?= $(patsubst $(PWD)/%/apps_proc,%,$(APPS_DIR))
-ifeq ($(MACH),)
-  ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
-    MACH := mdm9x15
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
-    MACH := mdm9x28
-    PROD ?= ar758x
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
-    MACH := mdm9x28
+ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
+  MACH ?= mdm9x15
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
+  MACH ?= mdm9x28
+  ifeq ($(PROD),)
+    PROD = ar758x
+  endif
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
+  MACH ?= mdm9x28
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files))
+  MACH ?= mdm9x40
+  ifeq ($(PROD),)
+    PROD = ar759x
   endif
 endif
 
@@ -24,11 +36,6 @@ endif
 # Try to get product name from manifest.xml
 ifeq ($(PROD),)
   PROD := $(shell sed -nr '/product name/{s/.*name="(.*)".*/\1/;p}' $(shell pwd)/.repo/manifest.xml)
-endif
-
-# Try to get a default product name based on the manifest name if failed to get it from manifest
-ifeq ($(PROD),)
-  PROD := $(basename $(notdir $(shell readlink -f $(shell pwd)/.repo/manifest.xml)))
 endif
 
 ifneq ($(PROD),)
@@ -139,13 +146,15 @@ endif
 # Determine path for LK repository
 # On mdm9x15, lk is built using CAF revision + patches
 ifneq (,$(wildcard $(PWD)/lk/))
-  LK_REPO ?= "$(PWD)/lk"
-else ifneq (,$(wildcard $(APPS_DIR)/bootable/bootloader/lk/))
-  LK_REPO ?= "$(APPS_DIR)/bootable/bootloader/lk/"
-endif
-ifneq (,$(LK_REPO))
-  ifneq (mdm9x15,$(MACH))
+  LK_REPO := "$(PWD)/lk"
+  # Append LK_REPO argument for 9x28 and 9x40 targets
+  ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
     LK_ARGS := -a "LK_REPO=$(LK_REPO)"
+  endif
+else
+  # Enforce existence of LK for 9x28 and 9x40; optional for others
+  ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
+    $(error Missing LK directory $(PWD)/lk)
   endif
 endif
 
@@ -306,6 +315,8 @@ image_bin: prepare
 image_src: prepare
 	$(COMMON_SRC)
 
+image: image_$(DEFAULT_MDM_BUILD)
+
 ## toolchains
 
 toolchain_bin: prepare
@@ -313,6 +324,8 @@ toolchain_bin: prepare
 
 toolchain_src: prepare
 	$(COMMON_SRC) -k
+
+toolchain: toolchain_$(DEFAULT_MDM_BUILD)
 
 ## dev shell
 
@@ -322,7 +335,7 @@ dev_bin: prepare
 dev_src: prepare
 	$(COMMON_SRC) -c
 
-dev: dev_bin
+dev: dev_$(DEFAULT_MDM_BUILD)
 
 # Machine: swi-virt
 

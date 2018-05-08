@@ -1144,37 +1144,47 @@ mount_early_legato_stop()
     local ret=${SWI_OK}
     local mntpt=${FLASH_MOUNTPOINT_LEGATO}
     local dm_device_name=${DM_LGT_NOD_NAME}
-    local le_parti_name=${LEGATO_MTDEV_NAME}
+    local le_part_name=${LEGATO_MTDEV_NAME}
     local mtd_dev_num=
-    local is_squashfs=
-    local is_dm_verity=
+    local ubi_device=
+    local dm_verity_active=
+
+    DS_LINUX_SUB_SYSTEM_FLAG=${DS_SYSTEM_1_FLAG}
 
     if [ ! -e "$mntpt/start" ]; then
         return ${ret}
     fi
 
-    if [ ! -z "$dm_device_name" ]; then
-        is_dm_verity=$( mount | grep "${mntpt}" | grep "/dev/mapper/${dm_device_name}" )
+    if [ -x /usr/bin/swidssd ]; then
+        /usr/bin/swidssd read linux
+        DS_LINUX_SUB_SYSTEM_FLAG=$?
     fi
 
-    is_squashfs=$( mount | grep "${mntpt}" | grep "type squashfs" | \
+    if [ $DS_LINUX_SUB_SYSTEM_FLAG -eq $DS_SYSTEM_2_FLAG ]; then
+        le_part_name=${le_part_name}2
+    fi
+
+    # Legato file system is ubi + squashfs and working on DM-Verity device
+    if [ ! -z "$dm_device_name" ]; then
+        dm_verity_active=$( mount | grep "${mntpt}" | grep "/dev/mapper/${dm_device_name}" )
+    fi
+
+    # Legato file system is ubi + squashfs and working on UBI device
+    ubi_device=$( mount | grep "${mntpt}" | grep "type squashfs" | \
                    grep "ubiblock" )
 
     # There is nothing we can do if umount fails, so do not check
     # the result of the operation. The same is true for ubidetach.
     umount -l ${mntpt}
 
-    if [ ! -z "${is_dm_verity}" ] ; then
+    # Remove Dm-verity device
+    if [ ! -z "${dm_verity_active}" ] ; then
         veritysetup remove ${dm_device_name}
-        get_mtdpart_dev_num ${le_parti_name}
-        mtd_dev_num=$?
-        if [ ! ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
-            ubidetach -m ${mtd_dev_num}
-        fi
     fi
 
-    if [ ! -z "${is_squashfs}" ] ; then
-        get_mtdpart_dev_num ${le_parti_name}
+    # Detach UBI device
+    if [ ! -z "${ubi_device}" ] || [ ! -z "${dm_verity_active}" ] ; then
+        get_mtdpart_dev_num ${le_part_name}
         mtd_dev_num=$?
         if [ ! ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
             ubidetach -m ${mtd_dev_num}

@@ -8,10 +8,15 @@ DESCRIPTION = "IMA policy file."
 # change its md5sum below.
 IMA_POLICY_DIR ?= "."
 
-# Name of the non-default policy file. This variable should be added
-# to extrawhite list as well:
-#    export BB_ENV_EXTRAWHITE="IMA_POLICY_FILE"
+# Name of the default, base policy file.
 IMA_POLICY_FILE ?= "ima.policy"
+
+# Additional add-on policy files.
+IMA_POLICY_IMMUTABLE_FILES ?= "ima-immutable-files.policy"
+
+# Smack label which must be applied to immutable files at build time
+# to protect them using IMA at run-time.
+IMA_SMACK_IMMUTABLE_FILES_LABEL ?= "${IMA_SMACK}"
 
 # Where to find additional files (patches, etc.).
 FILESEXTRAPATHS_prepend := "${IMA_POLICY_DIR}:${THISDIR}/files:"
@@ -19,7 +24,7 @@ FILESEXTRAPATHS_prepend := "${IMA_POLICY_DIR}:${THISDIR}/files:"
 # Package revision number. Change "r" number if you change
 # anything in this package (e.g. add patch, remove patch,
 # change dependencies, etc.).
-PR = "r0"
+PR = "r1"
 
 HOMEPAGE = "https://sourceforge.net/p/linux-ima/wiki/Home/"
 LICENSE = "GPLv2"
@@ -34,8 +39,20 @@ LIC_FILES_CHKSUM = "file://../COPYING;md5=b234ee4d69f5fce4486a80fdaf4a4263"
 # Where to find source code for this package.
 SRC_URI = "file://COPYING"
 SRC_URI += "file://${IMA_POLICY_FILE}"
+SRC_URI += "file://${IMA_POLICY_IMMUTABLE_FILES}"
 
 do_install() {
+
+    if [ ! -z "${IMA_SMACK_IMMUTABLE_FILES_LABEL}" ] ; then
+        # Add smack rule to protect immutable files.
+        bbnote "Immutable files will be protected using ${IMA_SMACK_IMMUTABLE_FILES_LABEL} smack label."
+        cat ${WORKDIR}/${IMA_POLICY_IMMUTABLE_FILES} >> ${WORKDIR}/${IMA_POLICY_FILE}
+        sed -i -- 's/@@IMA_SMACK_IMMUTABLE_FILES_LABEL@@/'"${IMA_SMACK_IMMUTABLE_FILES_LABEL}"'/g' \
+            ${WORKDIR}/${IMA_POLICY_FILE}
+    else
+        bbwarn "IMA: Immutable files will not be protected."
+    fi
+
     # Install policy file.
     install -m 0444 ${WORKDIR}/${IMA_POLICY_FILE} -D ${D}${sysconfdir}/ima/ima.policy
 }

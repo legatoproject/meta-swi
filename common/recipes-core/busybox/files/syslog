@@ -10,8 +10,6 @@
 
 set -e
 
-SMACK_PATH=/legato/smack
-
 if [ -f /etc/syslog-startup.conf ]; then
         . /etc/syslog-startup.conf
         LOG_LOCAL=0
@@ -57,16 +55,18 @@ case "$1" in
   start)
         echo -n "Starting syslogd/klogd: "
 
-        if [ ! -e /legato/SMACK_DISABLED ]
-        then
+        if [ -e "/etc/run.env" ]; then
+            source /etc/run.env
+        fi
+
+        if is_legato_smack_enabled; then
             oldlabel=$(cat /proc/self/attr/current)
             echo syslog >/proc/self/attr/current
         fi
 
         start-stop-daemon -S -b -n syslogd -a /sbin/syslogd -- -n $SYSLOG_ARGS
 
-        if [ ! -e /legato/SMACK_DISABLED ]
-        then
+        if is_legato_smack_enabled; then
             echo $oldlabel >/proc/self/attr/current
         fi
 

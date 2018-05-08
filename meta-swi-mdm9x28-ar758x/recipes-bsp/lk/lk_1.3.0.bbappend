@@ -1,5 +1,3 @@
-LK_REPO ?= "git://github.com/legatoproject/lk.git;protocol=https;branch=mdm9x28le201-swi"
-
 INSANE_SKIP_${PN} += "already-stripped"
 
 LIBGCC = "${STAGING_LIBDIR}/${TARGET_SYS}/6.2.0/libgcc.a"

@@ -6,14 +6,22 @@ POKY_VERSION ?= bda51ee7821de9120f6f536fcabe592f2a0c8a37
 META_OE_VERSION ?= 8e6f6e49c99a12a0382e48451f37adac0181362f
 
 # Machine architecture
-ifeq ($(MACH),)
-  ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
-    MACH := mdm9x15
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
-    MACH := mdm9x28
-    PROD ?= ar758x
-  else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
-    MACH := mdm9x28
+# Guess the architecture and product based on the availability of proprietary binaries.
+# If binaries are not available (FOSS build for instance), MACH= and PROD= have to be
+# provided when calling make.
+ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
+  MACH ?= mdm9x15
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
+  MACH ?= mdm9x28
+  ifeq ($(PROD),)
+    PROD = ar758x
+  endif
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
+  MACH ?= mdm9x28
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files))
+  MACH ?= mdm9x40
+  ifeq ($(PROD),)
+    PROD = ar759x
   endif
 endif
 
@@ -52,6 +60,9 @@ USE_DOCKER ?= 0
 # Use distributed building ?
 USE_ICECC ?= 0
 
+# Enable extended package group (mostly to aid debugging)
+USE_UNSUPPORTED_DEBUG_IMG ?= 0
+
 # Firmware path pointing to ar_yocto-cwe.tar.bz2
 FIRMWARE_PATH ?= 0
 
@@ -78,6 +89,11 @@ clean:
 
 ifeq ($(USE_ICECC),1)
   ICECC_ARGS = -h
+endif
+
+# Use extended image.
+ifeq ($(USE_UNSUPPORTED_DEBUG_IMG),1)
+  EXT_SWI_IMG_ARGS = -E
 endif
 
 ifdef FW_VERSION
@@ -123,11 +139,15 @@ endif
 # Determine path for LK repository
 # On mdm9x15, lk is built using CAF revision + patches
 ifneq (,$(wildcard $(PWD)/lk/))
-  LK_REPO ?= "$(PWD)/lk"
-endif
-ifneq (,$(LK_REPO))
-  ifneq (mdm9x15,$(MACH))
+  LK_REPO := "$(PWD)/lk"
+  # Append LK_REPO argument for 9x28 and 9x40 targets
+  ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
     LK_ARGS := -a "LK_REPO=$(LK_REPO)"
+  endif
+else
+  # Enforce existence of LK for 9x28 and 9x40; optional for others
+  ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
+    $(error Missing LK directory $(PWD)/lk)
   endif
 endif
 
@@ -176,7 +196,8 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${SDK_PREFIX_ARGS} \
 				${HOSTNAME_ARGS} \
 				${IMA_ARGS} \
-				${BB_ARGS}
+				${BB_ARGS} \
+				${EXT_SWI_IMG_ARGS}
 
 # Machine: swi-mdm9x15
 
@@ -245,10 +266,10 @@ COMMON_VIRT_X86 := \
 ## images
 
 image_virt_arm:
-	$(COMMON_VIRT_ARM) -d
+	$(COMMON_VIRT_ARM)
 
 image_virt_x86:
-	$(COMMON_VIRT_X86) -d
+	$(COMMON_VIRT_X86)
 
 image_virt: image_virt_arm
 

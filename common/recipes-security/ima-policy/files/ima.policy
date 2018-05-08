@@ -59,7 +59,8 @@ dont_appraise fsmagic=0x27e0eb
 # Some defaults for measurement
 measure func=FILE_MMAP mask=MAY_EXEC
 measure func=BPRM_CHECK mask=MAY_EXEC
-measure func=MODULE_CHECK
+# Do not measure kernel modules for first IMA release.
+# measure func=MODULE_CHECK
 # Do not measure all types that have the "logfile" SELinux attribute
 # You can use seinfo -alogfile -x to get an overview of all these types
 # Remainder of the defaults

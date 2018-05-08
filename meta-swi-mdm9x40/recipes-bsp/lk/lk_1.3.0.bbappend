@@ -1,5 +1,9 @@
+inherit localgit
+
 SRCREV = "${AUTOREV}"
-LK_REPO ?= "git://github.com/legatoproject/lk.git;protocol=https;branch=mdm9x40le312-swi"
+
+SRC_URI = ""
+SRC_DIR = "${LK_REPO}"
 
 LK_TARGET = "mdm9640"
 

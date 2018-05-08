@@ -1,6 +1,5 @@
 DEPENDS += " \
         virtual/lk \
-        yaffs2-utils-native \
         mtd-utils-native"
 
 SRC_URI += "file://ubinize.cfg"
@@ -73,14 +72,9 @@ prepare_ubi() {
 }
 
 default_rootfs_ps() {
-    # Default yaffs2 image to 4k
-    ln -sf ${IMAGE_NAME}.rootfs.4k.yaffs2 ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.yaffs2
-
-    # Default rootfs to ubi for 2k
+    # Default rootfs to ubi for 2k and 4k
     ln -sf ${IMAGE_LINK_NAME}.2k.ubi    ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.default
-
-    # Default rootfs to yaffs2 for 4k
-    ln -sf ${IMAGE_LINK_NAME}.4k.yaffs2 ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
+    ln -sf ${IMAGE_LINK_NAME}.4k.ubi    ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
 }
 
 do_image_complete[postfuncs] += "prepare_ubi"
@@ -101,3 +95,4 @@ python do_unpack2() {
 
 addtask unpack2 before do_rootfs
 
+require mdm9x15-image-cwe.inc

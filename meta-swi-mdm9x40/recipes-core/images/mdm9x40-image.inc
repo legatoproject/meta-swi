@@ -21,9 +21,6 @@ IMAGE_INSTALL_append = " cryptsetup"
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 
-# Stubs
-IMAGE_INSTALL_append = " bsinfo-stub"
-
 IMAGE_INSTALL_append = " kernel-modules"
 
 # Add linkmon app to monitor USB link
@@ -196,3 +193,4 @@ IMAGE_PREPROCESS_COMMAND += "do_setfileattr; "
 
 addtask unpack2 before do_rootfs
 
+require mdm9x40-image-cwe.inc
