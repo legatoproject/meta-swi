@@ -1,8 +1,23 @@
 require recipes-core/meta/meta-toolchain.bb
 
+# Only add Legato if this is a LEGATO_BUILD
+def get_toolchain_version(d):
+    # Return the SDK prefix (version in /opt/swi)
+    # unless it is the default one.
+    sdk_prefix_default = d.getVar('SDKPATH_PREFIX_DEFAULT', True)
+    sdk_prefix = d.getVar('SDKPATH_PREFIX', True)
+    if (not sdk_prefix) or (not sdk_prefix_default):
+        raise Exception("Expected sdk_prefix[%s] and sdk_prefix_default[%s], but one of them is not set" % (sdk_prefix, sdk_prefix_default))
+    if sdk_prefix != sdk_prefix_default:
+        return sdk_prefix
+    # Otherwise default to DISTRO_VERSION, a variable define
+    # by poky that corresponds to the yocto version (2.2.3 for instance).
+    return d.getVar('DISTRO_VERSION', True)
+
+TOOLCHAIN_VERSION = "${@get_toolchain_version(d)}"
 TOOLCHAIN_HOST_TASK += "nativesdk-packagegroup-swi-toolchain"
 TOOLCHAIN_TARGET_TASK += "packagegroup-swi-toolchain-target"
-TOOLCHAIN_OUTPUTNAME = "${SDK_NAME}-toolchain-swi-${DISTRO_VERSION}"
+TOOLCHAIN_OUTPUTNAME = "${SDK_NAME}-toolchain-swi-${TOOLCHAIN_VERSION}"
 
 SDK_PACKAGING_FUNC_ORIG = "create_shar"
 SDK_PACKAGING_FUNC = "create_sdk_pkgs"
