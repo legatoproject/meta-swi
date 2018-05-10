@@ -7,15 +7,27 @@ TOOLCHAIN_OUTPUTNAME = "${SDK_NAME}-toolchain-swi-${DISTRO_VERSION}"
 SDK_PACKAGING_FUNC_ORIG = "create_shar"
 SDK_PACKAGING_FUNC = "create_sdk_pkgs"
 
+# Run 'make scripts' in kernel directory to setup driver builds.
+# SUDO_EXEC is blank unless we're installing in non-writable directory,
+# otherwise it's '/usr/bin/sudo'. The effect of this is that when
+# installing in e.g. $HOME, we execute:
+#    make ARCH=... CC=... scripts
+# When installing in e.g. /opt, files are extracted by a sudo'ed command
+# and owned by sudo user, so we execute:
+#    sudo make ARCH=... CC=... scripts
+#
 # Note that $target_sdk_dir is doesn't use ${} syntax, and so
 # isn't expanded by Poky; it passes literally through to the shell script.
 SDK_POST_INSTALL_COMMAND = \
-    "( if cd $target_sdk_dir/sysroots/${REAL_MULTIMACH_TARGET_SYS}${KERNEL_SRC_PATH} && [ -e Makefile ] ; then \
+    "( set -e; \
+       if cd $target_sdk_dir/sysroots/${REAL_MULTIMACH_TARGET_SYS}${KERNEL_SRC_PATH} && [ -e Makefile ] ; then \
          . $target_sdk_dir/environment-setup-${REAL_MULTIMACH_TARGET_SYS}; \
-         [ -n "$SUDO_EXEC" ] && $SUDO_EXEC find scripts -type d -exec chown -R $(id -u) {} \; ; \
-         make ARCH=${ARCH} scripts; \
-         [ -n "$SUDO_EXEC" ] && $SUDO_EXEC find scripts -exec chown -R 0 {} \; ; \
-       fi )"
+         $SUDO_EXEC make ARCH=${ARCH} CC=`which $CC` scripts; \
+       fi ); \
+       if [ $? -ne 0 ] ; then \
+         echo \"Failed to install driver build environment.\"; \
+         exit 1; \
+       fi"
 
 repack_tarball() {
     TARBALL_XZ="${SDKDEPLOYDIR}/${TOOLCHAIN_OUTPUTNAME}.tar.xz"
