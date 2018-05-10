@@ -28,3 +28,10 @@ def check_legato_pkg(d, package="legato-af"):
         return package
     return ""
 
+# Make sure that some content is not in the rootfs
+do_rm_unused_files() {
+    rm -f "${IMAGE_ROOTFS}/etc/shadow-"
+    rm -f "${IMAGE_ROOTFS}/etc/gshadow-"
+}
+
+IMAGE_PREPROCESS_COMMAND += "do_rm_unused_files; "
