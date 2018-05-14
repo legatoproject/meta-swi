@@ -622,9 +622,6 @@ fi
 # Toolchain
 if [ $TOOLCHAIN = true ]; then
     case $MACH in
-       swi-mdm* )
-           bitbake ${BB_FLAGS} meta-toolchain-swi-ext
-           ;;
        * )
            bitbake ${BB_FLAGS} meta-toolchain-swi
            ;;
