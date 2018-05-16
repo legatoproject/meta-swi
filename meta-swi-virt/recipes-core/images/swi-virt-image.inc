@@ -4,11 +4,6 @@ INC_PR = "r0"
 
 FSTYPE_VIRT ?= "ext4"
 
-IMAGE_INSTALL_append = " util-linux"
-IMAGE_INSTALL_append = " util-linux-blkid"
-IMAGE_INSTALL_append = " util-linux-mount"
-IMAGE_INSTALL_append = " nfs-utils-client"
-
 # Tool to recognize the platform
 IMAGE_INSTALL_append = " bsinfo-stub"
 
