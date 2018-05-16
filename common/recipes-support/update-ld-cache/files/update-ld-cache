@@ -59,18 +59,23 @@ bmount_files()
     local flist="ld.so.conf ld.so.cache"
 
     # Make sure that there are no stale mounts.
+    # Look at the inode number on both sides of the mount as they should
+    # match.
+    # If they do not, the mountpoint is considered 'stale' and we unmount it,
+    # so it can be remounted just after and would therefore point to the right
+    # inode.
     for file in $flist ; do
-        mount | grep -owq "^tmpfs on $real_root_g/$file (deleted)"
-        if [ $? -eq 0 ] ; then
+        if [ "x$(ls -i $real_root_g/$file | awk '{print $1}')" != \
+             "x$(ls -i $tmp_root_g/$file 2>/dev/null | awk '{print $1}')" ]; then
             swi_log "Removing stale mount [$real_root_g/$file]..."
-            umount -l $real_root_g/$file
+            umount -l $real_root_g/$file >/dev/null 2>&1
         fi
     done
 
     # Do bind mounts.
     for file in $flist ; do
         # If bind mounts are already in place, do nothing.
-        mount | grep -owq "^tmpfs on $real_root_g/$file type tmpfs"
+        grep -owq "^tmpfs $real_root_g/$file tmpfs" /proc/mounts
         if [ $? -ne 0 ] ; then
             # Make sure that original file already exists. If not,
             # there is nothing we could do further more.
@@ -139,7 +144,7 @@ update_ld_cache()
     swi_log "Updating ld.so.cache using [$libs]..."
 
     # Now, update ld.so.cache ...
-    swi_log "Updating $real_root/ld.so.cache ..."
+    swi_log "Updating $real_root_g/ld.so.cache ..."
     grep -q "^${libs}$" $tmp_root_g/ld.so.conf 2>/dev/null || \
         echo $libs >>$tmp_root_g/ld.so.conf
     ldconfig -f $tmp_root_g/ld.so.conf -C $tmp_root_g/ld.so.cache
