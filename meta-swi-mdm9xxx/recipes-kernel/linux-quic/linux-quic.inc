@@ -1,6 +1,8 @@
 DESCRIPTION = "QuIC Linux Kernel"
 LICENSE = "GPLv2"
 
+inherit kernel-src-install
+
 # Determine linux version from sources
 def determine_linux_version(d):
     repo_dir = d.getVar('LINUX_REPO_DIR', True)
@@ -30,3 +32,7 @@ def determine_linux_version(d):
 LINUX_VERSION ?= "${@determine_linux_version(d)}"
 PV = "${LINUX_VERSION}"
 PR = "r1"
+
+do_install_append() {
+    kernel_src_install
+}

@@ -1,3 +1,5 @@
+inherit kernel-src-install
+
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://squashfs.cfg"
 SRC_URI += "file://smack.cfg"
@@ -23,3 +25,7 @@ KMACHINE_swi-virt-arm = "qemuarm"
 KBRANCH_swi-virt-arm = "${KBRANCH_qemuarm}"
 
 SRCREV_machine_swi-virt-arm = "${SRCREV_machine_qemuarm}"
+
+do_install_append() {
+    kernel_src_install
+}

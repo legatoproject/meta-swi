@@ -1,6 +1,5 @@
 inherit kernel externalsrc
 
-require recipes-kernel/kernel-src-install.inc
 require recipes-kernel/linux-quic/linux-quic.inc
 
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
@@ -61,10 +60,6 @@ do_configure_prepend() {
 
 do_compile_append() {
     oe_runmake dtbs ${KERNEL_EXTRA_ARGS}
-}
-
-do_install_append() {
-    kernel_src_install
 }
 
 # The following was removed from the kernel class between Yocto 1.7 and 2.2.

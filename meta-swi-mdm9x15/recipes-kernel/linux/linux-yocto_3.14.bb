@@ -1,6 +1,6 @@
 require recipes-kernel/linux/linux-yocto.inc
 
-require recipes-kernel/kernel-src-install.inc
+inherit kernel-src-install
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
