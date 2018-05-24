@@ -64,7 +64,7 @@ measure func=BPRM_CHECK mask=MAY_EXEC
 # Do not measure all types that have the "logfile" SELinux attribute
 # You can use seinfo -alogfile -x to get an overview of all these types
 # Remainder of the defaults
-appraise func=MODULE_CHECK appraise_type=imasig
+# appraise func=MODULE_CHECK appraise_type=imasig
 appraise func=MMAP_CHECK appraise_type=imasig
 appraise func=BPRM_CHECK appraise_type=imasig
 appraise obj_user=M
