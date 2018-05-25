@@ -37,7 +37,7 @@ SDK_POST_INSTALL_COMMAND = \
     "( set -e; \
        if cd $target_sdk_dir/sysroots/${REAL_MULTIMACH_TARGET_SYS}${KERNEL_SRC_PATH} && [ -e Makefile ] ; then \
          . $target_sdk_dir/environment-setup-${REAL_MULTIMACH_TARGET_SYS}; \
-         $SUDO_EXEC make ARCH=${ARCH} CC=`which $CC` scripts; \
+         $SUDO_EXEC PATH="${PATH}" make ARCH=${ARCH} CC="${CC}" scripts; \
        fi ); \
        if [ $? -ne 0 ] ; then \
          echo \"Failed to install driver build environment.\"; \
