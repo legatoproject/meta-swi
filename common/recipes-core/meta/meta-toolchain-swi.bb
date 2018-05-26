@@ -26,18 +26,21 @@ SDK_PACKAGING_FUNC = "create_sdk_pkgs"
 # SUDO_EXEC is blank unless we're installing in non-writable directory,
 # otherwise it's '/usr/bin/sudo'. The effect of this is that when
 # installing in e.g. $HOME, we execute:
-#    make ARCH=... CC=... scripts
+#    /bin/sh -c "( . $target_sdk_dir/environment-setup... ; make scripts )"
 # When installing in e.g. /opt, files are extracted by a sudo'ed command
-# and owned by sudo user, so we execute:
-#    sudo make ARCH=... CC=... scripts
+# and owned by sudo user, so we execute the exact same thing, but as root
+# since the command is prepended with sudo:
+#    sudo /bin/sh -c "( . $target_sdk_dir/environment-setup... ; make scripts )"
 #
-# Note that $target_sdk_dir is doesn't use ${} syntax, and so
+# Note that $target_sdk_dir doesn't use ${} syntax, and so
 # isn't expanded by Poky; it passes literally through to the shell script.
 SDK_POST_INSTALL_COMMAND = \
     "( set -e; \
        if cd $target_sdk_dir/sysroots/${REAL_MULTIMACH_TARGET_SYS}${KERNEL_SRC_PATH} && [ -e Makefile ] ; then \
-         . $target_sdk_dir/environment-setup-${REAL_MULTIMACH_TARGET_SYS}; \
-         $SUDO_EXEC PATH="${PATH}" make ARCH=${ARCH} CC="${CC}" scripts; \
+         $SUDO_EXEC /bin/sh -c "( \
+           . $target_sdk_dir/environment-setup-${REAL_MULTIMACH_TARGET_SYS}; \
+           make scripts; \
+         )"; \
        fi ); \
        if [ $? -ne 0 ] ; then \
          echo \"Failed to install driver build environment.\"; \
