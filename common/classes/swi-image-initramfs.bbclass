@@ -1,16 +1,33 @@
-# We are not adding ima-policy globaly, because some of the
-# kernels may not fully support ima feature set (e.g. 9x15 kernel is 3.14).
-PACKAGE_INSTALL_append = " cryptsetup libgcrypt ossp-uuid ima-policy"
+DESCRIPTION = "An image with only the bare minimum to accelerate the boot process."
+
+PACKAGE_INSTALL = "busybox mtd-utils-ubifs"
+
+# Do not pollute the initrd image with rootfs features
+IMAGE_FEATURES = ""
+
+IMAGE_LINGUAS = " "
+
+LICENSE = "MIT"
+
+inherit core-image
+
+IMAGE_ROOTFS_SIZE ?= "8192"
+
+IMAGE_FSTYPES = "cpio tar.bz2"
+
+PR = "0"
+
+PACKAGE_EXCLUDE += "busybox-syslog busybox-udhcpc"
+
+# Clean unecessary content
+remove_entity() {
+    echo "Removing $file"
+    rm -rf $file
+}
 
 fakeroot do_filter_rootfs () {
 
     cd ${IMAGE_ROOTFS}
-
-    # Clean unecessary content
-    remove_entity() {
-        echo "Removing $file"
-        rm -rf $file
-    }
 
     for file in $(find); do
         if [[ "$file" == "./sbin/ldconfig" ]]; then
@@ -39,6 +56,7 @@ fakeroot do_filter_rootfs () {
                 */libudev*) ;;
                 */libcrypt*) ;;
                 */libz.so*) ;;
+                */libm*) ;;
                 *) remove_entity $file ;;
             esac
         elif echo $file | grep -e "./usr/sbin/.*ubi"; then
@@ -57,9 +75,8 @@ fakeroot do_filter_rootfs () {
     # Populate rootfs with some devices
     mknod dev/console c 5 1
     mknod dev/null c 1 3
-    mknod dev/ttyHSL0 c 249 0
-    mknod dev/ttyHSL1 c 249 1
     mknod dev/urandom c 1 9
     mknod dev/zero c 1 5
 }
 
+IMAGE_PREPROCESS_COMMAND += "do_filter_rootfs; "

@@ -3,8 +3,7 @@ DEPENDS += " \
         mtd-utils-native \
         cryptsetup-native \
         ima-evm-utils-native \
-        libarchive-native \
-        ima-support-tools-native"
+        libarchive-native"
 
 INC_PR = "r0"
 
@@ -38,10 +37,6 @@ IMAGE_INSTALL_append = " kernel-modules"
 
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL_append = " linkmon"
-
-# Add IMA/EVM support tools
-IMAGE_INSTALL_append = " ima-evm-utils"
-IMAGE_INSTALL_append = " keyutils"
 
 # Add replacements for busybox utils in order to properly handle
 # extended file attributes.

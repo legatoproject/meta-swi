@@ -1,7 +1,6 @@
 inherit kernel externalsrc
 inherit android-signing
 
-require recipes-kernel/kernel-src-install.inc
 require recipes-kernel/linux-quic/linux-quic.inc
 
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
@@ -10,6 +9,9 @@ COMPATIBLE_MACHINE = "(swi-mdm9x28)"
 # configuration variables for externalsrc class
 EXTERNALSRC_pn-${PN} = "${LINUX_REPO_DIR}/.."
 EXTERNALSRC_BUILD_pn-${PN} = "${WORKDIR}/build"
+
+# Override KERNEL_CC for Linux kernel build
+KERNEL_CC_prepend = "${LINUX_REPO_DIR}/../scripts/gcc-wrapper.py "
 
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
@@ -59,10 +61,6 @@ do_configure_prepend() {
 
 do_compile_append() {
     oe_runmake dtbs ${KERNEL_EXTRA_ARGS}
-}
-
-do_install_append() {
-    kernel_src_install
 }
 
 # The following was removed from the kernel class between Yocto 1.7 and 2.2.

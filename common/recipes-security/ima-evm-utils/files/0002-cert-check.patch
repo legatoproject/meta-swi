@@ -1,0 +1,138 @@
+diff --git a/src/evmctl.c b/src/evmctl.c
+index 2ffee78..f3d9181 100644
+--- a/src/evmctl.c
++++ b/src/evmctl.c
+@@ -910,6 +910,16 @@ static int cmd_import(struct command *cmd)
+ 		calc_keyid_v1(keyid, name, pub, len);
+ 	}
+ 
++	if (params.x509 && params.check_expiry)
++	{
++	    if (verify_x509_cert_expiry(inkey) != 0)
++	    {
++	        free(pub);
++	        RSA_free(key);
++	        return 1;
++	    }
++	}
++
+ 	log_info("Importing public key %s from file %s into keyring %d\n", name, inkey, id);
+ 
+ 	id = add_key(params.x509 ? "asymmetric" : "user", params.x509 ? NULL : name, pub, len, id);
+@@ -1649,7 +1659,8 @@ static void usage(void)
+ struct command cmds[] = {
+ 	{"--version", NULL, 0, ""},
+ 	{"help", cmd_help, 0, "<command>"},
+-	{"import", cmd_import, 0, "[--rsa] pubkey keyring", "Import public key into the keyring.\n"},
++	{"import", cmd_import, 0, "[--rsa] [--check_expiry] pubkey keyring", "Import public key into the keyring."
++	                           " Specify 'check_expiry' to check public certificate validity before loading key into keyring.\n"},
+ 	{"convert", cmd_convert, 0, "key", "convert public key into the keyring.\n"},
+ 	{"sign", cmd_sign_evm, 0, "[-r] [--imahash | --imasig ] [--key key] [--pass [password] file", "Sign file metadata.\n"},
+ 	{"verify", cmd_verify_evm, 0, "file", "Verify EVM signature (for debugging).\n"},
+@@ -1676,6 +1687,7 @@ static struct option opts[] = {
+ 	{"sigfile", 0, 0, 'f'},
+ 	{"uuid", 2, 0, 'u'},
+ 	{"rsa", 0, 0, '1'},
++	{"check_expiry", 0, 0, 'c'},
+ 	{"key", 1, 0, 'k'},
+ 	{"type", 1, 0, 't'},
+ 	{"recursive", 0, 0, 'r'},
+@@ -1782,6 +1794,9 @@ int main(int argc, char *argv[])
+ 		case '1':
+ 			params.x509 = 0;
+ 			break;
++        case 'c':
++            params.check_expiry = 1;
++            break;
+ 		case 'k':
+ 			params.keyfile = optarg;
+ 			break;
+diff --git a/src/imaevm.h b/src/imaevm.h
+index 1bafaad..ab8f375 100644
+--- a/src/imaevm.h
++++ b/src/imaevm.h
+@@ -178,6 +178,7 @@ typedef int (*verify_hash_fn_t)(const char *file, const unsigned char *hash, int
+ struct libevm_params {
+ 	int verbose;
+ 	int x509;
++	int check_expiry;
+ 	const char *hash_algo;
+ 	const char *keyfile;
+ 	const char *keypass;
+@@ -209,5 +210,6 @@ int sign_hash(const char *algo, const unsigned char *hash, int size, const char
+ int verify_hash(const char *file, const unsigned char *hash, int size, unsigned char *sig, int siglen);
+ int ima_verify_signature(const char *file, unsigned char *sig, int siglen, unsigned char *digest, int digestlen);
+ void init_public_keys(const char *keyfiles);
++int verify_x509_cert_expiry(const char *certfile);
+ 
+ #endif
+diff --git a/src/libimaevm.c b/src/libimaevm.c
+index 6fa0ed4..2dd7149 100644
+--- a/src/libimaevm.c
++++ b/src/libimaevm.c
+@@ -49,6 +49,7 @@
+ #include <dirent.h>
+ #include <string.h>
+ #include <stdio.h>
++#include <time.h>
+ 
+ #include <openssl/pem.h>
+ #include <openssl/evp.h>
+@@ -129,6 +130,7 @@ struct libevm_params params = {
+ 	.verbose = LOG_INFO - 1,
+ 	.x509 = 1,
+ 	.hash_algo = "sha1",
++	.check_expiry = 0,
+ };
+ 
+ static void __attribute__ ((constructor)) libinit(void);
+@@ -331,6 +333,49 @@ int ima_calc_hash(const char *file, uint8_t *hash)
+ 	return mdlen;
+ }
+ 
++int verify_x509_cert_expiry(const char *certfile)
++{
++    FILE *fp;
++    X509 *crt = NULL;
++    int result = 0;
++
++    fp = fopen(certfile, "r");
++    if (!fp) {
++        log_err("Failed to open certificate: %s\n", certfile);
++        return 1;
++    }
++
++    crt = d2i_X509_fp(fp, NULL);
++    if (!crt) {
++        log_err("d2i_X509_fp() failed\n");
++        fclose(fp);
++        return 1;
++    }
++
++    result = X509_cmp_current_time(X509_get_notBefore(crt));
++
++    // We are trying to use certificate before it is valid.
++    if (result > 0)
++    {
++        log_err("Trying to use certificate '%s' before it is vaild\n", certfile);
++        X509_free(crt);
++        fclose(fp);
++        return 1;
++    }
++
++    result = X509_cmp_current_time(X509_get_notAfter(crt));
++
++    if (result < 0)
++    {
++        log_err("Trying to use certificate '%s' after its expiry\n", certfile);
++        X509_free(crt);
++        fclose(fp);
++        return 1;
++    }
++
++    return 0;
++}
++
+ RSA *read_pub_key(const char *keyfile, int x509)
+ {
+ 	FILE *fp;

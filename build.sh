@@ -603,6 +603,10 @@ case $MACH in
             set_option 'INITRAMFS_IMAGE' "${MACH#swi-}-image-initramfs"
         fi
         ;;
+    swi-virt* )
+        set_option 'INITRAMFS_IMAGE_BUNDLE' '1'
+        set_option 'INITRAMFS_IMAGE' "swi-virt-image-initramfs"
+        ;;
 esac
 
 # Firmware Path
@@ -622,9 +626,6 @@ fi
 # Toolchain
 if [ $TOOLCHAIN = true ]; then
     case $MACH in
-       swi-mdm* )
-           bitbake ${BB_FLAGS} meta-toolchain-swi-ext
-           ;;
        * )
            bitbake ${BB_FLAGS} meta-toolchain-swi
            ;;

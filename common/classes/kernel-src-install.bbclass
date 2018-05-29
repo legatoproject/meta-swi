@@ -14,15 +14,15 @@ kernel_src_install() {
 
     # We get some of this material from the pristine source tree:
 
+    echo "Installing files from sources (from ${STAGING_KERNEL_DIR}):"
     ( cd ${STAGING_KERNEL_DIR}
 
       ( find . \
           -type f \
           \( -name '*.h' -o \
-             -name 'Makefile' -o \
              -name 'Makefile*' -o \
-             -name 'Kconfig' -o \
              -name 'Kconfig*' -o \
+             -name 'Kbuild*' -o \
              -name '*.include' \)
         find scripts \
           -type f ) | cpio -o ) | \
@@ -33,25 +33,13 @@ kernel_src_install() {
     # This includes generated headers, config include Makefiles,
     # the .config file and System.map:
 
-    ( cd ${B}
+    echo "Installing generated files (from ${STAGING_KERNEL_BUILDDIR}):"
+    ( cd ${STAGING_KERNEL_BUILDDIR}
 
       ( find . \
-          -type f \
-          \( -name '*.conf' -o \
-             -name '*.conf.*' \)
-        find $(find . -type d -name generated) \
-          -type f ) | cpio -o ) | \
+          -type f | grep -v '^./scripts/' ) | cpio -o ) | \
     ( cd $dest
       cpio -id --no-preserve-owner )
-
-    cp -f ${B}/.config ${B}/Module.symvers $dest
-
-    cp -f ${B}/System.map $dest/System.map-${LINUX_VERSION}
-
-    # mdm9x15 build needs this link in do_bootimg
-    if [ "${LINUX_VERSION}" != "${KERNEL_VERSION}" ] ; then
-        ln -sf System.map-${LINUX_VERSION} $dest/System.map-${KERNEL_VERSION}
-    fi
 
     # Hack for various apps_proc packages on the mdm9x15:
     # audio-alsa, audcal and others. These include the non-sanitized
@@ -81,3 +69,4 @@ kernel_src_install() {
 
     rm -rf ${D}/usr/src/usr
 }
+

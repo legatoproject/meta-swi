@@ -27,6 +27,7 @@ SRC_URI = "https://downloads.sourceforge.net/project/linux-ima/ima-evm-utils/ima
 # We really do not need man pages. In addition, its build is creating
 # problems.
 SRC_URI += "file://0001-no-manpages.patch"
+SRC_URI += "file://0002-cert-check.patch"
 
 inherit autotools gettext pkgconfig
 

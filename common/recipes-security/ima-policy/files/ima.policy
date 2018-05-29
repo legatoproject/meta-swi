@@ -4,11 +4,9 @@
 #
 # Magics can be found in kernel/include/uapi/linux/magic.h
 # Default can be found in security/integrity/ima/ima_policy.c
-# SQUASH_SUPER_MAGIC = 0x73717368
+# SQUASHFS_MAGIC = 0x73717368
 dont_measure fsmagic=0x73717368
 dont_appraise fsmagic=0x73717368
-# Magics can be found in kernel/include/uapi/linux/magic.h
-# Default can be found in security/integrity/ima/ima_policy.c
 # PROC_SUPER_MAGIC = 0x9fa0
 dont_measure fsmagic=0x9fa0
 dont_appraise fsmagic=0x9fa0
@@ -64,7 +62,7 @@ measure func=BPRM_CHECK mask=MAY_EXEC
 # Do not measure all types that have the "logfile" SELinux attribute
 # You can use seinfo -alogfile -x to get an overview of all these types
 # Remainder of the defaults
-appraise func=MODULE_CHECK appraise_type=imasig
+# appraise func=MODULE_CHECK appraise_type=imasig
 appraise func=MMAP_CHECK appraise_type=imasig
 appraise func=BPRM_CHECK appraise_type=imasig
 appraise obj_user=M
