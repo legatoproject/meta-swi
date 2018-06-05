@@ -3,6 +3,7 @@ LICENSE = "MPL-2.0"
 LIC_FILES_CHKSUM = "file://${LEGATO_WORKDIR}/LICENSE.md;md5=55a288862ec4d1fd20f996344d511a1f"
 
 DEPENDS += "cmake-native"
+DEPENDS += "ninja-native"
 
 # This adds files from the LEGATO_WORKDIR to SRC_URI, which allows bitbake to track
 # the checksum of this files and therefore rebuild when they change.
