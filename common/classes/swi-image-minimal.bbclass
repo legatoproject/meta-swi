@@ -3,6 +3,7 @@ DESCRIPTION = "A small image just capable of allowing SWI products to boot."
 CORE_SWI_IMAGE ?= "packagegroup-swi-image-target"
 EXTENDED_SWI_IMAGE ?= "packagegroup-swi-image-target-ext"
 
+ROOTFS_PKGMANAGE_BOOTSTRAP ??= ""
 IMAGE_INSTALL = "packagegroup-core-boot ${ROOTFS_PKGMANAGE_BOOTSTRAP} ${CORE_IMAGE_EXTRA_INSTALL} ${CORE_SWI_IMAGE}"
 
 # Enable debug packages
