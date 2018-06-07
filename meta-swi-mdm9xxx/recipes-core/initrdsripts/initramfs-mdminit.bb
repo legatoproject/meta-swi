@@ -8,6 +8,7 @@ SRC_URI = "file://init.sh \
 
 # init.sh requires run.env
 RDEPENDS_${PN} += "initscripts-runenv"
+RDEPENDS_${PN} += "busybox"
 
 PR = "r11"
 
