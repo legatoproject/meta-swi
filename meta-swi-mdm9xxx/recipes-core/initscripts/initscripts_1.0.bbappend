@@ -95,10 +95,6 @@ KERNEL_VERSION = ""
 inherit update-alternatives
 DEPENDS_append = " update-rc.d-native"
 
-ALTERNATIVE_PRIORITY = "90"
-ALTERNATIVE_${PN} = "functions"
-ALTERNATIVE_LINK_NAME[functions] = "${sysconfdir}/init.d/functions"
-
 HALTARGS ?= "-d -f"
 
 do_configure () {
