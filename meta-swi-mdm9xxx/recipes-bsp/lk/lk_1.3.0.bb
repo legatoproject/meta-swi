@@ -21,7 +21,17 @@ LK_TARGET ?= "mdm9615"
 # 2 - SPEW
 LK_DEBUG ?= "0"
 
-EXTRA_OEMAKE = "-j 1 TOOLCHAIN_PREFIX='${TARGET_PREFIX}' TOOLCHAIN_OPTIONS='${TOOLCHAIN_OPTIONS}' ${LK_TARGET} DEBUG=${LK_DEBUG} BOOTLOADER_OUT='${B}' ENABLE_IMA='${ENABLE_IMA}' IMA_KERNEL_CMDLINE_OPTIONS='${IMA_KERNEL_CMDLINE_OPTIONS}'"
+EXTRA_OEMAKE = "-j 1 \
+                TOOLCHAIN_PREFIX='${TARGET_PREFIX}' \
+                TOOLCHAIN_OPTIONS='${TOOLCHAIN_OPTIONS}' \
+                ${LK_TARGET} \
+                DEBUG=${LK_DEBUG} \
+                BOOTLOADER_OUT='${B}' \
+                ARCH='${TARGET_ARCH}' \
+                CC='${CC}' \
+                ${@base_conditional('ARM_FLOAT_ABI', 'hard', 'ENABLE_HARD_FPU=1', '', d)} \
+                ENABLE_IMA='${ENABLE_IMA}' \
+                IMA_KERNEL_CMDLINE_OPTIONS='${IMA_KERNEL_CMDLINE_OPTIONS}'"
 
 do_tag_lk() {
     cd ${S}
@@ -40,8 +50,8 @@ do_tag_lk() {
             cut -c 1-10 -`""
     fi
 
-    echo "#define LKVERSION  \"${LK_VERSION}\"" > ${S}/app/aboot/sierra_lkversion.h
     mkdir -p ${B}/build-${LK_TARGET}
+    echo "#define LKVERSION  \"${LK_VERSION}\"" > ${B}/build-${LK_TARGET}/sierra_lkversion.h
     echo "${LK_VERSION} $(date +'%Y/%m/%d %H:%M:%S')" >> ${B}/build-${LK_TARGET}/lk.version
 }
 
@@ -50,6 +60,7 @@ addtask tag_lk before do_compile after do_configure
 do_compile[dirs] = "${S}"
 do_compile_prepend() {
     export NOECHO=""
+    export LIBGCC="$(${CC} ${CFLAGS} -print-libgcc-file-name)"
 }
 
 do_install() {

@@ -1,11 +1,5 @@
 INSANE_SKIP_${PN} += "already-stripped"
 
-LIBGCC = "${STAGING_LIBDIR}/${TARGET_SYS}/6.2.0/libgcc.a"
-
-EXTRA_OEMAKE += "ARCH='${TARGET_ARCH}' CC='${CC}' LIBGCC='${LIBGCC}'"
-#enable hardfloat
-EXTRA_OEMAKE_append = " ${@base_conditional('ARM_FLOAT_ABI', 'hard', 'ENABLE_HARD_FPU=1', '', d)}"
-
 add_hash_segment() {
     IMAGE_NAME=$1
     cd ${B}
