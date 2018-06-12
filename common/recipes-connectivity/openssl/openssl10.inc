@@ -25,7 +25,7 @@ TERMIO_libc-musl = "-DTERMIOS"
 TERMIO ?= "-DTERMIO"
 # Avoid binaries being marked as requiring an executable stack since it 
 # doesn't(which causes and this causes issues with SELinux
-CFLAG = "${@base_conditional('SITEINFO_ENDIANNESS', 'le', '-DL_ENDIAN', '-DB_ENDIAN', d)} \
+CFLAG = "${@oe.utils.conditional('SITEINFO_ENDIANNESS', 'le', '-DL_ENDIAN', '-DB_ENDIAN', d)} \
 	 ${TERMIO} ${CFLAGS} -Wall -Wa,--noexecstack"
 
 export DIRS = "crypto ssl apps"
@@ -275,6 +275,34 @@ do_install_append_class-native() {
 	    SSL_CERT_DIR=${libdir}/ssl/certs \
 	    SSL_CERT_FILE=${libdir}/ssl/cert.pem \
 	    OPENSSL_ENGINES=${libdir}/ssl/engines
+}
+
+# From relative_symlinks.bbclass
+do_install[postfuncs] += "install_relative_symlinks"
+
+def replace_absolute_symlinks(basedir, d):
+    """
+    Walk basedir looking for absolute symlinks and replacing them with relative ones.
+    The absolute links are assumed to be relative to basedir
+    (compared to make_relative_symlink above which tries to compute common ancestors
+    using pattern matching instead)
+    """
+    for walkroot, dirs, files in os.walk(basedir):
+        for file in files + dirs:
+            path = os.path.join(walkroot, file)
+            if not os.path.islink(path):
+                continue
+            link = os.readlink(path)
+            if not os.path.isabs(link):
+                continue
+            walkdir = os.path.dirname(path.rpartition(basedir)[2])
+            base = os.path.relpath(link, walkdir)
+            bb.debug(2, "Replacing absolute path %s with relative path %s" % (link, base))
+            os.remove(path)
+            os.symlink(base, path)
+
+python install_relative_symlinks () {
+    replace_absolute_symlinks(d.getVar('D', True), d)
 }
 
 BBCLASSEXTEND = "native nativesdk"
