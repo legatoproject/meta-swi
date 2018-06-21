@@ -1,0 +1,28 @@
+--- a/testcases/lib/cmdlib.sh	2018-06-21 14:00:01.910074316 +0200
++++ b/testcases/lib/cmdlib.sh	2018-06-21 16:14:19.630113260 +0200
+@@ -29,6 +29,25 @@
+     set -x
+ fi
+ 
++# SWISTART
++#=============================================================================
++# FUNCTION NAME:        command
++#
++# FUNCTION DESCRIPTION: Replace the built-in command from bash
++#
++# PARAMETERS:           [-v] command-to-check
++#
++# RETURNS:              0 if command exists, 1 else
++#=============================================================================
++command()
++{
++	[ $1 == "-v" ] && shift
++	which $1
++	return $?
++}
++# SWISTOP
++
++
+ #=============================================================================
+ # FUNCTION:   tst_cleanup
+ # PURPOSE:    Clean up after a testcase.

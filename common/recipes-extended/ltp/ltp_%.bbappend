@@ -1,5 +1,10 @@
 inherit tar-runtime
 
+
+FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+
+SRC_URI += "file://0001-SWI-ltp-cmdlib_sh.patch"
+
 rm_tests() {
     CAUSE="missing mkfs"
     for t in access06 \
