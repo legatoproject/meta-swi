@@ -1,3 +1,2 @@
 # Rule to protect immutable files using SMACK labeling.
-measure func=FILE_CHECK mask=MAY_READ
 appraise obj_user=@@IMA_SMACK_IMMUTABLE_FILES_LABEL@@ appraise_type=imasig
