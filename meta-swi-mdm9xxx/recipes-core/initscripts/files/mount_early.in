@@ -1059,6 +1059,7 @@ mount_early_legato_start()
     local secure=${SWI_AUTH_FAIL}
     local mtd_dev_num=0
 
+    DS_LINUX_SUB_SYSTEM_FLAG=000
     is_dual_system
     if [ $? -eq ${SWI_TRUE} ]; then
         /usr/bin/swidssd read linux
