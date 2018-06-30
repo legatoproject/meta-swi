@@ -10,6 +10,9 @@ COMPATIBLE_MACHINE = "(swi-mdm9x40)"
 EXTERNALSRC_pn-${PN} = "${LINUX_REPO_DIR}/.."
 EXTERNALSRC_BUILD_pn-${PN} = "${WORKDIR}/build"
 
+# Override KERNEL_CC for Linux kernel build
+KERNEL_CC_prepend = "${LINUX_REPO_DIR}/../scripts/gcc-wrapper.py "
+
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9640_defconfig"
 KERNEL_DEFCONFIG_PATH = "${S}/arch/arm/configs/${KERNEL_DEFCONFIG}"
