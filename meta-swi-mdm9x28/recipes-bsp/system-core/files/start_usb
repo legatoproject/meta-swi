@@ -27,6 +27,7 @@
 # Starts the USB Android Gadget.
 
 export KERNEL=`uname -r`
+export SOFTAP_W_DUN="N"
 
 case "$1" in
   start)
@@ -63,6 +64,19 @@ case "$1" in
                 # Some other version of kernel?
                 ;;
         esac
+        # enable concurrent SoftAP and DUN
+        if [ ! -f /data/usb/softap_w_dun ]
+        then
+          mkdir -p /data/usb
+          echo Y  > /data/usb/softap_w_dun
+        fi
+        SOFTAP_W_DUN=`cat /data/usb/softap_w_dun`
+
+        echo "SOFTAP_W_DUN:" $SOFTAP_W_DUN
+        if [ "$SOFTAP_W_DUN" == "Y" ]
+        then
+          echo 1  > /sys/devices/virtual/android_usb/android0/f_serial/dun_w_softap_enable
+        fi
         ;;
 
   stop)
