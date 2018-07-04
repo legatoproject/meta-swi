@@ -1,23 +1,15 @@
-inherit kernel externalsrc
+inherit kernel localgit
 
 require recipes-kernel/linux-quic/linux-quic.inc
 
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 COMPATIBLE_MACHINE = "(swi-mdm9x28)"
 
-# configuration variables for externalsrc class
-EXTERNALSRC_pn-${PN} = "${LINUX_REPO_DIR}/.."
-EXTERNALSRC_BUILD_pn-${PN} = "${WORKDIR}/build"
-
 # Override KERNEL_CC for Linux kernel build
 KERNEL_CC_prepend = "${LINUX_REPO_DIR}/../scripts/gcc-wrapper.py "
 
 # Provide a config baseline for things so the kernel will build...
 KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
-KERNEL_DEFCONFIG_PATH = "${S}/arch/arm/configs/${KERNEL_DEFCONFIG}"
-
-# inform externalsrc about files whose changes must trigger do_configure
-CONFIGURE_FILES_pn-${PN} = "${KERNEL_DEFCONFIG_PATH}"
 
 # Override for Qemu
 COMPATIBLE_MACHINE_swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
@@ -25,7 +17,14 @@ KERNEL_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
 COMPATIBLE_MACHINE_swi-mdm9x28-qemu = "swi-mdm9x28-qemu"
 KERNEL_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
 
+B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
+
+SRC_DIR = "${LINUX_REPO_DIR}/.."
+
+LINUX_VERSION ?= "3.18.20"
+PV = "${LINUX_VERSION}+git${GITSHA}"
+PR = "r1"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
@@ -45,10 +44,10 @@ do_configure_prepend() {
       rm -rf ${STAGING_KERNEL_DIR}
       mkdir -p ${STAGING_KERNEL_DIR}
       rmdir ${STAGING_KERNEL_DIR}
-      ln -sf ${LINUX_REPO_DIR}/.. ${STAGING_KERNEL_DIR}
+      ln -sf ${SRC_DIR} ${STAGING_KERNEL_DIR}
     fi
 
-    cp ${KERNEL_DEFCONFIG_PATH} ${WORKDIR}/defconfig
+    cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
 
     # Add ".system" public cert into kernel build area. Kernel build
     # will suck this cert in automatically.
