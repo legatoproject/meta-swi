@@ -198,6 +198,7 @@ do_copy_swi_version() {
     cd ${IMGDEPLOYDIR}
     cp ${IMAGE_ROOTFS}/etc/legato/version ${IMAGE_NAME}.build_package.version
     cp ${IMAGE_ROOTFS}/etc/legato/version build_package.version
+    cp  build_package.version ${DEPLOY_DIR_IMAGE}
     ln -sf ${IMAGE_NAME}.build_package.version ${IMAGE_LINK_NAME}.build_package.version
 
     TMP_VERSION=$(cat build_package.version | grep "build version" | cut -d' ' -f4)
