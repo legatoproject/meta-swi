@@ -46,6 +46,7 @@ do_compile() {
 
         export LEGATO_ROOT=${PKG_CONFIG_SYSROOT_DIR}/usr/share/legato
         export LEGATO_SYSROOT=${PKG_CONFIG_SYSROOT_DIR}
+        export LEGATO_KERNELROOT=${STAGING_KERNEL_BUILDDIR}
 
         compile_target $LEGATO_TARGET
     done
