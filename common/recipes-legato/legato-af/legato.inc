@@ -39,6 +39,9 @@ def list_legato_files(d):
                 continue
             if " " in f:
                 continue # Unable to handle files that contain a space
+            # Skip .patch files as they would be handled by the do_patch task
+            if f.endswith(".patch"):
+                continue
 
             file_list.append( "file://" + quote(os.path.join(startpath, path, f)) )
 
