@@ -15,10 +15,6 @@ KERNEL_EXTRA_ARGS        += "O=${B}"
 
 SRC_DIR = "${LINUX_REPO_DIR}/.."
 
-LINUX_VERSION ?= "3.18.31"
-PV = "${LINUX_VERSION}+git${GITSHA}"
-PR = "r1"
-
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
 do_patch() {
