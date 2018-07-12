@@ -27,7 +27,7 @@ do_compile[depends]  = "legato-tools:do_populate_sysroot"
 do_compile[depends] += "gdb:do_populate_sysroot"
 
 # Add dependency to the kernel so that Legato can build kernel modules.
-do_compile[depends] += "virtual/kernel:do_populate_sysroot"
+do_compile[depends] += "dummy-kernel-mod:do_compile"
 
 FILESEXTRAPATHS += "${THISDIR}/files"
 
