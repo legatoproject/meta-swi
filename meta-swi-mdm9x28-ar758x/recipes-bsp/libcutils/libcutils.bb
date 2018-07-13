@@ -22,12 +22,12 @@ S = "${WORKDIR}/git/libcutils"
 EXTRA_OECONF  = " --with-core-includes=${WORKDIR}/git/include"
 EXTRA_OECONF += " --with-host-os=${HOST_OS}"
 EXTRA_OECONF += " --disable-static"
-EXTRA_OECONF += "${@base_conditional('BASEMACHINE', 'apq8017', ' LE_PROPERTIES_ENABLED=true', '', d)}"
-EXTRA_OECONF += "${@base_conditional('BASEMACHINE', 'apq8009', ' LE_PROPERTIES_ENABLED=true', '', d)}"
-EXTRA_OECONF += "${@base_conditional('BASEMACHINE', 'apq8053', ' LE_PROPERTIES_ENABLED=true', '', d)}"
+EXTRA_OECONF += "${@oe.utils.conditional('BASEMACHINE', 'apq8017', ' LE_PROPERTIES_ENABLED=true', '', d)}"
+EXTRA_OECONF += "${@oe.utils.conditional('BASEMACHINE', 'apq8009', ' LE_PROPERTIES_ENABLED=true', '', d)}"
+EXTRA_OECONF += "${@oe.utils.conditional('BASEMACHINE', 'apq8053', ' LE_PROPERTIES_ENABLED=true', '', d)}"
 
-EXTRA_OECONF += "${@base_conditional('BASEMACHINE', 'apq8096', ' LE_PROPERTIES_ENABLED=true', '', d)}"
-EXTRA_OECONF += "${@base_conditional('BASEMACHINE', 'apq8098', ' LE_PROPERTIES_ENABLED=true', '', d)}"
+EXTRA_OECONF += "${@oe.utils.conditional('BASEMACHINE', 'apq8096', ' LE_PROPERTIES_ENABLED=true', '', d)}"
+EXTRA_OECONF += "${@oe.utils.conditional('BASEMACHINE', 'apq8098', ' LE_PROPERTIES_ENABLED=true', '', d)}"
 
 PACKAGE_DEBUG_SPLIT_STYLE = 'debug-without-src'
 FILES_${PN}-dbg    = "${libdir}/.debug/libcutils.*"

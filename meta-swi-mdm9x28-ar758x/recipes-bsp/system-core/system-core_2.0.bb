@@ -30,7 +30,7 @@ EXTRA_OECONF_append = " --with-sanitized-headers=${STAGING_DIR_TARGET}${KERNEL_S
 EXTRA_OECONF_append = " --with-logd-logging"
 
 # Disable adb root privileges in USER builds for msm targets
-EXTRA_OECONF_append_msm = "${@base_conditional('USER_BUILD','1',' --disable-adb-root','',d)}"
+EXTRA_OECONF_append_msm = "${@oe.utils.conditional('USER_BUILD','1',' --disable-adb-root','',d)}"
 
 CPPFLAGS += "-I${STAGING_INCDIR}/ext4_utils"
 CPPFLAGS += "-I${STAGING_INCDIR}/libselinux"
