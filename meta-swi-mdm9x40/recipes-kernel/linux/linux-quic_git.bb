@@ -17,9 +17,6 @@ SRC_DIR = "${LINUX_REPO_DIR}/.."
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
-do_patch() {
-}
-
 do_configure_prepend() {
     # When SRC_URI contains something, the Yocto kernel.bbclass creates
     # ${STAGING_KERNEL_DIR} as a symlink to the local git repo; due to similar
