@@ -1,0 +1,41 @@
+diff --git a/arch/arm/mach-msm/sierra_monitor.c b/arch/arm/mach-msm/sierra_monitor.c
+index e328289..3ce18d2 100644
+--- a/arch/arm/mach-msm/sierra_monitor.c
++++ b/arch/arm/mach-msm/sierra_monitor.c
+@@ -266,15 +266,15 @@ static void sierra_resource_check(const char *pathp, const char *valuep, int for
+ 	set_fs(oldfs);
+ 
+ 	if (check_failed) {
+-		pr_err("%s: resource check failed %s, panic\n", __FUNCTION__, pathp);
+-		if (force_dload) {
+-			pr_info("%s: force_dload: %d\n", __FUNCTION__, force_dload);
++		pr_err("%s: kiran resource check failed %s, panic\n", __FUNCTION__, pathp);
++		//if (force_dload) {
++		//	pr_info("%s: force_dload: %d\n", __FUNCTION__, force_dload);
+ 			/* set the flag to force device to dload mode after crash */
+-			msm_set_download_mode_swi(force_dload);
++		//	msm_set_download_mode_swi(force_dload);
+ 			/* also try to do image reocovery so that it can get out of dload */
+-			sierra_smem_im_recovery_mode_set();
+-		}
+-		panic("sierra resource:%s - check failed", pathp);
++		//	sierra_smem_im_recovery_mode_set();
++		//}
++		//panic("sierra resource:%s - check failed", pathp);
+ 	}
+ }
+
+diff --git a/drivers/tty/serial/msm_serial_hs.c b/drivers/tty/serial/msm_serial_hs.c
+index 28bac26..2fc348e 100755
+--- a/drivers/tty/serial/msm_serial_hs.c
++++ b/drivers/tty/serial/msm_serial_hs.c
+@@ -3421,7 +3421,8 @@ static int msm_hs_probe(struct platform_device *pdev)
+	/* set uart config enum index */
+	if (uart_config_set(line, BS_UART_TYPE_HS) != 0)
+	{
+-		return -EPERM;
++               pr_err("%s uart_config_set error\n",__func__);
++               //return -EPERM;
+	}
+ #endif /* CONFIG_SIERRA */
+ /* SWISTOP */

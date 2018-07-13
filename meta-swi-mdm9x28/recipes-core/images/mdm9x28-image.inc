@@ -29,6 +29,12 @@ IMAGE_INSTALL_append = " crda"
 IMAGE_INSTALL_append = " i2cgpioctl"
 IMAGE_INSTALL_append = " sierra-init-tiwifi"
 
+# QCA9377 support (only if it's enabled).
+# Kernel module
+IMAGE_INSTALL_append = " ${@bb.utils.contains('ENABLE_QCA9377', '1', ' qcacld-hl', '', d)}"
+# Init script
+IMAGE_INSTALL_append = " ${@bb.utils.contains('ENABLE_QCA9377', '1', ' sierra-init-qca9377', '', d)}"
+
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 

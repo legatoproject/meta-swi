@@ -1,0 +1,10 @@
+--- a/Kbuild	2018-05-25 14:39:35.827722216 -0700
++++ b/Kbuild	2018-05-25 14:42:20.593929917 -0700
+@@ -986,7 +986,6 @@
+ 		-DWLAN_PERF \
+ 		-DPTT_SOCK_SVC_ENABLE \
+ 		-Wall\
+-		-Werror\
+ 		-D__linux__ \
+ 		-DHAL_SELF_STA_PER_BSS=1 \
+ 		-DWLAN_FEATURE_VOWIFI_11R \
