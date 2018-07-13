@@ -74,7 +74,7 @@ repack_tarball() {
     mv sysroots $ROOT_DIR
 
     echo "Recreate tarball '$TARBALL_XZ'"
-    tar ${SDKTAROPTS} -cf - $ROOT_DIR | pixz > $TARBALL_XZ
+    tar ${SDKTAROPTS} -cf - $ROOT_DIR | xz -T 0 > $TARBALL_XZ
 
     echo "Moving '$TARBALL_XZ' to '$TARBALL_XZ.repkg'"
     mv $TARBALL_XZ "$TARBALL_XZ.repkg"
