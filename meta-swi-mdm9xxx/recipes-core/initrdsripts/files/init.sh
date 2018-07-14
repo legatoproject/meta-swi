@@ -315,7 +315,7 @@ mount_as_dm_verity() {
 
     # Create UBI block device for squashfs image
     if ! [ -b "${ubi_img_block_dev}" ]; then
-        ubiblkvol -a ${ubi_img_dev}
+        ubiblock --create ${ubi_img_dev}
         if [ $? -ne 0 ] ; then
             echo "Unable to create ${ubi_img_block_dev}."
             return ${SWI_ERR}
@@ -329,7 +329,7 @@ mount_as_dm_verity() {
 
     # Dm-verity hash tree table is located on this volume, check it and prepare it for use.
     if ! [ -b "${ubi_hash_block_dev}" ]; then
-        ubiblkvol -a ${ubi_hash_dev}
+        ubiblock --create ${ubi_hash_dev}
         if [ $? -ne 0 ] ; then
             echo "Unable to create ${ubi_hash_block_dev}."
             return ${SWI_ERR}
@@ -467,7 +467,7 @@ set_boot_dev()
             if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
                 # squashfs volume, create UBI block device
                 if ! [ -b "${ubi_img_blkdev}" ]; then
-                    ubiblkvol --attach ${ubi_img_dev}
+                    ubiblock --create ${ubi_img_dev}
                 fi
                 if [ -c "${ubi_hash_dev}" ]; then
                     mount_as_dm_verity ${UBI_ROOTFS_DEVNUM}  \
