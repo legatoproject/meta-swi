@@ -3,11 +3,15 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI_append = " file://prepro.awk \
                    file://run.env.in \
+                   file://mountall.sh \
                    file://mount_unionfs.in \
                    file://etc/group \
                    file://etc/gshadow \
                    file://etc/passwd \
                    file://etc/shadow \
+                   file://rcS-default \
+                   file://rcS \
+                   file://rcK \
                  "
 
 TMPL_FLAGS ??= ""
@@ -47,6 +51,8 @@ do_install_append () {
     # Environment file that should be sourced by other scripts
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
 
+    install -m 0755 ${WORKDIR}/mountall.sh   ${D}${sysconfdir}/init.d
+
     # Script that mounts unionfs
     install -m 0755 -d ${D}${DATA_DIR}
     install -D -m 0755 ${WORKDIR}/mount_unionfs -D ${D}${sysconfdir}/init.d/mount_unionfs
@@ -58,5 +64,10 @@ do_install_append () {
     install -D -m 0400 ${WORKDIR}/etc/gshadow -D ${D}${sysconfdir}/gshadow
     install -D -m 0444 ${WORKDIR}/etc/passwd -D ${D}${sysconfdir}/passwd
     install -D -m 0400 ${WORKDIR}/etc/shadow -D ${D}${sysconfdir}/shadow
+
+    install -d ${D}${sysconfdir}/default
+    install -m 0444 ${WORKDIR}/rcS-default -D ${D}${sysconfdir}/default/rcS
+    install -m 0755 ${WORKDIR}/rcS           ${D}${sysconfdir}/init.d
+    install -m 0755 ${WORKDIR}/rcK           ${D}${sysconfdir}/init.d
 }
 

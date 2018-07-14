@@ -12,7 +12,6 @@ SRC_URI = "file://functions \
            file://single \
            file://urandom \
            file://volatiles \
-           file://inittab \
            file://mdev.conf \
            file://usb.sh \
            file://find-touchscreen.sh \
@@ -40,7 +39,6 @@ SRC_URI_swi-mdm9x28-ar758x-rcy = "file://functions \
            file://single \
            file://urandom \
            file://volatiles \
-           file://inittab \
            file://mdev.conf \
            file://usb.sh \
            file://find-touchscreen.sh \
@@ -62,7 +60,6 @@ SRC_URI_swi-mdm9x40-ar759x-rcy = "file://functions \
            file://single \
            file://urandom \
            file://volatiles \
-           file://inittab \
            file://mdev.conf \
            file://usb.sh \
            file://find-touchscreen.sh \
@@ -115,7 +112,6 @@ do_install () {
     install -d ${D}/var/lib/urandom
     install -d ${D}${sysconfdir}/qct_cfg
 
-    install -m 0644    ${WORKDIR}/inittab   ${D}${sysconfdir}/inittab
     install -m 0644    ${WORKDIR}/mdev.conf ${D}${sysconfdir}/mdev.conf
     install -m 0755    ${WORKDIR}/usb.sh    ${D}${sysconfdir}/mdev/usb.sh
     install -m 0755    ${WORKDIR}/find-touchscreen.sh   ${D}${sysconfdir}/mdev/find-touchscreen.sh
@@ -209,7 +205,6 @@ do_install_swi-mdm9x28-ar758x-rcy() {
     # Holds state information pertaining to urandom
     install -d ${D}/var/lib/urandom
 
-    install -m 0644    ${WORKDIR}/inittab   ${D}${sysconfdir}/inittab
     install -m 0644    ${WORKDIR}/mdev.conf ${D}${sysconfdir}/mdev.conf
     install -m 0755    ${WORKDIR}/usb.sh    ${D}${sysconfdir}/mdev/usb.sh
     install -m 0755    ${WORKDIR}/find-touchscreen.sh   ${D}${sysconfdir}/mdev/find-touchscreen.sh
@@ -248,7 +243,6 @@ do_install_swi-mdm9x40-ar759x-rcy() {
     # Holds state information pertaining to urandom
     install -d ${D}/var/lib/urandom
 
-    install -m 0644    ${WORKDIR}/inittab   ${D}${sysconfdir}/inittab
     install -m 0644    ${WORKDIR}/mdev.conf ${D}${sysconfdir}/mdev.conf
     install -m 0755    ${WORKDIR}/usb.sh    ${D}${sysconfdir}/mdev/usb.sh
     install -m 0755    ${WORKDIR}/find-touchscreen.sh   ${D}${sysconfdir}/mdev/find-touchscreen.sh

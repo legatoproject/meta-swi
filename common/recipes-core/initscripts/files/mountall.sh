@@ -11,10 +11,6 @@
 
 source /etc/run.env
 
-# Create directories for bind-mounts(done via fstab) required by legato.
-mkdir -p ${FLASH_MOUNTPOINT}/legato
-mkdir -p ${FLASH_MOUNTPOINT}/home
-
 #
 # Mount local filesystems in /etc/fstab. For some reason, people
 # might want to mount "proc" several times, and mount -v complains

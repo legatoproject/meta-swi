@@ -111,7 +111,6 @@ rcS_main()
     return ${ret}
 }
 
-
 #
 # The execution starts here.
 #
