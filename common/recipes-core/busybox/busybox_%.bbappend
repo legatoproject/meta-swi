@@ -17,7 +17,8 @@ python() {
                  ' file://busybox-tar-add-IF_FEATURE_-checks.patch' \
                  ' file://0001-iproute-support-scope-.-Closes-8561.patch' \
                  ' file://0001-ip-fix-an-improper-optimization-req.r.rtm_scope-may-.patch' \
-                 ' file://Fix_semop_interrupted.patch')
+                 ' file://Fix_semop_interrupted.patch' \
+                 ' file://CVE-2017-16544.patch')
     else:
         d.setVar('SRC_URI', srcuri + \
                  ' file://microcom_local_echo_and_ascii_backspace_1.27.2.patch')
