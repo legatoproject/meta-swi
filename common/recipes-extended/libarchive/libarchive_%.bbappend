@@ -11,6 +11,8 @@ TARGET_CFLAGS += "-I${WORKDIR}/extra-includes"
 EXTRA_OEMAKE += "CFLAGS='${TARGET_CFLAGS}'"
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
+DEPENDS += "e2fsprogs"
+
 python() {
     import re
 
@@ -22,5 +24,8 @@ python() {
            d.setVar('SRC_URI', srcuri + \
                     ' file://non-recursive-extract-and-list.patch' \
                     ' file://0001-archive_write_disk_posix.c-make-_fsobj-functions-mor.patch' \
-                    ' file://0002-Fix-extracting-hardlinks-over-symlinks.patch')
+                    ' file://0002-Fix-extracting-hardlinks-over-symlinks.patch' \
+                    ' file://CVE-2016-10349-CVE-2016-10350.patch' \
+                    ' file://CVE-2017-5601.patch')
 }
+
