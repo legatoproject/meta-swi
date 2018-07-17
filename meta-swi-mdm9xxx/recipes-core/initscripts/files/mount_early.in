@@ -1039,7 +1039,7 @@ handle_legato_fail_issue()
         # failure reason, because partition failed to mount. We need
         # to swap this Legato image with good one.
         swap_dual_system $mtd_dev_num
-        if [ $? -ne ${SWI_TRUE}]; then
+        if [ $? -ne ${SWI_TRUE} ]; then
             echo "The partition should not be handled"
             return ${SWI_FALSE}
         fi

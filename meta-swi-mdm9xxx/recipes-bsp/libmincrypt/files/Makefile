@@ -7,3 +7,5 @@ rsa.o: rsa.c ../include/mincrypt/rsa.h
 sha.o: sha.c ../include/mincrypt/sha.h
 	$(CC) $(INCLUDES) -I./include $(CFLAGS) -c $<
 
+clean:
+	rm -f *.o *.a

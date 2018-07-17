@@ -1,7 +1,7 @@
-From 127dba5872f918d7ad96f5230aa67f242945588c Mon Sep 17 00:00:00 2001
+From c01d063b91d4fae3501bd76e3a13346e01f54539 Mon Sep 17 00:00:00 2001
 From: Lucy He <LHe@sierrawireless.com>
-Date: Tue, 31 Oct 2017 01:46:07 +0800
-Subject: [PATCH] start_power_config
+Date: Mon, 27 Nov 2017 22:35:22 +0800
+Subject: [PATCH] start-power-config
 
 Signed-off-by: Lucy He <LHe@sierrawireless.com>
 ---
@@ -9,17 +9,18 @@ Signed-off-by: Lucy He <LHe@sierrawireless.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/start_power_config b/start_power_config
-index 7256292..316a19b 100755
+index 43b10a2..c7a45fb 100755
 --- a/start_power_config
 +++ b/start_power_config
-@@ -46,6 +46,8 @@ case "$1" in
- 		echo "1 800000:86" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
+@@ -45,6 +45,8 @@ case "$1" in
+ 		echo 998400 > /sys/devices/system/cpu/cpufreq/interactive/hispeed_freq
+ 		echo "1 806400:80" > /sys/devices/system/cpu/cpufreq/interactive/target_loads
  		echo 40000 > /sys/devices/system/cpu/cpufreq/interactive/min_sample_time
- 		echo 400000 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
 +		timeout_val=40000000000
 +		echo app_init $timeout_val > /sys/power/wake_lock
-		echo mem > /sys/power/autosleep
-
-		# Enable Low Power modes
---
+ 		echo 806400 > /sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq
+ 		echo mem > /sys/power/autosleep
+ 
+-- 
 1.9.1
+

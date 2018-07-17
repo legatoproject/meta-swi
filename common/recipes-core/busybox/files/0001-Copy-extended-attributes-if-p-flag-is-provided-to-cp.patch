@@ -65,14 +65,14 @@ diff --git a/libbb/Kbuild.src b/libbb/Kbuild.src
 index 7fb6872..472565e 100644
 --- a/libbb/Kbuild.src
 +++ b/libbb/Kbuild.src
-@@ -173,6 +173,7 @@ lib-$(CONFIG_TRACEROUTE6) += inet_cksum.o
- lib-$(CONFIG_UDHCPC) += inet_cksum.o
- lib-$(CONFIG_UDHCPC6) += inet_cksum.o
- lib-$(CONFIG_UDHCPD) += inet_cksum.o
-+lib-$(CONFIG_XATTR) += copy_file_attr.o
+@@ -170,6 +170,7 @@
+ lib-$(CONFIG_MPSTAT) += get_cpu_count.o
+ lib-$(CONFIG_POWERTOP) += get_cpu_count.o
  
- # We shouldn't build xregcomp.c if we don't need it - this ensures we don't
- # require regex.h to be in the include dir even if we don't need it thereby
++lib-$(CONFIG_XATTR) += copy_file_attr.o
+ lib-$(CONFIG_PING) += inet_cksum.o
+ lib-$(CONFIG_PING6) += inet_cksum.o
+ lib-$(CONFIG_TRACEROUTE) += inet_cksum.o
 diff --git a/libbb/copy_file.c b/libbb/copy_file.c
 index a4be875..a9ffa05 100644
 --- a/libbb/copy_file.c

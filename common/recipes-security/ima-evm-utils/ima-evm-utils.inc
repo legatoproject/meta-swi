@@ -34,7 +34,4 @@ inherit autotools gettext pkgconfig
 # Fix "QA Issue: No GNU_HASH in the elf binary" problem
 INSANE_SKIP_${PN} = "ldflags"
 
-# Need to find libkeyutils so library
-EXTRA_OEMAKE = "LDFLAGS=-L${STAGING_LIBDIR} -lkeyutils"
-
 BBCLASSEXTEND = "native nativesdk"

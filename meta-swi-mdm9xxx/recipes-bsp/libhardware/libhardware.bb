@@ -10,8 +10,8 @@ SRCREV = "267df67ebf6ac7b29bf43fdfe9af41a64aec0036"
 LIBHARDWARE_REPO = "git://codeaurora.org/platform/hardware/libhardware;branch=LNX.LE.2.1"
 PR = "r0"
 
-SRC_URI  = "${LIBHARDWARE_REPO}"
-SRC_URI += "file://autotools.patch"
+SRC_URI  = "${LIBHARDWARE_REPO} \
+            file://autotools.patch "
 
 S = "${WORKDIR}/git"
 

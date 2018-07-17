@@ -9,3 +9,7 @@ SRC_URI += "file://eglibc-fts-without-LFS.patch \
 
 # Sierra Wireless home grown ...
 SRC_URI += "file://0001-cability-Fix-libfakeroot.c-related-compilation-error.patch"
+
+do_configure_prepend() {
+    mkdir -p "${S}/build-aux"
+}

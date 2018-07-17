@@ -39,7 +39,7 @@ TARGET_LDFLAGS = ""
 do_configure[noexec] = "1"
 
 compile_target() {
-    make $LEGATO_TARGET
+    make $LEGATO_TARGET ENABLE_IMA=${ENABLE_IMA} IMA_PRIVATE_KEY=${IMA_PRIVATE_KEY} IMA_PUBLIC_CERT=${IMA_PUBLIC_CERT}
 }
 
 do_install() {
