@@ -15,6 +15,9 @@ COMPATIBLE_MACHINE_swi-mdm9x15 = "swi-mdm9x15"
 KBRANCH_DEFAULT_MDM9X15 ?= "standard/swi-mdm9x15-yocto-1.7-ref"
 KBRANCH_swi-mdm9x15 = "${KBRANCH_DEFAULT_MDM9X15}"
 
+# Provide a config baseline for things so the kernel will build...
+KERNEL_DEFCONFIG ?= "mdm9615_defconfig"
+
 KMETA_DEFAULT_MDM9X15 ?= "meta-yocto-1.7-ref"
 KMETA = "${KMETA_DEFAULT_MDM9X15}"
 
@@ -172,10 +175,9 @@ do_tag_config() {
     sed -i '/LOCALVERSION/s/=".*+/="-/' .config
 }
 
-do_oldconfig() {
+do_configure_prepend() {
     cd ${KBUILD_OUTPUT}
-    cp ${LINUX_REPO_DIR}/../../kernel-meta/meta/cfg/kernel-cache/bsp/swi-mdm9x15/swi-mdm9x15.cfg .config
-    oe_runmake oldconfig
+    cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} .config
 }
 
 do_kernel_configme() {
@@ -186,4 +188,3 @@ do_install_append() {
 }
 
 addtask tag_config after do_configure before do_kernel_configcheck
-addtask do_oldconfig after do_configure before do_tag_config
