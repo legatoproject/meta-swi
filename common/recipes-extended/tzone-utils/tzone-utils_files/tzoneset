@@ -1,0 +1,70 @@
+#!/bin/sh
+###############################################################################
+# This executable will be used to properly set device timezone as well as
+# device time (if requested).
+#
+# Author: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+#
+# Copyright (C) 2018 Sierra Wireless Inc.
+# Use of this work is subject to license.
+#
+###############################################################################
+
+UMASK=022
+umask $UMASK
+
+# import run environment
+source /etc/run.env
+
+# Version of this executable.
+VERSION="0.90"
+
+# This executable
+this_e=$( basename $0 )
+
+lock_file_g=/tmp/.$this_e.lock
+
+#
+# Useful methods.
+#
+
+# Parse passed options.
+parse_options()
+{
+    local num_parms=$#
+
+    swi_log "Number of parameters received: [$num_parms]"
+    swi_log "Parameters received: [$@]"
+
+    return $SWI_OK
+}
+
+# Check the environment we run this executable in.
+check_env()
+{
+    return $SWI_OK
+}
+
+# Main method.
+main()
+{
+    local parms="$@"
+
+    # list of methods to execute
+    local method_list=(check_env
+                       "parse_options $parms")
+
+    # Execute all methods in the list
+    for method in "${method_list[@]}"; do
+        echo "${this_e}: Executing [$method]... "
+        $method
+        if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+    done
+
+    return $SWI_OK
+}
+
+##################
+# Main entry point
+##################
+main "$@" ; exit $?

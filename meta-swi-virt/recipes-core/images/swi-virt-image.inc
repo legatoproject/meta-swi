@@ -13,6 +13,10 @@ IMAGE_INSTALL_append = " kernel-module-softdog"
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d)}"
 
+# Add timezone related packages
+IMAGE_INSTALL_append = " tzdata"
+IMAGE_INSTALL_append = " tzone-utils"
+
 # Prepare a package with kernel + hdd image
 do_prepare_virt[depends] += "virtual/kernel:do_deploy"
 do_prepare_virt() {

@@ -26,6 +26,10 @@ IMAGE_INSTALL_append = " kernel-modules"
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL_append = " linkmon"
 
+# Add timezone related packages
+IMAGE_INSTALL_append = " tzdata"
+IMAGE_INSTALL_append = " tzone-utils"
+
 create_ubinize_config() {
     local cfg_path=$1
     local rootfs_type=$2
