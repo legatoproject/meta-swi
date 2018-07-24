@@ -1,7 +1,6 @@
-inherit kernel localgit
+inherit kernel
 
 require recipes-kernel/linux-quic/linux-quic.inc
-
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 COMPATIBLE_MACHINE = "(swi-mdm9x40)"
 
@@ -13,24 +12,19 @@ KERNEL_DEFCONFIG ?= "mdm9640_defconfig"
 B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
 
-SRC_DIR = "${LINUX_REPO_DIR}"
+FILESPATH = "${LINUX_REPO_DIR}:${THISDIR}/files"
+SRC_URI = "file://.;subdir=kernel"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
-do_configure_prepend() {
-    # When SRC_URI contains something, the Yocto kernel.bbclass creates
-    # ${STAGING_KERNEL_DIR} as a symlink to the local git repo; due to similar
-    # reasons that also motivate our localgit class. This is in the do_unpack
-    # step. When SRC_URI is empty, ${STAGING_KERNEL_DIR} ends up an empty
-    # directory rather than a symlink. We check for this and create the
-    # symlink anyway.
-    if [ ! -L ${STAGING_KERNEL_DIR} ] ; then
-      rm -rf ${STAGING_KERNEL_DIR}
-      mkdir -p ${STAGING_KERNEL_DIR}
-      rmdir ${STAGING_KERNEL_DIR}
-      ln -sf ${SRC_DIR} ${STAGING_KERNEL_DIR}
-    fi
+do_unpack_append() {
+    wrkdir = d.getVar('WORKDIR', True)
+    srcdir = d.getVar('S', True)
+    os.system("mkdir -p %s" % (srcdir))
+    os.system("cp -drl %s/kernel/. %s/." % (wrkdir, srcdir))
+}
 
+do_configure_prepend() {
     cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
 
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper

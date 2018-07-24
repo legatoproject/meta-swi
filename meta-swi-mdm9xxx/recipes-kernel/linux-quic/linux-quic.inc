@@ -30,7 +30,7 @@ def determine_linux_version(d):
     return ".".join(v)
 
 LINUX_VERSION ?= "${@determine_linux_version(d)}"
-PV = "${LINUX_VERSION}+git${GITSHA}"
+PV = "${LINUX_VERSION}"
 PR = "r1"
 
 do_install_append() {
