@@ -16,6 +16,96 @@ root_firmware_g=/lib/firmware
 @endif
 overlayfs_sig_g=${OVERLAYFS_SIGNATURE}
 ufs_type=${UFS_T}
+etc_is_writable_g=${SWI_FALSE}
+
+# I've found cases where /etc/localtime is pointing to /etc/TZ,
+# and we need to fix it, if possible.
+# This will only work if /etc is writeable.
+localtime_fixup()
+{
+    local ret=$SWI_OK
+    local localtime=""
+    local timezone_files_root=/usr/share/zoneinfo
+    local sl_localtime=/etc/localtime
+    local real_localtime=$timezone_files_root/localtime
+    local timezone=""
+    local timezone_file=/etc/timezone
+    local default_tz="Universal"
+
+    if [ "x${etc_is_writable_g}" != "x${SWI_TRUE}" ] ; then
+        return $SWI_OK
+    fi
+
+    # If timezone mount point does not exist, make one.
+    if [ ! -f $real_localtime ] ; then
+        swi_log "Creating [$real_localtime] mount point."
+        touch $real_localtime
+    fi
+
+    # Make sure that timezone string exists. If it does not,
+    # setup default.
+    if [ ! -f $timezone_file ] ; then
+        timezone="$default_tz"
+        swi_log "Using default timezone [$timezone]."
+        echo "$timezone" >$timezone_file
+    else
+        timezone=$( cat $timezone_file )
+        swi_log "Using timezone [$timezone]."
+    fi
+
+    # Make sure that timezone exists.
+    if [ ! -f $timezone_files_root/$timezone ] ; then
+        swi_log "[$timezone] does not exist, using [$default_tz]."
+        timezone="$default_tz"
+        echo "$timezone" >$timezone_file
+    fi
+
+    # /etc/localtime must point to proper timezone file.
+    localtime=$( readlink -f $sl_localtime )
+    if [ "x$localtime" != "x$real_localtime" ] ; then
+        # None of this should fail, it's RW file system.
+        rm -f $sl_localtime
+        ln -s $real_localtime $sl_localtime
+    fi
+
+    # We always have to do this, because overlay is mounted on /etc
+    # after timezone initial mount bind (take a look at
+    # mount_early:mount_early_set_timezone() )
+    umount $real_localtime &>/dev/null
+    mount --bind $timezone_files_root/$timezone $real_localtime
+
+    return $SWI_OK
+}
+
+# Make sure that /etc/timezone is writable even if /etc is not.
+set_timezone_writable()
+{
+    local ret=${SWI_OK}
+
+    # If /etc is not writable, make sure that /etc/timezone is.
+    if [ "x${etc_is_writable_g}" = "x${SWI_TRUE}" ] ; then
+        return ${SWI_OK}
+    fi
+
+    # This is only going to work if /etc/timezone exists
+    if [ ! -f /etc/timezone ] ; then
+        # Timezone file is not available, and there is nothing
+        # we should do here. Note that this is not an error.
+        return ${SWI_OK}
+    fi
+
+    # Save timezone content.
+    cat /etc/timezone > /tmp/timezone
+
+    # Now, make sure it appears to be writable.
+    mount --bind /tmp/timezone /etc/timezone
+    if [ $? -ne 0 ] ; then
+        swi_log "Cannot mount /tmp/timezone"
+        ret=${SWI_ERR}
+    fi
+
+    return ${ret}
+}
 
 mount_unionfs_dir()
 {
@@ -83,6 +173,7 @@ mount_unionfs_start()
         if [ $? -ne ${SWI_OK} ] ; then
             return ${SWI_ERR}
         fi
+        etc_is_writable_g=${SWI_TRUE}
     fi
 
     # Try to make /data writable
@@ -103,6 +194,14 @@ mount_unionfs_start()
 @endif
 
     return ${ret}
+}
+
+unset_timezone_writable()
+{
+    # Do not care about the result
+    umount -l /etc/timezone &>/dev/null
+
+    return ${SWI_OK}
 }
 
 # Stop union fs.
@@ -133,9 +232,12 @@ mount_unionfs_stop()
 case "$1" in
     start)
         mount_unionfs_start
+        set_timezone_writable
+        localtime_fixup
     ;;
 
     stop)
+        unset_timezone_writable
         mount_unionfs_stop
     ;;
 

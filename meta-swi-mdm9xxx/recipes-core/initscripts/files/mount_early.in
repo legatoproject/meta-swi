@@ -1382,6 +1382,60 @@ mount_early_create_dirs()
     return ${ret}
 }
 
+# Set timezone. This method is in mount_early, because
+# we are mounting various files.
+mount_early_set_timezone()
+{
+    local ret=${SWI_OK}
+    local timezone=""
+    local localtime=""
+    local timezone_files_root=/usr/share/zoneinfo
+    local real_localtime=${timezone_files_root}/localtime
+
+    # This is only going to work if /etc/timezone exists
+    if [ ! -f /etc/timezone ] ; then
+        swi_log "/etc/timezone does not exist, not setting timezone"
+        return ${SWI_OK}
+    fi
+
+    # If /etc/localtime is not softlink, nothing we could do.
+    if [ ! -L /etc/localtime ] ; then
+        swi_log "/etc/localtime does not exist, not setting timezone"
+        return ${SWI_OK}
+    fi
+
+    # Also, /etc/localtime must point to proper timezone file.
+    localtime=$( readlink -f /etc/localtime )
+    if [ "x${localtime}" != "x${real_localtime}" ] ; then
+        # We are unable to perform this operation, but can continue.
+        swi_log "/etc/localtime is invalid, not setting timezone"
+        return ${SWI_OK}
+    fi
+
+    # See what the timezone is. This will be the name of the file
+    # in /usr/share/zoneinfo .
+    timezone=$( cat /etc/timezone )
+    swi_log "Using timezone ${timezone}..."
+
+    # Now, set proper timezone. If this operation fails, it is an error.
+    mount --bind ${timezone_files_root}/${timezone} ${real_localtime}
+    if [ $? -ne 0 ] ; then
+        swi_log "Moounting of ${timezone_files_root}/${timezone} failed."
+        ret=${SWI_ERR}
+    fi
+
+    return ${ret}
+}
+
+mount_early_unset_timezone()
+{
+    local real_localtime=${timezone_files_root}/localtime
+
+    # Do not care about the result.
+    umount -l ${real_localtime} &>/dev/null
+    return ${SWI_OK}
+}
+
 # Chooser.
 mount_early_start()
 {
@@ -1395,7 +1449,9 @@ mount_early_start()
         method_list_essential="
                                mount_early_pseudo
                                mount_early_other
-                               mount_early_create_dirs"
+                               mount_early_create_dirs
+                               mount_early_set_timezone
+                              "
     fi
 
     local method_list="
@@ -1426,6 +1482,7 @@ mount_early_stop()
                        mount_early_user_stop
                        mount_early_legato_stop
                        mount_early_userrw_stop
+                       mount_early_unset_timezone
                       "
 
     for method in ${method_list} ; do
