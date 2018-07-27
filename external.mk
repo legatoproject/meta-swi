@@ -206,6 +206,9 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 # Machine: swi-mdm9x15
 
 ifeq ($(MACH),mdm9x15)
+  KBRANCH_mdm9x15 := $(shell git --git-dir=kernel/.git branch | grep -oe 'standard/.*')
+  KMETA_mdm9x15 := $(shell git --git-dir=kernel/.git branch | grep -oe 'meta-.*')
+
   MACH_ARGS += -a KBRANCH_DEFAULT_MDM9X15=${KBRANCH_mdm9x15} \
                -a KMETA_DEFAULT_MDM9X15=${KMETA_mdm9x15}
 endif
