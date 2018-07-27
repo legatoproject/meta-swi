@@ -15,6 +15,8 @@ uart_get_srv
 
 DAEMON_OPT1_UART="1"
 DAEMON_OPT2_UART="/dev/ttyHS0"
+#provide the DAEMON_OPT3_UART in miliseconds
+DAEMON_OPT3_UART="7000"
 
 DAEMON_OPT1_USB="2"
 
@@ -23,16 +25,9 @@ set -e
 case "$1" in
   start)
         swi_log "Starting DS_MUX: "
-        swi_log "UART1_SERVICE=${UART1_SERVICE}"
-        if  [ x${UART1_SERVICE} = "xAT" ]; then
-          # Start DS_MUX daemon if UART 1 is set to AT Service
-          swi_log "UART1 is AT Service"
-          start-stop-daemon -S -b -a DS_MUX -- $DAEMON_OPT1_UART $DAEMON_OPT2_UART
-       else
-          # Start DS_MUX daemon on USB if UART 1 is NOT set to AT Service
-          swi_log "DS_MUX daemon on USB"
-          start-stop-daemon -S -b -a DS_MUX -- $DAEMON_OPT1_USB
-        fi
+        # Both DAEMON_OPT1_UART and DAEMON_OPT2_UART are not really used in the start_at_cmux_le script
+        # Because the mux channel is determined by the at!muxmode command
+        start-stop-daemon -S -b -a DS_MUX -- $DAEMON_OPT1_UART $DAEMON_OPT2_UART $DAEMON_OPT3_UART
         swi_log "Done start_at_cmux_le script."
         ;;
   stop)
