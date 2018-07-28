@@ -1,0 +1,27 @@
+#!/bin/sh
+# --------------------------------------------------------------
+# Copyright (c) 2012 Sierra Wireless. All Rights Reserved.
+# --------------------------------------------------------------
+# restartNMEA: Simple script to restart NMEA port bridging 
+# on USB disconnect/reconnect
+
+# start ttyGS0 minitoring and bridging
+while [ 1 ]
+do
+  if [ -e /dev/ttyGS0 ] && [ -e /dev/nmea ]; then
+    cat /dev/nmea > /dev/ttyGS0 &
+    # remember 'cat /dev/nmea' pid so it can be killed later
+    nmeapid=$!
+    cat /dev/ttyGS0 > /dev/nmea
+    # cat /dev/ttyGS0 exit, kill 'cat /dev/nmea' too   
+    kill $nmeapid
+    # wait 15s for ttyGS0 re-enumeration
+    sleep 15
+  elif [ -e /dev/nmea ]; then
+    # wait 15s for ttyGS0 show up, in case SWOC enumeration at startup
+    sleep 15
+  else
+    # /dev/nmea not exist, might not be enabled, exit
+    break
+  fi
+done
