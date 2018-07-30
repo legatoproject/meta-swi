@@ -35,6 +35,9 @@ IMAGE_INSTALL_append = " ${@bb.utils.contains('ENABLE_QCA9377', '1', ' qcacld-hl
 # Init script
 IMAGE_INSTALL_append = " ${@bb.utils.contains('ENABLE_QCA9377', '1', ' sierra-init-qca9377', '', d)}"
 
+# Bluez support for Bluetooth
+IMAGE_INSTALL_append = " bluez5"
+
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 
