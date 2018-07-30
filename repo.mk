@@ -254,6 +254,9 @@ ifeq (mdm9x15,$(MACH))
   KBRANCH_mdm9x15_BRIEF := $(shell git --git-dir=kernel/.git log -1 --pretty=oneline | sed "s/'//g")
   KMETA_mdm9x15_BRIEF := $(shell git --git-dir=kernel-meta/.git log -1 --pretty=oneline | sed "s/'//g")
 
+  MACH_ARGS += -a KBRANCH_DEFAULT_MDM9X15=${KBRANCH_mdm9x15} \
+               -a KMETA_DEFAULT_MDM9X15=${KMETA_mdm9x15}
+
   PREPARE_TASKS += kernel_branches
 
 .PHONY: kernel_branches
