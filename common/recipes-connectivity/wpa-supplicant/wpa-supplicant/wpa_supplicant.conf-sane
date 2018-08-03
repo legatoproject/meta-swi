@@ -3,5 +3,6 @@ ctrl_interface_group=0
 update_config=1
 
 network={
+        ssid="SWIR_MOBILE_AP"
         key_mgmt=NONE
 }

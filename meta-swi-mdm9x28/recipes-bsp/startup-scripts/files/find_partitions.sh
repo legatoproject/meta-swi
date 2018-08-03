@@ -144,6 +144,7 @@ else
 fi
 
 MODEM_PARTITION=modem
+DS_MODEM_SUB_SYSTEM_FLAG=000
 
 is_dual_system
 if [ $? -eq ${SWI_TRUE} ]; then

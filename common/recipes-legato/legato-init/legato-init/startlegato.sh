@@ -30,13 +30,13 @@ case "$1" in
         umount /legato 2>/dev/null
         mount -o bind $LEGATO_MNT /legato
 
-        $LEGATO_START
+        test -x $LEGATO_START && $LEGATO_START
         ;;
 
     stop)
         # Do something to stop Legato
         echo "Legato shutdown sequence"
-        $LEGATO_START stop
+        test -x $LEGATO_START && $LEGATO_START stop
         umount /legato
         ;;
 

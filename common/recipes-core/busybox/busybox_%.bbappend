@@ -1,10 +1,20 @@
 # look for files in the layer first
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-SRC_URI_1.24.1_append = " file://microcom_local_echo_and_ascii_backspace.patch \
-                          file://mdev-dev-bus-usb.patch"
+python() {
+    import re
 
-SRC_URI_1.27.2_append = "file://microcom_local_echo_and_ascii_backspace_1.27.2.patch"
+    pv = d.getVar('PV', True)
+    srcuri = d.getVar('SRC_URI', True)
+
+
+    # Handle versions < 1.27.2
+    if re.match('1.2[0-6]', pv):
+        d.setVar('SRC_URI', srcuri + ' file://microcom_local_echo_and_ascii_backspace.patch' \
+                                     ' file://mdev-dev-bus-usb.patch')
+    else:
+        d.setVar('SRC_URI', srcuri + ' file://microcom_local_echo_and_ascii_backspace_1.27.2.patch')
+}
 
 SRC_URI_append = " file://0001-Copy-extended-attributes-if-p-flag-is-provided-to-cp.patch"
 

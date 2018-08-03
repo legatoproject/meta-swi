@@ -52,8 +52,7 @@ case "$1" in
                 mkdir -p /dev/usb-ffs/adb
                 mount -o uid=2000,gid=2000 -t functionfs adb /dev/usb-ffs/adb
                 mount -o remount,gid=5,mode=620 /dev/pts
-                mkdir -p /system/bin
-                ln -s /bin/sh  /system/bin/sh
+                mkdir -p /system/bin 2>/dev/null && ln -s /bin/sh /system/bin/sh
             fi
 
             ;;

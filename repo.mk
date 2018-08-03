@@ -98,6 +98,10 @@ IMA_CONFIG ?= $(PWD)/meta-swi/common/recipes-security/ima-support-tools/files/im
 # Default BB arguments
 BB_ARGS ?=
 
+# Enable build for QCA9377. We are currently unsure which products would receive
+# this feature, and by default we do not want it.
+QCA9377_BUILD ?= 0
+
 all: image_bin
 
 clean:
@@ -133,6 +137,20 @@ ifeq ($(IMA_BUILD),1)
     $(error "IMA is not supported for [${MACH}][${PROD}]")
   else
     IMA_ARGS := -i ${IMA_CONFIG}
+  endif
+endif
+
+# QCA9377 build is currently only supported on WP76. Currently, this is for
+# MangOH only, however it is not enabled by default. So, if no one knows about
+# it, no harm done.
+ifeq ($(QCA9377_BUILD),1)
+  ifneq ($(MACH),mdm9x28)
+    $(error "QCA9377 WiFi is not supported on [${MACH}]")
+  else
+    ifeq ($(PROD),ar758x)
+	$(error "QCA9377 WiFi is not supported on [${MACH}][${PROD}]")
+    endif
+    QCA9377_ARGS := -G
   endif
 endif
 
@@ -213,7 +231,8 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${HOSTNAME_ARGS} \
 				${IMA_ARGS} \
 				${BB_ARGS} \
-				${EXT_SWI_IMG_ARGS}
+				${EXT_SWI_IMG_ARGS} \
+				${QCA9377_ARGS}
 
 # Machine:
 

@@ -29,7 +29,7 @@ EXTRA_OEMAKE = "-j 1 \
                 BOOTLOADER_OUT='${B}' \
                 ARCH='${TARGET_ARCH}' \
                 CC='${CC}' \
-                ${@base_conditional('ARM_FLOAT_ABI', 'hard', 'ENABLE_HARD_FPU=1', '', d)} \
+                ${@oe.utils.conditional('ARM_FLOAT_ABI', 'hard', 'ENABLE_HARD_FPU=1', '', d)} \
                 ENABLE_IMA='${ENABLE_IMA}' \
                 IMA_KERNEL_CMDLINE_OPTIONS='${IMA_KERNEL_CMDLINE_OPTIONS}'"
 

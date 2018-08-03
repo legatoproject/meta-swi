@@ -7,3 +7,5 @@ RDEPENDS_${PN}_append_class-nativesdk = " bsdtar"
 
 # Enable extended attributes for all targets.
 PACKAGECONFIG_append = " xattr"
+TARGET_CFLAGS += "-I${WORKDIR}/extra-includes"
+EXTRA_OEMAKE += "CFLAGS='${TARGET_CFLAGS}'"
