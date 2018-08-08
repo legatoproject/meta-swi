@@ -11,6 +11,8 @@ DEPENDS += "legato-tools"
 DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"
 DEPENDS += "ima-support-tools-native"
+DEPENDS += "ima-evm-utils-native"
+DEPENDS += "libarchive-native"
 
 # Framework dependencies
 RDEPENDS_${PN} += "libgcc"
