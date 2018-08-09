@@ -65,3 +65,6 @@ RDEPENDS_${PN} += "keyutils"
 
 # Transparently update ld cache.
 RDEPENDS_${PN} += "update-ld-cache"
+
+# Needed for differential update (bsdiff and bspatch)
+RDEPENDS_${PN} += "bsdiff"

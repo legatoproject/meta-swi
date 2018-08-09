@@ -13,6 +13,7 @@ DEPENDS += "mtd-utils-native"
 DEPENDS += "ima-support-tools-native"
 DEPENDS += "ima-evm-utils-native"
 DEPENDS += "libarchive-native"
+DEPENDS += "bsdiff-native"
 
 # Framework dependencies
 RDEPENDS_${PN} += "libgcc"
