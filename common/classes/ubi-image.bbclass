@@ -23,7 +23,8 @@ create_ubi_image() {
         ;;
     esac
 
-    ${STAGING_DIR_NATIVE}/usr/sbin/ubinize -o $ubi_path $ubinize_args $ubinize_cfg
+    # For UBINIZE, a fixed sequence number must be set for delta update
+    ${STAGING_DIR_NATIVE}/usr/sbin/ubinize -Q 0x12345678 -o $ubi_path $ubinize_args $ubinize_cfg
 
     if [ -n "$ubi_link_path" ]; then
         rm -f $ubi_link_path
