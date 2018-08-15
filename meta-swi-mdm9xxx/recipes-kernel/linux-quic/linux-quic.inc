@@ -6,7 +6,7 @@ inherit kernel-src-install
 # Determine linux version from sources
 def determine_linux_version(d):
     repo_dir = d.getVar('LINUX_REPO_DIR', True)
-    makefile_path = os.path.join(repo_dir, "..", "Makefile")
+    makefile_path = os.path.join(repo_dir, "Makefile")
     if not os.path.exists(makefile_path):
         raise Exception("Kernel Makefile doesn't exist at %s" % makefile_path)
 

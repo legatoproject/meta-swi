@@ -6,7 +6,7 @@ LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5
 
 PR = "r0"
 
-FILESPATH =+ "${LINUX_REPO_DIR}/../net:"
+FILESPATH =+ "${LINUX_REPO_DIR}/net:"
 
 SRC_URI = "file://embms_kernel \
            file://start_embms_le"

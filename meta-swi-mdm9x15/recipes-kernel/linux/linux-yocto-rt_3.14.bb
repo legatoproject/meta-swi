@@ -14,7 +14,7 @@ KBRANCH_swi-mdm9x15 = "${KBRANCH_DEFAULT_MDM9X15}"
 KMETA_DEFAULT_MDM9X15 ?= "meta-yocto-1.7-ref"
 KMETA = "${KMETA_DEFAULT_MDM9X15}"
 
-KSRC_linux_yocto_3_14 := "${LINUX_REPO_DIR}"
+KSRC_linux_yocto_3_14 := "${LINUX_REPO_DIR}/.git"
 SRC_URI = "git://${KSRC_linux_yocto_3_14};protocol=file;branch=${KBRANCH},${KMETA};name=machine,meta"
 
 COMPATIBLE_MACHINE_swi-mdm9x15 = "(swi-mdm9x15)"
