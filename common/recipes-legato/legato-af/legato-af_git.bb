@@ -22,7 +22,6 @@ RDEPENDS_${PN} += "libstdc++"
 # Target dependencies
 DEPENDS += "curl"
 DEPENDS += "zlib"
-DEPENDS += "tinycbor"
 DEPENDS += "openssl"
 
 # Build time dependencies (not in the rootfs image)
