@@ -14,12 +14,23 @@ this_e=$( basename $0 )
 # UBIFS mount options. Platforms may or may not have quota support. Hence, quota
 # support must be separated from the rest of the default options.
 UBI_MNTOPT_DEFAULT="sync,smackfsdef=_"
-UBI_MNT_OPT_QUOTA="usrquota,grpquota"
+UBI_MNTOPT_QUOTA="usrquota,grpquota"
 
 # YAFFS2 FS mount options. Do not change ecc for tags, you may break YAFFS2
 # file systems on various platforms.
 YAFFS2_MNTOPT="rw,tags-ecc-off,smackfsdef=_"
 
+# Quotacheck binary may not be available due to licensing issues. Until
+# this is resolved, we should keep quota support around. Also, it looks like
+# that there is no way to programmatically do quota check, which may force
+# users to use FreeBSD quotacheck.
+# In addition, users could add back quota-tools package, but they would
+# be liable for any licensing issues.
+#
+quota_check="/bin/true"
+if [ -e /usr/sbin/quotacheck ] ; then
+   quota_check="quotacheck"
+fi
 
 # Initialize YAFFS2 support related variables.
 # Auto support detection can be overriden in run.env
@@ -259,7 +270,7 @@ quotacheck_ug()
     # Check both user and group at the same time. If group file is corrupt
     # quotacheck will stop and wait for user input, but show must go on.
     # Therefore, we need 'yes' in order to get things moving again.
-    yes | quotacheck ${qc_sw} ${mntpt}
+    yes | $quota_check ${qc_sw} ${mntpt}
     if [ $? -eq 0 ] ; then
         return ${SWI_OK}
     fi
@@ -282,7 +293,7 @@ quotacheck_ug()
 
         qc_sw="-${ug_sw}mb"
 
-        quotacheck ${qc_sw} ${mntpt}
+        $quota_check ${qc_sw} ${mntpt}
         if [ $? -ne 0 ] ; then
 
             # Quotacheck failed.
@@ -293,7 +304,7 @@ quotacheck_ug()
                 rm -f ${mntpt}/aquota.${ug_str}
                 cp -af ${mntpt}/aquota.${ug_str}~ ${mntpt}/aquota.${ug_str}
 
-                quotacheck ${qc_sw} ${mntpt}
+                $quota_check ${qc_sw} ${mntpt}
                 if [ $? -eq 0 ] ; then
                     swi_log "Quota check done, '${ug_str}' backup file looks healthy."
                     continue
@@ -309,7 +320,7 @@ quotacheck_ug()
             # Things did not go that well with backup file, try to recreate quota file.
             qc_sw="${qc_sw}""c"
 
-            quotacheck ${qc_sw} ${mntpt}
+            $quota_check ${qc_sw} ${mntpt}
             if [ $? -ne 0 ] ; then
                 swi_log "Quota check failed while creating '${ug_str}' quota file, giving up."
 
@@ -603,7 +614,7 @@ mount_ubifs()
     # squashfs mount will fail this test, because quota options are not
     # passed in.
     mnt_opts="${UBI_MNTOPT_DEFAULT},${ubifs_mnt_options}"
-    var=$( echo -n "${mnt_opts/${UBI_MNTOPT_DEFAULT},${UBI_MNT_OPT_QUOTA},rw/}" )
+    var=$( echo -n "${mnt_opts/${UBI_MNTOPT_DEFAULT},${UBI_MNTOPT_QUOTA},rw/}" )
     if [ -z ${var} ] ; then
         # Quota options were passed in, do file system quota check.
         swi_log "Performing quota check on file system mounted at ${mntpt}"
@@ -639,7 +650,7 @@ mount_ubifs_multi_mount_options()
 
     # Try to mount UBIFS partition using various mount options. Do not change
     # parameter order, you will break things.
-    list="${UBI_MNT_OPT_QUOTA},rw rw"
+    list="${UBI_MNTOPT_QUOTA},rw rw"
     for item in ${list} ; do
         swi_log "Trying to mount UBIFS on ${mntpt} using [${item}] mount options..."
         mount_ubifs ${mtd_part_name} ${mntpt} \

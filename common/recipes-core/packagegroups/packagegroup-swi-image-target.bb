@@ -21,9 +21,6 @@ RDEPENDS_${PN} += "conntrack-tools"
 RDEPENDS_${PN} += "libcap"
 RDEPENDS_${PN} += "libcap-bin"
 
-# Userland quota support.
-RDEPENDS_${PN} += "quota"
-
 # Add curl with https support
 RDEPENDS_${PN} += "curl"
 RDEPENDS_${PN} += "ca-certificates"
