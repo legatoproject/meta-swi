@@ -1,3 +1,5 @@
+DEPENDS += "rsync-native"
+
 kernel_src_install() {
     local dest=${D}${KERNEL_SRC_PATH}
     local dest_pref=$dest/usr
@@ -25,9 +27,8 @@ kernel_src_install() {
              -name 'Kbuild*' -o \
              -name '*.include' \)
         find scripts \
-          -type f ) | cpio -o ) | \
-     ( cd $dest
-       cpio -id --no-preserve-owner )
+          -type f ) | \
+      rsync -lptD --files-from=- . $dest )
 
     # We get the generated materials from the build directory:
     # This includes generated headers, config include Makefiles,
@@ -37,9 +38,8 @@ kernel_src_install() {
     ( cd ${STAGING_KERNEL_BUILDDIR}
 
       ( find . \
-          -type f | grep -v '^./scripts/' ) | cpio -o ) | \
-    ( cd $dest
-      cpio -id --no-preserve-owner )
+          -type f | grep -v '^./scripts/' ) | \
+      rsync -lptD --files-from=- . $dest )
 
     # Hack for various apps_proc packages on the mdm9x15:
     # audio-alsa, audcal and others. These include the non-sanitized
