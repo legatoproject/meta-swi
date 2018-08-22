@@ -16,7 +16,7 @@ uart_get_srv
 DAEMON_OPT1_UART="1"
 DAEMON_OPT2_UART="/dev/ttyHS0"
 #provide the DAEMON_OPT3_UART in miliseconds
-DAEMON_OPT3_UART="7000"
+DAEMON_OPT3_UART="5000"
 
 DAEMON_OPT1_USB="2"
 
