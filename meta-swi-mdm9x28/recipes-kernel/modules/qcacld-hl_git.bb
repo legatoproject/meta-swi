@@ -1,5 +1,4 @@
 inherit autotools-brokensep module
-#inherit autotools-brokensep module qperf
 
 DESCRIPTION = "Qualcomm Atheros WLAN CLD high latency driver"
 LICENSE = "ISC"
@@ -21,7 +20,6 @@ S = "${WORKDIR}/git"
 SRC_URI += "file://bdwlan.bin \
 	    file://qwlan.bin \
 	    file://otp.bin \
-            file://0001-compile-options.patch \
            "
 
 # Targets - mdm9650 and sdxhedgehog: modulename = wlan_sdio.ko, chip name - qca9377
@@ -88,6 +86,3 @@ do_install () {
     install -d ${WLAN_KO}/wlan
     install -m 0644 ${S}/wlan.ko ${WLAN_KO}/wlan/
 }
-
-
-#addtask module_signing after do_package before do_package_write_ipk
