@@ -4,8 +4,12 @@ SECTION = "base"
 LICENSE = "GPLv3"
 LIC_FILES_CHKSUM = "file://COPYING;md5=f27defe1e96c2e1ecd4e0c9be8967949"
 
+# Archives can be deleted from the latest mirror, so pick a snapshot
+# corresponding to this fakeroot version.
+DEBIAN_SNAPSHOT_VERSION = "20170817T093655Z"
+
 SRC_URI = "\
-    ${DEBIAN_MIRROR}/main/f/fakeroot/fakeroot_${PV}.orig.tar.bz2 \
+    https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT_VERSION}/pool/main/f/fakeroot/fakeroot_${PV}.orig.tar.bz2 \
 "
 
 inherit autotools
