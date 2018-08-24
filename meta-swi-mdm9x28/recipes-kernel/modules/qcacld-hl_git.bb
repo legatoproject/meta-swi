@@ -5,7 +5,7 @@ LICENSE = "ISC"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=f3b90e78ea0cffb20bf5cca7947a896d"
 
 # Must be in sync with amss.xml.
-# Tag LE.UM.1.1-47600-9x07
+# Base Tag LE.UM.1.1-47600-9x07
 SRCREV = "61a7e18f7703dac9e902b31c82593502f881804b"
 SRC_REPO = "git://codeaurora.org/platform/vendor/qcom-opensource/wlan/qcacld-2.0;branch=wlan-cld2.driver.lnx.1.0.c4-rel"
 
