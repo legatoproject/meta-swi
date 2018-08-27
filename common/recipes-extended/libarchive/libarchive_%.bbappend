@@ -22,7 +22,7 @@ python() {
     # Handle versions < 3.3.2
     if re.match('3.[12]', pv):
            d.setVar('SRC_URI', srcuri + \
-                    ' file://non-recursive-extract-and-list.patch' \
+                    ' file://non-recursive-extract-and-list_3.2.2.patch' \
                     ' file://0001-archive_write_disk_posix.c-make-_fsobj-functions-mor.patch' \
                     ' file://0002-Fix-extracting-hardlinks-over-symlinks.patch' \
                     ' file://CVE-2016-10349-CVE-2016-10350.patch' \
