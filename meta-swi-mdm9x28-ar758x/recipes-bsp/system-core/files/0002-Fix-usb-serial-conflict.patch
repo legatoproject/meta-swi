@@ -1,0 +1,33 @@
+diff --git a/adb/start_adbd b/adb/start_adbd
+index a67f17d48..3ade60533 100644
+--- a/adb/start_adbd
++++ b/adb/start_adbd
+@@ -29,16 +29,12 @@
+ 
+ # adbd        init.d script to start the Android debug bridge daemon
+ 
+-set -e
+-
+ if [ -f /etc/default/adbd ]; then
+         . /etc/default/adbd
+ fi
+ 
+ case "$1" in
+   start)
+-        echo -n "Starting adbd: " > /dev/kmsg
+-        start-stop-daemon -S -b -a /sbin/adbd
+         # Check first if the /data/adb_devid already has an id saved from earlier boot up.
+         # If yes use it to retrieve adb devices else use the msm ID and save it to /data/adb_devid for subsequent boot ups.
+ 
+@@ -57,6 +53,11 @@ case "$1" in
+                     cat /sys/class/android_usb/android0/iSerial > /data/adb_devid
+                     sync
+         fi
++
++        # Start adbd (after iSerial is set).
++        echo -n "Starting adbd: " > /dev/kmsg
++        start-stop-daemon -S -b -a /sbin/adbd
++
+         echo "done" > /dev/kmsg
+         ;;
+   stop)

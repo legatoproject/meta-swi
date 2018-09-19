@@ -1,12 +1,11 @@
 inherit autotools-brokensep module
-#inherit autotools-brokensep module qperf
 
 DESCRIPTION = "Qualcomm Atheros WLAN CLD high latency driver"
 LICENSE = "ISC"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=f3b90e78ea0cffb20bf5cca7947a896d"
 
 # Must be in sync with amss.xml.
-# Tag LE.UM.1.1-47600-9x07
+# Base Tag LE.UM.1.1-47600-9x07
 SRCREV = "61a7e18f7703dac9e902b31c82593502f881804b"
 SRC_REPO = "git://codeaurora.org/platform/vendor/qcom-opensource/wlan/qcacld-2.0;branch=wlan-cld2.driver.lnx.1.0.c4-rel"
 
@@ -21,7 +20,6 @@ S = "${WORKDIR}/git"
 SRC_URI += "file://bdwlan.bin \
 	    file://qwlan.bin \
 	    file://otp.bin \
-            file://0001-compile-options.patch \
            "
 
 # Targets - mdm9650 and sdxhedgehog: modulename = wlan_sdio.ko, chip name - qca9377
@@ -55,7 +53,7 @@ PR = "r0"
 #DEPENDS = "rtsp-alg"
 
 # Append the chip name to firmware installation path
-CHIP_NAME_APPEND = "${@base_conditional('CHIP_NAME', '', '', '/${CHIP_NAME}', d)}"
+CHIP_NAME_APPEND = "${@oe.utils.conditional('CHIP_NAME', '', '', '/${CHIP_NAME}', d)}"
 FIRMWARE_PATH = "${D}/lib/firmware/wlan/qca_cld${CHIP_NAME_APPEND}"
 
 # Explicitly disable LL to enable HL as current WLAN driver is not having
@@ -84,10 +82,7 @@ do_install () {
     install -m 0644 ${WORKDIR}/qwlan.bin ${D}/lib/firmware/
 
     #copying wlan.ko to STAGING_DIR_TARGET
-    WLAN_KO=${@base_conditional('PERF_BUILD', '1', '${STAGING_DIR_TARGET}-perf', '${STAGING_DIR_TARGET}', d)}
+    WLAN_KO=${@oe.utils.conditional('PERF_BUILD', '1', '${STAGING_DIR_TARGET}-perf', '${STAGING_DIR_TARGET}', d)}
     install -d ${WLAN_KO}/wlan
     install -m 0644 ${S}/wlan.ko ${WLAN_KO}/wlan/
 }
-
-
-#addtask module_signing after do_package before do_package_write_ipk

@@ -1,0 +1,23 @@
+# Note: BusyBox init doesn't support runlevels.  The runlevels field is
+# completely ignored by BusyBox init. If you want runlevels, use
+# sysvinit.
+#
+# Format for each entry: <id>:<runlevels>:<action>:<process>
+#
+# id        == tty to run on, or empty for /dev/console
+# runlevels == ignored
+# action    == one of sysinit, respawn, askfirst, wait, once,
+#              restart, ctrlaltdel, and shutdown.
+# process   == program to run
+
+# Run any rc scripts
+::sysinit:/etc/init.d/rcS
+
+# Run a script on shutdown
+::shutdown:/etc/init.d/rcK
+
+# Stuff to do when restarting the init process
+::restart:/sbin/init
+
+# Attempt to start getty on UARTx
+# getty entries are added at buildtime

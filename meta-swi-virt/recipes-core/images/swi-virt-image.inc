@@ -13,6 +13,10 @@ IMAGE_INSTALL_append = " kernel-module-softdog"
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d)}"
 
+# Add timezone related packages
+IMAGE_INSTALL_append = " tzdata"
+IMAGE_INSTALL_append = " tzone-utils"
+
 # Prepare a package with kernel + hdd image
 do_prepare_virt[depends] += "virtual/kernel:do_deploy"
 do_prepare_virt() {
@@ -46,16 +50,17 @@ do_prepare_virt() {
         echo "CMDLINE='rootfstype=ramfs rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=${FSTYPE_VIRT}'" >> $CFG
     fi
 
+    echo "CONSOLE_TTY=$(echo ${SERIAL_CONSOLE} | awk '{print $2}')" >> $CFG
+
     if [[ "${VIRT_ARCH}" == "x86" ]]; then
         echo 'ARG_TARGET="-machine q35 -m 192M"' >> $CFG
         echo 'ROOTFS_METHOD=-hda' >> $CFG
-        echo 'CONSOLE_TTY=ttyS0' >> $CFG
 
     elif [[ "${VIRT_ARCH}" == "arm" ]]; then
         echo 'ARG_TARGET="-machine versatilepb -m 192M"' >> $CFG
         echo 'ROOTFS_METHOD=-hda' >> $CFG
-        echo 'CONSOLE_TTY=ttyS0' >> $CFG
     fi
+
     # ... IMA
     if [[ "${IMA_BUILD}" == "true" ]]; then
         echo 'IMA_BUILD=1' >> $CFG

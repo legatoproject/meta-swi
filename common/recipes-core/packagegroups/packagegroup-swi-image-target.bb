@@ -21,9 +21,6 @@ RDEPENDS_${PN} += "conntrack-tools"
 RDEPENDS_${PN} += "libcap"
 RDEPENDS_${PN} += "libcap-bin"
 
-# Userland quota support.
-RDEPENDS_${PN} += "quota"
-
 # Add curl with https support
 RDEPENDS_${PN} += "curl"
 RDEPENDS_${PN} += "ca-certificates"
@@ -51,9 +48,6 @@ RDEPENDS_${PN} += "ppp"
 # Add rngd for entropy
 RDEPENDS_${PN} += "rng-tools"
 
-# Add tinycbor to all targets
-RDEPENDS_${PN} += "tinycbor"
-
 # Make sure to package libgcc in the rootfs
 # since Legato depends on it
 RDEPENDS_${PN} += "libgcc"
@@ -65,3 +59,6 @@ RDEPENDS_${PN} += "keyutils"
 
 # Transparently update ld cache.
 RDEPENDS_${PN} += "update-ld-cache"
+
+# Needed for differential update (bsdiff and bspatch)
+RDEPENDS_${PN} += "bsdiff"

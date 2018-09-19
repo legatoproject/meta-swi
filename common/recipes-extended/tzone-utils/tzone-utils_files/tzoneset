@@ -1,0 +1,425 @@
+#!/bin/sh
+###############################################################################
+# This executable will be used to properly set device timezone as well as
+# device time (if requested).
+#
+# Author: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+#
+# Copyright (C) 2018 Sierra Wireless Inc.
+# Use of this work is subject to license.
+#
+###############################################################################
+
+UMASK=022
+umask $UMASK
+
+# import run environment
+source /etc/run.env
+
+# Version of this executable.
+version="0.90"
+
+# This executable
+this_e=$( basename $0 )
+
+# Operation must be atomic, and lock file is necessary.
+lock_file_g=/var/lock/.$this_e.lock
+
+# Time (in seconds from epoch)
+time_utc_g=0
+
+# Time offset from UTC (in seconds)
+time_offset_utc_g=0
+
+# DST (in hours)
+dst_g=0
+
+#
+# Useful methods.
+#
+
+# Parse passed options. Needed parameters:
+# - 1st param: time from epoch (in seconds)
+# - 2nd param: UTC offset (in seconds)
+# - 3rd param: DST (in hours)
+parse_options()
+{
+    local num_parms=$#
+    local wanted_num_params=3
+    local args="$@"
+
+    if [ $num_parms != $wanted_num_params ] ; then
+        swi_log "$wanted_num_params are needed for setting up timezone."
+        return $SWI_ERR
+    fi
+
+    # Get time
+    time_utc_g="$1"
+
+    # Get UTC based offset
+    time_offset_utc_g="$2"
+
+    # Get DST
+    dst_g="$3"
+
+    return $SWI_OK
+}
+
+# Check the environment we run this executable in.
+check_env()
+{
+    local localtime=""
+    local timezone_files_root=/usr/share/zoneinfo
+    local real_localtime=$timezone_files_root/localtime
+
+    # This is only going to work if /etc/timezone exists
+    if [ ! -f /etc/timezone ] ; then
+        swi_log "/etc/timezone file is missing."
+        return $SWI_ERR
+    fi
+
+    # If /etc/localtime is not softlink, nothing we could do.
+    if [ ! -L /etc/localtime ] ; then
+        swi_log "/etc/localtime is invalid."
+        return $SWI_ERR
+    fi
+
+    # Also, /etc/localtime must point to proper timezone file.
+    localtime=$( readlink -f /etc/localtime )
+    if [ "x${localtime}" != "x${real_localtime}" ] ; then
+        # We are unable to perform this operation, but can continue.
+        swi_log "/etc/localtime is invalid."
+        return $SWI_ERR
+    fi
+
+    return $SWI_OK
+}
+
+# This operation needs to be atomic.
+lock_op()
+{
+    if [ -f $lock_file_g ] ; then
+        swi_log "Only one instance of $this_e can run at any given time."
+        return $SWI_ERR
+    fi
+    touch $lock_file_g
+
+    return $SWI_OK
+}
+
+# Unlock the whole operation.
+unlock_op()
+{
+    rm -f $lock_file_g
+    return $SWI_OK
+}
+
+# Parameter is sec from epoch
+set_time()
+{
+    local sec=$time_utc_g
+
+    if [ $sec -eq 0 ] ; then
+        # Nothing to do here.
+        return $SWI_OK
+    fi
+
+    date -s "@$sec"
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+
+    return $SWI_OK
+}
+
+# Set timezone based on the parameters passed
+do_execute_tzoneset()
+{
+    local ret=$SWI_OK
+    local zonefile_root=/usr/share/zoneinfo
+    local zonefile_mp=$zonefile_root/localtime
+    local dst=$( expr $dst_g \* 3600 )
+    local offset=$( expr $time_offset_utc_g + $dst )
+    local zname="Invalid"
+
+    # For non 1h zones, we need to point to real cities with DST offsets in
+    # timezone files, and ignore passed DST info (there are no GMT files
+    # available).
+    case $time_offset_utc_g in
+
+        # UTC-9:30
+        -34200 )
+            zname="Pacific/Marquesas"
+        ;;
+
+        # UTC-4:30
+        -16200 )
+            zname="America/Caracas"
+        ;;
+
+        # UTC-3:30
+        -12600 )
+            zname="America/St_Johns"
+        ;;
+
+        # UTC+3:30
+        12600 )
+            zname="Asia/Tehran"
+        ;;
+
+        # UTC+4:30
+        16200 )
+            zname="Asia/Kabul"
+        ;;
+
+        # UTC+5:30
+        19800 )
+            zname="Asia/Kolkata"
+        ;;
+
+        # UTC+5:45
+        20700 )
+            zname="Asia/Kathmandu"
+        ;;
+
+        # UTC+6:30
+        23400 )
+            zname="Asia/Rangoon"
+        ;;
+
+        # UTC+8:45
+        31500 )
+            zname="Australia/Eucla"
+        ;;
+
+        # UTC+9:30
+        34200 )
+            zname="Australia/Adelaide"
+        ;;
+
+        # UTC+10:30
+        37800 )
+            zname="Australia/Lord_Howe"
+        ;;
+
+        # UTC+11:30
+        41400 )
+            zname="Pacific/Norfolk"
+        ;;
+
+        # UTC+12:45
+        45900 )
+            zname="Pacific/Chatham"
+        ;;
+
+        * )
+        ;;
+
+    esac
+
+    # 1h timezones. We could point to Etc/GMT-X files, but need to account for DST.
+    # Why are we not doing this in a nice loop? Well, shell scripting is ugly as it
+    # is, and having it in switch-case statement is crystal clear.
+    case $offset in
+
+        # UTC-12
+        -43200 )
+            zname="Etc/GMT+12"
+        ;;
+
+        # UTC-11
+        -39600 )
+            zname="Etc/GMT+11"
+        ;;
+
+        # UTC-10
+        -36000 )
+            zname="Etc/GMT+10"
+       ;;
+
+        # UTC-9
+        -32400 )
+            zname="Etc/GMT+9"
+        ;;
+
+        # UTC-8
+        -28800 )
+            zname="Etc/GMT+8"
+        ;;
+
+        # UTC-7
+        -25200 )
+            zname="Etc/GMT+7"
+        ;;
+
+        # UTC-6
+        -21600 )
+            zname="Etc/GMT+6"
+        ;;
+
+        # UTC-5
+        -18000 )
+            zname="Etc/GMT+5"
+        ;;
+
+        # UTC-4
+        -14400 )
+            zname="Etc/GMT+4"
+        ;;
+
+        # UTC-3
+        -10800 )
+            zname="Etc/GMT+3"
+        ;;
+
+        # UTC-2
+        -7200 )
+            zname="Etc/GMT+2"
+        ;;
+
+        # UTC-1
+        -3600 )
+            zname="Etc/GMT+1"
+        ;;
+
+        # UTC-0
+        0 )
+            zname="Etc/GMT0"
+        ;;
+
+        # UTC+1
+        3600 )
+            zname="Etc/GMT-1"
+        ;;
+
+        # UTC+2
+        7200 )
+            zname="Etc/GMT-2"
+        ;;
+
+        # UTC+3
+        10800 )
+            zname="Etc/GMT-3"
+        ;;
+
+        # UTC+4
+        14400 )
+            zname="Etc/GMT-4"
+        ;;
+
+        # UTC+5
+        18000 )
+            zname="Etc/GMT-5"
+        ;;
+
+        # UTC+6
+        21600 )
+            zname="Etc/GMT-6"
+        ;;
+
+        # UTC+7
+        25200 )
+            zname="Etc/GMT-7"
+        ;;
+
+        # UTC+8
+        28800 )
+            zname="Etc/GMT-8"
+        ;;
+
+        # UTC+9
+        32400 )
+            zname="Etc/GMT-9"
+        ;;
+
+        # UTC+10
+        36000 )
+            zname="Etc/GMT-10"
+        ;;
+
+        # UTC+11
+        39600 )
+            zname="Etc/GMT-11"
+        ;;
+
+        # UTC+12
+        43200 )
+            zname="Etc/GMT-12"
+        ;;
+
+        # UTC+13
+        46800 )
+            zname="Etc/GMT-13"
+        ;;
+
+        # UTC+14
+        50400 )
+            zname="Etc/GMT-14"
+        ;;
+
+        * )
+        ;;
+
+    esac
+
+    # If there is no real timezone file, timezone could not
+    # be set.
+    if [ ! -f $zonefile_root/$zname ] ; then
+        swi_log "Zone file [$zonefile_root/$zname] does not exist."
+        ret=$SWI_ERR
+    fi
+
+    # Change timezone.
+    if [ $ret -eq $SWI_OK ] ; then
+
+        swi_log "Changing timezone to [$zname]..."
+
+        # Remove the old one, if it exists.
+        mount | grep -w "$zonefile_mp" &>/dev/null
+        if [ $? -eq 0 ] ; then
+            umount $zonefile_mp &>/dev/null
+        fi
+
+        # Point to new, correct timezone file
+        mount --bind $zonefile_root/$zname $zonefile_mp
+
+        if [ $? -ne 0 ] ; then
+            ret=$SWI_ERR
+        else
+            echo "$zname" >/etc/timezone
+        fi
+    fi
+
+    return $ret
+}
+
+# Main method.
+main()
+{
+    local ret=#SWI_OK
+
+    check_env
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+
+    lock_op
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+
+    # From this point on, we need to unlock.
+
+    parse_options "$@"
+    if [ $? -ne 0 ] ; then unlock_op ; return $SWI_ERR ; fi
+
+    set_time
+    if [ $? -ne 0 ] ; then unlock_op ; return $SWI_ERR ; fi
+
+    do_execute_tzoneset
+    if [ $? -ne 0 ] ; then unlock_op ; return $SWI_ERR ; fi
+
+    unlock_op
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+
+    return $SWI_OK
+}
+
+##################
+# Main entry point
+##################
+main "$@" ; exit $?

@@ -14,12 +14,23 @@ this_e=$( basename $0 )
 # UBIFS mount options. Platforms may or may not have quota support. Hence, quota
 # support must be separated from the rest of the default options.
 UBI_MNTOPT_DEFAULT="sync,smackfsdef=_"
-UBI_MNT_OPT_QUOTA="usrquota,grpquota"
+UBI_MNTOPT_QUOTA="usrquota,grpquota"
 
 # YAFFS2 FS mount options. Do not change ecc for tags, you may break YAFFS2
 # file systems on various platforms.
 YAFFS2_MNTOPT="rw,tags-ecc-off,smackfsdef=_"
 
+# Quotacheck binary may not be available due to licensing issues. Until
+# this is resolved, we should keep quota support around. Also, it looks like
+# that there is no way to programmatically do quota check, which may force
+# users to use FreeBSD quotacheck.
+# In addition, users could add back quota-tools package, but they would
+# be liable for any licensing issues.
+#
+quota_check="/bin/true"
+if [ -e /usr/sbin/quotacheck ] ; then
+   quota_check="quotacheck"
+fi
 
 # Initialize YAFFS2 support related variables.
 # Auto support detection can be overriden in run.env
@@ -259,7 +270,7 @@ quotacheck_ug()
     # Check both user and group at the same time. If group file is corrupt
     # quotacheck will stop and wait for user input, but show must go on.
     # Therefore, we need 'yes' in order to get things moving again.
-    yes | quotacheck ${qc_sw} ${mntpt}
+    yes | $quota_check ${qc_sw} ${mntpt}
     if [ $? -eq 0 ] ; then
         return ${SWI_OK}
     fi
@@ -282,7 +293,7 @@ quotacheck_ug()
 
         qc_sw="-${ug_sw}mb"
 
-        quotacheck ${qc_sw} ${mntpt}
+        $quota_check ${qc_sw} ${mntpt}
         if [ $? -ne 0 ] ; then
 
             # Quotacheck failed.
@@ -293,7 +304,7 @@ quotacheck_ug()
                 rm -f ${mntpt}/aquota.${ug_str}
                 cp -af ${mntpt}/aquota.${ug_str}~ ${mntpt}/aquota.${ug_str}
 
-                quotacheck ${qc_sw} ${mntpt}
+                $quota_check ${qc_sw} ${mntpt}
                 if [ $? -eq 0 ] ; then
                     swi_log "Quota check done, '${ug_str}' backup file looks healthy."
                     continue
@@ -309,7 +320,7 @@ quotacheck_ug()
             # Things did not go that well with backup file, try to recreate quota file.
             qc_sw="${qc_sw}""c"
 
-            quotacheck ${qc_sw} ${mntpt}
+            $quota_check ${qc_sw} ${mntpt}
             if [ $? -ne 0 ] ; then
                 swi_log "Quota check failed while creating '${ug_str}' quota file, giving up."
 
@@ -374,7 +385,7 @@ mount_as_dm_verity() {
 
     # Create UBI block device for squashfs image
     if ! [ -b "${ubi_img_block_dev}" ]; then
-        ubiblkvol -a ${ubi_img_dev}
+        ubiblock --create ${ubi_img_dev}
         if [ $? -ne 0 ] ; then
             swi_log "Unable to create ${ubi_img_block_dev}."
             return ${SWI_ERR}
@@ -388,7 +399,7 @@ mount_as_dm_verity() {
 
     # Dm-verity hash tree table is located on this volume, check it and prepare it for use.
     if ! [ -b "${ubi_hash_block_dev}" ]; then
-        ubiblkvol -a ${ubi_hash_dev}
+        ubiblock --create ${ubi_hash_dev}
         if [ $? -ne 0 ] ; then
             swi_log "Unable to create ${ubi_hash_block_dev}."
             return ${SWI_ERR}
@@ -499,7 +510,7 @@ mount_ubifs()
     # but it is needed for volumes containg file systems like squashfs.
     # If device does not show up for whatever reason, we need to exit.
 @if mdm9x15
-    ubiblkvol -a /dev/ubi${ubi_dev_vol_pair}
+    ubiblock --create /dev/ubi${ubi_dev_vol_pair}
     if [ $? -ne 0 ] ; then
         swi_log "Unable to use ubi${ubi_dev_num} partition ${ubi_vol_num}"
         ubidetach -m ${mtd_dev_num}
@@ -522,7 +533,7 @@ mount_ubifs()
         if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
             # squashfs volume, create UBI block device
             if ! [ -b "/dev/ubiblock${ubi_dev_vol_pair}" ]; then
-                ubiblkvol -a /dev/ubi${ubi_dev_vol_pair}
+                ubiblock --create /dev/ubi${ubi_dev_vol_pair}
                 if [ $? -ne 0 ] ; then
                     swi_log "Unable to use ubi${ubi_dev_num} partition ${ubi_vol_num}"
                     ubidetach -m ${mtd_dev_num}
@@ -603,7 +614,7 @@ mount_ubifs()
     # squashfs mount will fail this test, because quota options are not
     # passed in.
     mnt_opts="${UBI_MNTOPT_DEFAULT},${ubifs_mnt_options}"
-    var=$( echo -n "${mnt_opts/${UBI_MNTOPT_DEFAULT},${UBI_MNT_OPT_QUOTA},rw/}" )
+    var=$( echo -n "${mnt_opts/${UBI_MNTOPT_DEFAULT},${UBI_MNTOPT_QUOTA},rw/}" )
     if [ -z ${var} ] ; then
         # Quota options were passed in, do file system quota check.
         swi_log "Performing quota check on file system mounted at ${mntpt}"
@@ -639,7 +650,7 @@ mount_ubifs_multi_mount_options()
 
     # Try to mount UBIFS partition using various mount options. Do not change
     # parameter order, you will break things.
-    list="${UBI_MNT_OPT_QUOTA},rw rw"
+    list="${UBI_MNTOPT_QUOTA},rw rw"
     for item in ${list} ; do
         swi_log "Trying to mount UBIFS on ${mntpt} using [${item}] mount options..."
         mount_ubifs ${mtd_part_name} ${mntpt} \
@@ -1382,6 +1393,60 @@ mount_early_create_dirs()
     return ${ret}
 }
 
+# Set timezone. This method is in mount_early, because
+# we are mounting various files.
+mount_early_set_timezone()
+{
+    local ret=${SWI_OK}
+    local timezone=""
+    local localtime=""
+    local timezone_files_root=/usr/share/zoneinfo
+    local real_localtime=${timezone_files_root}/localtime
+
+    # This is only going to work if /etc/timezone exists
+    if [ ! -f /etc/timezone ] ; then
+        swi_log "/etc/timezone does not exist, not setting timezone"
+        return ${SWI_OK}
+    fi
+
+    # If /etc/localtime is not softlink, nothing we could do.
+    if [ ! -L /etc/localtime ] ; then
+        swi_log "/etc/localtime does not exist, not setting timezone"
+        return ${SWI_OK}
+    fi
+
+    # Also, /etc/localtime must point to proper timezone file.
+    localtime=$( readlink -f /etc/localtime )
+    if [ "x${localtime}" != "x${real_localtime}" ] ; then
+        # We are unable to perform this operation, but can continue.
+        swi_log "/etc/localtime is invalid, not setting timezone"
+        return ${SWI_OK}
+    fi
+
+    # See what the timezone is. This will be the name of the file
+    # in /usr/share/zoneinfo .
+    timezone=$( cat /etc/timezone )
+    swi_log "Using timezone ${timezone}..."
+
+    # Now, set proper timezone. If this operation fails, it is an error.
+    mount --bind ${timezone_files_root}/${timezone} ${real_localtime}
+    if [ $? -ne 0 ] ; then
+        swi_log "Moounting of ${timezone_files_root}/${timezone} failed."
+        ret=${SWI_ERR}
+    fi
+
+    return ${ret}
+}
+
+mount_early_unset_timezone()
+{
+    local real_localtime=${timezone_files_root}/localtime
+
+    # Do not care about the result.
+    umount -l ${real_localtime} &>/dev/null
+    return ${SWI_OK}
+}
+
 # Chooser.
 mount_early_start()
 {
@@ -1395,7 +1460,9 @@ mount_early_start()
         method_list_essential="
                                mount_early_pseudo
                                mount_early_other
-                               mount_early_create_dirs"
+                               mount_early_create_dirs
+                               mount_early_set_timezone
+                              "
     fi
 
     local method_list="
@@ -1426,6 +1493,7 @@ mount_early_stop()
                        mount_early_user_stop
                        mount_early_legato_stop
                        mount_early_userrw_stop
+                       mount_early_unset_timezone
                       "
 
     for method in ${method_list} ; do

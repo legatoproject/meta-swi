@@ -9,12 +9,12 @@ LK_TARGET = "mdm9607"
 
 inherit android-signing
 
-EXTRA_OEMAKE += "LINUX_KERNEL_DIR='${LINUX_REPO_DIR}/..'"
+EXTRA_OEMAKE += "LINUX_KERNEL_DIR='${LINUX_REPO_DIR}'"
 EXTRA_OEMAKE_append = " SIGNED_KERNEL=1"
 
 do_patch() {
-    if [ ! -L "${S}/app/aboot/sierra" -a -d "${LINUX_REPO_DIR}/../arch/arm/mach-msm/sierra" ]; then
-        ln -sf ${LINUX_REPO_DIR}/../arch/arm/mach-msm/sierra ${S}/app/aboot/sierra
+    if [ ! -L "${S}/app/aboot/sierra" -a -d "${LINUX_REPO_DIR}/arch/arm/mach-msm/sierra" ]; then
+        ln -sf ${LINUX_REPO_DIR}/arch/arm/mach-msm/sierra ${S}/app/aboot/sierra
     fi
 }
 

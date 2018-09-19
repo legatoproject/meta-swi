@@ -221,7 +221,7 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				-p poky/ \
 				-o meta-openembedded/ \
 				-l meta-swi \
-				-x "kernel/.git" \
+				-x "kernel" \
 				-j $(NUM_THREADS) \
 				-t $(NUM_THREADS) \
 				${ICECC_ARGS} \

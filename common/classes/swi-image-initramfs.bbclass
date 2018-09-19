@@ -60,7 +60,7 @@ fakeroot do_filter_rootfs () {
                 *) remove_entity $file ;;
             esac
         elif echo $file | grep -e "./usr/sbin/.*ubi"; then
-            if [[ "$file" != "./usr/sbin/ubiattach" ]] && [[ "$file" != "./usr/sbin/ubiblkvol" ]]; then
+            if [[ "$file" != "./usr/sbin/ubiattach" ]] && [[ "$file" != "./usr/sbin/ubiblock" ]]; then
                 remove_entity $file
             fi
         fi

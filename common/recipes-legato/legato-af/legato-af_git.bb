@@ -11,6 +11,9 @@ DEPENDS += "legato-tools"
 DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"
 DEPENDS += "ima-support-tools-native"
+DEPENDS += "ima-evm-utils-native"
+DEPENDS += "libarchive-native"
+DEPENDS += "bsdiff-native"
 
 # Framework dependencies
 RDEPENDS_${PN} += "libgcc"
@@ -19,7 +22,6 @@ RDEPENDS_${PN} += "libstdc++"
 # Target dependencies
 DEPENDS += "curl"
 DEPENDS += "zlib"
-DEPENDS += "tinycbor"
 DEPENDS += "openssl"
 
 # Build time dependencies (not in the rootfs image)
@@ -56,7 +58,8 @@ do_install() {
         # start-up scripts
         install -d ${D}/opt/legato/startupDefaults
         for target in ${LEGATO_ROOTFS_TARGETS}; do
-            for script in $(find ${B}/build/$target/staging/mnt/flash/startupDefaults -type f); do
+            select_legato_target $target
+            for script in $(find ${B}/build/$LEGATO_TARGET/staging/mnt/flash/startupDefaults -type f); do
                 install $script ${D}/opt/legato/startupDefaults/
             done
         done
@@ -88,22 +91,26 @@ do_install() {
     install -d ${D}${libdir}
     first_target=$(echo ${LEGATO_ROOTFS_TARGETS} | awk '{print $1}')
     if [ -n "$first_target" ]; then
-        if [ -e "${B}/build/$first_target/bin/lib/liblegato.so" ]; then
-            install ${B}/build/$first_target/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
+        select_legato_target $first_target
+
+        if [ -e "${B}/build/$LEGATO_TARGET/bin/lib/liblegato.so" ]; then
+            install ${B}/build/$LEGATO_TARGET/bin/lib/liblegato.so ${D}${libdir}/liblegato.so
         else
-            install ${B}/build/$first_target/framework/lib/liblegato.so ${D}${libdir}/liblegato.so
+            install ${B}/build/$LEGATO_TARGET/framework/lib/liblegato.so ${D}${libdir}/liblegato.so
         fi
     fi
 
     # Populate liblegato.so in sysroots/
     for target in $(echo ${LEGATO_ROOTFS_TARGETS}); do
-        install -d ${D}/usr/share/legato/build/$target/framework/lib
-        if [ -e "${B}/build/$target/bin/lib/liblegato.so" ]; then
-            install ${B}/build/$target/bin/lib/liblegato.so \
-                    ${D}/usr/share/legato/build/$target/framework/lib/liblegato.so
+        select_legato_target $target
+
+        install -d ${D}/usr/share/legato/build/$LEGATO_TARGET/framework/lib
+        if [ -e "${B}/build/$LEGATO_TARGET/bin/lib/liblegato.so" ]; then
+            install ${B}/build/$LEGATO_TARGET/bin/lib/liblegato.so \
+                    ${D}/usr/share/legato/build/$LEGATO_TARGET/framework/lib/liblegato.so
         else
-            install ${B}/build/$target/framework/lib/liblegato.so \
-                    ${D}/usr/share/legato/build/$target/framework/lib/liblegato.so
+            install ${B}/build/$LEGATO_TARGET/framework/lib/liblegato.so \
+                    ${D}/usr/share/legato/build/$LEGATO_TARGET/framework/lib/liblegato.so
         fi
     done
 
@@ -125,13 +132,15 @@ do_install_image() {
 
     # legato-image
     for target in ${LEGATO_ROOTFS_TARGETS}; do
-        mkdir -p ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}
-        if [ -d ${B}/build/${target}/readOnlyStaging/legato ]; then
-            cp -R ${B}/build/${target}/readOnlyStaging/legato/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
-        elif [ -d ${B}/build/${target}/staging ]; then
-            cp -R ${B}/build/${target}/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
-        elif [ -d ${B}/build/${target}/_staging_system.${target}.update ]; then
-            cp -R ${B}/build/${target}/_staging_system.${target}.update/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/${target}/
+        select_legato_target $target
+
+        mkdir -p ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET
+        if [ -d ${B}/build/$LEGATO_TARGET/readOnlyStaging/legato ]; then
+            cp -R ${B}/build/$LEGATO_TARGET/readOnlyStaging/legato/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/
+        elif [ -d ${B}/build/$LEGATO_TARGET/staging ]; then
+            cp -R ${B}/build/$LEGATO_TARGET/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/
+        elif [ -d ${B}/build/$LEGATO_TARGET/_staging_system.$LEGATO_TARGET.update ]; then
+            cp -R ${B}/build/$LEGATO_TARGET/_staging_system.$LEGATO_TARGET.update/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/
         else
             echo "Unable to find staging directory"
             exit 1

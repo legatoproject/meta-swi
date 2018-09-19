@@ -1,0 +1,13 @@
+--- a/sysklogd/syslogd.c	2018-03-26 18:48:44.669973243 +0800
++++ b/sysklogd/syslogd.c	2018-03-26 18:48:16.946290966 +0800
+@@ -498,7 +498,10 @@
+ 	int old_tail, new_tail;
+ 	int len;
+ 
++try_semop:
+ 	if (semop(G.s_semid, G.SMwdn, 3) == -1) {
++		if (EINTR == errno)
++			goto try_semop;
+ 		bb_perror_msg_and_die("SMwdn");
+ 	}
+ 

@@ -2,7 +2,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
             file://defconfig_qca9377 \
-            file://hostapd-qca.conf \
+            file://hostapd-part-qca.conf \
            "
 
 do_configure_append() {
@@ -20,7 +20,7 @@ do_install_append() {
     ln -s ${sbindir}/hostapd_cli ${D}/bin/
 
     if [ "x${ENABLE_QCA9377}" = "x1" ] ; then
-        install -m 0644 ${WORKDIR}/hostapd-qca.conf -D \
-	    ${D}/${sysconfdir}/hostapd.conf
+        install -m 0644 ${WORKDIR}/hostapd-part-qca.conf -D \
+            ${D}/${sysconfdir}/hostapd-part-qca.conf
     fi
 }

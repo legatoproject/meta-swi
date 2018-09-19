@@ -1,0 +1,120 @@
+From 3a45b87ac36f60962d6d19c592813e186a9e82e6 Mon Sep 17 00:00:00 2001
+From: Mike Frysinger <vapier@chromium.org>
+Date: Thu, 15 Sep 2016 12:16:33 +0200
+Subject: [PATCH] modutils: support finit_module syscall
+
+On some systems like Chromium OS, loading modules from non-verified
+filesystems is denied.  Only finit_module is allowed because an open
+fd is passed which can be checked against a verified location.
+
+Change the module loading code to first attempt finit_module and if
+that fails for whatever reason, fall back to the existing logic.
+
+On x86_64, this adds ~80 bytes to modutils/modutils.o and ~68 bytes
+to modutils/modprobe-small.o.
+
+Signed-off-by: Mike Frysinger <vapier@chromium.org>
+Signed-off-by: Denys Vlasenko <vda.linux@googlemail.com>
+---
+ modutils/modprobe-small.c | 33 ++++++++++++++++++++++++++++++---
+ modutils/modutils.c       | 21 +++++++++++++++++++++
+ 2 files changed, 51 insertions(+), 3 deletions(-)
+
+diff --git a/modutils/modprobe-small.c b/modutils/modprobe-small.c
+index 5936e48..a47e522 100644
+--- a/modutils/modprobe-small.c
++++ b/modutils/modprobe-small.c
+@@ -18,9 +18,13 @@
+ /* After libbb.h, since it needs sys/types.h on some systems */
+ #include <sys/utsname.h> /* uname() */
+ #include <fnmatch.h>
++#include <sys/syscall.h>
+ 
+ extern int init_module(void *module, unsigned long len, const char *options);
+ extern int delete_module(const char *module, unsigned flags);
++#ifdef __NR_finit_module
++# define finit_module(fd, uargs, flags) syscall(__NR_finit_module, fd, uargs, flags)
++#endif
+ extern int query_module(const char *name, int which, void *buf, size_t bufsize, size_t *ret);
+ /* linux/include/linux/module.h has limit of 64 chars on module names */
+ #undef MODULE_NAME_LEN
+@@ -209,11 +213,34 @@ static int load_module(const char *fname, const char *options)
+ 	int r;
+ 	size_t len = MAXINT(ssize_t);
+ 	char *module_image;
++
++	if (!options)
++		options = "";
++
+ 	dbg1_error_msg("load_module('%s','%s')", fname, options);
+ 
+-	module_image = xmalloc_open_zipped_read_close(fname, &len);
+-	r = (!module_image || init_module(module_image, len, options ? options : "") != 0);
+-	free(module_image);
++	/*
++	 * First we try finit_module if available.  Some kernels are configured
++	 * to only allow loading of modules off of secure storage (like a read-
++	 * only rootfs) which needs the finit_module call.  If it fails, we fall
++	 * back to normal module loading to support compressed modules.
++	 */
++	r = 1;
++# ifdef __NR_finit_module
++	{
++		int fd = open(fname, O_RDONLY | O_CLOEXEC);
++		if (fd >= 0) {
++			r = finit_module(fd, options, 0) != 0;
++			close(fd);
++		}
++	}
++# endif
++	if (r != 0) {
++		module_image = xmalloc_open_zipped_read_close(fname, &len);
++		r = (!module_image || init_module(module_image, len, options) != 0);
++		free(module_image);
++	}
++
+ 	dbg1_error_msg("load_module:%d", r);
+ 	return r; /* 0 = success */
+ #else
+diff --git a/modutils/modutils.c b/modutils/modutils.c
+index 0a05673..d36caaf 100644
+--- a/modutils/modutils.c
++++ b/modutils/modutils.c
+@@ -13,6 +13,9 @@ extern int delete_module(const char *module, unsigned int flags);
+ #else
+ # include <sys/syscall.h>
+ # define init_module(mod, len, opts) syscall(__NR_init_module, mod, len, opts)
++# if defined(__NR_finit_module)
++#  define finit_module(fd, uargs, flags) syscall(__NR_finit_module, fd, uargs, flags)
++# endif
+ # define delete_module(mod, flags) syscall(__NR_delete_module, mod, flags)
+ #endif
+ 
+@@ -212,6 +215,24 @@ int FAST_FUNC bb_init_module(const char *filename, const char *options)
+ 		return bb_init_module_24(filename, options);
+ #endif
+ 
++	/*
++	 * First we try finit_module if available.  Some kernels are configured
++	 * to only allow loading of modules off of secure storage (like a read-
++	 * only rootfs) which needs the finit_module call.  If it fails, we fall
++	 * back to normal module loading to support compressed modules.
++	 */
++# ifdef __NR_finit_module
++	{
++		int fd = open(filename, O_RDONLY | O_CLOEXEC);
++		if (fd >= 0) {
++			rc = finit_module(fd, options, 0) != 0;
++			close(fd);
++			if (rc == 0)
++				return rc;
++		}
++	}
++# endif
++
+ 	image_size = INT_MAX - 4095;
+ 	mmaped = 0;
+ 	image = try_to_mmap_module(filename, &image_size);
+-- 
+2.7.4
+

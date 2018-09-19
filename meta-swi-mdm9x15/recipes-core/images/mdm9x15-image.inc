@@ -32,6 +32,10 @@ IMAGE_INSTALL_append = " kernel-devicetree"
 # Add linkmon app to monitor USB link
 IMAGE_INSTALL_append = " linkmon"
 
+# Add timezone related packages
+IMAGE_INSTALL_append = " tzdata"
+IMAGE_INSTALL_append = " tzone-utils"
+
 # Create UBI images for ROOT and USER1 partitions. If it becomes longer, this
 # function should be optimized (creation of sub-methods, etc.)
 prepare_ubi_ps() {

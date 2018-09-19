@@ -85,7 +85,7 @@ FindAndMountUBI () {
         if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
             # squashfs volume, create UBI block device
             if ! [ -e "/dev/ubiblock1_0" ]; then
-                ubiblkvol -a /dev/ubi1_0
+                ubiblock --create /dev/ubi1_0
                 # Need to wait for the block device ready
                 wait_on_dev "-b" "/dev/ubiblock1_0"
                 if [ $? -ne ${SWI_OK} ]; then
