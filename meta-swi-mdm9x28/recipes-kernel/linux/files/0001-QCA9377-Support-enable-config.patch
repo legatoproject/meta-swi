@@ -14,9 +14,9 @@ index 7698b5a65677..5d1bc00a49b2 100644
 --- a/arch/arm/configs/mdm9607_defconfig
 +++ b/arch/arm/configs/mdm9607_defconfig
 @@ -540,3 +540,16 @@ CONFIG_CRYPTO_CTR=m
- # Legato sandboxed apps cannot cope with it. Therefore,
- # we need to disable this Android feature.
  # CONFIG_ANDROID_PARANOID_NETWORK is not set
+ # CONFIG_TRACING_SUPPORT is not set
+ # SWISTOP
 +
 +# Common for QCA9377 BT & WiFi
 +CONFIG_REGULATOR=y
