@@ -9,7 +9,8 @@ def check_legato_af_dep(d):
         return "legato-af"
     return ""
 
-DEPENDS += "legato-tools"
+DEPENDS += "legato-tools-native"
+DEPENDS += "fakeroot-native"
 DEPENDS += "${@check_legato_af_dep(d)}"
 
 # no-op by default

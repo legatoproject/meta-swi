@@ -7,7 +7,6 @@ inherit legato
 require legato.inc
 
 # Host dependencies
-DEPENDS += "legato-tools"
 DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"
 DEPENDS += "ima-support-tools-native"
@@ -25,7 +24,7 @@ DEPENDS += "zlib"
 DEPENDS += "openssl"
 
 # Build time dependencies (not in the rootfs image)
-do_compile[depends]  = "legato-tools:do_populate_sysroot"
+do_compile[depends]  = "legato-tools-native:do_populate_sysroot"
 do_compile[depends] += "gdb:do_populate_sysroot"
 
 # Add dependency to the kernel so that Legato can build kernel modules.
@@ -134,13 +133,13 @@ do_install_image() {
     for target in ${LEGATO_ROOTFS_TARGETS}; do
         select_legato_target $target
 
-        mkdir -p ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET
+        mkdir -p ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$target
         if [ -d ${B}/build/$LEGATO_TARGET/readOnlyStaging/legato ]; then
-            cp -R ${B}/build/$LEGATO_TARGET/readOnlyStaging/legato/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/
+            cp -R ${B}/build/$LEGATO_TARGET/readOnlyStaging/legato/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$target/
         elif [ -d ${B}/build/$LEGATO_TARGET/staging ]; then
-            cp -R ${B}/build/$LEGATO_TARGET/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/
+            cp -R ${B}/build/$LEGATO_TARGET/staging/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$target/
         elif [ -d ${B}/build/$LEGATO_TARGET/_staging_system.$LEGATO_TARGET.update ]; then
-            cp -R ${B}/build/$LEGATO_TARGET/_staging_system.$LEGATO_TARGET.update/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/
+            cp -R ${B}/build/$LEGATO_TARGET/_staging_system.$LEGATO_TARGET.update/* ${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$target/
         else
             echo "Unable to find staging directory"
             exit 1
