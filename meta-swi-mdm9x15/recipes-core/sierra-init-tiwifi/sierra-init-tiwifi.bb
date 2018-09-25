@@ -11,11 +11,12 @@ SRC_URI = "file://tiwifi.sh \
 
 do_configure[noexec] = "1"
 
-do_compile[depends] = "i2c-tools:do_populate_sysroot"
+DEPENDS += "i2c-tools"
+TARGET_LDFLAGS_prepend = " -li2c "
 
 do_compile() {
     cp -pv ${WORKDIR}/gpioexp.c .
-    make gpioexp
+    oe_runmake gpioexp
 }
 
 do_install() {

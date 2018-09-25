@@ -6,11 +6,16 @@
  * Copyright (C) Sierra Wireless Inc. Use of this work is subject to license.
  */
 
-#include <linux/i2c-dev-user.h>
+#include <linux/i2c-dev.h>
+#include <i2c/smbus.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <errno.h>
+#include <string.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/types.h>
+#include <sys/ioctl.h>
 
 /**
  * i2c slave address on MangOH platform
