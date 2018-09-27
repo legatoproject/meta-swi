@@ -1,0 +1,25 @@
+--- a/Makefile	2018-09-26 13:22:49.166841557 -0700
++++ b/Makefile	2018-09-26 13:25:50.464061497 -0700
+@@ -1,12 +1,15 @@
+-CFLAGS		+=	-O3 -lbz2
++CFLAGS          += $(EXTRA_CFLAGS) -O3
++LDFLAGS         += $(EXTRA_LDFLAGS) -lbz2
+ 
+-PREFIX		?=	/usr/local
+-INSTALL_PROGRAM	?=	${INSTALL} -c -s -m 555
+-INSTALL_MAN	?=	${INSTALL} -c -m 444
++PREFIX          ?= /usr/local
++INSTALL_PROGRAM ?= ${INSTALL} -c -s -m 555
++INSTALL_MAN     ?= ${INSTALL} -c -m 444
+ 
+-all:		bsdiff bspatch
+-bsdiff:		bsdiff.c
+-bspatch:	bspatch.c
++all: bsdiff bspatch
++bsdiff:
++	$(CC) -o bsdiff $(CFLAGS) bsdiff.c $(LDFLAGS)
++bspatch:
++	$(CC) -o bspatch $(CFLAGS) bspatch.c $(LDFLAGS)
+ 
+ install:
+ 	${INSTALL_PROGRAM} bsdiff bspatch ${PREFIX}/bin
