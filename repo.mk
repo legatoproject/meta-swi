@@ -143,7 +143,7 @@ ifeq ($(QCA9377_BUILD),1)
     $(error "QCA9377 WiFi is not supported on [${MACH}]")
   else
     ifeq ($(PROD),ar758x)
-	$(error "QCA9377 WiFi is not supported on [${MACH}][${PROD}]")
+      $(error "QCA9377 WiFi is not supported on [${MACH}][${PROD}]")
     endif
     QCA9377_ARGS := -G
   endif

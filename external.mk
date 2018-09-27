@@ -1,6 +1,8 @@
 # Set number of threads
 NUM_THREADS ?= 9
 
+DEFAULT_MDM_BUILD := bin
+
 # Yocto versions
 POKY_VERSION ?= bda51ee7821de9120f6f536fcabe592f2a0c8a37
 META_OE_VERSION ?= 8e6f6e49c99a12a0382e48451f37adac0181362f
@@ -86,6 +88,10 @@ IMA_CONFIG ?= $(PWD)/meta-swi/common/recipes-security/ima-support-tools/files/im
 # Default BB arguments
 BB_ARGS ?=
 
+# Enable build for QCA9377. We are currently unsure which products would receive
+# this feature, and by default we do not want it.
+QCA9377_BUILD ?= 0
+
 all: image_bin
 
 clean:
@@ -121,6 +127,20 @@ ifeq ($(IMA_BUILD),1)
     $(error "IMA is not supported for [${MACH}][${PROD}]")
   else
     IMA_ARGS := -i ${IMA_CONFIG}
+  endif
+endif
+
+# QCA9377 build is currently only supported on WP76. Currently, this is for
+# MangOH only, however it is not enabled by default. So, if no one knows about
+# it, no harm done.
+ifeq ($(QCA9377_BUILD),1)
+  ifneq ($(MACH),mdm9x28)
+    $(error "QCA9377 WiFi is not supported on [${MACH}]")
+  else
+    ifeq ($(PROD),ar758x)
+      $(error "QCA9377 WiFi is not supported on [${MACH}][${PROD}]")
+    endif
+    QCA9377_ARGS := -G
   endif
 endif
 
@@ -191,7 +211,7 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				-p poky/ \
 				-o meta-openembedded/ \
 				-l meta-swi \
-				-x "kernel/.git" \
+				-x "kernel" \
 				-j $(NUM_THREADS) \
 				-t $(NUM_THREADS) \
 				${ICECC_ARGS} \
@@ -201,7 +221,8 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${HOSTNAME_ARGS} \
 				${IMA_ARGS} \
 				${BB_ARGS} \
-				${EXT_SWI_IMG_ARGS}
+				${EXT_SWI_IMG_ARGS} \
+				${QCA9377_ARGS}
 
 # Machine: swi-mdm9x15
 
@@ -212,6 +233,19 @@ ifeq ($(MACH),mdm9x15)
   MACH_ARGS += -a KBRANCH_DEFAULT_MDM9X15=${KBRANCH_mdm9x15} \
                -a KMETA_DEFAULT_MDM9X15=${KMETA_mdm9x15}
 endif
+
+## extras needed for building
+
+poky:
+	git clone git://git.yoctoproject.org/poky
+	cd poky && git checkout ${POKY_VERSION}
+
+meta-openembedded:
+	git clone git://git.openembedded.org/meta-openembedded
+	cd meta-openembedded && git checkout ${META_OE_VERSION}
+
+.PHONY: prepare
+prepare: poky meta-openembedded
 
 COMMON_MACH := \
 				$(COMMON_ARGS) \
@@ -229,34 +263,26 @@ ifeq ($(PROPRIETARY_BUILD),1)
   COMMON_BIN += -q
 endif
 
-## extras needed for building
-
-poky:
-	git clone git://git.yoctoproject.org/poky
-	cd poky && git checkout ${POKY_VERSION}
-
-meta-openembedded:
-	git clone git://git.openembedded.org/meta-openembedded
-	cd meta-openembedded && git checkout ${META_OE_VERSION}
-
 ## images
 
-image_bin: poky meta-openembedded
+image_bin: prepare
 	$(COMMON_BIN)
 
-image: image_bin
+image: image_$(DEFAULT_MDM_BUILD)
 
 ## toolchains
 
-toolchain_bin: poky meta-openembedded
+toolchain_bin: prepare
 	$(COMMON_BIN) -k
 
-toolchain: toolchain_bin
+toolchain: toolchain_$(DEFAULT_MDM_BUILD)
 
 ## dev shell
 
-dev: poky meta-openembedded
+dev_bin: prepare
 	$(COMMON_BIN) -c
+
+dev: dev_$(DEFAULT_MDM_BUILD)
 
 # Machine: swi-virt
 
