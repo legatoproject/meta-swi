@@ -79,7 +79,8 @@ determine_kernel_versions() {
     # Retreive generic version name from manifest
     VERSION_kernel_image=$(grep -e '^kernel' "${IMAGE_MANIFEST}" | grep -v 'module' \
                                                                  | awk '{print $3}' \
-                                                                 | sed 's/-r[0-9]*$//')
+                                                                 | sed 's/-r[0-9]*$//' \
+                                                                 | head -1)
 
     # linux-yocto
     if [[ "${PREFERRED_PROVIDER_virtual/kernel}" == "linux-yocto" ]]; then
