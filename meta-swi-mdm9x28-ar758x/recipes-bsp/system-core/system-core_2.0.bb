@@ -4,8 +4,8 @@ HOMEPAGE = "https://www.codeaurora.org/cgit/quic/la/platform/system/core/"
 LICENSE = "Apache-2.0"
 LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=89aea4e17d99a7cacdbeed46a0096b10"
 
-# Tag LE.UM.1.2-15100-9x07
-SRCREV = "0918d945560b3ac4317a401f83e003bde76ca3f0"
+# Tag LE.UM.1.2-47600-9x07
+SRCREV = "276e8815d004acffacd3d4db16a4c63383ae3e85"
 SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=le-blast.lnx.1.1.c2-rel"
 
 SRC_URI  = "${SYSTEMCORE_REPO}"
@@ -15,13 +15,17 @@ SRC_URI += "file://0001-Fix-compile-errors-of-system-core-by-GCC6.2.0.patch"
 SRC_URI += "file://composition-sierra_dev"
 SRC_URI += "file://start_usb"
 SRC_URI += "file://fix-big-endian-build.patch"
+# Start adb after iSerial is set.
+SRC_URI += "file://0002-Fix-usb-serial-conflict.patch"
+# Fix gcc 7 build
+SRC_URI += "file://0003-include-utils-Vector.h-remove-nonsensical-libresourc.patch"
+SRC_URI += "file://0004-libbacktrace-Use-ucontext_t-instead-of-struct-uconte.patch"
 
 inherit autotools pkgconfig
 
 S = "${WORKDIR}/git"
 
-PV = "2.0"
-PR = "r1"
+PR = "r2"
 
 DEPENDS = "virtual/kernel openssl glib-2.0 libselinux safe-iop ext4-utils libunwind libcutils libmincrypt libcap"
 
@@ -31,6 +35,8 @@ EXTRA_OECONF_append = " --with-logd-logging"
 
 # Disable adb root privileges in USER builds for msm targets
 EXTRA_OECONF_append_msm = "${@oe.utils.conditional('USER_BUILD','1',' --disable-adb-root','',d)}"
+
+EXTRA_OEMAKE += " LIBS='-lpthread'"
 
 CPPFLAGS += "-I${STAGING_INCDIR}/ext4_utils"
 CPPFLAGS += "-I${STAGING_INCDIR}/libselinux"

@@ -1,0 +1,30 @@
+From 2d4529c81f05d7f402ba4ffc9b334b5246ac7f16 Mon Sep 17 00:00:00 2001
+From: Remil Ram <remilr@codeaurora.org>
+Date: Thu, 12 Jul 2018 05:41:39 -0700
+Subject: [PATCH] include/utils/Vector.h: remove nonsensical libresource method
+
+Change-Id: I55deb625f387fd3f8e991f737b42210fc3ddd885
+---
+ include/utils/Vector.h | 6 ------
+ 1 file changed, 6 deletions(-)
+
+diff --git a/include/utils/Vector.h b/include/utils/Vector.h
+index ed7b72521..1093c20d5 100644
+--- a/include/utils/Vector.h
++++ b/include/utils/Vector.h
+@@ -246,12 +246,6 @@ Vector<TYPE>& Vector<TYPE>::operator = (const Vector<TYPE>& rhs) {
+     return *this; 
+ }
+ 
+-template<class TYPE> inline
+-const Vector<TYPE>& Vector<TYPE>::operator = (const Vector<TYPE>& rhs) const {
+-    VectorImpl::operator = (static_cast<const VectorImpl&>(rhs));
+-    return *this;
+-}
+-
+ template<class TYPE> inline
+ Vector<TYPE>& Vector<TYPE>::operator = (const SortedVector<TYPE>& rhs) {
+     VectorImpl::operator = (static_cast<const VectorImpl&>(rhs));
+-- 
+2.19.0
+

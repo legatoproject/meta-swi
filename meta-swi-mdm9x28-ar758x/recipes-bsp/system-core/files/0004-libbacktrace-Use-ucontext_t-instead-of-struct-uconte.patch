@@ -1,0 +1,51 @@
+From 37fa0fe4617f5ebd852c501ff3d6a5d74bbc74f2 Mon Sep 17 00:00:00 2001
+From: Viswanath Kraleti <vkraleti@codeaurora.org>
+Date: Sat, 11 Nov 2017 17:58:14 +0530
+Subject: [PATCH] libbacktrace: Use ucontext_t instead of struct ucontext
+
+glibc-2.26 doesn't provide struct ucontext anymore. Stop using
+this structure and directly refer to ucontext_t.
+
+Change-Id: I0bbbc0d9acbec8af5ff144752f65823f6e6b7998
+---
+ include/backtrace/Backtrace.h | 4 +---
+ libbacktrace/Backtrace.cpp    | 1 -
+ 2 files changed, 1 insertion(+), 4 deletions(-)
+
+diff --git a/include/backtrace/Backtrace.h b/include/backtrace/Backtrace.h
+index 290682a74..ea0d4f3f0 100644
+--- a/include/backtrace/Backtrace.h
++++ b/include/backtrace/Backtrace.h
+@@ -19,6 +19,7 @@
+ 
+ #include <inttypes.h>
+ #include <stdint.h>
++#include <ucontext.h>
+ 
+ #include <string>
+ #include <vector>
+@@ -47,9 +48,6 @@ struct backtrace_frame_data_t {
+ #if defined(__APPLE__)
+ struct __darwin_ucontext;
+ typedef __darwin_ucontext ucontext_t;
+-#else
+-struct ucontext;
+-typedef ucontext ucontext_t;
+ #endif
+ 
+ class Backtrace {
+diff --git a/libbacktrace/Backtrace.cpp b/libbacktrace/Backtrace.cpp
+index 42769ed90..97388921c 100644
+--- a/libbacktrace/Backtrace.cpp
++++ b/libbacktrace/Backtrace.cpp
+@@ -18,7 +18,6 @@
+ #include <stdint.h>
+ #include <stdlib.h>
+ #include <sys/types.h>
+-#include <ucontext.h>
+ 
+ #include <string>
+ 
+-- 
+2.19.0
+
