@@ -10,11 +10,21 @@ kernel_src_install() {
     oe_runmake headers_install INSTALL_HDR_PATH=$dest_pref
 
     # Install kernel tree materials needed for kernel module builds.
-    # For this, we make a sparse copy of the entire kernel source tree,
+
+    # We first get the generated materials from the kernel build directory:
+    # This includes generated headers, config include Makefiles,
+    # the .config file and System.map:
+
+    echo "Installing generated files (from ${STAGING_KERNEL_BUILDDIR}):"
+    ( cd ${STAGING_KERNEL_BUILDDIR}
+
+      ( find . \
+          -type f | grep -v '^./scripts/' ) | \
+      rsync -lptD --files-from=- . $dest )
+
+    # Then we get a sparse copy of the entire kernel source tree,
     # excluding things like Documentation and .c files,
     # but keeping Makefiles and headers.
-
-    # We get some of this material from the pristine source tree:
 
     echo "Installing files from sources (from ${STAGING_KERNEL_DIR}):"
     ( cd ${STAGING_KERNEL_DIR}
@@ -28,17 +38,6 @@ kernel_src_install() {
              -name '*.include' \)
         find scripts \
           -type f ) | \
-      rsync -lptD --files-from=- . $dest )
-
-    # We get the generated materials from the build directory:
-    # This includes generated headers, config include Makefiles,
-    # the .config file and System.map:
-
-    echo "Installing generated files (from ${STAGING_KERNEL_BUILDDIR}):"
-    ( cd ${STAGING_KERNEL_BUILDDIR}
-
-      ( find . \
-          -type f | grep -v '^./scripts/' ) | \
       rsync -lptD --files-from=- . $dest )
 
     # Hack for various apps_proc packages on the mdm9x15:
