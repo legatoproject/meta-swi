@@ -49,7 +49,6 @@ $0 <options ...>
     -i <ima-config-file> (enable IMA build, pass full path to ima.conf as a parameter)
     -B Pass flags directly to bitbake (e.g. -vvv for verbose build)
     -E Enable extended SWI image (add additional developer packages)
-    -G Enable QCA9377 support
 
   Machine swi-mdmXXXX:
     -q (enable Qualcomm Proprietary bin)
@@ -100,7 +99,6 @@ QEMU=false
 ENABLE_IMA=false
 IMA_CONFIG=""
 BB_FLAGS=""
-ENABLE_QCA9377=false
 
 while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQG" arg
 do
@@ -213,10 +211,6 @@ do
     B)
         BB_FLAGS=$OPTARG
         echo "bitbake flags: [$BB_FLAGS]"
-        ;;
-     G)
-        ENABLE_QCA9377=true
-        echo "QCA9377 support is required."
         ;;
     ?)
         echo "$0: invalid option -$OPTARG" 1>&2
@@ -519,25 +513,6 @@ set_ima()
     return $ret
 }
 
-# This method will take care of QCA9377 enablement.
-set_qca9377_support()
-{
-    local ret=$SWI_OK
-    local is_enabled=$ENABLE_QCA9377
-
-    # If support is requested, set it up in global environment file. Otherwise,
-    # clear support, because it may have been set to something else previously.
-    if [ "x$is_enabled" = "xtrue" ] ; then
-        echo "Enabling QCA9377 support..."
-        set_option "ENABLE_QCA9377" 1
-    else
-        echo "Disabling QCA9377 support..."
-        set_option "ENABLE_QCA9377" 0
-    fi
-
-    return $ret
-}
-
 # Tune local.conf file
 if [ -n "${PROD}" ]; then
     if [ -n "$ENABLE_RECOVERY" ]; then
@@ -564,10 +539,6 @@ set_option "LEGATO_BUILD" $ENABLE_LEGATO
 
 # Set all IMA related build options
 set_ima
-if [ $? != $SWI_OK ]; then exit 1 ; fi
-
-# Set all QCA9377 related options.
-set_qca9377_support
 if [ $? != $SWI_OK ]; then exit 1 ; fi
 
 if [ -n "$FW_VERSION" ]; then

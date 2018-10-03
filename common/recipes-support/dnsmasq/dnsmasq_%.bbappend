@@ -14,9 +14,7 @@ do_install_prepend() {
 
 do_install_append() {
 
-    if [ "x${ENABLE_QCA9377}" = "x1" ] ; then
-        install -m 0644 ${WORKDIR}/dnsmasq-qca.conf -D \
-            ${D}/${sysconfdir}/dnsmasq-qca.conf
-    fi
+    install -m 0644 ${WORKDIR}/dnsmasq-qca.conf -D \
+        ${D}/${sysconfdir}/dnsmasq-qca.conf
 
 }

@@ -35,6 +35,9 @@ run_lock=/var/lock/${this_e}.lock
 # qca wifi module name
 qca_wifi_mod=wlan
 
+# cfg80211 module name
+cfg_wifi_mod=cfg80211
+
 # Ip address required for AP mode. It must be in range
 # specified in dnsmasq.conf .
 ap_mode_ip="192.168.43.1"
@@ -133,6 +136,7 @@ rm_wifi_modules()
     # If it fails, there is nothing we could do about it, so
     # do not return an error.
     rmmod $qca_wifi_mod >/dev/null 2>&1
+    rmmod $cfg_wifi_mod >/dev/null 2>&1
 
     echo $clogging >/proc/sys/kernel/printk
 
