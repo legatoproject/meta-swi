@@ -124,7 +124,7 @@ ifeq ($(MANGOH_BUILD),1)
 endif
 
 ifeq ($(IMA_BUILD),1)
-  ifeq (,$(filter $(MACH),virt)$(filter $(PROD),ar758x))
+ ifeq (,$(filter $(MACH),virt)$(filter $(MACH),mdm9x28))
     $(error "IMA is not supported for [${MACH}][${PROD}]")
   else
     IMA_ARGS := -i ${IMA_CONFIG}
