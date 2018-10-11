@@ -36,7 +36,10 @@ SRC_URI += "file://0001-makefile-fix.patch"
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 # This package depends on bzip2 even at runtime.
-DEPENDS += "bzip2"
+DEPENDS_BZIP2 = "bzip2-replacement-native"
+DEPENDS_BZIP2_class-target = "bzip2"
+DEPENDS_BZIP2_class-nativesdk = "nativesdk-bzip2"
+DEPENDS = "${DEPENDS_BZIP2}"
 RDEPENDS_${PN} += "bzip2"
 
 # Avoid installed-vs-shipped errors.
