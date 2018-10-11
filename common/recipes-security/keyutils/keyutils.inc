@@ -18,7 +18,7 @@ LIC_FILES_CHKSUM = "file://LICENCE.GPL;md5=5f6e72824f5da505c1f4a7197f004b45"
 
 DEPENDS = ""
 
-SRC_URI = "git://git.kernel.org/pub/scm/linux/kernel/git/dhowells/keyutils;tag=v${PV};protocol=https"
+SRC_URI = "git://git.kernel.org/pub/scm/linux/kernel/git/dhowells/keyutils;protocol=https"
 
 inherit autotools gettext pkgconfig
 
