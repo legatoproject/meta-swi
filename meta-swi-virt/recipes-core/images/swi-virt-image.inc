@@ -67,6 +67,9 @@ do_prepare_virt() {
         echo "IMA_KERNEL_CMDLINE_OPTIONS=\"${IMA_KERNEL_CMDLINE_OPTIONS}\"" >> $CFG
     fi
 
+    # Network
+    echo "NET_DRV=virtio" >> $CFG
+
     # Kernel
     cp -H "${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin" ${VIRT_DIR}/kernel
 
