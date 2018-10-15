@@ -13,7 +13,7 @@ RDEPENDS_${PN} += "kern-tools-native"
 PACKAGES_prepend = "kernel-tools "
 FILES_kernel-tools = "${KERNEL_SRC_PATH}/arch/*/tools/* \
                       ${KERNEL_SRC_PATH}/arch/*/tools/.debug/*"
-INSANE_SKIP_kernel-tools = "arch debug-files"
+INSANE_SKIP_kernel-tools = "arch debug-files rpaths"
 
 # x86
 COMPATIBLE_MACHINE_swi-virt-x86 = "swi-virt-x86"
