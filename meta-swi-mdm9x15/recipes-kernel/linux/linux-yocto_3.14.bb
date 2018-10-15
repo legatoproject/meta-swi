@@ -16,7 +16,7 @@ KBRANCH_DEFAULT_MDM9X15 ?= "standard/swi-mdm9x15-yocto-1.7-ref"
 KBRANCH_swi-mdm9x15 = "${KBRANCH_DEFAULT_MDM9X15}"
 
 # Provide a config baseline for things so the kernel will build...
-KERNEL_DEFCONFIG ?= "mdm9615_defconfig"
+KBUILD_DEFCONFIG ?= "mdm9615_defconfig"
 
 KMETA_DEFAULT_MDM9X15 ?= "meta-yocto-1.7-ref"
 KMETA = "${KMETA_DEFAULT_MDM9X15}"
@@ -177,7 +177,7 @@ do_tag_config() {
 
 do_configure_prepend() {
     cd ${KBUILD_OUTPUT}
-    cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} .config
+    cp ${S}/arch/arm/configs/${KBUILD_DEFCONFIG} .config
 }
 
 do_kernel_configme() {

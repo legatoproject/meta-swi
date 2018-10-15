@@ -9,13 +9,13 @@ COMPATIBLE_MACHINE = "(swi-mdm9x28)"
 KERNEL_CC_prepend = "${LINUX_REPO_DIR}/scripts/gcc-wrapper.py "
 
 # Provide a config baseline for things so the kernel will build...
-KERNEL_DEFCONFIG ?= "mdm9607_defconfig"
+KBUILD_DEFCONFIG ?= "mdm9607_defconfig"
 
 # Override for Qemu
 COMPATIBLE_MACHINE_swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
-KERNEL_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
+KBUILD_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
 COMPATIBLE_MACHINE_swi-mdm9x28-qemu = "swi-mdm9x28-qemu"
-KERNEL_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
+KBUILD_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
 
 B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
@@ -35,7 +35,7 @@ do_unpack_append() {
 }
 
 do_configure_prepend() {
-    cp ${S}/arch/arm/configs/${KERNEL_DEFCONFIG} ${WORKDIR}/defconfig
+    cp ${S}/arch/arm/configs/${KBUILD_DEFCONFIG} ${WORKDIR}/defconfig
 
     # Add ".system" public cert into kernel build area. Kernel build
     # will suck this cert in automatically.
@@ -45,7 +45,7 @@ do_configure_prepend() {
     fi
 
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper
-    oe_runmake_call -C ${S} ARCH=${ARCH} ${KERNEL_EXTRA_ARGS} ${KERNEL_DEFCONFIG}
+    oe_runmake_call -C ${S} ARCH=${ARCH} ${KERNEL_EXTRA_ARGS} ${KBUILD_DEFCONFIG}
 }
 
 do_compile_append() {
