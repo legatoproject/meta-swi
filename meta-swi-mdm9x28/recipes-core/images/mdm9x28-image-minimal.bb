@@ -6,7 +6,7 @@ require ../../../meta-swi-mdm9xxx/recipes-core/images/mdm9xxx-qemu-image-minimal
 
 rootfs_symlink() {
     # Provide minimal image as rootfs symlink
-    ln -sf ${IMAGE_LINK_NAME}.4k.default ${DEPLOY_DIR_IMAGE}/rootfs
+    ln -sf ${IMAGE_LINK_NAME}.4k.default ${IMGDEPLOYDIR}/rootfs
 }
 
 do_rootfs[postfuncs] += "rootfs_symlink"

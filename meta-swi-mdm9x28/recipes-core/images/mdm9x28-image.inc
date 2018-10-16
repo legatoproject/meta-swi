@@ -69,7 +69,7 @@ create_ubinize_config() {
         local dm_root_hash_path=$4
     fi
 
-    local rootfs_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${rootfs_type}"
+    local rootfs_path="${IMGDEPLOYDIR}/${IMAGE_NAME}.rootfs.${rootfs_type}"
 
     echo \[sysfs_volume\] > $cfg_path
     echo mode=ubi >> $cfg_path
@@ -114,13 +114,6 @@ create_ubinize_config() {
     fi
 }
 
-get_dm_root_hash() {
-    local dm_root_hash_path=$1
-    local dm_hash_filename=$2
-    local root_hash=$(cat ${dm_hash_filename} | grep Root | awk -F' ' '{printf $3}')
-    echo ${root_hash} > ${dm_root_hash_path}
-}
-
 prepare_ubi_ps() {
     local page_size=$1
     local image_type=
@@ -132,16 +125,16 @@ prepare_ubi_ps() {
     local ubi_path=
     local ubi_link_path=
 
-    for rootfs_type in ubifs squashfs; do
+    mkdir -p "${IMGDEPLOYDIR}"
 
+    for rootfs_type in ubifs squashfs; do
+        image_type=${rootfs_type}
         if [[ "${rootfs_type}" != "squashfs" ]]; then
             image_type=${page_size}.${rootfs_type}
-        else
-            image_type=${rootfs_type}
         fi
 
-        ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${image_type}.ubinize.cfg"
-        image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${image_type}"
+        ubinize_cfg="${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.${image_type}.ubinize.cfg"
+        image_path="${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.${image_type}"
 
         # Now Dm-verity only work with squashfs
         if [ "${DM_VERITY_ENCRYPT}" = "on" -a "${rootfs_type}" = "squashfs" ]; then
@@ -150,66 +143,54 @@ prepare_ubi_ps() {
             dm_root_hash_path="${image_path}.rhash"
 
             if [[ ! -e ${dm_hash_filename} ]]; then
-                create_dm_verity_hash ${image_path} ${dm_hash_path} ${dm_hash_filename}
-                get_dm_root_hash ${dm_root_hash_path} ${dm_hash_filename}
+                create_dm_verity_hash "${image_path}" "${dm_hash_path}" "${dm_hash_filename}"
+                get_dm_root_hash "${dm_root_hash_path}" "${dm_hash_filename}"
             fi
             create_ubinize_config ${ubinize_cfg} ${image_type} ${dm_hash_path} ${dm_root_hash_path}
         else
             create_ubinize_config ${ubinize_cfg} ${image_type}
         fi
 
-        ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.${page_size}.ubi"
-        ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${rootfs_type}.${page_size}.ubi"
+        ubi_path="${IMGDEPLOYDIR}/${IMAGE_NAME}.${rootfs_type}.${page_size}.ubi"
+        ubi_link_path="${IMGDEPLOYDIR}/${IMAGE_LINK_NAME}.${rootfs_type}.${page_size}.ubi"
 
         create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
     done
 }
-
-yocto_squashfs_duct_tape() {
-    # Hack: make symlink from our traditional deploy image
-    # location that we had under Yocto 1.7 to the new squashfs
-    # location established by Yocto 2.2's do_squashfs_image.
-    # Why: without this, prepare_ubi_ps cannot find
-    # ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs
-    # The real fix is probably to standardize our custom image recipes
-    # to all use IMGDEPLOYDIR.
-
-    ln -sf \
-        ${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.squashfs \
-        ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs
-}
-
-do_image_complete[postfuncs] += "yocto_squashfs_duct_tape"
 
 # Create UBI images
 prepare_ubi() {
     prepare_ubi_ps '2k'
     prepare_ubi_ps '4k'
 
-    # Default image (no bs suffix) to 4k + squashfs
-    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.squashfs.4k.ubi"
-    ubi_link_path_def_2k="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.squashfs.2k.ubi"
+    cd ${IMGDEPLOYDIR}
 
-    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.ubi"
-    ubi_link_path_2k="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.ubi"
+    # Default image (no bs suffix) to 4k + squashfs
+    ubi_link_path_def="${IMAGE_LINK_NAME}.squashfs.4k.ubi"
+    ubi_link_path_def_2k="${IMAGE_LINK_NAME}.squashfs.2k.ubi"
+
+    ubi_link_path="${IMAGE_LINK_NAME}.4k.ubi"
+    ubi_link_path_2k="${IMAGE_LINK_NAME}.2k.ubi"
 
     rm -f $ubi_link_path $ubi_link_path_2k
-    ln -s $(basename $ubi_link_path_def) $ubi_link_path
-    ln -s $(basename $ubi_link_path_def_2k) $ubi_link_path_2k
+    ln -s $ubi_link_path_def $ubi_link_path
+    ln -s $ubi_link_path_def_2k $ubi_link_path_2k
 
-    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
+    ubi_link_path="${IMAGE_LINK_NAME}.ubi"
     rm -f $ubi_link_path
-    ln -s $(basename $ubi_link_path_def) $ubi_link_path
+    ln -s $ubi_link_path_def $ubi_link_path
 }
 
 do_image_complete[postfuncs] += "prepare_ubi"
 
 default_rootfs_ps() {
+    cd ${IMGDEPLOYDIR}
+
     # Default rootfs to ubi for 4k
-    ln -sf ${IMAGE_LINK_NAME}.4k.ubi  ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
+    ln -sf ${IMAGE_LINK_NAME}.4k.ubi  ${IMAGE_LINK_NAME}.4k.default
 
     # Default rootfs to 4k
-    ln -sf ${IMAGE_LINK_NAME}.4k.default ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
+    ln -sf ${IMAGE_LINK_NAME}.4k.default ${IMAGE_LINK_NAME}.default
 }
 
 do_image_complete[postfuncs] += "default_rootfs_ps"

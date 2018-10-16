@@ -4,7 +4,7 @@ require mdm9x15-image.inc
 
 rootfs_symlink() {
     # Provide minimal image as rootfs symlink
-    ln -sf ${IMAGE_LINK_NAME}.2k.default ${DEPLOY_DIR_IMAGE}/rootfs
+    ln -sf ${IMAGE_LINK_NAME}.2k.default ${IMGDEPLOYDIR}/rootfs
 }
 
 # The mdm9x15-image.inc recipe brings in some files via SRC_URI

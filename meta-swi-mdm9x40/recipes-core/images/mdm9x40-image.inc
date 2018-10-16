@@ -1,7 +1,8 @@
 DEPENDS += " \
         virtual/lk \
         mtd-utils-native \
-        cryptsetup-native"
+        cryptsetup-native \
+        libarchive-native"
 
 INC_PR = "r0"
 
@@ -30,6 +31,10 @@ IMAGE_INSTALL_append = " linkmon"
 IMAGE_INSTALL_append = " tzdata"
 IMAGE_INSTALL_append = " tzone-utils"
 
+# Add replacements for busybox utils in order to properly handle
+# extended file attributes.
+IMAGE_INSTALL_append = " libarchive"
+
 create_ubinize_config() {
     local cfg_path=$1
     local rootfs_type=$2
@@ -39,7 +44,7 @@ create_ubinize_config() {
         local dm_root_hash_path=$4
     fi
 
-    local rootfs_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${rootfs_type}"
+    local rootfs_path="${IMGDEPLOYDIR}/${IMAGE_NAME}.rootfs.${rootfs_type}"
 
     echo \[sysfs_volume\] > $cfg_path
     echo mode=ubi >> $cfg_path
@@ -84,15 +89,9 @@ create_ubinize_config() {
     fi
 }
 
-get_dm_root_hash() {
-    local dm_root_hash_path=$1
-    local dm_hash_filename=$2
-    local root_hash=$(cat ${dm_hash_filename} | grep Root | awk -F' ' '{printf $3}')
-    echo ${root_hash} > ${dm_root_hash_path}
-}
-
 prepare_ubi_ps() {
     local page_size=$1
+    local image_type=
     local ubinize_cfg=
     local image_path=
     local dm_hash_path=
@@ -102,8 +101,10 @@ prepare_ubi_ps() {
     local ubi_link_path=
 
     for rootfs_type in ubifs squashfs; do
-        ubinize_cfg="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.ubinize.cfg"
-        image_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.${rootfs_type}"
+        image_type=${rootfs_type}
+
+        ubinize_cfg="${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.${image_type}.ubinize.cfg"
+        image_path="${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.${image_type}"
 
         # Now Dm-verity only work with squashfs
         if [ "${DM_VERITY_ENCRYPT}" = "on" -a "${rootfs_type}" = "squashfs" ]; then
@@ -111,63 +112,50 @@ prepare_ubi_ps() {
             dm_hash_filename="${dm_hash_path}.txt"
             dm_root_hash_path="${image_path}.rhash"
 
-            create_dm_verity_hash ${image_path} ${dm_hash_path} ${dm_hash_filename}
-            get_dm_root_hash ${dm_root_hash_path} ${dm_hash_filename}
-            create_ubinize_config ${ubinize_cfg} ${rootfs_type} ${dm_hash_path} ${dm_root_hash_path}
+            if [[ ! -e ${dm_hash_filename} ]]; then
+                create_dm_verity_hash "${image_path}" "${dm_hash_path}" "${dm_hash_filename}"
+                get_dm_root_hash "${dm_root_hash_path}" "${dm_hash_filename}"
+            fi
+            create_ubinize_config ${ubinize_cfg} ${image_type} ${dm_hash_path} ${dm_root_hash_path}
         else
-            create_ubinize_config ${ubinize_cfg} ${rootfs_type}
+            create_ubinize_config ${ubinize_cfg} ${image_type}
         fi
 
-        ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${rootfs_type}.${page_size}.ubi"
-        ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${rootfs_type}.${page_size}.ubi"
+        ubi_path="${IMGDEPLOYDIR}/${IMAGE_NAME}.${rootfs_type}.${page_size}.ubi"
+        ubi_link_path="${IMGDEPLOYDIR}/${IMAGE_LINK_NAME}.${rootfs_type}.${page_size}.ubi"
 
         create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
     done
 }
 
-yocto_squashfs_duct_tape() {
-    # Hack: make symlink from our traditional deploy image
-    # location that we had under Yocto 1.7 to the new squashfs
-    # location established by Yocto 2.2's do_squashfs_image.
-    # Why: without this, prepare_ubi_ps cannot find
-    # ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs
-    # The real fix is probably to standardize our custom image recipes
-    # to all use IMGDEPLOYDIR.
-
-    ln -sf \
-        ${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.squashfs \
-        ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.squashfs
-
-    ln -sf \
-        ${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.ubifs \
-        ${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.rootfs.ubifs
-}
-
-do_image_complete[postfuncs] += "yocto_squashfs_duct_tape"
-
 # Create UBI images
 prepare_ubi() {
     prepare_ubi_ps '4k'
 
-    # Default image (no bs suffix) to 4k + squashfs
-    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.squashfs.4k.ubi"
-    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.ubi"
-    rm -f $ubi_link_path
-    ln -s $(basename $ubi_link_path_def) $ubi_link_path
+    cd ${IMGDEPLOYDIR}
 
-    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
+    # Default image (no bs suffix) to 4k + squashfs
+    ubi_link_path_def="${IMAGE_LINK_NAME}.squashfs.4k.ubi"
+    ubi_link_path="${IMAGE_LINK_NAME}.4k.ubi"
+
     rm -f $ubi_link_path
-    ln -s $(basename $ubi_link_path_def) $ubi_link_path
+    ln -s $ubi_link_path_def $ubi_link_path
+
+    ubi_link_path="${IMAGE_LINK_NAME}.ubi"
+    rm -f $ubi_link_path
+    ln -s $ubi_link_path_def $ubi_link_path
 }
 
 do_image_complete[postfuncs] += "prepare_ubi"
 
 default_rootfs_ps() {
+    cd ${IMGDEPLOYDIR}
+
     # Default rootfs to ubi for 4k
-    ln -sf ${IMAGE_LINK_NAME}.4k.ubi  ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
+    ln -sf ${IMAGE_LINK_NAME}.4k.ubi  ${IMAGE_LINK_NAME}.4k.default
 
     # Default rootfs to 4k
-    ln -sf ${IMAGE_LINK_NAME}.4k.default ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.default
+    ln -sf ${IMAGE_LINK_NAME}.4k.default ${IMAGE_LINK_NAME}.default
 }
 
 do_image_complete[postfuncs] += "default_rootfs_ps"
@@ -185,6 +173,8 @@ python do_unpack2() {
     bb.build.exec_func('base_do_unpack', d)
 }
 
+addtask unpack2 before do_rootfs
+
 do_setfileattr() {
     if [[ "x${SMACK_ATTR_NAME}" != "x" ]]; then
         if [[ "x${SMACK_ATTR_VALUE}" != "x" ]]; then
@@ -194,7 +184,5 @@ do_setfileattr() {
 }
 
 IMAGE_PREPROCESS_COMMAND += "do_setfileattr; "
-
-addtask unpack2 before do_rootfs
 
 require mdm9x40-image-cwe.inc
