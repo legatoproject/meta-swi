@@ -20,7 +20,17 @@ echo 0 > /sys/class/android_usb/android$num/enable
 
 /usr/bin/ud_getusbinfo MANU > /sys/class/android_usb/android$num/iManufacturer
 /usr/bin/ud_getusbinfo NAME > /sys/class/android_usb/android$num/iProduct
-/usr/bin/ud_getusbinfo SER > /sys/class/android_usb/android$num/iSerial
+# Set unique ADB device ID beore device is enumerated otherwise ADB device
+# ID will be changed after device re-enumerated
+#/usr/bin/ud_getusbinfo SER > /sys/class/android_usb/android$num/iSerial
+if [ -e "/etc/adb_devid" ]
+then
+    cat /etc/adb_devid > /sys/class/android_usb/f_accessory/device/iSerial
+else
+    cat /proc/sys/kernel/random/boot_id | cut -d- -f5 | tr -d '\n' > /sys/class/android_usb/f_accessory/device/iSerial
+    cat /sys/class/android_usb/f_accessory/device/iSerial > /etc/adb_devid
+fi
+
 /usr/bin/ud_getusbinfo PRINUM > /sys/class/android_usb/android$num/iPriNumber
 /usr/bin/ud_getusbinfo PRIREV > /sys/class/android_usb/android$num/iPriRevision
 /usr/bin/ud_getusbinfo IMEI > /sys/class/android_usb/android$num/iImei
