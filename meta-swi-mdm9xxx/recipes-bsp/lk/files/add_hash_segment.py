@@ -429,7 +429,7 @@ def CreateMdtFile(ELFParameterList,IN):
 
 	for segment in ELFParameterList['segments']:
 		if segment['hashValue']==True:
-			AddFile(image, name, int(segment['offset'], 16), int(segment['f_size'], 16))
+			AddFile(IN, name, int(segment['offset'], 16), int(segment['f_size'], 16))
 			break
 
 	name = "./Temp/split"

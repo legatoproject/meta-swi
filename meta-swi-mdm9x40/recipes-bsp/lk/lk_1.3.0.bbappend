@@ -11,6 +11,8 @@ EXTRA_OEMAKE += "LINUX_KERNEL_DIR='${LINUX_REPO_DIR}'"
 
 INSANE_SKIP_${PN} += "already-stripped"
 
+DEPENDS += "openssl-native python-native"
+
 add_hash_segment() {
     IMAGE_NAME=$1
     cd ${B}
