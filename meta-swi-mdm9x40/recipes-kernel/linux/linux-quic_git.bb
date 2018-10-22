@@ -55,7 +55,7 @@ BOOTIMG_NAME_2k ?= "boot-yocto-mdm9x40-@{DATETIME}.2k"
 BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x40-@{DATETIME}.4k"
 
 MACHINE_KERNEL_BASE = "0x81800000"
-MACHINE_KERNEL_TAGS_OFFSET = "0x81700000"
+MACHINE_KERNEL_TAGS_OFFSET = "0x82a00000"
 
 gen_master_dtb() {
     master_dtb_name=$1

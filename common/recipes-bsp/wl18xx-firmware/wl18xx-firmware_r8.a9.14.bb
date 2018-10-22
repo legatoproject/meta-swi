@@ -20,9 +20,8 @@ SRC_URI = "git://git.ti.com/wilink8-wlan/wl18xx_fw.git;protocol=git;branch=${BRA
 
 S = "${WORKDIR}/git"
 
-do_compile() {
-    :
-}
+do_configure[noexec] = "1"
+do_compile[noexec] = "1"
 
 do_install() {
     oe_runmake 'DEST_DIR=${D}' install

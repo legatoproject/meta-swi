@@ -35,4 +35,16 @@ do_rm_unused_files() {
     rm -f "${IMAGE_ROOTFS}/etc/gshadow-"
 }
 
-IMAGE_PREPROCESS_COMMAND += "do_rm_unused_files; "
+fakeroot do_label_files() {
+    # set SMACK labels on selected files
+    if [ -f "${IMAGE_ROOTFS}/usr/sbin/dropbearmulti" ] ; then
+        setfattr -n security.SMACK64EXEC -v admin \
+            "${IMAGE_ROOTFS}/usr/sbin/dropbearmulti"
+    fi
+    if [ -f "${IMAGE_ROOTFS}/usr/bin/qmuxd" ] ; then
+        setfattr -n security.SMACK64EXEC -v qmuxd \
+            "${IMAGE_ROOTFS}/usr/bin/qmuxd"
+    fi
+}
+
+IMAGE_PREPROCESS_COMMAND_append = " do_rm_unused_files; do_label_files; "
