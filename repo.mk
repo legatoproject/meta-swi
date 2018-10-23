@@ -4,7 +4,7 @@ NUM_THREADS ?= 9
 # Set workspace directory
 DEFAULT_MDM_BUILD := bin
 APPS_DIR ?= $(firstword $(wildcard $(PWD)/mdm*[0-9]/apps_proc))
-ifneq ($(APPS_DIR),)
+ifneq ($(wildcard $(PWD)/mdm*[0-9]/common),)
   DEFAULT_MDM_BUILD := src
 endif
 
