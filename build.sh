@@ -99,6 +99,7 @@ QEMU=false
 ENABLE_IMA=false
 IMA_CONFIG=""
 BB_FLAGS=""
+SHARED_SSTATE=${SHARED_SSTATE:-false}
 
 while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQG" arg
 do
@@ -521,9 +522,45 @@ else
     set_machine "${MACH}"
 fi
 
+YOCTO_MAJOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\1/g')
+YOCTO_MINOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\2/g')
+
 grep -E "SOURCE_MIRROR_URL" $BD/conf/local.conf > /dev/null
 if [ $? != 0 ]; then
-        sed -e '/^#DL_DIR/a\SOURCE_MIRROR_URL ?= \"file\:\/\/'"$scriptdir"'/../downloads\"\nINHERIT += \"own-mirrors\"\nBB_GENERATE_MIRROR_TARBALLS = \"1\"\nBB_NO_NETWORK = \"0\"\nWORKSPACE = \"'"${WORKSPACE}"'\"\nLINUX_REPO_DIR = \"'"${LINUXDIR}"'\"\nDISTRO = \"'"${DISTRO}"'\"' -i $BD/conf/local.conf
+
+    # Determine source mirrors
+    if [ -e "$scriptdir/../downloads" ]; then
+        # Use the downloads/ directory if available
+        SOURCE_MIRROR_URL="${SOURCE_MIRROR_URL:-"file://$scriptdir/../downloads"}"
+    elif grep -q "sierrawireless.local" /etc/resolv.conf; then
+        # Internal SWI network
+
+        # Use internal SWI download mirror
+        SOURCE_MIRROR_URL="${SOURCE_MIRROR_URL:-"http://get.legato.sierrawireless.local/yocto/mirror/"}"
+
+        # Use shared sstate by default
+        SSTATE_MIRROR_URL="${SSTATE_MIRROR_URL:-"http://get.legato.sierrawireless.local/yocto/sstate/yocto-${YOCTO_MAJOR}.${YOCTO_MINOR}"}"
+    else
+        # External network
+
+        # Use official Yocto mirror
+        SOURCE_MIRROR_URL="${SOURCE_MIRROR_URL:-"https://downloads.yoctoproject.org/mirror/sources/"}"
+
+        # Use external SWI download mirror
+        EXTRA_MIRROR_OPTS='PREMIRRORS_prepend = \" \\\n'
+        EXTRA_MIRROR_OPTS+='    https?$://.*/.* https://get.legato.io/yocto/mirror/ \\n \\\n'
+        EXTRA_MIRROR_OPTS+='    git://.*/.*     https://get.legato.io/yocto/mirror/ \\n \\\n'
+        EXTRA_MIRROR_OPTS+='\"\n'
+    fi
+
+    if [[ "$SHARED_SSTATE" == "true" ]] && [ -n "$SSTATE_MIRROR_URL" ]; then
+        EXTRA_MIRROR_OPTS+='SSTATE_MIRRORS = \"'
+        EXTRA_MIRROR_OPTS+='    file://.*'
+        EXTRA_MIRROR_OPTS+='    '"${SSTATE_MIRROR_URL}"'/PATH;downloadfilename=PATH'
+        EXTRA_MIRROR_OPTS+='\"\n'
+    fi
+
+    sed -e '/^#DL_DIR/a\SOURCE_MIRROR_URL ?= \"'"$SOURCE_MIRROR_URL"'\"\nINHERIT += \"own-mirrors\"\nBB_GENERATE_MIRROR_TARBALLS = \"1\"\n'"$EXTRA_MIRROR_OPTS"'BB_NO_NETWORK = \"0\"\nWORKSPACE = \"'"${WORKSPACE}"'\"\nLINUX_REPO_DIR = \"'"${LINUXDIR}"'\"\nDISTRO = \"'"${DISTRO}"'\"' -i $BD/conf/local.conf
 fi
 sed -e 's:^#\(BB_NUMBER_THREADS\).*:\1 = \"'"$TASKS"'\":' -i $BD/conf/local.conf
 sed -e 's:^#\(PARALLEL_MAKE\).*:\1 = \"-j '"$THREADS"'\":' -i $BD/conf/local.conf
