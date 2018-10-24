@@ -29,7 +29,7 @@ RDEPENDS_${PN} += "ca-certificates"
 RDEPENDS_${PN} += "attr"
 
 # Adds an alternative to tar (bsdtar)
-RDEPENDS_${PN} += "libarchive"
+RDEPENDS_${PN} += "bsdtar"
 
 # Provide base support for Legato
 RDEPENDS_${PN} += "legato-init"
