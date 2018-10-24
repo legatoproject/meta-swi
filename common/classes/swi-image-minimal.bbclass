@@ -45,6 +45,10 @@ fakeroot do_label_files() {
         setfattr -n security.SMACK64EXEC -v qmuxd \
             "${IMAGE_ROOTFS}/usr/bin/qmuxd"
     fi
+    if [ -f "${IMAGE_ROOTFS}/usr/sbin/tzoneset" ] ; then
+        setfattr -n security.SMACK64EXEC -v _ \
+            "${IMAGE_ROOTFS}/usr/sbin/tzoneset"
+    fi
 }
 
 IMAGE_PREPROCESS_COMMAND_append = " do_rm_unused_files; do_label_files; "
