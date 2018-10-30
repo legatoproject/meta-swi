@@ -13,6 +13,16 @@ DEPENDS += "legato-tools-native"
 DEPENDS += "fakeroot-native"
 DEPENDS += "${@check_legato_af_dep(d)}"
 
+# For Legato devMode
+DEPENDS += "gdb"
+DEPENDS += "strace"
+DEPENDS += "tcf-agent"
+DEPENDS += "openssh"
+DEPENDS += "usbutils"
+DEPENDS += "iperf3"
+DEPENDS += "tcpdump"
+DEPENDS += "lsof"
+
 # no-op by default
 select_legato_target() {
     export LEGATO_TARGET=$1
