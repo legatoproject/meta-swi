@@ -112,13 +112,13 @@ CONFIG_EAP_GTC=y
 CONFIG_EAP_OTP=y
 
 # EAP-SIM (enable CONFIG_PCSC, if EAP-SIM is used)
-#CONFIG_EAP_SIM=y
+CONFIG_EAP_SIM=y
 
 # EAP-PSK (experimental; this is _not_ needed for WPA-PSK)
 #CONFIG_EAP_PSK=y
 
 # EAP-pwd (secure authentication using only a password)
-#CONFIG_EAP_PWD=y
+CONFIG_EAP_PWD=y
 
 # EAP-PAX
 #CONFIG_EAP_PAX=y
@@ -127,11 +127,11 @@ CONFIG_EAP_OTP=y
 CONFIG_EAP_LEAP=y
 
 # EAP-AKA (enable CONFIG_PCSC, if EAP-AKA is used)
-#CONFIG_EAP_AKA=y
+CONFIG_EAP_AKA=y
 
 # EAP-AKA' (enable CONFIG_PCSC, if EAP-AKA' is used).
 # This requires CONFIG_EAP_AKA to be enabled, too.
-#CONFIG_EAP_AKA_PRIME=y
+CONFIG_EAP_AKA_PRIME=y
 
 # Enable USIM simulator (Milenage) for EAP-AKA
 #CONFIG_USIM_SIMULATOR=y
@@ -206,7 +206,7 @@ CONFIG_CTRL_IFACE=y
 
 # Include internal line edit mode in wpa_cli. This can be used as a replacement
 # for GNU Readline to provide limited command line editing and history support.
-#CONFIG_WPA_CLI_EDIT=y
+CONFIG_WPA_CLI_EDIT=y
 
 # Remove debugging code that is printing out debug message to stdout.
 # This can be used to reduce the size of the wpa_supplicant considerably
@@ -256,12 +256,12 @@ CONFIG_BACKEND=file
 # unix = UNIX/POSIX like systems (default)
 # win32 = Windows systems
 # none = Empty template
-#CONFIG_OS=unix
+CONFIG_OS=unix
 
 # Select event loop implementation
 # eloop = select() loop (default)
 # eloop_win = Windows events and WaitForMultipleObject() loop
-#CONFIG_ELOOP=eloop
+CONFIG_ELOOP=eloop
 
 # Should we use poll instead of select? Select is used by default.
 #CONFIG_ELOOP_POLL=y
@@ -276,14 +276,14 @@ CONFIG_BACKEND=file
 # winpcap = WinPcap with receive thread
 # ndis = Windows NDISUIO (note: requires CONFIG_USE_NDISUIO=y)
 # none = Empty template
-#CONFIG_L2_PACKET=linux
+CONFIG_L2_PACKET=linux
 
 # PeerKey handshake for Station to Station Link (IEEE 802.11e DLS)
 CONFIG_PEERKEY=y
 
 # IEEE 802.11w (management frame protection), also known as PMF
 # Driver support is also needed for IEEE 802.11w.
-#CONFIG_IEEE80211W=y
+CONFIG_IEEE80211W=y
 
 # Select TLS implementation
 # openssl = OpenSSL (default)
@@ -364,10 +364,10 @@ CONFIG_TLS=openssl
 #CONFIG_DYNAMIC_EAP_METHODS=y
 
 # IEEE Std 802.11r-2008 (Fast BSS Transition)
-#CONFIG_IEEE80211R=y
+CONFIG_IEEE80211R=y
 
 # Add support for writing debug log to a file (/tmp/wpa_supplicant-log-#.txt)
-#CONFIG_DEBUG_FILE=y
+CONFIG_DEBUG_FILE=y
 
 # Send debug messages to syslog instead of stdout
 CONFIG_DEBUG_SYSLOG=y
@@ -459,13 +459,13 @@ CONFIG_IEEE80211N=y
 # This can be used to enable functionality to improve interworking with
 # external networks (GAS/ANQP to learn more about the networks and network
 # selection based on available credentials).
-#CONFIG_INTERWORKING=y
+CONFIG_INTERWORKING=y
 
 # Hotspot 2.0
-#CONFIG_HS20=y
+CONFIG_HS20=y
 
 # Disable roaming in wpa_supplicant
-#CONFIG_NO_ROAMING=y
+CONFIG_NO_ROAMING=y
 
 # AP mode operations with wpa_supplicant
 # This can be used for controlling AP mode operations with wpa_supplicant. It
@@ -477,7 +477,7 @@ CONFIG_AP=y
 # P2P (Wi-Fi Direct)
 # This can be used to enable P2P support in wpa_supplicant. See README-P2P for
 # more information on P2P operations.
-#CONFIG_P2P=y
+CONFIG_P2P=y
 
 # Enable TDLS support
 #CONFIG_TDLS=y

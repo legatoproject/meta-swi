@@ -29,14 +29,19 @@ IMAGE_INSTALL_append = " crda"
 IMAGE_INSTALL_append = " i2cgpioctl"
 IMAGE_INSTALL_append = " sierra-init-tiwifi"
 
-# QCA9377 support (only if it's enabled).
+#================
+# QCA9377 support
+#================
+# AR758x and WP76xx products are using this file as well.  AR758x do not need QCA9377 support, but WP76xx need QCA9377 support.
+# AR758x machine is swi-mdm9x28-ar758x.
+# WP76xx machine is swi-mdm9x28-wp
 # Kernel module
-IMAGE_INSTALL_append = " ${@bb.utils.contains('ENABLE_QCA9377', '1', ' qcacld-hl', '', d)}"
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28-wp', ' qcacld-hl', '', d)}"
 # Init script
-IMAGE_INSTALL_append = " ${@bb.utils.contains('ENABLE_QCA9377', '1', ' sierra-init-qca9377', '', d)}"
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28-wp', ' sierra-init-qca9377', '', d)}"
 
-# Bluez support for Bluetooth
-IMAGE_INSTALL_append = " bluez5"
+# Bluetooth Bluez support
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28-wp', ' bluez5', '', d)}"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"

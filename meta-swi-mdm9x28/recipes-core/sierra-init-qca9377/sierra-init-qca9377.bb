@@ -12,5 +12,5 @@ do_configure[noexec] = "1"
 do_compile[noexec] = "1"
 
 do_install() {
-    install -m 0755 ${WORKDIR}/qca9377.sh -D ${D}/${sysconfdir}/init.d/qca9377
+    install -m 0755 ${WORKDIR}/qca9377.sh -D ${D}/${bindir}/qca9377
 }
