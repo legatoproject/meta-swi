@@ -344,6 +344,19 @@ dev_src: prepare
 
 dev: dev_$(DEFAULT_MDM_BUILD)
 
+## binary layer generation
+
+BIN_LAYER_ARGS := -m $(MACH)
+ifneq ($(PROD),)
+  BIN_LAYER_ARGS += -p $(PROD)
+endif
+
+binary_layer:
+	$(PWD)/meta-swi-extras/create_bin_layer.sh \
+		-b $(PWD)/build_src/ \
+		-o $(PWD)/build_src/binary_layer/ \
+		$(BIN_LAYER_ARGS)
+
 # Machine: swi-virt
 
 COMMON_VIRT_ARM := \
