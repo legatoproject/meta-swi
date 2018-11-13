@@ -18,10 +18,17 @@ DEPENDS += "bsdiff-native"
 RDEPENDS_${PN} += "libgcc"
 RDEPENDS_${PN} += "libstdc++"
 
+# Optional framework support
+PACKAGECONFIG ??= "python"
+PACKAGECONFIG[python] = "python,nopython,python"
+
 # Target dependencies
 DEPENDS += "curl"
 DEPENDS += "zlib"
 DEPENDS += "openssl"
+
+# Sample apps dependencies
+DEPENDS += "procps"
 
 # Build time dependencies (not in the rootfs image)
 do_compile[depends]  = "legato-tools-native:do_populate_sysroot"
@@ -130,6 +137,7 @@ do_install_image() {
     export LEGATO_VERSION=$(cat ${D}/usr/share/legato/version)
 
     # legato-image
+    rm -rf "${LEGATO_STAGING_DIR}/$LEGATO_VERSION"
     for target in ${LEGATO_ROOTFS_TARGETS}; do
         select_legato_target $target
 

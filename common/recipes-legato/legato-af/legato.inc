@@ -5,6 +5,7 @@ LIC_FILES_CHKSUM = "file://${LEGATO_WORKDIR}/LICENSE.md;md5=55a288862ec4d1fd20f9
 DEPENDS += "cmake-native"
 DEPENDS += "ninja-native"
 DEPENDS += "coreutils-native"
+DEPENDS += "kconfig-frontends-native"
 
 # This adds files from the LEGATO_WORKDIR to SRC_URI, which allows bitbake to track
 # the checksum of this files and therefore rebuild when they change.
@@ -42,6 +43,8 @@ def list_legato_files(d):
                 continue # Unable to handle files that contain a space
             # Skip .patch files as they would be handled by the do_patch task
             if f.endswith(".patch"):
+                continue
+            if f.startswith(".config"):
                 continue
 
             file_list.append( "file://" + quote(os.path.join(startpath, path, f)) )
@@ -89,4 +92,5 @@ PRIVATE_LIBS = "libjansson.so.4"
 do_compile_prepend() {
     export LEGATO_ROOT="${S}"
     export PATH="${S}/bin:$PATH"
+    export KCONFIG="${RECIPE_SYSROOT_NATIVE}/usr/bin/kconfig"
 }

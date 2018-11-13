@@ -3,8 +3,10 @@ do_compile_prepend() {
 }
 
 select_legato_target() {
-    if grep -q VIRT_TOOLCHAIN_DIR "${S}/targetDefs"; then
+    if [ -e "${S}/targetDefs" ] && grep -q VIRT_TOOLCHAIN_DIR "${S}/targetDefs"; then
         export LEGATO_TARGET="virt"
+    else
+        export LEGATO_TARGET="$1"
     fi
 }
 
