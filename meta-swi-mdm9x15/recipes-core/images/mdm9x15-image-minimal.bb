@@ -14,4 +14,4 @@ rootfs_symlink() {
 python populate_lic_qa_checksum () {
 }
 
-do_rootfs[postfuncs] += "rootfs_symlink"
+do_deploy[postfuncs] += "rootfs_symlink"
