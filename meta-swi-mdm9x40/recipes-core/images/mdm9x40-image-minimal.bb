@@ -7,6 +7,4 @@ rootfs_symlink() {
     ln -sf ${IMAGE_LINK_NAME}.4k.default ${IMGDEPLOYDIR}/rootfs
 }
 
-do_rootfs[postfuncs] += "rootfs_symlink"
-
-
+do_deploy[postfuncs] += "rootfs_symlink"
