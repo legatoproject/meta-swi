@@ -37,9 +37,9 @@ do_rm_unused_files() {
 
 fakeroot do_label_files() {
     # Set SMACK labels on selected files
-    if [ -f "${IMAGE_ROOTFS}/usr/sbin/dropbearmulti" ] ; then
+    if [ -f "${IMAGE_ROOTFS}/etc/init.d/dropbear" ] ; then
         setfattr -n security.SMACK64EXEC -v admin \
-            "${IMAGE_ROOTFS}/usr/sbin/dropbearmulti"
+            "${IMAGE_ROOTFS}/etc/init.d/dropbear"
     fi
     if [ -f "${IMAGE_ROOTFS}/usr/bin/qmuxd" ] ; then
         setfattr -n security.SMACK64EXEC -v qmuxd \

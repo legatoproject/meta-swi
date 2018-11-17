@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+# Wrapper for the /etc/init.d/dropbear script so that it can be run as an independent
+# process instead of being sourced by busybox.
+# This allow the script to run with label as set per an eventual security.SMACK64EXEC.
+#
+/etc/init.d/dropbear "$@" &
+exit 0
