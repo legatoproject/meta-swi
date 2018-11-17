@@ -1,5 +1,10 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-INITSCRIPT_NAME = "dropbear"
+SRC_URI += "file://init.wrapper"
+
+INITSCRIPT_NAME = "dropbear.wrapper"
 INITSCRIPT_PARAMS = "start 95 S . stop 90 S ."
 
+do_install_append() {
+    install -m 0755 ${WORKDIR}/init.wrapper ${D}${sysconfdir}/init.d/dropbear.wrapper
+}
