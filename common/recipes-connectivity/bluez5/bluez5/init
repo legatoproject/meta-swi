@@ -21,43 +21,41 @@ set -e
 
 case $1 in
   start)
-	echo -n "Starting $DESC: "
-	if test "$BLUETOOTH_ENABLED" = 0; then
-		echo "disabled (see /etc/default/bluetooth)."
-		exit 0
-	fi
-	start-stop-daemon --start --background $SSD_OPTIONS
-	echo "${DAEMON##*/}."
+    echo -n "Starting $DESC: "
+    if test "$BLUETOOTH_ENABLED" = 0; then
+      echo "disabled (see /etc/default/bluetooth)."
+      exit 0
+    fi
+    start-stop-daemon --start --background $SSD_OPTIONS
+    echo "${DAEMON##*/}."
   ;;
   stop)
-	echo -n "Stopping $DESC: "
-	if test "$BLUETOOTH_ENABLED" = 0; then
-		echo "disabled (see /etc/default/bluetooth)."
-		exit 0
-	fi
-	start-stop-daemon --stop $SSD_OPTIONS
-	echo "${DAEMON##*/}."
+    echo -n "Stopping $DESC: "
+    if test "$BLUETOOTH_ENABLED" = 0; then
+      echo "disabled (see /etc/default/bluetooth)."
+      exit 0
+    fi
+    start-stop-daemon --stop $SSD_OPTIONS
+    echo "${DAEMON##*/}."
   ;;
   restart|force-reload)
-	$0 stop
-	sleep 1
-	$0 start
+    $0 stop
+    sleep 1
+    $0 start
   ;;
   status)
-	 pidof ${DAEMON} >/dev/null
-	 status=$?
-        if [ $status -eq 0 ]; then
-                 echo "bluetooth is running."
-        else
-                echo "bluetooth is not running"
-        fi
-        exit $status
-   ;;
-   *)
-	N=/etc/init.d/bluetooth
-	echo "Usage: $N {start|stop|restart|force-reload|status}" >&2
-	exit 1
-	;;
+    if pidof ${DAEMON} >/dev/null; then
+      echo "bluetooth is running."
+    else
+      echo "bluetooth is not running"
+    fi
+    exit $status
+  ;;
+  *)
+    N=/etc/init.d/bluetooth
+    echo "Usage: $N {start|stop|restart|force-reload|status}" >&2
+    exit 1
+  ;;
 esac
 
 exit 0
