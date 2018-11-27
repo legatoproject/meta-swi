@@ -1,0 +1,6 @@
+admin _ rwx
+_ syslog rw
+admin syslog rw
+_ admin rwx
+qmuxd _ rwx
+_ qmuxd rwx
