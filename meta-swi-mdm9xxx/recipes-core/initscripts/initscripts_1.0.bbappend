@@ -27,6 +27,7 @@ SRC_URI = "file://functions \
            file://mount_early.in \
            file://loginNagger \
            file://load_modem.sh \
+	   file://accesses \
            "
 
 SRC_URI_swi-mdm9x28-ar758x-rcy = "file://functions \
@@ -115,6 +116,7 @@ do_install () {
     install -m 0644    ${WORKDIR}/mdev.conf ${D}${sysconfdir}/mdev.conf
     install -m 0755    ${WORKDIR}/usb.sh    ${D}${sysconfdir}/mdev/usb.sh
     install -m 0755    ${WORKDIR}/find-touchscreen.sh   ${D}${sysconfdir}/mdev/find-touchscreen.sh
+    install -m 0644    ${WORKDIR}/accesses -D ${D}${sysconfdir}/smack/accesses
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/hostname.sh   ${D}${sysconfdir}/init.d
