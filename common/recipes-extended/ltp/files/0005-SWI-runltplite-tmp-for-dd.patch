@@ -1,0 +1,38 @@
+--- a/runltplite.sh	2019-01-11 15:32:06.701021798 +0100
++++ b/runltplite.sh	2019-01-11 15:40:38.345012635 +0100
+@@ -48,6 +48,7 @@
+     }
+     export LTPROOT=${PWD}
+     export TMPBASE="/tmp"
++    export TMP_DD="${LTPROOT}/tmp"
+     export TMP="${TMPBASE}/ltp-$$"
+     export PATH="${PATH}:${LTPROOT}/testcases/bin"
+ 
+@@ -196,11 +197,16 @@
+     done
+ 
+ 
+-    mkdir -p $TMP || \
++    mkdir -p $TMP $TMP_DD || \
+     {
+         echo "FATAL: Unable to make temporary directory $TMP"
+         exit 1
+     }
++    chmod 1777 $TMP || \
++    {
++      echo "unable to chmod 1777 $TMP ... aborting"
++      exit 1
++    }
+ 
+     cd $TMP || \
+     {
+@@ -387,7 +387,8 @@
+ 
+ cleanup()
+ {
+-    rm -rf ${TMP}
++    [ -n "${LTP_DEV}" ] && losetup -d ${LTP_DEV}
++    rm -rf ${TMP} ${TMP_DD}
+ }
+ 
+ trap "cleanup" 0
