@@ -1,0 +1,229 @@
+--- a/testcases/kernel/security/integrity/ima/tests/ima_measurements.sh	2019-02-06 12:54:03.744073578 +0100
++++ b/testcases/kernel/security/integrity/ima/tests/ima_measurements.sh	2019-02-06 13:12:34.252053691 +0100
+@@ -29,6 +29,12 @@
+ ################################################################################
+ export TST_TOTAL=3
+ export TCID="ima_measurements"
++export TCID="ima_measurements"
++export TST_NEEDS_CHECKPOINTS=1
++export LTP_COLORIZE_OUTPUT=0
++export TMPDIR=/tmp
++
++. `dirname $0`/cmdlib.sh
+ 
+ init()
+ {
+@@ -46,17 +52,20 @@
+ test01()
+ {
+ 	# Create file test.txt
+-	cat > test.txt <<-EOF
+-	$(date) - this is a test file
++	cat > $TST_TMPDIR/test.txt <<-EOF
++	#!/bin/sh
++	date
+ 	EOF
+ 	if [ $? -ne 0 ]; then
+ 		tst_brkm TBROK "Unable to create test file"
+ 	fi
++	chmod +x $TST_TMPDIR/test.txt
+ 
+ 	# Calculating the sha1sum of test.txt should add
+ 	# the measurement to the measurement list.
+ 	# (Assumes SHA1 IMA measurements.)
+-	hash=$(sha1sum "test.txt" | sed 's/  -//')
++	$TST_TMPDIR/test.txt
++	hash=$(sha1sum "$TST_TMPDIR/test.txt" | sed 's/  -//')
+ 
+ 	# Check if the file is measured
+ 	# (i.e. contained in the ascii measurement list.)
+@@ -76,11 +85,13 @@
+ test02()
+ {
+ 	# Modify test.txt
+-	echo $($date) - file modified >> test.txt
++	echo "#$($date) - file modified" >> $TST_TMPDIR/test.txt
++	$TST_TMPDIR/test.txt
+ 
+ 	# Calculating the sha1sum of test.txt should add
+ 	# the new measurement to the measurement list
+-	hash=$(sha1sum test.txt | sed 's/  -//')
++	$TST_TMPDIR/test.txt
++	hash=$(sha1sum $TST_TMPDIR/test.txt | sed 's/  -//')
+ 
+ 	# Check if the new measurement exists
+ 	cat /sys/kernel/security/ima/ascii_runtime_measurements > measurements
+@@ -100,30 +111,31 @@
+ test03()
+ {
+ 	# create file user-test.txt
+-	mkdir -m 0700 user
+-	chown nobody.nobody user
+-	cd user
++	mkdir -p -m 0700 $TST_TMPDIR/user
++	chown nobody.nogroup $TST_TMPDIR/user
++	cd $TST_TMPDIR/user
+ 	hash=0
+ 
+ 	# As user nobody, create and cat the new file
+ 	# (The LTP tests assumes existence of 'nobody'.)
+-	sudo -n -u nobody sh -c "echo $(date) - create test.txt > ./test.txt;
+-				 cat ./test.txt > /dev/null"
++	su nobody sh -c "echo $(date) > $TST_TMPDIR/user/user-test.txt;
++				chmod +x $TST_TMPDIR/user/user-test.txt; $TST_TMPDIR/user/user-test.txt"
++
+ 
+ 	# Calculating the hash will add the measurement to the measurement
+ 	# list, so only calc the hash value after getting the measurement
+ 	# list.
+ 	cat /sys/kernel/security/ima/ascii_runtime_measurements > measurements
+-	hash=$(sha1sum test.txt | sed 's/  -//')
+-	cd - >/dev/null
++	hash=$(sha1sum $TST_TMPDIR/user/user-test.txt | sed 's/  -//')
+ 
+ 	# Check if the file is measured
+ 	grep $hash measurements > /dev/null
+-	if [ $? -ne 0 ]; then
++	if [ $? -eq 0 ]; then
+ 		tst_resm TPASS "user file test.txt not measured"
+ 	else
+ 		tst_resm TFAIL "user file test.txt measured"
+ 	fi
++	cd - >/dev/null
+ }
+ 
+ . ima_setup.sh
+--- a/testcases/kernel/security/integrity/ima/tests/ima_policy.sh	2019-01-15 10:40:38.313962959 +0100
++++ b/testcases/kernel/security/integrity/ima/tests/ima_policy.sh	2019-01-15 09:53:04.546045288 +0100
+@@ -28,6 +28,11 @@
+ ################################################################################
+ export TST_TOTAL=3
+ export TCID="ima_policy"
++export TST_NEEDS_CHECKPOINTS=1
++export LTP_COLORIZE_OUTPUT=0
++export TMPDIR=/tmp
++
++. `dirname $0`/cmdlib.sh
+ 
+ init()
+ {
+@@ -35,6 +40,7 @@
+ 	IMA_POLICY=$IMA_DIR/policy
+ 	if [ ! -f $IMA_POLICY ]; then
+ 		tst_resm TINFO "default policy already replaced"
++		tst_brkm TCONF "missing $IMA_POLICY"
+ 	fi
+ 
+ 	VALID_POLICY=$LTPROOT/testcases/data/ima_policy/measure.policy
+--- a/testcases/kernel/security/integrity/ima/tests/ima_setup.sh	2019-01-15 10:40:38.313962959 +0100
++++ b/testcases/kernel/security/integrity/ima/tests/ima_setup.sh	2019-01-14 15:49:10.475921465 +0100
+@@ -25,7 +25,13 @@
+ #
+ # Author:       Mimi Zohar, zohar@ibm.vnet.ibm.com
+ ################################################################################
++export TST_NEEDS_CHECKPOINTS=0
++export LTP_COLORIZE_OUTPUT=0
++export TMPDIR=/tmp
++
+ . test.sh
++. `dirname $0`/cmdlib.sh
++
+ mount_sysfs()
+ {
+ 	SYSFS=$(mount 2>/dev/null | awk '$5 == "sysfs" { print $3 }')
+--- a/testcases/kernel/security/integrity/ima/tests/ima_tpm.sh	2019-01-15 10:40:38.313962959 +0100
++++ b/testcases/kernel/security/integrity/ima/tests/ima_tpm.sh	2019-01-14 15:49:10.475921465 +0100
+@@ -31,6 +31,11 @@
+ ################################################################################
+ export TST_TOTAL=3
+ export TCID="ima_tpm"
++export TST_NEEDS_CHECKPOINTS=1
++export LTP_COLORIZE_OUTPUT=0
++export TMPDIR=/tmp
++
++. `dirname $0`/cmdlib.sh
+ 
+ init()
+ {
+--- a/testcases/kernel/security/integrity/ima/tests/ima_violations.sh	2019-01-15 10:40:38.313962959 +0100
++++ b/testcases/kernel/security/integrity/ima/tests/ima_violations.sh	2019-01-15 10:32:52.133976408 +0100
+@@ -32,6 +32,11 @@
+ 
+ export TST_TOTAL=3
+ export TCID="ima_violations"
++export TST_NEEDS_CHECKPOINTS=1
++export LTP_COLORIZE_OUTPUT=0
++export TMPDIR=/tmp
++
++. `dirname $0`/cmdlib.sh
+ 
+ open_file_read()
+ {
+@@ -71,6 +76,13 @@
+ 	fi
+ 
+ 	ima_violations=$SECURITYFS/ima/violations
++
++	# Check if test is relevant because it needs to have read/write violations
++	echo "date" >$TST_TMPDIR/checktest_$$.txt
++	chmod +x $TST_TMPDIR/checktest_$$.txt
++	cat $TST_TMPDIR/checktest_$$.txt >/dev/null
++	grep -q checktest_$$.txt $SECURITYFS/ima/* 2>/dev/null || \
++		tst_brkm TCONF "IMA for read/write is disabled"
+ }
+ 
+ # Function:     test01
+@@ -79,7 +91,7 @@
+ {
+ 	read num_violations < $ima_violations
+ 
+-	TMPFN=test.txt
++	TMPFN=$TST_TMPDIR/test.txt
+ 	open_file_write $TMPFN
+ 	open_file_read $TMPFN
+ 	close_file_read
+@@ -87,7 +99,7 @@
+ 	read num_violations_new < $ima_violations
+ 	num=$(($(expr $num_violations_new - $num_violations)))
+ 	if [ $num -gt 0 ]; then
+-		tail $log | grep test.txt | grep -q 'open_writers'
++		logread  | tail | grep test.txt | grep -q 'open_writers'
+ 		if [ $? -eq 0 ]; then
+ 			tst_resm TPASS "open_writers violation added(test.txt)"
+ 		else
+@@ -104,7 +116,7 @@
+ {
+ 	read num_violations < $ima_violations
+ 
+-	TMPFN=test.txt
++	TMPFN=$TST_TMPDIR/test.txt
+ 	open_file_read $TMPFN
+ 	open_file_write $TMPFN
+ 	close_file_write
+@@ -112,7 +124,7 @@
+ 	read num_violations_new < $ima_violations
+ 	num=$(($(expr $num_violations_new - $num_violations)))
+ 	if [ $num -gt 0 ]; then
+-		tail $log | grep test.txt | grep -q 'ToMToU'
++		logread | tail | grep test.txt | grep -q 'ToMToU'
+ 		if [ $? -eq 0 ]; then
+ 			tst_resm TPASS "ToMToU violation added(test.txt)"
+ 		else
+@@ -129,7 +141,7 @@
+ {
+ 	read num_violations < $ima_violations
+ 
+-	TMPFN=test.txtb
++	TMPFN=$TST_TMPDIR/test.txtb
+ 	echo 'testing testing ' > $TMPFN
+ 	ima_mmap $TMPFN & p1=$!
+ 	sleep 1		# got to wait for ima_mmap to mmap the file
+@@ -137,7 +149,7 @@
+ 	read num_violations_new < $ima_violations
+ 	num=$(($(expr $num_violations_new - $num_violations)))
+ 	if [ $num -gt 0 ]; then
+-		tail $log | grep test.txtb | grep -q 'open_writers'
++		logread | tail | grep test.txtb | grep -q 'open_writers'
+ 		if [ $? -eq 0 ]; then
+ 			tst_resm TPASS "mmapped open_writers violation added(test.txtb)"
+ 		else
