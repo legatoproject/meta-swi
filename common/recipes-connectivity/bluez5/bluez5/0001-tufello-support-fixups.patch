@@ -1,0 +1,22 @@
+--- a/tools/hciattach_rome.c	2018-12-11 20:34:20.415722244 -0800
++++ b/tools/hciattach_rome.c	2018-12-11 20:34:37.775418097 -0800
+@@ -29,7 +29,6 @@
+  *
+  ******************************************************************************/
+ 
+-#define MODULE_HAS_MAC_ADDR
+ #define LOG_TAG "bt_vendor"
+ #include <stdio.h>
+ #include <unistd.h>
+--- a/tools/hciattach_rome.h	2018-12-12 13:18:38.298738844 -0800
++++ b/tools/hciattach_rome.h	2018-12-12 13:25:59.995096307 -0800
+@@ -260,7 +260,9 @@
+ #define ROME_SKIP_EVT_CC       0x02
+ #define ROME_SKIP_EVT_VSE_CC   0x03
+ 
++#ifndef FW_CONFIG_FILE_PATH
+ #define FW_CONFIG_FILE_PATH        "/etc/bluetooth/firmware.conf"
++#endif
+ /******************************************************************************
+ **  Local type definitions
+ ******************************************************************************/
