@@ -1,4 +1,5 @@
 require bluez5.inc
+FILESEXTRAPATHS_prepend := "${WORKDIR}:${THISDIR}/files:"
 
 REQUIRED_DISTRO_FEATURES = "bluez5"
 

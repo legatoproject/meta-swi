@@ -42,6 +42,7 @@ IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28', ' sierra
 
 # Bluetooth Bluez support
 IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28', ' bluez5', '', d)}"
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28', ' qca9377-bt-firmware', '', d)}"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
