@@ -11,7 +11,7 @@ IMAGE_INSTALL_append = " bsinfo-stub"
 IMAGE_INSTALL_append = " kernel-module-softdog"
 
 # Add eventual legato dependency
-DEPENDS += "${@check_legato_pkg(d)}"
+DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 
 # Add timezone related packages
 IMAGE_INSTALL_append = " tzdata"

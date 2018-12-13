@@ -1355,6 +1355,27 @@ mount_early_pseudo()
     mkdir -p /dev/shm
     mount -t tmpfs tmpfs /dev/shm -o mode=0777,smackfsdef=*
 
+    # Mount smackfs on standard location. If standard mount point is not there,
+    # most likely, SMACK security is not enabled, and we'll skip it.
+    if [ -d /sys/fs/smackfs ] ; then
+        echo "${this_e}: Mounting SMACK security pseudo fs..."
+        mount -t smackfs smackfs /sys/fs/smackfs
+        if [ $? -ne 0 ] ; then
+            # If SMACK pseudo file system failed to mount, there is nothing
+            # much we could do. However, boot should continue.
+            echo "${this_e}: Failed to mount SMACK security pseudo fs."
+        else
+            # This thing is mounted, add the rules. If we cannot add the rules
+            # there is really nothing we could do, so log the problem, and
+            # continue booting up.
+            add_system_smack_rules
+            if [ $? -ne 0 ] ; then
+                echo "${this_e}: Failed to add system SMACK rules."
+                umount /sys/fs/smackfs >/dev/null 2>&1
+            fi
+        fi
+    fi
+
     # Kick hotplugging and start mdev.
     echo "/sbin/mdev" > /proc/sys/kernel/hotplug
     mdev -s
@@ -1445,6 +1466,46 @@ mount_early_unset_timezone()
     # Do not care about the result.
     umount -l ${real_localtime} &>/dev/null
     return ${SWI_OK}
+}
+
+# Add SMACK rules considered to be system related.
+# All the rules must be located in /etc/smack/accesses, because
+# we could also use smack userland tools to load the rules from
+# this file (if we choose to do so later on).
+add_system_smack_rules()
+{
+    local smack_rules_src=/etc/smack/accesses
+    local smack_rules_dst=/sys/fs/smackfs/load2
+    local smack_delay=
+    local ret=${SWI_OK}
+
+    if [ ! -f ${smack_rules_src} ] ; then
+        echo "${this_e}: Cannot find ${smack_rules_src}."
+        return ${SWI_ERR}
+    fi
+
+    if [ ! -f ${smack_rules_dst} ] ; then
+        echo "${this_e}: Cannot find ${smack_rules_src}."
+        return ${SWI_ERR}
+    fi
+
+    (   set -e; \
+        while read -r -u 10 i; do \
+            if ! echo "$i" | grep -q -e '^#' -e '^ *$'; then \
+                if echo $i; then \
+                    sleep ${smack_delay:-0}; \
+                else \
+                    echo "${this_e}: Invalid line in ${smack_rules_src}: $i" >&2; \
+                    return ${SWI_ERR}; \
+                fi; \
+            fi; \
+        done ) 10<${smack_rules_src} >${smack_rules_dst}
+    if [ $? -ne 0 ]; then
+        echo "${this_e}: Error loading system SMACK rules."
+        ret=${SWI_ERR}
+    fi
+
+    return ${ret}
 }
 
 # Chooser.

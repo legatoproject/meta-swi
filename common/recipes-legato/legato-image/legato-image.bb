@@ -7,8 +7,6 @@ DEPENDS += "mtd-utils-native"
 
 inherit legato
 
-INHIBIT_DEFAULT_DEPS = "1"
-
 gen_version() {
     version_file="${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/system/version"
     echo $version_file

@@ -5,7 +5,7 @@ PR = "r0"
 inherit packagegroup
 
 RDEPENDS_${PN} += "perl"
-RDEPENDS_${PN} += "iperf"
+RDEPENDS_${PN} += "iperf3"
 RDEPENDS_${PN} += "tcpdump"
 RDEPENDS_${PN} += "strace"
 RDEPENDS_${PN} += "usbutils"

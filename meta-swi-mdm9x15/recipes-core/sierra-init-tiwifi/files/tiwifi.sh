@@ -71,11 +71,6 @@ ti_wifi_start() {
            gpioexp 1 13 output normal low >/dev/null || exit 127
        fi
 
-       # Set IOT0_GPIO4 = 1 (WP GPIO8)
-       [ -d /sys/class/gpio/gpio8 ] || echo 8 >/sys/class/gpio/export
-       echo out >/sys/class/gpio/gpio8/direction
-       echo 1 >/sys/class/gpio/gpio8/value
-
        modprobe msm_sdcc || exit 127
 
        modprobe wlcore || exit 127
@@ -111,8 +106,6 @@ ti_wifi_stop() {
 
        rmmod msm-sdcc || exit 127
 
-       # Reset IOT0_GPIO4 = 0 (WP GPIO8)
-       echo 0 >/sys/class/gpio/gpio8/value
        # Clear IOTO_RESET, GPIO#4/EXPANDER#3 - IOT0 Reset signal is enabled
        gpioexp 3 4 output normal low >/dev/null 2>&1
        if [ $? -ne 0 ]; then

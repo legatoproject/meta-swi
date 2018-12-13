@@ -1,10 +1,9 @@
-# This recipe
-inherit native
-
 DESCRIPTION = "Legato - Tools"
 SECTION = "base"
 DEPENDS = ""
 PR = "r0"
+
+BBCLASSEXTEND = "native nativesdk"
 
 require legato.inc
 

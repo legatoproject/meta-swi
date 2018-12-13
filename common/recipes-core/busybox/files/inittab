@@ -20,4 +20,4 @@
 ::restart:/sbin/init
 
 # Attempt to start getty on UARTx
-# getty entries are added at buildtime
+::respawn:/etc/init.d/run_getty.sh
