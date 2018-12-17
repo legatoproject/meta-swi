@@ -1,14 +1,15 @@
-From 556e190027a64b292eac777d4a7536e6ad592cb5 Mon Sep 17 00:00:00 2001
-From: Yan Kong <ykong@sierrawireless.com>
-Date: Mon, 12 Sep 2016 13:53:08 +0800
-Subject: [PATCH] mm-audio: offer aplay, arec, amix dynamic libraries
+From 50e22236ccd2aadf80e1ee4b24c720f45cde5952 Mon Sep 17 00:00:00 2001
+From: kehuang <KeHuang@sierrawireless.com>
+Date: Thu, 7 Dec 2017 17:06:22 +0800
+Subject: [PATCH] add Qualcomm's patch for DTMF feature
 
+Signed-off-by: kehuang <KeHuang@sierrawireless.com>
 ---
  libalsa-intf/Makefile.am |  23 +++
  libalsa-intf/amix.c      |   4 +
  libalsa-intf/aplay.c     | 333 +++++++++++++++++++++++++------------
- libalsa-intf/arec.c      | 421 +++++++++++++++++++++++++++++------------------
- 4 files changed, 514 insertions(+), 267 deletions(-)
+ libalsa-intf/arec.c      | 424 +++++++++++++++++++++++++++++------------------
+ 4 files changed, 517 insertions(+), 267 deletions(-)
  mode change 100644 => 100755 libalsa-intf/Makefile.am
  mode change 100644 => 100755 libalsa-intf/amix.c
  mode change 100644 => 100755 libalsa-intf/aplay.c
@@ -756,7 +757,7 @@ index e4bbcce..2f1a297
 diff --git a/libalsa-intf/arec.c b/libalsa-intf/arec.c
 old mode 100644
 new mode 100755
-index 6316cfa..5208e21
+index 6316cfa..f276d77
 --- a/libalsa-intf/arec.c
 +++ b/libalsa-intf/arec.c
 @@ -27,6 +27,7 @@
@@ -1078,7 +1079,7 @@ index 6316cfa..5208e21
                          lseek(fd, 0, SEEK_END);
                      }
                  }
-@@ -406,150 +430,160 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
+@@ -406,150 +430,163 @@ int record_file(unsigned rate, unsigned channels, int fd, unsigned count,  unsig
                        break;
             }
      } else {
@@ -1109,7 +1110,9 @@ index 6316cfa..5208e21
 +    memcpy(&arec_attr_signal, arec_attr, sizeof(arec_attr_t));
 +#endif
 +
-+	    while (!pcm_read(arec_attr->pcm, arec_attr->data, bufsize)) {
++	    while (1) {
++             err = pcm_read(arec_attr->pcm, arec_attr->data, bufsize);
++             if (!err) {
 +		if (write(fd, arec_attr->data, bufsize) != bufsize) {
  		    fprintf(stderr, "Arec:could not write %d bytes\n", bufsize);
  		    break;
@@ -1128,6 +1131,7 @@ index 6316cfa..5208e21
                  }
                  if (rec_size >= count)
                      break;
++             }
  	    }
 +        free(arec_attr->data);
 +        arec_attr->data = NULL;
@@ -1297,7 +1301,7 @@ index 6316cfa..5208e21
  }
  
  static void signal_handler(int sig)
-@@ -558,27 +592,31 @@ static void signal_handler(int sig)
+@@ -558,27 +595,31 @@ static void signal_handler(int sig)
      FILE *fp;
  
      fprintf(stderr, "Arec:Aborted by signal %s...\n", strsignal(sig));
@@ -1341,7 +1345,7 @@ index 6316cfa..5208e21
  {
      int rate = 48000;
      int ch = 1;
-@@ -590,6 +628,12 @@ int main(int argc, char **argv)
+@@ -590,6 +631,12 @@ int main(int argc, char **argv)
      struct sigaction sa;
      int rc = 0;
      char *cformat = NULL;
@@ -1354,7 +1358,7 @@ index 6316cfa..5208e21
  
      if (argc < 2) {
          printf("\nUsage: arec [options] <file>\n"
-@@ -613,10 +657,16 @@ int main(int argc, char **argv)
+@@ -613,10 +660,16 @@ int main(int argc, char **argv)
             fprintf(stderr, "\nSome of these may not be available on selected hardware\n");
            return 0;
      }
@@ -1372,7 +1376,7 @@ index 6316cfa..5208e21
            break;
         case 'V':
            debug = 1;
-@@ -634,18 +684,18 @@ int main(int argc, char **argv)
+@@ -634,18 +687,18 @@ int main(int argc, char **argv)
            ch  = (int)strtol(optarg, NULL, 0);
            break;
         case 'T':
@@ -1396,7 +1400,7 @@ index 6316cfa..5208e21
            break;
         default:
            printf("\nUsage: arec [options] <file>\n"
-@@ -666,37 +716,84 @@ int main(int argc, char **argv)
+@@ -666,37 +719,84 @@ int main(int argc, char **argv)
                 if (cformat != NULL)
                     fprintf(stderr, "%s ", cformat);
             }

@@ -16,7 +16,7 @@ fi
 DNSMASQ_CONF="/etc/dnsmasq.conf"
 test "/etc/dnsmasq.d/*" != '/etc/dnsmasq.d/*' && DNSMASQ_CONF="${DNSMASQ_CONF} /etc/dnsmasq.d/*"
 
-test -z "${PIDFILE}" && PIFILE="/run/dnsmasq.pid"
+test -z "${PIDFILE}" && PIDFILE="/run/dnsmasq.pid"
 
 if [ -z "$IGNORE_RESOLVCONF" ]
 then
@@ -60,41 +60,40 @@ stop_resolvconf()
 case "$1" in
     start)
         echo -n "starting $DESC: $NAME... "
-    test -d /var/lib/misc/ || mkdir /var/lib/misc/
-    start-stop-daemon -S -x $DAEMON -- $ARGS \
-        ${RESOLV_CONF:+ -r $RESOLV_CONF} \
-        ${PIDFILE:+ -x $PIDFILE}
-    test $? -eq 0 && start_resolvconf
-    echo "done."
+        test -d /var/lib/misc/ || mkdir /var/lib/misc/
+        start-stop-daemon -S -x $DAEMON -- $ARGS \
+            ${RESOLV_CONF:+ -r $RESOLV_CONF} \
+            ${PIDFILE:+ -x $PIDFILE}
+        test $? -eq 0 && start_resolvconf
+        echo "done."
     ;;
     stop)
         echo -n "stopping $DESC: $NAME... "
-    stop_resolvconf
-    start-stop-daemon -K -x $DAEMON
-    echo "done."
+        stop_resolvconf
+        start-stop-daemon -K -x $DAEMON
+        echo "done."
     ;;
     status)
-    echo -n "dnsmasq "
-    start-stop-daemon -q -K -t -x $DAEMON
-    RET=$?
-    if [ "$RET" = "0" ]; then
-        PID=`cat ${PIDFILE}`
-        echo "($PID) is running"
-    else
-        echo "is not running"
-        exit $RET
-    fi
+        echo -n "dnsmasq "
+        if start-stop-daemon -q -K -t -x $DAEMON; then
+            PID=`cat ${PIDFILE}`
+            echo "($PID) is running"
+        else
+            RET=$?
+            echo "is not running"
+            exit $RET
+        fi
     ;;
     restart)
         echo "restarting $DESC: $NAME... "
-     $0 stop
-    $0 start
-    echo "done."
+        $0 stop
+        $0 start
+        echo "done."
     ;;
     reload)
         echo -n "reloading $DESC: $NAME... "
         killall -HUP $(basename ${DAEMON})
-    echo "done."
+        echo "done."
     ;;
     systemd-start-resolvconf)
     start_resolvconf
@@ -103,14 +102,14 @@ case "$1" in
     stop_resolvconf
     ;;
     systemd-exec)
-    test -d /var/lib/misc/ || mkdir /var/lib/misc/
-    exec $DAEMON --keep-in-foreground $ARGS \
-        ${RESOLV_CONF:+ -r $RESOLV_CONF} \
-        ${PIDFILE:+ -x $PIDFILE}
+        test -d /var/lib/misc/ || mkdir /var/lib/misc/
+        exec $DAEMON --keep-in-foreground $ARGS \
+            ${RESOLV_CONF:+ -r $RESOLV_CONF} \
+            ${PIDFILE:+ -x $PIDFILE}
     ;;
     *)
-    echo "Usage: $0 {start|stop|status|restart|reload}"
-    exit 1
+        echo "Usage: $0 {start|stop|status|restart|reload}"
+        exit 1
     ;;
 esac
 
