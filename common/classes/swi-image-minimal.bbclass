@@ -53,6 +53,10 @@ fakeroot do_label_files() {
         setfattr -n security.SMACK64EXEC -v admin \
             "${IMAGE_ROOTFS}/etc/init.d/run_getty.sh"
     fi
+    if [ -f "${IMAGE_ROOTFS}/usr/sbin/restart_swi_apps" ] ; then
+        setfattr -n security.SMACK64EXEC -v admin \
+            "${IMAGE_ROOTFS}/usr/sbin/restart_swi_apps"
+    fi
 }
 
 IMAGE_PREPROCESS_COMMAND_append = " do_rm_unused_files; do_label_files; "
