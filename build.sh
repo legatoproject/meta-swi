@@ -672,6 +672,9 @@ set_option 'PACKAGECONFIG_remove' "gnutls"
 
 cd $BD
 
+# Set PACKAGE_CLASSES
+sed -e 's:^\(PACKAGE_CLASSES\).*:\1 = \"package_ipk\":' -i $BD/conf/local.conf
+
 # Command line
 if [ $CMD_LINE = true ]; then
     /bin/bash
@@ -692,7 +695,6 @@ fi
 echo -n "Build image of "
 if [ $DEBUG = true ]; then
     echo "dev rootfs (for $MACH)."
-    sed -e 's:^\(PACKAGE_CLASSES\).*:\1 = \"package_rpm\":' -i $BD/conf/local.conf
     case $MACH in
         swi-mdm* )
             bitbake ${BB_FLAGS} ${MACH#swi-}-image-dev
@@ -707,7 +709,6 @@ if [ $DEBUG = true ]; then
     exit $?
 else
     echo "minimal rootfs (for $MACH)."
-    sed -e 's:^\(PACKAGE_CLASSES\).*:\1 = \"package_ipk\":' -i $BD/conf/local.conf
     case $MACH in
         swi-mdm* )
             if test x$ENABLE_RECOVERY = "xtrue"; then
