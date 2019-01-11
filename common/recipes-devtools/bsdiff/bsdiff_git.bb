@@ -8,9 +8,6 @@ LIC_FILES_CHKSUM = "file://debian/copyright;md5=64e8a8b4894377726b48c8a346210d25
 SRC_REPO = "git://salsa.debian.org/debian/bsdiff.git;protocol=https"
 SRCREV = "b01df825a4998c00bcf1bb0d622e297ec66cd17c"
 
-# Useful, if we do not have make targets like "clean", etc.
-inherit autotools
-
 # We do not need to create separate nativesdk-* and *-native recipes
 # if we make this declaration.
 BBCLASSEXTEND = "native nativesdk"
@@ -24,13 +21,15 @@ RR = "1"
 PV = "${VERSNUM}"
 PR = "r${RR}"
 
-# Source and build directories.
+# Source directory
 S = "${WORKDIR}/git"
-B = "${WORKDIR}/build"
+# Build directory same as source: bsdiff doesn't support separate build dir.
+B = "${S}"
 
 # Sources
 SRC_URI = "${SRC_REPO}"
 SRC_URI += "file://0001-makefile-fix.patch"
+SRC_URI += "file://0002-package-as-library.patch"
 
 # Where to find additional files
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
@@ -50,33 +49,13 @@ FILES_${PN} += "${bindir}/bsdiff ${bindir}/bspatch"
 EXTRA_CFLAGS += "${BUILD_CFLAGS}"
 EXTRA_LDFLAGS += "${BUILD_LDFLAGS}"
 
-# We need to apply patches located in the package itself, and SRC_URI
-# does not work in that case (patches may not be available at the time
-# of do_fetch).
-# Patching must be done before compilation starts, hence add new task
-# to fulfill our needs.
-# Note that we need "build" directory, and this one is created by
-# do_configure step.
-do_patch_extra() {
-
-    local deb_patches=""
-
-    cd ${S}/debian/patches
-    deb_patches=$( ls *.patch | sort )
-
-    # Need sources in build directory, because Yocto
-    # wants to build there.
-    cp -arf ${S}/* ${B}/.
-
-    # We need patches located in Debian sources.
-    cd ${B}
-    for patch_file in ${deb_patches} ; do
-        patch -p1 <${S}/debian/patches/${patch_file}
-    done
-}
-addtask patch_extra after do_configure before do_compile
+# Pure Makefile project; no configure script
+do_configure[noexec] = "1"
 
 do_install() {
     install -m 0755 ${B}/bsdiff -D ${D}/${bindir}/bsdiff
     install -m 0755 ${B}/bspatch -D ${D}/${bindir}/bspatch
+    install -m 0755 ${B}/libbsdiff.so -D ${D}/${libdir}/libbsdiff.so.0.1
+    install -m 0755 ${B}/libbspatch.so -D ${D}/${libdir}/libbspatch.so.0.1
+    install -m 0644 ${S}/bsdiff.h -D ${D}/${includedir}/bsdiff.h
 }
