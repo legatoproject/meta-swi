@@ -1,7 +1,7 @@
 require ../../../meta-swi-mdm9xxx/recipes-core/images/mdm9xxx-image-initramfs.inc
 
 PACKAGE_INSTALL = "busybox mtd-utils-ubifs initscripts base-files"
-PACKAGE_INSTALL += "cryptsetup libgcrypt ossp-uuid"
+PACKAGE_INSTALL += "cryptsetup libgcrypt"
 DEPENDS = "linux-quic"
 
 fakeroot do_filter_rootfs () {
