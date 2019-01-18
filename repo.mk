@@ -348,7 +348,7 @@ dev: dev_$(DEFAULT_MDM_BUILD)
 
 BIN_LAYER_ARGS := -m $(MACH)
 ifneq ($(PROD),)
-  BIN_LAYER_ARGS += -p $(PROD)
+  BIN_LAYER_ARGS += -P $(PROD)
 endif
 
 binary_layer:
