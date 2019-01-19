@@ -6,3 +6,6 @@ dtbtool: dtbtool.o
 
 dtbtool.o: dtbtool.c
 	$(CC) $(INCLUDES) $(CFLAGS) -c $<
+
+clean:
+	rm -f *.o dtbtool
