@@ -9,6 +9,10 @@
 # * Stop WiFi
 # * Start WiFi in client mode
 # * Start WiFi in AP mode
+# * Start and stop BT.
+#
+# At this time, it is assuming single instance of WiFi and single instance
+# of BT functionality.
 #
 # The way to call this executable:
 #
@@ -28,9 +32,23 @@ source /etc/run.env
 # The name of this script. This is mandatory for 'swi_log' as well.
 this_e=$( basename $0 )
 
-# At this time, system could run in only one mode at the time (e.g.
-# "ap" or "client").
-run_lock=/var/lock/${this_e}.lock
+# Only partial lock
+run_lock="/var/lock/${this_e}_"
+
+# WiFi lock. System could run in only one mode at the time
+# (e.g. "ap" or "client").
+run_wifi_lock=/var/lock/${this_e}_wifi.lock
+
+# BT lock
+run_bt_lock=/var/lock/${this_e}_bt.lock
+
+# Serial port and BT communication.
+bt_chipset=qca
+bt_port_prefix=/dev
+bt_port=$bt_port_prefix/ttyHS0
+bt_port_speed=3000000
+bt_port_tout=120
+bt_port_ctrl=flow
 
 # qca wifi module name
 qca_wifi_mod=wlan
@@ -63,7 +81,7 @@ cat << EOF
 
   Where:
     service - "wifi" or "bt"
-    mode - "client" or "ap"
+    mode - "client" or "ap" for WiFi, and serial port for BT (e.g. ttyHSx or default)
     action - "start" or "stop"
 EOF
 
@@ -73,7 +91,7 @@ EOF
 # Check if operation is locked.
 is_locked()
 {
-    ret=$SWI_FALSE
+    local ret=$SWI_FALSE
 
     if [ -f $run_lock ] ; then
         ret=$SWI_TRUE
@@ -175,12 +193,16 @@ check_env()
     local clogging_hide_warn=3
     local clogging=
 
-    if [ "x$service" != "xwifi" ] ; then
-        # For now, we are supporting, wifi service only.
-        swi_log "Only wifi service is supported at this time."
+    # Check if services are correct.
+    if [ "x$service" != "xwifi" -a \
+         "x$service" != "xbt" ] ; then
+        swi_log "Only wifi and bt services are supported at this time."
         usage
         return $SWI_ERR
     fi
+
+    # This is global variable, needs to be structured certain way, so be careful.
+    run_lock="${run_lock}${service}.lock"
 
     # Only start and stop actions are supported.
     if [ "x$action" != "xstart" -a \
@@ -190,12 +212,35 @@ check_env()
         return $SWI_ERR
     fi
 
-    # Only ap or client modes are supported.
-    if [ "x$mode" != "xap" -a \
-         "x$mode" != "xclient" ] ; then
-        swi_log "Mode [$mode] is not supported."
-        usage
-        return $SWI_ERR
+    # Need to check if mode of operation os correct. Since BT does not
+    # have mode as wifi does, we would need to check this for wifi
+    # and BT separately.
+
+    # Check WiFi modes.
+    if [ "x$service" = "xwifi" ] ; then
+        # Only ap or client modes are supported.
+        if [ "x$mode" != "xap" -a \
+             "x$mode" != "xclient" ] ; then
+            swi_log "Wifi mode [$mode] is not supported."
+            usage
+            return $SWI_ERR
+        fi
+    fi
+
+    # For bluetooth, mode has different meaning, it's actually
+    # a serial port to use.
+    if [ "x$service" = "xbt" ] ; then
+        # If "default" was on the command line, use default
+        # specified in this executable.
+        if [ "x$mode" != "xdefault" ] ; then
+            bt_port=$bt_port_prefix/$mode
+        fi
+
+        if [ ! -c $bt_port ] ; then
+            swi_log "BT port [$bt_port] does not exist."
+            usage
+            return $SWI_ERR
+        fi
     fi
 
     # If we are required to stop, there is no real reason to
@@ -339,9 +384,49 @@ clear_gpios()
 # For now, this does nothing.
 qca_bt_start()
 {
-    local ret=$SWI_ERR
+    local ret=$SWI_OK
+    local attached=0
+    local ser_dev=$( basename $bt_port )
+    local used_ser_dev=""
+    local bt_devs=""
+    local bt_service=""
 
-    swi_log "BT service is not supported."
+    # set gpios
+    set_gpios
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+
+    # Do we have to start hciattach? There could be multiple serial devices,
+    # however, these could be attached to only one corresponding physical
+    # BT device each. At this time, I could not find a way to break that
+    # connection. So, I need to determine if serial device to be used
+    # is already attached to any of the BT devices.
+    if [ -d /sys/class/bluetooth ] ; then
+        # The list of already used BT devices is located here.
+        bt_devs=$( ls /sys/class/bluetooth )
+    fi
+
+    # Check the current BT+serial port binding
+    if [ "x$bt_devs" != "x" ] ; then
+        for bt_dev in $bt_devs ; do
+            used_ser_dev=$( cat /sys/class/bluetooth/$bt_dev/device/uevent | grep DEVNAME | awk -F'=' '{print $2}' )
+            if [ "x$used_ser_dev" = "x$ser_dev" ] ; then
+                swi_log "serial device [$ser_dev] already attached to [$bt_dev], will skip attach."
+                attached=1
+            fi
+        done
+    fi
+
+    # If we are here, all is good and we can bind serial port to BT device
+    if [ $attached -eq 0 ] ; then
+        hciattach $bt_port $bt_chipset $bt_port_speed -t $bt_port_tout $bt_port_ctrl
+        if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+    fi
+
+    # Now, we need to start bluetoothd service. Startup exec will take care
+    # of already running process: if it's already running it will just exit,
+    # and leave already running process running.
+    /etc/init.d/bluetooth start
+   if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
 
     return $ret
 }
@@ -350,9 +435,19 @@ qca_bt_start()
 # For now, this does nothing.
 qca_bt_stop()
 {
-    local ret=$SWI_ERR
+    local ret=$SWI_OK
 
-    swi_log "BT service is not supported."
+    # We cannot disconnect serial port at this time. The only thing we could
+    # do is stop bluetooth daemon and clear gpios, if allowed.
+
+    # Stop bluetooth daemon
+    /etc/init.d/bluetooth stop
+
+    # Clear gpios only if wifi is not running. We need
+    # some of these pins to stay intact on IoT interface.
+    if [ ! -f $run_wifi_lock ] ; then
+        clear_gpios
+    fi
 
     return $ret
 }
@@ -543,8 +638,11 @@ qca_wifi_stop()
     # Remove WiFi related kernel modules
     rm_wifi_modules
 
-    # Clear gpios
-    clear_gpios
+    # Clear gpios only if bluetooth is not running. We need
+    # some of these pins to stay intact on IoT interface.
+    if [ ! -f $run_bt_lock ] ; then
+        clear_gpios
+    fi
 
     return $ret
 }
@@ -553,7 +651,6 @@ qca_wifi_stop()
 qca_bt()
 {
     local ret=$SWI_OK
-    local mode=$2
     local action=$3
 
     case $action in
@@ -561,11 +658,17 @@ qca_bt()
         start )
             qca_bt_start "$@"
             ret=$?
+            if [ $ret -ne 0 ] ; then
+                # Failed to start, just clear everything.
+                qca_bt_stop "$@"
+                clear_lock
+            fi
         ;;
 
         stop )
             qca_bt_stop "$@"
             ret=$?
+            clear_lock
         ;;
 
         *)
