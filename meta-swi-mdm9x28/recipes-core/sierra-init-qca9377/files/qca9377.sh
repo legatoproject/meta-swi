@@ -161,6 +161,20 @@ rm_wifi_modules()
     return $ret
 }
 
+# Remove BT kernel modules, if these are not used.
+rm_bt_modules()
+{
+    local ret=$SWI_OK
+
+    # If these could not be removed, there is really nothing we could do about
+    # it, so keep quiet.
+    rmmod bnep  >/dev/null 2>&1
+    rmmod hci_uart  >/dev/null 2>&1
+    rmmod bluetooth  >/dev/null 2>&1
+
+    return $ret
+}
+
 # Add firewall rule needed for dnsmasq to honor DHCP
 # requests.
 open_fw()
@@ -436,12 +450,38 @@ qca_bt_start()
 qca_bt_stop()
 {
     local ret=$SWI_OK
+    local ser_dev=$2
+    local used_ser_dev=""
+    local pid=""
+    local tmp=""
 
-    # We cannot disconnect serial port at this time. The only thing we could
-    # do is stop bluetooth daemon and clear gpios, if allowed.
+    # If someone just set "default" on the command line,
+    # we need to translate this to real serial device.
+    if [ "x$ser_dev" = "xdefault" ] ; then
+        ser_dev=$( basename $bt_port )
+    fi
 
     # Stop bluetooth daemon
     /etc/init.d/bluetooth stop
+
+    # Kill relevant hciattach instance. In order to do that,
+    # I need to know what's the serial port.
+    used_ser_dev=$( ps -ef | grep hciattach | grep -v grep | awk '{print $9}' | awk -F'/' '{print $3}' )
+    if [ "x$used_ser_dev" = "x$ser_dev" ] ; then
+        pid=$( ps -ef | grep hciattach | grep -v grep | grep $used_ser_dev | awk '{print $2'} )
+        kill $pid
+        # Make sure that system is stable before continuing.
+        sleep 1
+    fi
+
+    # Try to remove kernel modules. That would be actually possible only in the case
+    # that no other hciattach instance is running, so check it before removing
+    # kernel modules.
+    tmp=$( ps -ef | grep hciattach | grep -v grep )
+    if [ "x$tmp" = "x" ] ; then
+        # Kernel modules could be removed.
+        rm_bt_modules
+    fi
 
     # Clear gpios only if wifi is not running. We need
     # some of these pins to stay intact on IoT interface.
