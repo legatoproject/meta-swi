@@ -129,7 +129,7 @@ ifeq ($(MANGOH_BUILD),1)
 endif
 
 ifeq ($(IMA_BUILD),1)
-  ifeq (,$(filter $(MACH),virt)$(filter $(PROD),ar758x))
+ ifeq (,$(filter $(MACH),virt)$(filter $(MACH),mdm9x28))
     $(error "IMA is not supported for [${MACH}][${PROD}]")
   else
     IMA_ARGS := -i ${IMA_CONFIG}
@@ -348,6 +348,19 @@ dev_src: prepare
 	$(COMMON_SRC) -c
 
 dev: dev_$(DEFAULT_MDM_BUILD)
+
+## binary layer generation
+
+BIN_LAYER_ARGS := -m $(MACH)
+ifneq ($(PROD),)
+  BIN_LAYER_ARGS += -p $(PROD)
+endif
+
+binary_layer:
+	$(PWD)/meta-swi-extras/create_bin_layer.sh \
+		-b $(PWD)/build_src/ \
+		-o $(PWD)/build_src/binary_layer/ \
+		$(BIN_LAYER_ARGS)
 
 # Machine: swi-virt
 

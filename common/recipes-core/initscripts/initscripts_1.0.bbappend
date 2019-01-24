@@ -3,6 +3,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI_append = " file://prepro.awk \
                    file://run.env.in \
+                   file://run_getty.sh.in \
                    file://mountall.sh \
                    file://mount_unionfs.in \
                    file://etc/group \
@@ -50,6 +51,7 @@ do_install_append () {
 
     # Environment file that should be sourced by other scripts
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
+    install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sysconfdir}/init.d/run_getty.sh
 
     install -m 0755 ${WORKDIR}/mountall.sh   ${D}${sysconfdir}/init.d
 

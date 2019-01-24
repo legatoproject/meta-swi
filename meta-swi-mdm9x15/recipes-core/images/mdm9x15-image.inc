@@ -42,8 +42,8 @@ prepare_ubi_ps() {
     local page_size=$1
 
     # Initially, set for root partition
-    local ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}.${page_size}.ubi"
-    local ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.${page_size}.ubi"
+    local ubi_path="${IMGDEPLOYDIR}/${IMAGE_NAME}.${page_size}.ubi"
+    local ubi_link_path="${IMGDEPLOYDIR}/${IMAGE_LINK_NAME}.${page_size}.ubi"
     local ubinize_cfg=${WORKDIR}/gen_ubinize.cfg
 
     # Process root partition UBI
@@ -53,8 +53,8 @@ prepare_ubi_ps() {
     create_ubi_image $page_size $ubinize_cfg $ubi_path $ubi_link_path
 
     # Process USER1 UBI
-    ubi_path="${DEPLOY_DIR_IMAGE}/${IMAGE_NAME}-user1.${page_size}.ubi"
-    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}-user1.${page_size}.ubi"
+    ubi_path="${IMGDEPLOYDIR}/${IMAGE_NAME}-user1.${page_size}.ubi"
+    ubi_link_path="${IMGDEPLOYDIR}/${IMAGE_LINK_NAME}-user1.${page_size}.ubi"
     ubinize_cfg=${WORKDIR}/gen_ubinize.cfg
 
     cp -af ${WORKDIR}/ubinize-user1.cfg $ubinize_cfg
@@ -68,17 +68,21 @@ prepare_ubi() {
     prepare_ubi_ps '2k'
     prepare_ubi_ps '4k'
 
+    cd ${IMGDEPLOYDIR}
+
     # Default image (no bs suffix) to 4k
-    ubi_link_path_def="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.ubi"
-    ubi_link_path="${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.ubi"
+    ubi_link_path_def="${IMAGE_LINK_NAME}.4k.ubi"
+    ubi_link_path="${IMAGE_LINK_NAME}.ubi"
     rm -f $ubi_link_path
     ln -s $(basename $ubi_link_path_def) $ubi_link_path
 }
 
 default_rootfs_ps() {
+    cd ${IMGDEPLOYDIR}
+
     # Default rootfs to ubi for 2k and 4k
-    ln -sf ${IMAGE_LINK_NAME}.2k.ubi    ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.2k.default
-    ln -sf ${IMAGE_LINK_NAME}.4k.ubi    ${DEPLOY_DIR_IMAGE}/${IMAGE_LINK_NAME}.4k.default
+    ln -sf ${IMAGE_LINK_NAME}.2k.ubi    ${IMAGE_LINK_NAME}.2k.default
+    ln -sf ${IMAGE_LINK_NAME}.4k.ubi    ${IMAGE_LINK_NAME}.4k.default
 }
 
 do_image_complete[postfuncs] += "prepare_ubi"
