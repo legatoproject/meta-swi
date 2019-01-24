@@ -56,12 +56,18 @@ ti_wifi_start() {
        modprobe wlcore_sdio || exit 127
        modprobe wl18xx || exit 127
     fi
-    sleep 5
-    ifconfig -a | grep wlan0 >/dev/null
-    if [ $? -ne 0 ] ; then
-        echo "Failed to start TI wifi"; exit 127
+    attempt=6
+    for i in $(seq 1 ${attempt})
+    do
+      if [ $i -ne 1 ]; then
+          sleep 1
+      fi
+      (ifconfig -a | grep wlan0 > /dev/null) && break
+    done
+    if [ $? -ne 0 ]; then
+      echo "Failed to start TI wifi"; exit 127
     fi
-    ifconfig wlan0 up >/dev/null
+    ifconfig wlan0 up > /dev/null
     if [ $? -ne 0 ] ; then
         echo "Failed to start TI wifi"; exit 127
     fi
