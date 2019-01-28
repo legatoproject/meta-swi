@@ -79,6 +79,9 @@ do_install() {
 }
 
 do_deploy() {
+    # andriod-signing's boot_signer requires java from host machine
+    export PATH=$PATH:/usr/bin
+
     install -d ${DEPLOY_DIR_IMAGE}
     install ${D}/boot/appsboot.mbn ${DEPLOY_DIR_IMAGE}
     if [ -f "${D}/boot/appsboot.raw" ] ; then

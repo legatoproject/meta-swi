@@ -92,8 +92,5 @@ PRIVATE_LIBS = "libjansson.so.4"
 do_compile_prepend() {
     export LEGATO_ROOT="${S}"
     export PATH="${S}/bin:$PATH"
-    export KCONFIG="${STAGING_DIR_NATIVE}/usr/bin/kconfig"
-    if [ ! -e "$KCONFIG" ]; then
-        exit 1
-    fi
+    export KCONFIG="${RECIPE_SYSROOT_NATIVE}/usr/bin/kconfig"
 }

@@ -1485,7 +1485,7 @@ add_system_smack_rules()
     fi
 
     if [ ! -f ${smack_rules_dst} ] ; then
-        echo "${this_e}: Cannot find ${smack_rules_src}."
+        echo "${this_e}: Cannot find ${smack_rules_dst}."
         return ${SWI_ERR}
     fi
 

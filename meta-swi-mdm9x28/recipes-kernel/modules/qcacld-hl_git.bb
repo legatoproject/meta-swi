@@ -39,12 +39,6 @@ python __anonymous () {
 
 FILES_${PN}     += "lib/firmware/wlan/*"
 FILES_${PN}     += "lib/firmware/*"
-FILES_${PN}     += "${base_libdir}/modules/${KERNEL_VERSION}/extra/${WLAN_MODULE_NAME}.ko"
-# The inherit of module.bbclass will automatically name module packages with
-# kernel-module-" prefix as required by the oe-core build environment. Also it
-# replaces '_' with '-' in the module name.
-RPROVIDES_${PN} += "${@'kernel-module-${WLAN_MODULE_NAME}'.replace('_', '-')}"
-PROVIDES_NAME   = "kernel-module-${WLAN_MODULE_NAME}"
 
 do_unpack[deptask] = "do_populate_sysroot"
 PR = "r0"

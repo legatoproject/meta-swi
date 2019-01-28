@@ -289,6 +289,13 @@ enable_layer "meta-networking" "$OE/meta-networking"
 # Enable the meta-python layer
 enable_layer "meta-python" "$OE/meta-python"
 
+# Enable the meta-gplv2 layer
+if [ -e "$OE/../meta-gplv2" ]; then
+    enable_layer "meta-gplv2" "$OE/../meta-gplv2"
+else
+    echo "Warning: meta-gplv2 repository not available"
+fi
+
 # Enable proprietary layers: common
 if [ $ENABLE_PROPRIETARY_SRC = true ] || [ $ENABLE_PROPRIETARY = true ]; then
     enable_layer "meta-swi-extras/common" "$scriptdir/../meta-swi-extras/common" "meta-$MACH"

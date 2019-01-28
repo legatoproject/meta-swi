@@ -32,9 +32,10 @@ IMAGE_INSTALL_append = " sierra-init-tiwifi"
 #================
 # QCA9377 support
 #================
-# AR758x and WP76xx products are using this file as well.  AR758x do not need QCA9377 support, but WP76xx need QCA9377 support.
+# AR758x products are using this file as well, and they do not need QCA9377 support.
 # AR758x machine is swi-mdm9x28-ar758x.
-# WP76xx machine is swi-mdm9x28-wp
+# WP76xx products need QCA9377 support.
+# WP76xx machine is swi-mdm9x28-wp.
 # Kernel module
 IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28-wp', ' qcacld-hl', '', d)}"
 # Init script
