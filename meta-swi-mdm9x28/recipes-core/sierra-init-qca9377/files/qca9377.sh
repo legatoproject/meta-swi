@@ -67,6 +67,18 @@ interface=wlan0
 # To remove the rule: iptables -D $fwrule
 fwrule="INPUT -i $interface -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
 
+# Check for new GPIO design with v2 directory and alias/raw export/unexport entries
+# Default expected is v2 design
+GPIO_EXPORT=/sys/class/gpio/v2/alias_export
+GPIO_UNEXPORT=/sys/class/gpio/v2/alias_unexport
+GPIO_DIR=/sys/class/gpio/v2/aliases_exported/
+if [ ! -e ${GPIO_EXPORT} ]; then
+    # Fallback to legacy design.
+    GPIO_EXPORT=/sys/class/gpio/export
+    GPIO_UNEXPORT=/sys/class/gpio/unexport
+    GPIO_DIR=/sys/class/gpio/gpio
+fi
+
 #
 # Some useful methods
 #
@@ -308,27 +320,27 @@ set_gpios()
     local ret=$SWI_OK
 
     # Set IOT0_GPIO2 = 1 (WP GPIO13)
-    if [ ! -d /sys/class/gpio/gpio13 ] ; then
+    if [ ! -d ${GPIO_DIR}13 ] ; then
         swi_log "Setting up IOT0_GPIO2 = 1 (WP GPIO13)..."
-        echo 13 >/sys/class/gpio/export
-        echo out >/sys/class/gpio/gpio13/direction
-        echo 1 >/sys/class/gpio/gpio13/value
+        echo 13 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}13/direction
+        echo 1 >${GPIO_DIR}13/value
     fi
 
     # Set IOT0_GPIO3 = 1 (WP GPIO7)
-    if [ ! -d /sys/class/gpio/gpio7 ] ; then
+    if [ ! -d ${GPIO_DIR}7 ] ; then
         swi_log "Setting up IOT0_GPIO3 = 1 (WP GPIO7)..."
-        echo 7 >/sys/class/gpio/export
-        echo out >/sys/class/gpio/gpio7/direction
-        echo 1 >/sys/class/gpio/gpio7/value
+        echo 7 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}7/direction
+        echo 1 >${GPIO_DIR}7/value
     fi
 
     # Set IOT0_RESET = 1 (WP GPIO2)
-    if [ ! -d /sys/class/gpio/gpio2 ] ; then
+    if [ ! -d ${GPIO_DIR}2 ] ; then
         swi_log "Setting up IOT0_RESET = 1 (WP GPIO2)..."
-        echo 2 >/sys/class/gpio/export
-        echo out >/sys/class/gpio/gpio2/direction
-        echo 1 >/sys/class/gpio/gpio2/value
+        echo 2 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}2/direction
+        echo 1 >${GPIO_DIR}2/value
     fi
 
     # Clear SDIO_SEL, GPIO#9/EXPANDER#1 - Select the SDIO
@@ -336,18 +348,18 @@ set_gpios()
     gpioexp 1 9 output normal low >/dev/null 2>&1
 
     # Set IOT0_GPIO4 = 1 (WP GPIO8)
-    if [ ! -d /sys/class/gpio/gpio8 ] ; then
+    if [ ! -d ${GPIO_DIR}8 ] ; then
         swi_log "Setting up IOT0_GPIO4 = 1 (WP GPIO8)..."
-        echo 8 >/sys/class/gpio/export
-        echo out >/sys/class/gpio/gpio8/direction
-        echo 1 >/sys/class/gpio/gpio8/value
+        echo 8 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}8/direction
+        echo 1 >${GPIO_DIR}8/value
     fi
 
     # Set CARD_DETECT_IOT0 (WP GPIO33)
-    if [ ! -d /sys/class/gpio/gpio33 ] ; then
+    if [ ! -d ${GPIO_DIR}33 ] ; then
         swi_log "Setting up CARD_DETECT_IOT0 (WP GPIO33)..."
-        echo 33 >/sys/class/gpio/export
-        echo in >/sys/class/gpio/gpio33/direction
+        echo 33 >${GPIO_EXPORT}
+        echo in >${GPIO_DIR}33/direction
     fi
 
     # Need to wait for GPIOs to stabilize before returning.
@@ -362,33 +374,33 @@ clear_gpios()
     local ret=$SWI_OK
 
     # Clear IOT0_GPIO2 = 1 (WP GPIO13)
-    if [ -d /sys/class/gpio/gpio13 ] ; then
+    if [ -d ${GPIO_DIR}13 ] ; then
         swi_log "Clearing IOT0_GPIO2 = 1 (WP GPIO13)..."
-        echo 13 >/sys/class/gpio/unexport
+        echo 13 >${GPIO_UNEXPORT}
     fi
 
     # Clear IOT0_GPIO3 = 1 (WP GPIO7)
-    if [ -d /sys/class/gpio/gpio7 ] ; then
+    if [ -d ${GPIO_DIR}7 ] ; then
         swi_log "Clearing up IOT0_GPIO3 = 1 (WP GPIO7)..."
-        echo 7 >/sys/class/gpio/unexport
+        echo 7 >${GPIO_UNEXPORT}
     fi
 
     # Clear IOT0_RESET = 1 (WP GPIO2)
-    if [ -d /sys/class/gpio/gpio2 ] ; then
+    if [ -d ${GPIO_DIR}2 ] ; then
         swi_log "Clearing IOT0_RESET = 1 (WP GPIO2)..."
-        echo 2 >/sys/class/gpio/unexport
+        echo 2 >${GPIO_UNEXPORT}
     fi
 
     # Clear IOT0_GPIO4 = 1 (WP GPIO8)
-    if [ -d /sys/class/gpio/gpio8 ] ; then
+    if [ -d ${GPIO_DIR}8 ] ; then
         swi_log "Clearing IOT0_GPIO4 = 1 (WP GPIO8)..."
-        echo 8 >/sys/class/gpio/unexport
+        echo 8 >${GPIO_UNEXPORT}
     fi
 
     # Clear CARD_DETECT_IOT0 (WP GPIO33)
-    if [ -d /sys/class/gpio/gpio33 ] ; then
+    if [ -d ${GPIO_DIR}33 ] ; then
         swi_log "Clearing CARD_DETECT_IOT0 (WP GPIO33)..."
-        echo 33 >/sys/class/gpio/unexport
+        echo 33 >${GPIO_UNEXPORT}
     fi
 
     return $ret

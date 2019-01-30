@@ -8,6 +8,15 @@
 
 export PATH=$PATH:/usr/bin:/bin:/usr/sbin:/sbin
 
+GPIO_EXPORT=/sys/class/gpio/v2/alias_export
+GPIO_UNEXPORT=/sys/class/gpio/v2/alias_unexport
+GPIO_DIR=/sys/class/gpio/v2/aliases_exported/
+if [ ! -e ${GPIO_EXPORT} ]; then
+    GPIO_EXPORT=/sys/class/gpio/export
+    GPIO_UNEXPORT=/sys/class/gpio/unexport
+    GPIO_DIR=/sys/class/gpio/gpio
+fi
+
 ti_wifi_start() {
     # Add mdev rule for crda
     grep crda /etc/mdev.conf > /dev/null
@@ -29,14 +38,14 @@ ti_wifi_start() {
            echo "mangOH red board"
 
            # Set IOT0_GPIO2 = 1 (WP GPIO13)
-           [ -d /sys/class/gpio/gpio13 ] || echo 13 >/sys/class/gpio/export
-           echo out >/sys/class/gpio/gpio13/direction
-           echo 1 >/sys/class/gpio/gpio13/value
+           [ -d ${GPIO_DIR}13 ] || echo 13 >${GPIO_EXPORT}
+           echo out >${GPIO_DIR}13/direction
+           echo 1 >${GPIO_DIR}13/value
 
            # Set IOT0_RESET = 1 (WP GPIO2)
-           [ -d /sys/class/gpio/gpio2 ] || echo 2 >/sys/class/gpio/export
-           echo out >/sys/class/gpio/gpio2/direction
-           echo 1 >/sys/class/gpio/gpio2/value
+           [ -d ${GPIO_DIR}2 ] || echo 2 >${GPIO_EXPORT}
+           echo out >${GPIO_DIR}2/direction
+           echo 1 >${GPIO_DIR}2/value
 
            # Clear SDIO_SEL, GPIO#9/EXPANDER#1 - Select the SDIO
            gpioexp 1 9 output normal low >/dev/null || exit 127
@@ -44,9 +53,9 @@ ti_wifi_start() {
            echo "mangOH green board"
 
            # Set IOT0_GPIO2 = 1 (WP GPIO33)
-           [ -d /sys/class/gpio/gpio33 ] || echo 33 >/sys/class/gpio/export
-           echo out >/sys/class/gpio/gpio33/direction
-           echo 1 >/sys/class/gpio/gpio33/value
+           [ -d ${GPIO_DIR}33 ] || echo 33 >${GPIO_EXPORT}
+           echo out >${GPIO_DIR}33/direction
+           echo 1 >${GPIO_DIR}33/value
 
            # Clear SDIO_SEL, GPIO#13/EXPANDER#1 - Select the SDIO
            gpioexp 1 13 output normal low >/dev/null || exit 127
@@ -89,20 +98,26 @@ ti_wifi_stop() {
        if [ $? -ne 0 ]; then
            echo "mangOH red board"
            # Set IOT0_RESET = 1 (WP GPIO2)
-           echo 0 >/sys/class/gpio/gpio2/value
+           echo 0 >${GPIO_DIR}2/value
 
            # Clear SDIO_SEL, GPIO#9/EXPANDER#1 - Deselect the SDIO
            gpioexp 1 9 output normal high >/dev/null || exit 127
 
            # Reset IOT0_GPIO2 = 0 (WP GPIO13)
-           echo 0 >/sys/class/gpio/gpio13/value
+           echo 0 >${GPIO_DIR}13/value
+
+           echo 13 >${GPIO_UNEXPORT}
+           echo 2 >${GPIO_UNEXPORT}
        else
            echo "mangOH green board"
            # Set SDIO_SEL, GPIO#13/EXPANDER#1 - Deselect the SDIO
            gpioexp 1 13 output normal high >/dev/null || exit 127
 
            # Reset IOT0_GPIO2 = 0 (WP GPIO33)
-           echo 0 >/sys/class/gpio/gpio33/value
+           echo 0 >${GPIO_DIR}33/value
+
+           # Unexport the GPIO
+           echo 33 >${GPIO_UNEXPORT}
        fi
     fi
 }
