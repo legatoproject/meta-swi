@@ -20,8 +20,13 @@ KBUILD_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
 B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
 
-FILESPATH = "${LINUX_REPO_DIR}:${THISDIR}/files"
-SRC_URI = "file://.;subdir=kernel"
+# We split the LINUX_REPO_DIR path into a dirname and basename, so that
+# that we can fetch it via SRC_URI. We need to fetch a specific name
+# that is found in some directory listed in the FILESPATH search path.
+LINUX_REPO_DIR_PARENT = "${@os.path.dirname(d.getVar('LINUX_REPO_DIR', False))}"
+LINUX_REPO_DIR_BASE = "${@os.path.basename(d.getVar('LINUX_REPO_DIR', False))}"
+FILESPATH_prepend = "${LINUX_REPO_DIR_PARENT}:"
+SRC_URI = "file://${LINUX_REPO_DIR_BASE}"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
