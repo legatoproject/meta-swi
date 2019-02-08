@@ -55,6 +55,7 @@ fakeroot do_filter_rootfs () {
                 */libuuid*) ;;
                 */libudev*) ;;
                 */libcrypt*) ;;
+                */libresolv*) ;;
                 */libz.so*) ;;
                 */libm*) ;;
                 *) remove_entity $file ;;
