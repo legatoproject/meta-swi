@@ -32,6 +32,7 @@ IMAGE_INSTALL_append = " sierra-init-tiwifi"
 #================
 # QCA9377 support
 #================
+
 # AR758x products are using this file as well, and they do not need QCA9377 support.
 # AR758x machine is swi-mdm9x28-ar758x.
 # WP76xx products need QCA9377 support.
@@ -43,6 +44,7 @@ IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28-wp', ' sie
 
 # Bluetooth Bluez support
 IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28-wp', ' bluez5', '', d)}"
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28-wp', ' qca9377-bt-firmware', '', d)}"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"

@@ -25,6 +25,4 @@ rootfs_symlink() {
     ln -sf ${IMAGE_LINK_NAME}.default ${IMGDEPLOYDIR}/rootfs-${IMAGE_TYPE}
 }
 
-do_rootfs[postfuncs] += "rootfs_symlink"
-
-
+do_deploy[postfuncs] += "rootfs_symlink"

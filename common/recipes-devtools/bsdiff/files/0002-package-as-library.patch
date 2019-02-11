@@ -1,0 +1,149 @@
+From: Kaz Kylheku <kkkylheku@sierrawireless.com>
+Subject: package bsdiff and bspatch as mini shared libs.
+Date: Wed Dec 19 17:03:41 PST 2018
+
+* Makefile (INSTALL_LIB, PROG, LIBS, MANS): New variables.
+(all): Mark as .PHONY target. Use $(PROGS) and $(LIBS).
+(%: %.c): New pattern rule for building an executable from a single .c file.
+With this all we do is express "foo: foo.c" and it gets built.
+(lib%.so: %.c): New pattern rule for building a shared lib from a single .c file.
+The necessary -shared and -fPIC are added via a target-specific assignment to
+CFLAGS.
+(install): Steps for installing the shared libs.
+(clean): New target.
+(bsdiff.c): Rename main to bsdiff. Add a conditionally-defined main which just
+calls bsdiff, compiled in only when building the executable utility, not the
+shared lib. In the shared lib, the bsdiff function becomes the exported dynamic
+symbol used by the library client.
+(bspatch.c): Same change as in bsdiff.c, but main is renamed to bspatch.
+
+Index: git/Makefile
+===================================================================
+--- git.orig/Makefile
++++ git/Makefile
+@@ -4,15 +4,29 @@ LDFLAGS         += $(EXTRA_LDFLAGS) -lbz
+ PREFIX          ?= /usr/local
+ INSTALL_PROGRAM ?= ${INSTALL} -c -s -m 555
+ INSTALL_MAN     ?= ${INSTALL} -c -m 444
++INSTALL_LIB     ?= ${INSTALL} -c -s -m 444
+ 
+-all: bsdiff bspatch
+-bsdiff:
+-	$(CC) -o bsdiff $(CFLAGS) bsdiff.c $(LDFLAGS)
+-bspatch:
+-	$(CC) -o bspatch $(CFLAGS) bspatch.c $(LDFLAGS)
++PROGS           := bsdiff bspatch
++LIBS            := libbsdiff.so libbspatch.so
++MANS            := bsdiff.1 bspatch.1
++HEADERS		    := bsdiff.h
++
++.PHONY: all
++all: $(PROGS) $(LIBS)
++
++%: %.c
++	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
++
++$(LIBS): CFLAGS += -fPIC -shared -DSHARED_LIB
++
++lib%.so: %.c
++	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+ 
+ install:
+-	${INSTALL_PROGRAM} bsdiff bspatch ${PREFIX}/bin
+-.ifndef WITHOUT_MAN
+-	${INSTALL_MAN} bsdiff.1 bspatch.1 ${PREFIX}/man/man1
+-.endif
++	${INSTALL_PROGRAM} $(PROGS) ${PREFIX}/bin
++	${INSTALL_LIB} $(LIBS) ${PREFIX}/lib
++	${INSTALL_LIB} $(HEADERS) ${PREFIX}/include
++	${INSTALL_MAN} $(MANS) ${PREFIX}/man/man1
++
++clean:
++	rm -rf $(PROGS) $(LIBS)
+Index: git/bsdiff.c
+===================================================================
+--- git.orig/bsdiff.c
++++ git/bsdiff.c
+@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: src/usr.bin/bsdiff/b
+ #include <stdlib.h>
+ #include <string.h>
+ #include <unistd.h>
++#include "bsdiff.h"
+ 
+ #define MIN(x,y) (((x)<(y)) ? (x) : (y))
+ 
+@@ -193,7 +194,7 @@ static void offtout(off_t x,u_char *buf)
+ 	if(x<0) buf[7]|=0x80;
+ }
+ 
+-int main(int argc,char *argv[])
++int bsdiff_main(int argc,char *argv[])
+ {
+ 	int fd;
+ 	u_char *old,*new;
+@@ -402,3 +403,17 @@ int main(int argc,char *argv[])
+ 
+ 	return 0;
+ }
++
++#ifdef SHARED_LIB
++int bsdiff(const char *oldfile,const char *newfile,const char *patch)
++{
++	char *argv[] = { "libbsdiff", oldfile, newfile, patch, NULL };
++	int argc = sizeof argv / sizeof argv[0] - 1;
++	return bsdiff_main(argc, argv);
++}
++#else
++int main(int argc,char *argv[])
++{
++	return bsdiff_main(argc, argv);
++}
++#endif
+Index: git/bspatch.c
+===================================================================
+--- git.orig/bspatch.c
++++ git/bspatch.c
+@@ -35,6 +35,7 @@ __FBSDID("$FreeBSD: src/usr.bin/bsdiff/b
+ #include <err.h>
+ #include <unistd.h>
+ #include <fcntl.h>
++#include "bsdiff.h"
+ 
+ static off_t offtin(u_char *buf)
+ {
+@@ -54,7 +55,7 @@ static off_t offtin(u_char *buf)
+ 	return y;
+ }
+ 
+-int main(int argc,char * argv[])
++int bspatch_main(int argc,char * argv[])
+ {
+ 	FILE * f, * cpf, * dpf, * epf;
+ 	BZFILE * cpfbz2, * dpfbz2, * epfbz2;
+@@ -202,3 +203,17 @@ int main(int argc,char * argv[])
+ 
+ 	return 0;
+ }
++
++#ifdef SHARED_LIB
++int bspatch(const char *oldfile,const char *newfile,const char *patch)
++{
++	char *argv[] = { "libbspatch", oldfile, newfile, patch, NULL };
++	int argc = sizeof argv / sizeof argv[0] - 1;
++	return bspatch_main(argc, argv);
++}
++#else
++int main(int argc,char *argv[])
++{
++	return bspatch_main(argc, argv);
++}
++#endif
+Index: git/bsdiff.h
+===================================================================
+--- /dev/null
++++ git/bsdiff.h
+@@ -0,0 +1,4 @@
++int bsdiff_main(int argc,char *argv[]);
++int bsdiff(const char *oldfile, const char *newfile, const char *patch);
++int bspatch_main(int argc,char * argv[]);
++int bspatch(const char *oldfile, const char *newfile, const char *patch);

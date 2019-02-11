@@ -4,15 +4,15 @@ NUM_THREADS ?= 9
 # Set workspace directory
 DEFAULT_MDM_BUILD := bin
 APPS_DIR ?= $(firstword $(wildcard $(PWD)/mdm*[0-9]/apps_proc))
-ifneq ($(APPS_DIR),)
+ifneq ($(wildcard $(PWD)/mdm*[0-9]/common),)
   DEFAULT_MDM_BUILD := src
+  MACH ?= $(patsubst $(PWD)/%/apps_proc,%,$(APPS_DIR))
 endif
 
 # Machine architecture
 # Guess the architecture and product based on the availability of proprietary binaries.
 # If binaries are not available (FOSS build for instance), MACH= and PROD= have to be
 # provided when calling make.
-MACH ?= $(patsubst $(PWD)/%/apps_proc,%,$(APPS_DIR))
 ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
   MACH ?= mdm9x15
 else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
@@ -281,7 +281,7 @@ kernel_branches:
 	fi
 	@if ! ( cd kernel && git branch | grep master > /dev/null ); then \
 		echo "Create local master branch" ; \
-		cd kernel && git branch master gerrit/master ; \
+		cd kernel && git branch master `git remote | head -1`/master ; \
 	fi
 
 endif
@@ -353,7 +353,7 @@ dev: dev_$(DEFAULT_MDM_BUILD)
 
 BIN_LAYER_ARGS := -m $(MACH)
 ifneq ($(PROD),)
-  BIN_LAYER_ARGS += -p $(PROD)
+  BIN_LAYER_ARGS += -P $(PROD)
 endif
 
 binary_layer:
