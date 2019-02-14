@@ -1,0 +1,106 @@
+From e1fa381ee96dadc52ef68f09327f825197f0a8b9 Mon Sep 17 00:00:00 2001
+From: Maria Yu <aiquny@codeaurora.org>
+Date: Wed, 28 May 2014 15:57:51 +0800
+Subject: [PATCH] lib: debug: add common stack protection feature in lk
+
+-fstack-protector is added in lk and corresponding
+__stack_chk_fail function and __stack_chk_guard.
+
+CRs-Fixed: 671500
+Change-Id: I2ac186affa311005c4d727c8cd00a93c8f5014c9
+
+diff --git a/include/debug.h b/include/debug.h
+index 2944cb711..c12bb6128 100644
+--- a/include/debug.h
++++ b/include/debug.h
+@@ -1,6 +1,8 @@
+ /*
+  * Copyright (c) 2008 Travis Geiselbrecht
+  *
++ * Copyright (c) 2014, The Linux Foundation. All rights reserved.
++ *
+  * Permission is hereby granted, free of charge, to any person obtaining
+  * a copy of this software and associated documentation files
+  * (the "Software"), to deal in the Software without restriction,
+@@ -67,6 +69,21 @@ void _panic(void *caller, const char *fmt, ...) __PRINTFLIKE(2, 3) __NO_RETURN;
+ 
+ #define PANIC_UNIMPLEMENTED panic("%s unimplemented\n", __PRETTY_FUNCTION__)
+ 
++void * __stack_chk_guard;
++
++/*
++* Initialize the stack protector canary value.
++*/
++static inline void __stack_chk_guard_setup()
++{
++	void *canary;
++	canary = (void*)rand();
++	__stack_chk_guard =  canary;
++}
++
++void __attribute__ ((noreturn))
++	__stack_chk_fail (void);
++
+ /* spin the cpu for a period of (short) time */
+ void spin(uint32_t usecs);
+ 
+diff --git a/kernel/main.c b/kernel/main.c
+index 1167f31bd..273baa34e 100644
+--- a/kernel/main.c
++++ b/kernel/main.c
+@@ -86,6 +86,8 @@ void kmain(void)
+ 	dprintf(SPEW, "initializing heap\n");
+ 	heap_init();
+ 
++	__stack_chk_guard_setup();
++
+ 	// initialize the threading system
+ 	dprintf(SPEW, "initializing threads\n");
+ 	thread_init();
+diff --git a/lib/debug/debug.c b/lib/debug/debug.c
+index bdc2d02c8..84d0678b1 100644
+--- a/lib/debug/debug.c
++++ b/lib/debug/debug.c
+@@ -1,6 +1,8 @@
+ /*
+  * Copyright (c) 2008 Travis Geiselbrecht
+  *
++ * Copyright (c) 2014, The Linux Foundation. All rights reserved.
++ *
+  * Permission is hereby granted, free of charge, to any person obtaining
+  * a copy of this software and associated documentation files
+  * (the "Software"), to deal in the Software without restriction,
+@@ -32,6 +34,13 @@
+ #include <platform/debug.h>
+ #include <kernel/thread.h>
+ #include <kernel/timer.h>
++#include <rand.h>
++
++void __attribute__ ((noreturn))
++__stack_chk_fail (void)
++{
++	panic("stack smashing detected.");
++}
+ 
+ void spin(uint32_t usecs)
+ {
+diff --git a/makefile b/makefile
+index 6c38a0cb9..1a9adf092 100644
+--- a/makefile
++++ b/makefile
+@@ -63,11 +63,7 @@ ifeq ($(LK_KERNEL_CMDLINE_MTD_PARTS),1)
+   CFLAGS += -DCMDLINE_MTD_PARTS
+ endif
+ 
+-# When the host arch is ARM, ensure stack protection code is not emitted since
+-# it's not supported by the bootloader's libc
+-ifneq ($(shell uname -m | grep "arm.*"),)
+-  CFLAGS += -fno-stack-protector
+-endif
++CFLAGS += -fstack-protector-all
+ CPPFLAGS := -fno-exceptions -fno-rtti -fno-threadsafe-statics
+ #CPPFLAGS += -Weffc++
+ ASMFLAGS := -DASSEMBLY
+-- 
+2.20.1
+

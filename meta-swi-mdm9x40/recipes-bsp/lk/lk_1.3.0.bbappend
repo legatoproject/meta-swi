@@ -8,6 +8,7 @@ SRC_DIR = "${LK_REPO}"
 LK_TARGET = "mdm9640"
 
 EXTRA_OEMAKE += "LINUX_KERNEL_DIR='${LINUX_REPO_DIR}'"
+CC_append += " -Wno-error=format-security"
 
 INSANE_SKIP_${PN} += "already-stripped"
 

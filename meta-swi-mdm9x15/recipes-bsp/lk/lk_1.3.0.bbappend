@@ -16,6 +16,7 @@ SRC_URI += "file://0010-TRAC-2797-WP85-support-and-fastboot-support-for-user1-pa
 SRC_URI += "file://0011-TRAC-3105-LK-set-quiet-option.patch"
 SRC_URI += "file://0012-Deliver-appsboot.-to-BUILDDIR.patch"
 SRC_URI += "file://0013-trac-3776-Fix-custom-ATAGs-passing-and-processing.patch"
+SRC_URI += "file://0014-lib-debug-add-common-stack-protection-feature-in-lk.patch"
 
 LK_TARGET = "mdm9615"
 

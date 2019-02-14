@@ -8,6 +8,7 @@ SRC_DIR = "${LK_REPO}"
 LK_TARGET = "mdm9607"
 
 EXTRA_OEMAKE += "LINUX_KERNEL_DIR='${LINUX_REPO_DIR}'"
+CC_append += " -Wno-error=format-security"
 
 do_patch() {
     if [ ! -L "${S}/app/aboot/sierra" -a -d "${LINUX_REPO_DIR}/arch/arm/mach-msm/sierra" ]; then
