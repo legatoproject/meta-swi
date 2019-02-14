@@ -529,8 +529,12 @@ else
     set_machine "${MACH}"
 fi
 
-YOCTO_MAJOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\1/g')
-YOCTO_MINOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\2/g')
+if [ -z "$YOCTO_MAJOR" ]; then
+    YOCTO_MAJOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\1/g')
+fi
+if [ -z "$YOCTO_MINOR" ]; then
+    YOCTO_MINOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\2/g')
+fi
 
 grep -E "SOURCE_MIRROR_URL" $BD/conf/local.conf > /dev/null
 if [ $? != 0 ]; then

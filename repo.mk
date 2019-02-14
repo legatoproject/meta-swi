@@ -9,6 +9,10 @@ ifneq ($(wildcard $(PWD)/mdm*[0-9]/common),)
   MACH ?= $(patsubst $(PWD)/%/apps_proc,%,$(APPS_DIR))
 endif
 
+# Yocto versions
+YOCTO_MAJOR = $(shell git --git-dir=poky/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\1/g')
+YOCTO_MINOR = $(shell git --git-dir=poky/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\2/g')
+
 # Machine architecture
 # Guess the architecture and product based on the availability of proprietary binaries.
 # If binaries are not available (FOSS build for instance), MACH= and PROD= have to be
@@ -179,17 +183,18 @@ BUILD_SCRIPT := "meta-swi/build.sh"
 # by the Yocto environment to be the ideal Linux distribution
 ifeq ($(USE_DOCKER),1)
   UID := $(shell id -u)
+  GID := $(shell id -g)
   HOSTNAME := $(shell hostname)
   DOCKER_BIN ?= docker
-  DOCKER_IMG ?= "quay.io/swi-infra/yocto-dev"
+  DOCKER_IMG ?= "quay.io/swi-infra/yocto-dev:yocto-${YOCTO_MAJOR}.${YOCTO_MINOR}"
   DOCKER_RUN := ${DOCKER_BIN} run \
                     --rm \
-                    --user=${UID} \
+                    --user=${UID}:${GID} \
                     --tty --interactive \
                     --hostname=${HOSTNAME} \
                     --volume ${PWD}:${PWD} \
-                    --volume /etc/passwd:/etc/passwd \
-                    --volume /etc/group:/etc/group \
+                    --volume /etc/passwd:/etc/passwd:ro \
+                    --volume /etc/group:/etc/group:ro \
                     --workdir ${PWD}
   BUILD_SCRIPT := ${DOCKER_RUN} ${DOCKER_IMG} ${BUILD_SCRIPT}
 endif
