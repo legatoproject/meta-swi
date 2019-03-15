@@ -1,7 +1,7 @@
 require linux-libc-headers.inc
 
 SRC_URI += "\
-    file://0001-libc-compat.h-fix-some-issues-arising-from-in6.h.patch \
+    file://${LINUXLIBCVERSION}/0001-libc-compat.h-fix-some-issues-arising-from-in6.h.patch \
     file://0002-libc-compat.h-prevent-redefinition-of-struct-ethhdr.patch \
     file://0003-remove-inclusion-of-sysinfo.h-in-kernel.h.patch \
     file://0001-if_ether-move-muslc-ethhdr-protection-to-uapi-file.patch \
