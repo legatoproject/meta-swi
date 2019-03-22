@@ -5,7 +5,6 @@ LIBHARDWARE_REPO = "git://codeaurora.org/platform/hardware/libhardware;branch=le
 SRC_URI  = "${LIBHARDWARE_REPO}"
 
 EXTRA_OEMAKE = "INCLUDES='-I${S}/include'"
-EXTRA_OECONF = "--with-sanitized-headers=${STAGING_DIR_TARGET}${KERNEL_SRC_PATH}/usr/include"
 
 do_install_append () {
         install -d ${D}${includedir}

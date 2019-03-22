@@ -17,7 +17,5 @@ SRC_URI  = "${SYSTEMEXTRA_REPO}"
 
 S = "${WORKDIR}/git/ext4_utils"
 
-EXTRA_OECONF = "--with-sanitized-headers=${STAGING_DIR_TARGET}${KERNEL_SRC_PATH}/usr/include"
-
 CPPFLAGS += "-I${STAGING_INCDIR}/libselinux"
 CPPFLAGS += "-I${STAGING_INCDIR}/cutils"

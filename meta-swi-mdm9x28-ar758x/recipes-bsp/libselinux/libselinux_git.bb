@@ -18,4 +18,3 @@ SRC_URI  = "${LIBSELINUX_REPO}"
 S = "${WORKDIR}/git"
 
 EXTRA_OECONF = " --with-pcre"
-EXTRA_OECONF += " --with-sanitized-headers=${STAGING_DIR_TARGET}${KERNEL_SRC_PATH}/usr/include"
