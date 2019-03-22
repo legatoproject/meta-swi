@@ -42,6 +42,7 @@ SRC_URI += "file://find.pl;subdir=openssl-${PV}/util/ \
             file://Use-SHA256-not-MD5-as-default-digest.patch \
             file://0001-Fix-build-with-clang-using-external-assembler.patch \
             file://0001-openssl-force-soft-link-to-avoid-rare-race.patch  \
+            file://CVE-2018-0734.patch \
             file://CVE-2018-0739.patch \
             "
 SRC_URI[md5sum] = "13bdc1b1d1ff39b6fd42a255e74676a4"
