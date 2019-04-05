@@ -5,11 +5,7 @@ PACKAGE_INSTALL = "busybox mtd-utils-ubifs"
 # Do not pollute the initrd image with rootfs features
 IMAGE_FEATURES = ""
 
-IMAGE_LINGUAS = " "
-
-LICENSE = "MIT"
-
-inherit core-image
+inherit swi-image
 
 IMAGE_ROOTFS_SIZE ?= "8192"
 
