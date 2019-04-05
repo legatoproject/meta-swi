@@ -99,6 +99,10 @@ ifeq ($(USE_ICECC),1)
   ICECC_ARGS = -h
 endif
 
+ifeq ($(SHARED_SSTATE),1)
+  SHARED_SSTATE_ARGS = -S
+endif
+
 # Use extended image.
 ifeq ($(USE_UNSUPPORTED_DEBUG_IMG),1)
   EXT_SWI_IMG_ARGS = -E
@@ -206,7 +210,8 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${HOSTNAME_ARGS} \
 				${IMA_ARGS} \
 				${BB_ARGS} \
-				${EXT_SWI_IMG_ARGS}
+				${EXT_SWI_IMG_ARGS} \
+				${SHARED_SSTATE_ARGS}
 
 # Machine: swi-mdm9x15
 

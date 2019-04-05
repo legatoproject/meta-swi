@@ -99,9 +99,9 @@ QEMU=false
 ENABLE_IMA=false
 IMA_CONFIG=""
 BB_FLAGS=""
-SHARED_SSTATE=${SHARED_SSTATE:-false}
+SHARED_SSTATE=false
 
-while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQG" arg
+while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQGS" arg
 do
     case $arg in
     p)
@@ -203,6 +203,10 @@ do
     Q)
         QEMU=true
         echo "Building for QEMU"
+        ;;
+    S)
+        SHARED_SSTATE=true
+        echo "Enable shared sstate"
         ;;
     i)
         ENABLE_IMA=true
@@ -547,10 +551,10 @@ if [ $? != 0 ]; then
         # Internal SWI network
 
         # Use internal SWI download mirror
-        SOURCE_MIRROR_URL="${SOURCE_MIRROR_URL:-"http://get.legato.sierrawireless.local/yocto/mirror/"}"
+        SOURCE_MIRROR_URL="${SOURCE_MIRROR_URL:-"http://get.legato/yocto/mirror/"}"
 
         # Use shared sstate by default
-        SSTATE_MIRROR_URL="${SSTATE_MIRROR_URL:-"http://get.legato.sierrawireless.local/yocto/sstate/yocto-${YOCTO_MAJOR}.${YOCTO_MINOR}"}"
+        SSTATE_MIRROR_URL="${SSTATE_MIRROR_URL:-"http://get.legato/yocto/sstate/yocto-${YOCTO_MAJOR}.${YOCTO_MINOR}"}"
     else
         # External network
 
