@@ -6,9 +6,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI += "file://0001-SWI-ltp-cmdlib_sh.patch \
             file://0002-SWI-add-ima-tests-in-ltplite.patch \
             file://0003-SWI-runltp-tmp-for-dd.patch \
-            file://0004-SWI-ima-sh.patch \
-            file://0005-SWI-runltplite-tmp-for-dd.patch \
-            file://0006-SWI-creat08-open10-setgid.patch"
+            file://0005-SWI-runltplite-tmp-for-dd.patch"
 SRC_URI += "http://downloads.sf.net/project/linux-ima/linux-ima/ltp-ima-standalone-v2.tar.gz;md5sum=92c2fbd58d7e22837b0ba525e3af3228 \
            "
 rm_tests() {
