@@ -1,6 +1,7 @@
 DESCRIPTION = "An image with only the bare minimum to accelerate the boot process."
 
 PACKAGE_INSTALL = "busybox mtd-utils-ubifs"
+PACKAGE_EXCLUDE = "bash libaio1 libtinfo5 lvm2 ncurses-terminfo-base"
 
 # Do not pollute the initrd image with rootfs features
 IMAGE_FEATURES = ""
