@@ -50,7 +50,7 @@ $0 <options ...>
     -B Pass flags directly to bitbake (e.g. -vvv for verbose build)
     -E Enable extended SWI image (add additional developer packages)
 
-  Machine swi-mdmXXXX:
+  Machine swi-mdmXXXX/swi-sdxXX:
     -q (enable Qualcomm Proprietary bin)
     -s (enable Qualcomm Proprietary source)
     -w <Qualcomm source directory (apps_proc)>
@@ -240,9 +240,9 @@ declare -a LAYERS
 
 enable_layer()
 {
-    local LAYER_NAME=$1
-    local LAYER_PATH=$2
-    local PREVIOUS_LAYER=$3
+    local LAYER_NAME="$1"
+    local LAYER_PATH="$2"
+    local PREVIOUS_LAYER="$3"
 
     if [ -z "$PREVIOUS_LAYER" ]; then
         PREVIOUS_LAYER='meta-yocto-bsp'
@@ -250,6 +250,12 @@ enable_layer()
 
     echo "+ layer: $LAYER_NAME"
 
+    if [ ! -e "$LAYER_PATH" ]; then
+        echo "Error: layer $LAYER_PATH does not exist"
+        exit 1
+    fi
+
+    LAYER_PATH="$(readlink -f "$LAYER_PATH")"
     LAYERS+=("$LAYER_PATH")
 
     grep -E "/$LAYER_NAME " $BD/conf/bblayers.conf > /dev/null
@@ -280,6 +286,24 @@ case $MACH in
             DISTRO="poky-swi-ext"
         fi
         ;;
+    swi-sdx55 )
+        # Enable the common meta-swi-mdm9xxx layer
+        enable_layer "meta-swi/meta-swi-mdm9xxx" "$SWI/meta-swi-mdm9xxx"
+
+        # Enable the meta-swi-sdxXX layer
+        enable_layer "meta-swi/meta-$MACH" "$SWI/meta-$MACH"
+
+        # Enable the meta-swi-sdxXX-PROD layer, if it exists
+        if [ -n "$PROD" ] && [ -e "$SWI/meta-${MACH}-${PROD}" ]; then
+            enable_layer "meta-swi/meta-$MACH-$PROD" "$SWI/meta-$MACH-$PROD" "meta-$MACH"
+        fi
+
+        if [ $ENABLE_PROPRIETARY_SRC = true ] || [ $ENABLE_PROPRIETARY = true ]; then
+            # Distro to poky-swi-ext to change SDKPATH
+            DISTRO="poky-swi-ext"
+        fi
+        ;;
+
 esac
 
 # Enable the meta-swi layer
@@ -407,8 +431,8 @@ fi
 ## Conf: local.conf
 
 set_option() {
-    opt_name=$1
-    opt_val=$2
+    local opt_name=$1
+    local opt_val=$2
 
     if grep "$opt_name =" $BD/conf/local.conf > /dev/null; then
         # Update entry
@@ -627,6 +651,9 @@ if [ -z "$KERNEL_PROVIDER" ]; then
         swi-mdm9* )
             KERNEL_PROVIDER="linux-quic"
             ;;
+        swi-sdx* )
+            KERNEL_PROVIDER="linux-msm"
+            ;;
         * )
             KERNEL_PROVIDER="linux-yocto"
             ;;
@@ -724,6 +751,9 @@ else
             else
                 bitbake ${BB_FLAGS} ${MACH#swi-}-image-minimal
             fi
+            ;;
+        swi-sdx* )
+            bitbake ${BB_FLAGS} mdm-image-minimal
             ;;
         swi-virt* )
             bitbake ${BB_FLAGS} swi-virt-image-minimal

@@ -8,6 +8,7 @@ PROVIDES = "virtual/lk"
 PR = "r2"
 
 SECURITY_FLAGS_PATCH = "file://0001-arm-fix-dprintf-format.patch"
+LK_REPO ?= ""
 SRC_URI = "${LK_REPO} ${SECURITY_FLAGS_PATCH}"
 
 S = "${WORKDIR}/git"

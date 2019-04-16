@@ -7,6 +7,10 @@ APPS_DIR ?= $(firstword $(wildcard $(PWD)/mdm*[0-9]/apps_proc))
 ifneq ($(wildcard $(PWD)/mdm*[0-9]/common),)
   DEFAULT_MDM_BUILD := src
   MACH ?= $(patsubst $(PWD)/%/apps_proc,%,$(APPS_DIR))
+else ifneq ($(wildcard $(PWD)/sdx55/common),)
+  DEFAULT_MDM_BUILD := src
+  MACH ?= sdx55
+  APPS_DIR = $(firstword $(wildcard $(PWD)/sdx55/SDX55_apps/apps_proc))
 endif
 
 # Yocto versions
@@ -31,6 +35,8 @@ else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files
   ifeq ($(PROD),)
     PROD = ar759x
   endif
+else ifneq (,$(wildcard $(PWD)/sdx55))
+  MACH ?= sdx55
 endif
 # If the build is for virt, override.
 ifneq (,$(findstring virt,$(MAKECMDGOALS)))
