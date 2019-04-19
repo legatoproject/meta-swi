@@ -1,0 +1,133 @@
+#!/bin/sh
+
+# udhcpc script edited by Tim Riker <Tim@Rikers.org>
+
+source /etc/run.env
+
+# Should this executable attempt to set DNS (e.g. update /etc/resolv.conf).
+set_dns=true
+
+# New route which is not used at the moment (save it just in case)
+route_new=
+
+[ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
+
+RESOLV_CONF="/etc/resolv.conf"
+[ -n "$subnet" ] && NETMASK="netmask $subnet"
+
+# return 0 if root is mounted on a network filesystem
+root_is_nfs() {
+    sed -n 's/^[^ ]* \([^ ]*\) \([^ ]*\) .*$/\1 \2/p' /proc/mounts |
+    grep -q "^/ \(nfs\|smbfs\|ncp\|coda\)$"
+}
+
+# Test routes, and see if these must be left alone.
+# If caller would like to keep the old route, new interface will be brought
+# up, but route would not be set if $UDHCPC_KEEP_DEFAULT_ROUTE exists. If not,
+# this method will behave as before.
+
+# Everything that needs to happen, will happen in this method (no need to do
+# anything else).
+test_routes() {
+
+    if [ "$1" = "bound" -o "$1" = "renew" ] ; then
+
+        if [ -f $UDHCPC_KEEP_DEFAULT_ROUTE ] ; then
+            echo "Keeping existing route."
+            route_new=$router
+            unset router
+        fi
+
+        if [ -f $UDHCPC_KEEP_DEFAULT_RESOLV ] ; then
+            echo "Keeping existing resolv.conf."
+            set_dns=false
+        fi
+
+        # Blindly delete these files, they would not be needed any more anyhow.
+        rm -f $UDHCPC_KEEP_DEFAULT_ROUTE
+        rm -f $UDHCPC_KEEP_DEFAULT_RESOLV
+    fi
+}
+
+have_bin_ip=0
+if [ -x /sbin/ip ]; then
+    have_bin_ip=1
+    BROADCAST="broadcast +"
+fi
+
+[ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
+
+# Test routes prior to executing other code.
+test_routes $1
+
+case "$1" in
+
+    deconfig)
+
+        if [ -x /sbin/resolvconf ]; then
+            /sbin/resolvconf -d "${interface}.udhcpc"
+        fi
+        if ! root_is_nfs ; then
+            if [ $have_bin_ip -eq 1 ]; then
+                /sbin/ip addr flush dev $interface
+                /sbin/ip link set dev $interface up
+            else
+                /sbin/ifconfig $interface 0.0.0.0
+            fi
+        fi
+
+    ;;
+
+    renew|bound)
+
+        if [ $have_bin_ip -eq 1 ]; then
+            /sbin/ip addr add dev $interface local $ip/$mask $BROADCAST
+        else
+            /sbin/ifconfig $interface $ip $BROADCAST $NETMASK
+        fi
+
+        if [ -n "$router" ] ; then
+            if ! root_is_nfs ; then
+                if [ $have_bin_ip -eq 1 ]; then
+                    while /sbin/ip route del default dev $interface 2>/dev/null ; do
+                        :
+                    done
+                else
+                    while /sbin/route del default gw 0.0.0.0 dev $interface 2>/dev/null ; do
+                        :
+                    done
+                fi
+            fi
+
+            metric=10
+            for i in $router ; do
+                if [ $have_bin_ip -eq 1 ]; then
+                    /sbin/ip route add default via $i metric $metric
+                else
+                    /sbin/route add default gw $i dev $interface metric $metric 2>/dev/null
+                fi
+                metric=$(($metric + 1))
+            done
+        fi
+
+        # Update resolver configuration file
+        if [ "$set_dns" = "true" ] ; then
+            R=""
+            [ -n "$domain" ] && R="domain $domain"
+            for i in $dns; do
+                echo "$0: Adding DNS $i"
+                R="${R}nameserver $i"
+            done
+
+           if [ -x /sbin/resolvconf ]; then
+               echo -n "$R" | /sbin/resolvconf -a "${interface}.udhcpc"
+           else
+               echo -n "$R" > "$RESOLV_CONF"
+           fi
+        fi
+
+    ;;
+
+esac
+
+exit 0
