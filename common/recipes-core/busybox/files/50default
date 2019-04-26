@@ -86,6 +86,36 @@ case "$1" in
             /sbin/ifconfig $interface $ip $BROADCAST $NETMASK
         fi
 
+        #
+        # Generate leases file.
+        #
+        {
+            echo "lease {"
+            echo "  interface \"$interface\";"
+            echo "  fixed-address $ip;"
+            [ -n "$subnet" ] && echo "  option subnet-mask $subnet;"
+            [ -n "$router" ] && echo "  option routers $router;"
+            echo "  option dhcp-lease-time $lease;"
+            [ -n "$dhcptype" ] && echo "  option dhcp-message-type $dhcptype;"
+            [ -n "$dns" ] && echo "  option domain-name-servers $dns;"
+            echo "  option dhcp-server-identifier ${siaddr:-$serverid};"
+            [ -n "$domain" ] && echo "  option domain-name \"$domain\";"
+            [ -n "$broadcast" ] && echo "  option broadcast-address $broadcast;"
+
+            d=$(expr "$(date "+%Y.%m.%d-%H:%M:%S")" : "\(.*\):")
+
+            t=$(date -d "$d:$(expr $lease / 2)" "+%w %Y/%m/%d %H:%M:%S" 2>/dev/null)
+            [ -n "$t" ] && echo "  renew $t;"
+
+            t=$(date -d "$d:$(expr 7 '*' $lease / 8)" "+%w %Y/%m/%d %H:%M:%S" 2>/dev/null)
+            [ -n "$t" ] && echo "  rebind $t;"
+
+            t=$(date -d "$d:$lease" "+%w %Y/%m/%d %H:%M:%S" 2>/dev/null)
+            [ -n "$t" ] && echo "  expire $t;"
+
+            echo "}"
+        } > /var/run/udhcpc.$interface.leases
+
         if [ -n "$router" ] ; then
             if ! root_is_nfs ; then
                 if [ $have_bin_ip -eq 1 ]; then
