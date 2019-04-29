@@ -94,6 +94,10 @@ determine_kernel_versions() {
     # linux-quic
     elif [[ "${PREFERRED_PROVIDER_virtual/kernel}" == "linux-quic" ]]; then
         VERSION_kernel=$(echo ${PREFERRED_VERSION_linux-quic} | sed 's/%//g')
+
+    # linux-msm
+    elif [[ "${PREFERRED_PROVIDER_virtual/kernel}" == "linux-msm" ]]; then
+        VERSION_kernel=$(echo ${PREFERRED_VERSION_linux-msm} | sed 's/%//g')
     fi
 
     if [ -z "$VERSION_kernel" ]; then
