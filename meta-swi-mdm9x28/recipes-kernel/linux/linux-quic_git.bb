@@ -177,8 +177,8 @@ do_bootimg() {
     if [ $? -ne 0 ] ; then exit 1 ; fi
 
     # sign the image:
-    android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.unsigned.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img
-    android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.unsigned.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img
+    android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.unsigned.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img verity
+    android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.unsigned.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img verity
 
     ln -sf boot-yocto-mdm9x28.4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img
     echo "${PV} $date" >> ${DEPLOY_DIR_IMAGE}/kernel.version

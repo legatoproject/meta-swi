@@ -19,6 +19,11 @@ SRC_URI += "file://swi-readme.txt \
             file://swi-keys.cwe \
            "
 
+# copy certficiates for android-signing to use
+#SRC_URI += "file://rootfs \
+#            file://legato \
+#           "
+
 S = "${WORKDIR}/git"
 
 # Move the scripts to a work-shared directory as described by SIGNING_TOOLS_DIR
@@ -26,6 +31,9 @@ do_install() {
     install -d ${ANDROID_SIGNING_DIR}
     cp -r ${S}/* ${ANDROID_SIGNING_DIR}
     cp ${WORKDIR}/swi* ${ANDROID_SIGNING_DIR}
+    # copy certficiates for android-signing to use
+    #cp -r ${WORKDIR}/rootfs ${ANDROID_SIGNING_DIR}/security
+    #cp -r ${WORKDIR}/legato ${ANDROID_SIGNING_DIR}/security
 }
 
 # don't run these functions

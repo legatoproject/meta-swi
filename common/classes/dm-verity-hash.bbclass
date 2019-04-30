@@ -1,4 +1,5 @@
 # Helper class to generate a hash tree table for Dm-verity
+inherit android-signing
 
 # Create hash tree table bin file
 create_dm_verity_hash() {
@@ -29,6 +30,15 @@ get_dm_root_hash() {
     local root_hash=$(cat ${dm_hash_filename} | grep Root | awk -F' ' '{printf $3}')
     echo "... ${root_hash}"
     echo ${root_hash} > ${dm_root_hash_path}
+
+    cp ${dm_root_hash_path} ${dm_root_hash_path}.unsigned
+
+    # sign the image with single cert
+    android_signature_add /rootfs "${dm_root_hash_path}" "${dm_root_hash_path}" testkey
+
+    # sign the image with cert chain
+    #android_signature_add /rootfs "${dm_root_hash_path}" "${dm_root_hash_path}" rootfs/Attestation \
+    #   rootfs/AttestationCA.der rootfs/RootCA.der
 }
 
 
