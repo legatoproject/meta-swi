@@ -493,7 +493,14 @@ mangoh_gpioExpander_GpioRef_t mangoh_gpioExpander_Request ( unsigned char module
     {
         gpioRefPtr->i2cAddr = I2C_SX1509_GPIO_EXPANDER3_ADDR;
     }
+
+#if defined CONFIG_MDM9X15
+    gpioRefPtr->i2cBus = 0;
+#elif defined CONFIG_MDM9X28
     gpioRefPtr->i2cBus = 4;
+#else
+    #error "Unknown platform"
+#endif
 
     gpioRefPtr->bank = 1; // 1 = A
     if (pinNum > 7)
@@ -662,7 +669,14 @@ int main( int argc, char **argv )
     int data;
     int i;
     int ret = 0;
+#if defined CONFIG_MDM9X15
+    const int i2cbus = 0;
+#elif defined CONFIG_MDM9X28
     const int i2cbus = 4;
+#else
+    #error "Unknown platform"
+#endif
+
     unsigned char reg, val;
 
     int expander, gpio;

@@ -14,6 +14,9 @@ do_configure[noexec] = "1"
 DEPENDS += "i2c-tools"
 TARGET_LDFLAGS_prepend = " -li2c "
 
+TARGET_CFLAGS_swi-mdm9x15_append = " -DCONFIG_MDM9X15"
+TARGET_CFLAGS_swi-mdm9x28_append = " -DCONFIG_MDM9X28"
+
 do_compile() {
     cp -pv ${WORKDIR}/gpioexp.c .
     oe_runmake gpioexp
