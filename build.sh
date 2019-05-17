@@ -693,6 +693,10 @@ case $MACH in
             set_option 'INITRAMFS_IMAGE' "${MACH#swi-}-image-initramfs"
         fi
         ;;
+    swi-sdx55* )
+        set_option 'INITRAMFS_IMAGE_BUNDLE' '1'
+        set_option 'INITRAMFS_IMAGE' "${MACH#swi-}-image-initramfs"
+        ;;
     swi-virt* )
         set_option 'INITRAMFS_IMAGE_BUNDLE' '1'
         set_option 'INITRAMFS_IMAGE' "swi-virt-image-initramfs"

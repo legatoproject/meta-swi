@@ -5,14 +5,6 @@ DESCRIPTION = "CAF Linux Kernel"
 LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 
-python __anonymous () {
-  # Override KERNEL_IMAGETYPE_FOR_MAKE variable, which is internal
-  # to kernel.bbclass. We override the variable as msm kernel can't
-  # support alternate image builds
-  if d.getVar("KERNEL_IMAGETYPE", True):
-      d.setVar("KERNEL_IMAGETYPE_FOR_MAKE", "")
-}
-
 DEPENDS += " mkbootimg-native openssl-native kern-tools-native"
 RDEPENDS_${KERNEL_PACKAGE_NAME}-base = ""
 
@@ -50,6 +42,19 @@ do_kernel_checkout[noexec] = "1"
 # extra task for configuration checks
 addtask kernel_configcheck after do_configure before do_compile
 
+# Note that @{DATETIME} isn't a BitBake variable expansion;
+# see do_bootimg for the crude substitution we do with sed.
+# Originally we had the ${DATETIME} variable here.
+# What this "fake variable" achieves is a stable base hash across reparses:
+# BitBake only ever sees the literal text @{DATETIME},
+# so the hash doesn't change. In Yocto 1.7 we didn't see a
+# problem, but newer Yocto diagnoses situations when the inputs
+# to a task appear to change upon a second parse, changing the
+# hash, which occurs if ${DATETIME} is mixed in.
+BOOTIMG_NAME_2k ?= "boot-yocto-sdx55-@{DATETIME}.2k"
+BOOTIMG_NAME_4k ?= "boot-yocto-sdx55-@{DATETIME}.4k"
+
+
 do_unpack_append() {
     wrkdir = d.getVar('WORKDIR', True)
     srcdir = d.getVar('S', True)
@@ -61,14 +66,15 @@ do_compile () {
     oe_runmake CC="${KERNEL_CC}" LD="${KERNEL_LD}" ${KERNEL_EXTRA_ARGS} $use_alternate_initrd
 }
 
-do_deploy() {
+do_deploy_prepend() {
     if [[ ${KERNEL_IMAGETYPE} != *-dtb ]]; then
         bberror "${PN}: Only appended DTB supported; Change KERNEL_IMAGETYPE to ${KERNEL_IMAGETYPE}-dtb in your kernel config."
         return
     fi
 
-    if [ -f ${D}/${KERNEL_IMAGEDEST}/-${KERNEL_VERSION} ]; then
-        mv ${D}/${KERNEL_IMAGEDEST}/-${KERNEL_VERSION} ${D}/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${KERNEL_VERSION}
+    # Remove kernel binary mysteriously installed by previous steps
+    if [ -f ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE} ] ; then
+        rm -f ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}
     fi
 }
 
@@ -90,19 +96,26 @@ gen_bootimg() {
     if [ "x${IMA_BUILD}" == "xtrue" -a "x${IMA_KERNEL_CMDLINE_OPTIONS}" == "x" ] ; then
         echo "IMA build requested, but IMA_KERNEL_CMDLINE_OPTIONS variable is empty."
         return $ret_err
+    else
+        echo "Kernel command line IMA options: [${IMA_KERNEL_CMDLINE_OPTIONS}]"
     fi
 
-    echo "Kernel command line IMA options: [${IMA_KERNEL_CMDLINE_OPTIONS}]"
-    echo "Kernel command line: [${KERNEL_BOOT_OPTIONS}]"
 
-    kernel_img=${D}/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${KERNEL_VERSION}
+    kernel_cmdline="${KERNEL_BOOT_OPTIONS}"
+    kernel_img=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${KERNEL_IMAGE_NAME}.bin
+    if [ "x${INITRAMFS_IMAGE_BUNDLE}" = "x1" ] ; then
+        kernel_cmdline="${KERNEL_BOOT_OPTIONS_RAMDISK}"
+        kernel_img=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${INITRAMFS_LINK_NAME}.bin
+    fi
+    kernel_img=`readlink -fn ${kernel_img}`
     ls -al $kernel_img
+    echo "Kernel: [${kernel_img}]"
+    echo "Kernel command line: [${kernel_cmdline}]"
 
-    # No initramfs
     ${STAGING_BINDIR_NATIVE}/mkbootimg \
         --kernel $kernel_img \
         --ramdisk /dev/null \
-        --cmdline "${KERNEL_BOOT_OPTIONS}" \
+        --cmdline "${kernel_cmdline}" \
 	--board ${MACHINE} \
         --base ${MACHINE_KERNEL_BASE} \
         --pagesize $page_size \
@@ -117,9 +130,9 @@ do_bootimg() {
     date=$(date +"%Y%m%d%H%M%S")
     image_name_2k=$(echo ${BOOTIMG_NAME_2k} | sed -e s/@{DATETIME}/$date/)
     image_name_4k=$(echo ${BOOTIMG_NAME_4k} | sed -e s/@{DATETIME}/$date/)
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" $image_name_2k boot-yocto-sdx55.2k masterDTB.2k 2048
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" $image_name_2k boot-yocto-sdx55.2k 2048
     if [ $? -ne 0 ] ; then exit 1 ; fi
-    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" $image_name_4k boot-yocto-sdx55.4k masterDTB.4k 4096
+    gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" $image_name_4k boot-yocto-sdx55.4k 4096
     if [ $? -ne 0 ] ; then exit 1 ; fi
     ln -sf $image_name_4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-sdx55.img
     echo "${PV} $date" >> ${DEPLOY_DIR_IMAGE}/kernel.version
