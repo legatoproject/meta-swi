@@ -13,19 +13,16 @@ SRC_URI = "file://sierra_ks_if_user_test.c \
 do_configure[noexec] = "1"
 
 DEPENDS += "i2c-tools"
-DEPENDS += "linux-quic"
 
 TARGET_LDFLAGS_prepend = " -li2c "
 
 do_compile() {
-    cp -pv ${WORKDIR}/sierra_ks_if_dmv_test.c .
-    cp -pv ${WORKDIR}/sierra_ks_if_user_test.c .
-    cp -pv ${WORKDIR}/sierra_ks_if_intf.h .
+    cd ${WORKDIR}
     oe_runmake sierra_ks_if_user_test
     oe_runmake sierra_ks_if_dmv_test
 }
 
 do_install() {
-    install -m 0755 sierra_ks_if_user_test -D ${D}/usr/bin/kstest
-    install -m 0755 sierra_ks_if_dmv_test -D ${D}/usr/bin/kskey
+    install -m 0755 ${WORKDIR}/sierra_ks_if_user_test -D ${D}/usr/bin/kstest
+    install -m 0755 ${WORKDIR}/sierra_ks_if_dmv_test -D ${D}/usr/bin/kskey
 }
