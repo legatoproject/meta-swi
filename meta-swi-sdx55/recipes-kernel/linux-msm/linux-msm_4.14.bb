@@ -8,10 +8,6 @@ inherit ${@bb.utils.contains('TARGET_KERNEL_ARCH', 'aarch64', 'qtikernel-arch', 
 COMPATIBLE_MACHINE = "(qcs40x|sdxprairie|sdmsteppe|swi-sdx55)"
 KERNEL_IMAGEDEST = "boot"
 
-SRC_DIR   =  "${WORKSPACE}/kernel/msm-4.14"
-S         =  "${WORKDIR}/kernel/msm-4.14"
-PR = "r0"
-
 DEPENDS += "dtc-native"
 #DEPENDS += " llvm-arm-toolchain-native"
 

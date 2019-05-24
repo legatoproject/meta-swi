@@ -67,5 +67,8 @@ kernel_src_install() {
     # by headers_install that lies outside of $dest.
 
     rm -rf ${D}/usr/src/usr
+
+    # Also remove some native content
+    rm -rf ${dest_pref}/gen_init_cpio
 }
 

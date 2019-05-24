@@ -1,5 +1,7 @@
 inherit kernel kernel-yocto
 #inherit qperf
+ 
+require recipes-kernel/linux-quic/linux-quic.inc
 
 DESCRIPTION = "CAF Linux Kernel"
 LICENSE = "GPLv2"
@@ -22,13 +24,13 @@ LINUX_REPO_DIR_PARENT = "${@os.path.dirname(d.getVar('LINUX_REPO_DIR', False))}"
 LINUX_REPO_DIR_BASE = "${@os.path.basename(d.getVar('LINUX_REPO_DIR', False))}"
 FILESPATH_prepend = "${LINUX_REPO_DIR_PARENT}:"
 SRC_URI = "file://${LINUX_REPO_DIR_BASE} \
-		${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'file://systemd.cfg', '', d)} \
-		${@bb.utils.contains('DISTRO_FEATURES', 'virtualization', 'file://virtualization.cfg', '', d)} \
-		${@bb.utils.contains('DISTRO_FEATURES', 'nand-squashfs', 'file://squashfs.cfg', '', d)} \
- 	     "
+           ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'file://systemd.cfg', '', d)} \
+           ${@bb.utils.contains('DISTRO_FEATURES', 'virtualization', 'file://virtualization.cfg', '', d)} \
+           ${@bb.utils.contains('DISTRO_FEATURES', 'nand-squashfs', 'file://squashfs.cfg', '', d)} \
+           "
 
 PACKAGE_ARCH = "${MACHINE_ARCH}"
-PACKAGES = "kernel kernel-base kernel-vmlinux kernel-dev kernel-modules"
+PACKAGES = "kernel kernel-base kernel-vmlinux kernel-dev kernel-dbg kernel-modules"
 
 KBRANCH ?= ""
 KMETA = "kernel-meta"
@@ -53,7 +55,6 @@ addtask kernel_configcheck after do_configure before do_compile
 # hash, which occurs if ${DATETIME} is mixed in.
 BOOTIMG_NAME_2k ?= "boot-yocto-sdx55-@{DATETIME}.2k"
 BOOTIMG_NAME_4k ?= "boot-yocto-sdx55-@{DATETIME}.4k"
-
 
 do_unpack_append() {
     wrkdir = d.getVar('WORKDIR', True)
@@ -81,6 +82,8 @@ do_deploy_prepend() {
 # Put the zImage in the kernel-dev pkg
 FILES_kernel-dev += "/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${KERNEL_VERSION}"
 
+FILES_kernel-dbg += "${KERNEL_SRC_PATH}/arch/*/boot/*/.debug/*"
+
 gen_bootimg() {
     image_flags=$1
     image_name=$2
@@ -100,7 +103,6 @@ gen_bootimg() {
         echo "Kernel command line IMA options: [${IMA_KERNEL_CMDLINE_OPTIONS}]"
     fi
 
-
     kernel_cmdline="${KERNEL_BOOT_OPTIONS}"
     kernel_img=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${KERNEL_IMAGE_NAME}.bin
     if [ "x${INITRAMFS_IMAGE_BUNDLE}" = "x1" ] ; then
@@ -116,7 +118,7 @@ gen_bootimg() {
         --kernel $kernel_img \
         --ramdisk /dev/null \
         --cmdline "${kernel_cmdline}" \
-	--board ${MACHINE} \
+        --board ${MACHINE} \
         --base ${MACHINE_KERNEL_BASE} \
         --pagesize $page_size \
         --tags-addr ${MACHINE_KERNEL_TAGS_OFFSET} \
