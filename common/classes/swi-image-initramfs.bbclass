@@ -24,6 +24,13 @@ remove_entity() {
     fi
 }
 
+strip_entity() {
+    if [ -f "$1" ] ; then
+        echo "Stripping $1"
+        eu-strip "$1"
+    fi
+}
+
 fakeroot do_filter_rootfs () {
     cd ${IMAGE_ROOTFS}
 
@@ -48,6 +55,12 @@ fakeroot do_filter_rootfs () {
                 ./usr/lib/opkg
     do
       remove_entity $item
+    done
+
+    # Glibc might be built with debug symbols (e.g. for Valgrind debugging)
+    # We strip the initramfs copy of glibc in case that is so:
+    for item in ./lib/lib*.so ; do
+        strip_entity $item
     done
 
     # garbage collect: remove unreachable executables and libs
