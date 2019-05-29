@@ -10,6 +10,9 @@ inherit ubi-image
 inherit dm-verity-hash
 inherit set-files-attr
 
+IMAGE_INSTALL_append = " start-scripts-find-partitions"
+IMAGE_INSTALL_append = " start-scripts-firmware-links"
+
 IMAGE_INSTALL_append = " kernel-modules"
 
 create_ubinize_config() {
