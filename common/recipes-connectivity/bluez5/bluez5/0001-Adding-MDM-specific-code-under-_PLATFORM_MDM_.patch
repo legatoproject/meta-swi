@@ -1,0 +1,53 @@
+From c0ac135b68f339441700014c0ddce9b4ee8c6dca Mon Sep 17 00:00:00 2001
+From: Dibyendu Roy <dibyen@codeaurora.org>
+Date: Thu, 11 Jun 2015 12:07:43 +0530
+Subject: [PATCH] Adding MDM specific code under _PLATFORM_MDM_
+
+This patch is added to comment out the commit
+84cc0e12983b5761c67789ef93fd6fb164c7314d in x86 as
+dynamic suspend feature is not available in x86. However,
+this code shall be active for MDM platform due to
+dynamic suspend feature.
+
+Change-Id: I998f0521b4a5f9744412db40f2c2d3bff2ac3d11
+---
+ tools/hciattach_rome.c | 5 ++++-
+ tools/hciattach_rome.h | 3 +++
+ 2 files changed, 7 insertions(+), 1 deletion(-)
+
+diff --git a/tools/hciattach_rome.c b/tools/hciattach_rome.c
+index 0d7014f1d..1891de24e 100644
+--- a/tools/hciattach_rome.c
++++ b/tools/hciattach_rome.c
+@@ -1742,13 +1742,14 @@ int qca_soc_init(int fd, int speed, char *bdaddr)
+ 
+ 	vnd_userial.fd = fd;
+ 
++#ifdef _PLATFORM_MDM_
+     /* Vote for UART CLK prior to FW download */
+     err = ioctl(fd, USERIAL_OP_CLK_ON);
+     if (err < 0) {
+         fprintf(stderr, "%s: Failed to vote UART CLK ON\n", __func__);
+         return -1;
+     }
+-
++#endif
+ 	/* Get Rome version information */
+ 	if((err = rome_patch_ver_req(fd)) <0){
+ 		fprintf(stderr, "%s: Fail to get Rome Version (0x%x)\n", __FUNCTION__, err);
+@@ -1876,10 +1876,12 @@ download:
+ 	}
+ 
+ error:
++#ifdef _PLATFORM_MDM_
+     /* Vote UART CLK OFF post to FW download */
+     err = ioctl(fd, USERIAL_OP_CLK_OFF);
+     if (err < 0)
+         fprintf(stderr, "%s: Failed to vote UART CLK OFF!!!\n", __func__);
++#endif
+ 
+ 	return ret;
+ }
+-- 
+2.20.1
+
