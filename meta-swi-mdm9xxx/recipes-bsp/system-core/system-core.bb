@@ -32,6 +32,8 @@ inherit update-rc.d
 
 EXTRA_OEMAKE = "INCLUDES='-I${S}/include'"
 
+COMPATIBLE_MACHINE = "(swi-mdm.*)"
+
 patch_adb_shell() {
     # Use /bin/sh instead of /system/bin/sh for adbd
     sed -i "s^/system/bin/sh^/bin/sh^" ${S}/adb/services.c

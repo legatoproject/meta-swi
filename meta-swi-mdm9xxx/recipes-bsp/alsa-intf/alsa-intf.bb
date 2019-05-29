@@ -15,6 +15,8 @@ SRC_URI  = "${ALSAINTF_REPO}"
 
 S = "${WORKDIR}/git"
 
+COMPATIBLE_MACHINE = "(swi-mdm.*)"
+
 SANITIZED_HEADERS ?= "${STAGING_DIR_TARGET}${KERNEL_SRC_PATH}/usr/include"
 
 EXTRA_OECONF += "--prefix=/etc \
