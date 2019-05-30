@@ -30,7 +30,7 @@ SRC_URI = "file://${LINUX_REPO_DIR_BASE} \
            "
 
 PACKAGE_ARCH = "${MACHINE_ARCH}"
-PACKAGES = "kernel kernel-base kernel-vmlinux kernel-dev kernel-dbg kernel-modules"
+PACKAGES = "${KERNEL_PACKAGE_NAME} ${KERNEL_PACKAGE_NAME}-base ${KERNEL_PACKAGE_NAME}-vmlinux ${KERNEL_PACKAGE_NAME}-dev ${KERNEL_PACKAGE_NAME}-dbg ${KERNEL_PACKAGE_NAME}-modules"
 
 KBRANCH ?= ""
 KMETA = "kernel-meta"
@@ -80,9 +80,9 @@ do_deploy_prepend() {
 }
 
 # Put the zImage in the kernel-dev pkg
-FILES_kernel-dev += "/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${KERNEL_VERSION}"
+FILES_${KERNEL_PACKAGE_NAME}-dev += "/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${KERNEL_VERSION}"
 
-FILES_kernel-dbg += "${KERNEL_SRC_PATH}/arch/*/boot/*/.debug/*"
+FILES_${KERNEL_PACKAGE_NAME}-dbg += "${KERNEL_SRC_PATH}/arch/*/boot/*/.debug/*"
 
 gen_bootimg() {
     image_flags=$1

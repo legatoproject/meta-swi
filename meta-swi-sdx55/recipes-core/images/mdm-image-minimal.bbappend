@@ -14,6 +14,7 @@ IMAGE_INSTALL_append = " start-scripts-find-partitions"
 IMAGE_INSTALL_append = " start-scripts-firmware-links"
 
 IMAGE_INSTALL_append = " kernel-modules"
+IMAGE_INSTALL_append = " bsinfo-stub"
 
 create_ubinize_config() {
     local cfg_path=$1
