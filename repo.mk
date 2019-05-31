@@ -208,7 +208,19 @@ ifeq ($(USE_DOCKER),1)
                     --volume ${PWD}:${PWD} \
                     --volume /etc/passwd:/etc/passwd:ro \
                     --volume /etc/group:/etc/group:ro \
-                    --workdir ${PWD}
+                    --workdir ${PWD} \
+                    --env USE_ICECC \
+                    --env SHARED_SSTATE \
+                    --env USE_UNSUPPORTED_DEBUG_IMG \
+                    --env FW_VERSION \
+                    --env LEGATO_BUILD \
+                    --env MANGOH_BUILD \
+                    --env IMA_BUILD \
+                    --env IMA_CONFIG \
+                    --env SDK_PREFIX \
+                    --env FIRMWARE_PATH \
+                    --env TARGET_HOSTNAME \
+                    --env RECOVERY_BUILD
   BUILD_SCRIPT := ${DOCKER_RUN} ${DOCKER_IMG} ${BUILD_SCRIPT}
 endif
 
