@@ -1,4 +1,5 @@
 DEPENDS += " \
+	edk2 \
 	mtd-utils-native \
 	cryptsetup-native \
 	ima-evm-utils-native \

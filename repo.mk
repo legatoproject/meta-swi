@@ -179,6 +179,19 @@ else
   endif
 endif
 
+# Determine the location of edk2 bootloader
+ifneq (,$(wildcard $(PWD)/edk2/))
+  EDK2_REPO := "$(PWD)/edk2"
+  ifneq (, $(filter $(MACH), sdx55))
+    EDK2_ARGS := -a "EDK2_REPO=$(EDK2_REPO)"
+  endif
+else
+  # Enforce existence of EDK2 for SDX55; optional for others
+  ifneq (, $(filter $(MACH), sdx55))
+    $(error Missing EDK2 directory $(PWD)/edk2)
+  endif
+endif
+
 ifeq ($(RECOVERY_BUILD),1)
   RCY_ARGS = -e
 endif
@@ -319,6 +332,7 @@ COMMON_MACH := \
 				$(COMMON_ARGS) \
 				$(MANGOH_ARGS) \
 				$(LK_ARGS) \
+				$(EDK2_ARGS) \
 				$(MACH_ARGS) \
 				${PROD_ARGS} \
 				$(RCY_ARGS)
