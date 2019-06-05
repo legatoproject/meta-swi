@@ -7,8 +7,9 @@ source /etc/run.env
 # Should this executable attempt to set DNS (e.g. update /etc/resolv.conf).
 set_dns=true
 
-# New route which is not used at the moment (save it just in case)
-route_new=
+# New router received from DHCP server. It will always be recorded in lease
+# file
+router_new=""
 
 [ -z "$1" ] && echo "Error: should be called from udhcpc" && exit 1
 
@@ -32,9 +33,11 @@ test_routes() {
 
     if [ "$1" = "bound" -o "$1" = "renew" ] ; then
 
+        # Always save router for later use.
+        router_new=$router
+
         if [ -f $UDHCPC_KEEP_DEFAULT_ROUTE ] ; then
             echo "Keeping existing route."
-            route_new=$router
             unset router
         fi
 
@@ -94,7 +97,7 @@ case "$1" in
             echo "  interface \"$interface\";"
             echo "  fixed-address $ip;"
             [ -n "$subnet" ] && echo "  option subnet-mask $subnet;"
-            [ -n "$router" ] && echo "  option routers $router;"
+            [ -n "$router_new" ] && echo "  option routers $router_new;"
             echo "  option dhcp-lease-time $lease;"
             [ -n "$dhcptype" ] && echo "  option dhcp-message-type $dhcptype;"
             [ -n "$dns" ] && echo "  option domain-name-servers $dns;"
