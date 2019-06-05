@@ -99,9 +99,9 @@ QEMU=false
 ENABLE_IMA=false
 IMA_CONFIG=""
 BB_FLAGS=""
-SHARED_SSTATE=${SHARED_SSTATE:-false}
+SHARED_SSTATE=false
 
-while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQG" arg
+while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQGS" arg
 do
     case $arg in
     p)
@@ -204,6 +204,10 @@ do
         QEMU=true
         echo "Building for QEMU"
         ;;
+    S)
+        SHARED_SSTATE=true
+        echo "Enable shared sstate"
+        ;;
     i)
         ENABLE_IMA=true
         IMA_CONFIG=$OPTARG
@@ -232,54 +236,51 @@ if [[ "$(basename $(readlink -f /bin/sh))" != "bash" ]]; then
 fi
 
 ## Conf: bblayers.conf
-declare -a LAYERS
+declare -a LAYER_PATHS
+declare -a LAYER_NAMES
 
 enable_layer()
 {
-    local LAYER_NAME=$1
-    local LAYER_PATH=$2
-    local PREVIOUS_LAYER=$3
+    local layer_name="$1"
+    local layer_path="$2"
+    local previous_layer="$3"
 
-    if [ -z "$PREVIOUS_LAYER" ]; then
-        PREVIOUS_LAYER='meta-yocto-bsp'
+    if [ -z "$previous_layer" ]; then
+        if [ ${#LAYER_NAMES[@]} -ge 1 ]; then
+            previous_layer="${LAYER_NAMES[-1]}"
+        else
+            previous_layer="meta-yocto-bsp"
+        fi
+
+        previous_layer="$(echo "${previous_layer}" | sed 's#/#\\/#')"
     fi
 
-    echo "+ layer: $LAYER_NAME"
+    echo "+ layer: $layer_name"
 
-    LAYERS+=("$LAYER_PATH")
+    if command -v readlink >/dev/null; then
+        layer_path="$(readlink -f "$layer_path")"
+    fi
 
-    grep -E "/$LAYER_NAME " $BD/conf/bblayers.conf > /dev/null
+    # Avoid duplication
+    for other_path in ${LAYER_PATHS[@]}; do
+        if [[ "$other_path" == "$layer_path" ]]; then
+            echo "  duplicate ${layer_path}, skipping"
+            return
+        fi
+    done
+
+    LAYER_NAMES+=("$layer_name")
+    LAYER_PATHS+=("$layer_path")
+
+    grep -E "/$layer_name " $BD/conf/bblayers.conf > /dev/null
     if [ $? != 0 ]; then
-        echo "         -> $LAYER_PATH"
-        sed -e '/'"$PREVIOUS_LAYER"'/a\  '"$LAYER_PATH"' \\' -i $BD/conf/bblayers.conf
+        echo "         -> $layer_path"
+        if ! sed -e '/'"$previous_layer"'/a\  '"$layer_path"' \\' -i $BD/conf/bblayers.conf; then
+            echo "  error inserting layer $layer_name"
+            exit 1
+        fi
     fi
 }
-
-case $MACH in
-    swi-virt-* )
-        enable_layer "meta-swi-virt" "$SWI/meta-swi-virt"
-        ;;
-    swi-mdm9* )
-        # Enable the common meta-swi-mdm9xxx layer
-        enable_layer "meta-swi/meta-swi-mdm9xxx" "$SWI/meta-swi-mdm9xxx"
-
-        # Enable the meta-swi-mdmNNNN layer
-        enable_layer "meta-swi/meta-$MACH" "$SWI/meta-$MACH" "meta-swi-mdm9xxx"
-
-        # Enable the meta-swi-mdmNNNN-PROD layer, if it exists
-        if [ -n "$PROD" ] && [ -e "$SWI/meta-${MACH}-${PROD}" ]; then
-            enable_layer "meta-swi/meta-$MACH-$PROD" "$SWI/meta-$MACH-$PROD" "meta-$MACH"
-        fi
-
-        if [ $ENABLE_PROPRIETARY_SRC = true ] || [ $ENABLE_PROPRIETARY = true ]; then
-            # Distro to poky-swi-ext to change SDKPATH
-            DISTRO="poky-swi-ext"
-        fi
-        ;;
-esac
-
-# Enable the meta-swi layer
-enable_layer "meta-swi/common" "$SWI/common"
 
 # Enable the meta-oe layer
 enable_layer "meta-oe" "$OE/meta-oe"
@@ -297,11 +298,37 @@ else
     echo "Warning: meta-gplv2 repository not available"
 fi
 
+# Enable the meta-swi layer
+enable_layer "meta-swi/common" "$SWI/common"
+
+case $MACH in
+    swi-virt-* )
+        enable_layer "meta-swi-virt" "$SWI/meta-swi-virt"
+        ;;
+    swi-mdm9* )
+        # Enable the common meta-swi-mdm9xxx layer
+        enable_layer "meta-swi/meta-swi-mdm9xxx" "$SWI/meta-swi-mdm9xxx"
+
+        # Enable the meta-swi-mdmNNNN layer
+        enable_layer "meta-swi/meta-$MACH" "$SWI/meta-$MACH"
+
+        # Enable the meta-swi-mdmNNNN-PROD layer, if it exists
+        if [ -n "$PROD" ] && [ -e "$SWI/meta-${MACH}-${PROD}" ]; then
+            enable_layer "meta-swi/meta-$MACH-$PROD" "$SWI/meta-$MACH-$PROD"
+        fi
+
+        if [ $ENABLE_PROPRIETARY_SRC = true ] || [ $ENABLE_PROPRIETARY = true ]; then
+            # Distro to poky-swi-ext to change SDKPATH
+            DISTRO="poky-swi-ext"
+        fi
+        ;;
+esac
+
 # Enable proprietary layers: common
 if [ $ENABLE_PROPRIETARY_SRC = true ] || [ $ENABLE_PROPRIETARY = true ]; then
-    enable_layer "meta-swi-extras/common" "$scriptdir/../meta-swi-extras/common" "meta-$MACH"
+    enable_layer "meta-swi-extras/common" "$scriptdir/../meta-swi-extras/common"
 
-    enable_layer "meta-swi-extras/meta-$MACH" "$scriptdir/../meta-swi-extras/meta-$MACH" "meta-$MACH"
+    enable_layer "meta-swi-extras/meta-$MACH" "$scriptdir/../meta-swi-extras/meta-$MACH"
 fi
 
 # Enable meta-mangoh layer
@@ -330,16 +357,15 @@ if [ $ENABLE_PROPRIETARY_SRC = true ]; then
     fi
 
     # Add common mdm9xxx source layer
-    enable_layer "meta-swi-extras/meta-swi-mdm9xxx-src" "$scriptdir/../meta-swi-extras/meta-swi-mdm9xxx-src" "meta-swi-extras\/common"
+    enable_layer "meta-swi-extras/meta-swi-mdm9xxx-src" "$scriptdir/../meta-swi-extras/meta-swi-mdm9xxx-src"
 
     # Add machine-specific source layer
-    enable_layer "meta-swi-extras/meta-$MACH-src" "$scriptdir/../meta-swi-extras/meta-$MACH-src" "meta-swi-mdm9xxx-src"
+    enable_layer "meta-swi-extras/meta-$MACH-src" "$scriptdir/../meta-swi-extras/meta-$MACH-src"
 
     # Add product-specific source layer
     if [ -n "$PROD" ] && [ -e "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-src" ]; then
         enable_layer "meta-swi-extras/meta-$MACH-$PROD-src" \
-            "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-src" \
-            "meta-$MACH-src"
+            "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-src"
     fi
 
     copy_qmi_api() {
@@ -387,16 +413,15 @@ fi
 # Enable proprietary layers: from binaries
 if [ $ENABLE_PROPRIETARY = true ]; then
     # Add common mdm9xxx binary layer
-    enable_layer "meta-swi-extras/meta-swi-mdm9xxx-bin" "$scriptdir/../meta-swi-extras/meta-swi-mdm9xxx-bin" "meta-$MACH"
+    enable_layer "meta-swi-extras/meta-swi-mdm9xxx-bin" "$scriptdir/../meta-swi-extras/meta-swi-mdm9xxx-bin"
 
     # Add machine-specific binary layer
-    enable_layer "meta-swi-extras/meta-$MACH-bin" "$scriptdir/../meta-swi-extras/meta-$MACH-bin" "meta-swi-mdm9xxx-bin"
+    enable_layer "meta-swi-extras/meta-$MACH-bin" "$scriptdir/../meta-swi-extras/meta-$MACH-bin"
 
     # Add product-specific source layer
     if [ -n "$PROD" ] && [ -e "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-bin" ]; then
         enable_layer "meta-swi-extras/meta-$MACH-$PROD-bin" \
-            "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-bin" \
-            "meta-$MACH-bin"
+            "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-bin"
     fi
 fi
 
@@ -421,8 +446,8 @@ set_option() {
 check_machine_name() {
     local machine=$1
 
-    for layer in ${LAYERS[@]}; do
-        machine_file=$(find $layer -name "${machine}.conf" -print)
+    for layer_path in ${LAYER_PATHS[@]}; do
+        machine_file=$(find "$layer_path" -name "${machine}.conf" -print)
         if [ -n "$machine_file" ]; then
             return 0
         fi
@@ -529,8 +554,12 @@ else
     set_machine "${MACH}"
 fi
 
-YOCTO_MAJOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\1/g')
-YOCTO_MINOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\2/g')
+if [ -z "$YOCTO_MAJOR" ]; then
+    YOCTO_MAJOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\1/g')
+fi
+if [ -z "$YOCTO_MINOR" ]; then
+    YOCTO_MINOR=$(git --git-dir=$WS/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\2/g')
+fi
 
 grep -E "SOURCE_MIRROR_URL" $BD/conf/local.conf > /dev/null
 if [ $? != 0 ]; then
@@ -543,10 +572,10 @@ if [ $? != 0 ]; then
         # Internal SWI network
 
         # Use internal SWI download mirror
-        SOURCE_MIRROR_URL="${SOURCE_MIRROR_URL:-"http://get.legato.sierrawireless.local/yocto/mirror/"}"
+        SOURCE_MIRROR_URL="${SOURCE_MIRROR_URL:-"http://get.legato/yocto/mirror/"}"
 
         # Use shared sstate by default
-        SSTATE_MIRROR_URL="${SSTATE_MIRROR_URL:-"http://get.legato.sierrawireless.local/yocto/sstate/yocto-${YOCTO_MAJOR}.${YOCTO_MINOR}"}"
+        SSTATE_MIRROR_URL="${SSTATE_MIRROR_URL:-"http://get.legato/yocto/sstate/yocto-${YOCTO_MAJOR}.${YOCTO_MINOR}"}"
     else
         # External network
 
@@ -672,6 +701,9 @@ set_option 'PACKAGECONFIG_remove' "gnutls"
 
 cd $BD
 
+# Set PACKAGE_CLASSES
+sed -e 's:^\(PACKAGE_CLASSES\).*:\1 = \"package_ipk\":' -i $BD/conf/local.conf
+
 # Command line
 if [ $CMD_LINE = true ]; then
     /bin/bash
@@ -692,7 +724,6 @@ fi
 echo -n "Build image of "
 if [ $DEBUG = true ]; then
     echo "dev rootfs (for $MACH)."
-    sed -e 's:^\(PACKAGE_CLASSES\).*:\1 = \"package_rpm\":' -i $BD/conf/local.conf
     case $MACH in
         swi-mdm* )
             bitbake ${BB_FLAGS} ${MACH#swi-}-image-dev
@@ -707,7 +738,6 @@ if [ $DEBUG = true ]; then
     exit $?
 else
     echo "minimal rootfs (for $MACH)."
-    sed -e 's:^\(PACKAGE_CLASSES\).*:\1 = \"package_ipk\":' -i $BD/conf/local.conf
     case $MACH in
         swi-mdm* )
             if test x$ENABLE_RECOVERY = "xtrue"; then

@@ -101,8 +101,12 @@ gen_bootimg() {
     # if blob needs to be attached to the kernel.
     if [ "${KERNEL_DEVICE_TREE_BLOB_NAME}" != "" -a \
          "${KERNEL_ATTACHED_DEVICE_TREE}" -eq 1 ] ; then
-
-        cat ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${KERNEL_DEVICE_TREE_BLOB_NAME} >>${kernel_img_dtree}
+        # Yocto 2.5: DTB file name has kernel image type prepended.
+        if [ -e ${DEPLOY_DIR_IMAGE}/${KERNEL_DEVICE_TREE_BLOB_NAME} ] ; then
+            cat ${DEPLOY_DIR_IMAGE}/${KERNEL_DEVICE_TREE_BLOB_NAME} >>${kernel_img_dtree}
+        else
+            cat ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${KERNEL_DEVICE_TREE_BLOB_NAME} >>${kernel_img_dtree}
+        fi
     fi
 
     if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then

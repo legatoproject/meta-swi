@@ -2,7 +2,7 @@ DESCRIPTION = "Firmware files for use with TI wl18xx"
 LICENSE = "TI-TSPA"
 LIC_FILES_CHKSUM = "file://LICENCE;md5=4977a0fe767ee17765ae63c435a32a9e"
 
-inherit allarch
+PACKAGE_ARCH = "${MACHINE_ARCH}"
 
 PR = "r4+gitr${SRCPV}"
 

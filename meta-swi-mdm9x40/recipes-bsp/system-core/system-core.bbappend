@@ -11,6 +11,9 @@ SRC_URI += "file://composition-sierra_dev"
 SRC_URI += "file://start_usb"
 SRC_URI += "file://0001-Fix-adbd-crash-issue.patch"
 SRC_URI += "file://fix-big-endian-build.patch"
+SRC_URI += "file://no-define-linux-macro.patch"
+SRC_URI += "file://use-accessors-for-rsa.patch"
+SRC_URI += "file://include-sysmacros-for-major.patch"
 
 do_install_append() {
     install -m 0755 ${WORKDIR}/composition-sierra_dev -D ${D}${bindir}/usb/compositions/sierra_dev

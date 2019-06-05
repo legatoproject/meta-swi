@@ -1,6 +1,9 @@
 # look for files in the layer first
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
+SRC_URI_append = " file://50default \
+                 "
+
 python() {
     import re
 
@@ -26,4 +29,7 @@ do_install_append() {
   rm -rf ${D}${sysconfdir}/init.d/rcS
   rm -rf ${D}${sysconfdir}/init.d/rcK
   rm -rf ${D}${sysconfdir}/inittab
+
+  # Add udhcpc related stuff.
+  install -m 0755 ${WORKDIR}/50default -D ${D}${sysconfdir}/udhcpc.d/50default
 }

@@ -1,0 +1,12 @@
+--- a/runtest/ltplite	2018-12-03 15:12:45.904611742 +0100
++++ b/runtest/ltplite	2018-11-28 16:30:37.370119010 +0100
+@@ -1,3 +1,9 @@
++#DESCRIPTION:Integrity Measurement Architecture (IMA)
++ima01   if `grep -q ima_appraise=enforce /proc/cmdline`; then ima_measurements.sh; else TCID=ima01 tst_brkm TCONF "" "IMA not configured"; fi
++ima02   if `grep -q ima_appraise=enforce /proc/cmdline`; then ima_policy.sh; else TCID=ima02 tst_brkm TCONF "" "IMA not configured"; fi
++ima03   if `grep -q ima_appraise=enforce /proc/cmdline`; then ima_tpm.sh; else TCID=ima03 tst_brkm TCONF "" "IMA not configured"; fi
++ima04   if `grep -q ima_appraise=enforce /proc/cmdline`; then ima_violations.sh; else TCID=ima04 tst_brkm TCONF "" "IMA not configured"; fi
++
+ #DESCRIPTION:Math library tests - CPU tests
+ abs01 abs01
+ 

@@ -1,0 +1,38 @@
+From 824f838cc9c7b8a44174358446993d61be7bbb3f Mon Sep 17 00:00:00 2001
+From: Joe MacDonald <joe_macdonald@mentor.com>
+Date: Mon, 30 Oct 2017 13:18:20 -0400
+Subject: [PATCH] include missing kernel header
+
+Fixes errors like
+
+| /b/kraj/jlinux-next/poky/build/tmp-eglibc/sysroots/re-64b/usr/include/linux/if_bridge.h:172:20: error: field 'ip6' has incomplete type
+| In file included from ../libbridge/libbridge.h:24:0,
+
+Note: Modified for support backport to linux_libc_headers_3.18.131, to
+match the linux_quic_3.18.131. This is for building kernel 3.18.131
+with Yocto 2.5, which has a preferred libc header of 4.15.x
+
+Upstream-Status: Pending
+
+Signed-off-by: Khem Raj <raj.khem@gmail.com>
+Signed-off-by: Joe MacDonald <joe_macdonald@mentor.com>
+Modified-by: Steven MacDonald <smacdonald@sierrawireless.com>
+---
+ libbridge/libbridge.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/libbridge/libbridge.h b/libbridge/libbridge.h
+index c038b92..fd09306 100644
+--- a/libbridge/libbridge.h
++++ b/libbridge/libbridge.h
+@@ -24,6 +24,5 @@
+ #include <sys/time.h>
+ #include <netinet/in.h>
+ 
+-#include <linux/in6.h>
+ #include <linux/if.h>
+ #include <linux/if_bridge.h>
+ 
+-- 
+2.7.4
+

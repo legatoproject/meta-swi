@@ -16,11 +16,12 @@
 #
 # The way to call this executable:
 #
-#   qca9377 <service> <mode> <action>
+#   qca9377 <service> <mode> <action> [<iface>]
 #
 # service - "wifi" or "bt"
-# action - "start" or "stop"
 # mode - "client" or "ap"
+# action - "start", "init" or "stop"
+# iface - WiFi interface (optional)
 
 # Currently, this implementation works for MangOH Red with WP76
 # module only.
@@ -31,16 +32,6 @@ source /etc/run.env
 
 # The name of this script. This is mandatory for 'swi_log' as well.
 this_e=$( basename $0 )
-
-# Only partial lock
-run_lock="/var/lock/${this_e}_"
-
-# WiFi lock. System could run in only one mode at the time
-# (e.g. "ap" or "client").
-run_wifi_lock=/var/lock/${this_e}_wifi.lock
-
-# BT lock
-run_bt_lock=/var/lock/${this_e}_bt.lock
 
 # Serial port and BT communication.
 bt_chipset=qca
@@ -60,12 +51,35 @@ cfg_wifi_mod=cfg80211
 # specified in dnsmasq.conf .
 ap_mode_ip="192.168.43.1"
 
-# Must be the same as in hostapd and dnsmasq config files.
+# Must be the same as in hostapd and dnsmasq config files. However, if interface
+# is supplied on the command line, files will be changed on the fly.
 interface=wlan0
+
+# Only partial lock
+run_lock="/var/lock/${this_e}_"
+
+# WiFi lock. System could run in only one mode at the time
+# (e.g. "ap" or "client").
+run_wifi_lock=/var/lock/${this_e}_wifi_${interface}.lock
+
+# BT lock
+run_bt_lock=/var/lock/${this_e}_bt.lock
 
 # To add the rule: iptables -A $fwrule
 # To remove the rule: iptables -D $fwrule
 fwrule="INPUT -i $interface -p udp --dport 67:68 --sport 67:68 -j ACCEPT"
+
+# Check for new GPIO design with v2 directory and alias/raw export/unexport entries
+# Default expected is v2 design
+GPIO_EXPORT=/sys/class/gpio/v2/alias_export
+GPIO_UNEXPORT=/sys/class/gpio/v2/alias_unexport
+GPIO_DIR=/sys/class/gpio/v2/aliases_exported/
+if [ ! -e ${GPIO_EXPORT} ]; then
+    # Fallback to legacy design.
+    GPIO_EXPORT=/sys/class/gpio/export
+    GPIO_UNEXPORT=/sys/class/gpio/unexport
+    GPIO_DIR=/sys/class/gpio/gpio
+fi
 
 #
 # Some useful methods
@@ -77,12 +91,13 @@ usage()
 cat << EOF
 
   Usage:
-    $this_e <service> <mode> <action>
+    $this_e <service> <mode> <action> [<iface>]
 
   Where:
     service - "wifi" or "bt"
     mode - "client" or "ap" for WiFi, and serial port for BT (e.g. ttyHSx or default)
-    action - "start" or "stop"
+    action - "start", "init" or "stop"
+    iface - WiFi interface (optional)
 EOF
 
     return $SWI_OK
@@ -204,6 +219,7 @@ check_env()
     local service=$1
     local mode=$2
     local action=$3
+    local iface=$4
     local clogging_hide_warn=3
     local clogging=
 
@@ -216,10 +232,12 @@ check_env()
     fi
 
     # This is global variable, needs to be structured certain way, so be careful.
-    run_lock="${run_lock}${service}.lock"
+    run_lock="${run_lock}${service}"
 
-    # Only start and stop actions are supported.
+    # Only start, init and stop actions are supported. Note that at this time,
+    # BT does not have init functionality, and this will be checked later.
     if [ "x$action" != "xstart" -a \
+         "x$action" != "xinit" -a \
          "x$action" != "xstop" ] ; then
         swi_log "Action [$action] is not supported."
         usage
@@ -239,13 +257,29 @@ check_env()
             usage
             return $SWI_ERR
         fi
+
+        # Set interface for WiFi operation. The default is already set.
+        if [ "x$iface" != "x" ] ; then
+            interface=$iface
+        fi
+        run_lock="${run_lock}_${interface}.lock"
     fi
 
     # For bluetooth, mode has different meaning, it's actually
-    # a serial port to use.
+    # a serial port to use. Also, "init" action is not supported for BT
+    # service.
     if [ "x$service" = "xbt" ] ; then
-        # If "default" was on the command line, use default
-        # specified in this executable.
+
+        run_lock="${run_lock}.lock"
+
+        if [ "x$action" = "xinit" ] ; then
+            swi_log "At this time, action [$action] for service [$service] is not supported."
+            usage
+            return $SWI_ERR
+        fi
+
+        # If "default" was on the command line, use default specified in this
+        # executable.
         if [ "x$mode" != "xdefault" ] ; then
             bt_port=$bt_port_prefix/$mode
         fi
@@ -308,27 +342,27 @@ set_gpios()
     local ret=$SWI_OK
 
     # Set IOT0_GPIO2 = 1 (WP GPIO13)
-    if [ ! -d /sys/class/gpio/gpio13 ] ; then
+    if [ ! -d ${GPIO_DIR}13 ] ; then
         swi_log "Setting up IOT0_GPIO2 = 1 (WP GPIO13)..."
-        echo 13 >/sys/class/gpio/export
-        echo out >/sys/class/gpio/gpio13/direction
-        echo 1 >/sys/class/gpio/gpio13/value
+        echo 13 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}13/direction
+        echo 1 >${GPIO_DIR}13/value
     fi
 
     # Set IOT0_GPIO3 = 1 (WP GPIO7)
-    if [ ! -d /sys/class/gpio/gpio7 ] ; then
+    if [ ! -d ${GPIO_DIR}7 ] ; then
         swi_log "Setting up IOT0_GPIO3 = 1 (WP GPIO7)..."
-        echo 7 >/sys/class/gpio/export
-        echo out >/sys/class/gpio/gpio7/direction
-        echo 1 >/sys/class/gpio/gpio7/value
+        echo 7 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}7/direction
+        echo 1 >${GPIO_DIR}7/value
     fi
 
     # Set IOT0_RESET = 1 (WP GPIO2)
-    if [ ! -d /sys/class/gpio/gpio2 ] ; then
+    if [ ! -d ${GPIO_DIR}2 ] ; then
         swi_log "Setting up IOT0_RESET = 1 (WP GPIO2)..."
-        echo 2 >/sys/class/gpio/export
-        echo out >/sys/class/gpio/gpio2/direction
-        echo 1 >/sys/class/gpio/gpio2/value
+        echo 2 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}2/direction
+        echo 1 >${GPIO_DIR}2/value
     fi
 
     # Clear SDIO_SEL, GPIO#9/EXPANDER#1 - Select the SDIO
@@ -336,18 +370,18 @@ set_gpios()
     gpioexp 1 9 output normal low >/dev/null 2>&1
 
     # Set IOT0_GPIO4 = 1 (WP GPIO8)
-    if [ ! -d /sys/class/gpio/gpio8 ] ; then
+    if [ ! -d ${GPIO_DIR}8 ] ; then
         swi_log "Setting up IOT0_GPIO4 = 1 (WP GPIO8)..."
-        echo 8 >/sys/class/gpio/export
-        echo out >/sys/class/gpio/gpio8/direction
-        echo 1 >/sys/class/gpio/gpio8/value
+        echo 8 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}8/direction
+        echo 1 >${GPIO_DIR}8/value
     fi
 
     # Set CARD_DETECT_IOT0 (WP GPIO33)
-    if [ ! -d /sys/class/gpio/gpio33 ] ; then
+    if [ ! -d ${GPIO_DIR}33 ] ; then
         swi_log "Setting up CARD_DETECT_IOT0 (WP GPIO33)..."
-        echo 33 >/sys/class/gpio/export
-        echo in >/sys/class/gpio/gpio33/direction
+        echo 33 >${GPIO_EXPORT}
+        echo in >${GPIO_DIR}33/direction
     fi
 
     # Need to wait for GPIOs to stabilize before returning.
@@ -362,33 +396,33 @@ clear_gpios()
     local ret=$SWI_OK
 
     # Clear IOT0_GPIO2 = 1 (WP GPIO13)
-    if [ -d /sys/class/gpio/gpio13 ] ; then
+    if [ -d ${GPIO_DIR}13 ] ; then
         swi_log "Clearing IOT0_GPIO2 = 1 (WP GPIO13)..."
-        echo 13 >/sys/class/gpio/unexport
+        echo 13 >${GPIO_UNEXPORT}
     fi
 
     # Clear IOT0_GPIO3 = 1 (WP GPIO7)
-    if [ -d /sys/class/gpio/gpio7 ] ; then
+    if [ -d ${GPIO_DIR}7 ] ; then
         swi_log "Clearing up IOT0_GPIO3 = 1 (WP GPIO7)..."
-        echo 7 >/sys/class/gpio/unexport
+        echo 7 >${GPIO_UNEXPORT}
     fi
 
     # Clear IOT0_RESET = 1 (WP GPIO2)
-    if [ -d /sys/class/gpio/gpio2 ] ; then
+    if [ -d ${GPIO_DIR}2 ] ; then
         swi_log "Clearing IOT0_RESET = 1 (WP GPIO2)..."
-        echo 2 >/sys/class/gpio/unexport
+        echo 2 >${GPIO_UNEXPORT}
     fi
 
     # Clear IOT0_GPIO4 = 1 (WP GPIO8)
-    if [ -d /sys/class/gpio/gpio8 ] ; then
+    if [ -d ${GPIO_DIR}8 ] ; then
         swi_log "Clearing IOT0_GPIO4 = 1 (WP GPIO8)..."
-        echo 8 >/sys/class/gpio/unexport
+        echo 8 >${GPIO_UNEXPORT}
     fi
 
     # Clear CARD_DETECT_IOT0 (WP GPIO33)
-    if [ -d /sys/class/gpio/gpio33 ] ; then
+    if [ -d ${GPIO_DIR}33 ] ; then
         swi_log "Clearing CARD_DETECT_IOT0 (WP GPIO33)..."
-        echo 33 >/sys/class/gpio/unexport
+        echo 33 >${GPIO_UNEXPORT}
     fi
 
     return $ret
@@ -507,13 +541,15 @@ qca_wifi_start_ap()
 
     # Set hostapd. We need to merge standard and not so standard
     # parts of config file first.
-    cat /etc/hostapd.conf /etc/hostapd-part-qca.conf >/tmp/hostapd.conf
+    cat /etc/hostapd-part-qca.conf | sed "s/interface=wlan0/interface=$interface/g" >/tmp/hostapd.conf.temp
+    cat /etc/hostapd.conf /tmp/hostapd.conf.temp >/tmp/hostapd.conf
 
     # Run it as a daemon.
     hostapd -B /tmp/hostapd.conf
 
     # Run dnsmasq as a daemon.
-    dnsmasq -C /etc/dnsmasq-qca.conf
+    cat /etc/dnsmasq-qca.conf | sed "s/interface=wlan0/interface=$interface/g" >/tmp/dnsmasq-qca.conf
+    dnsmasq -C /tmp/dnsmasq-qca.conf
 
     # Open firewall to allow dhcp requests
     open_fw
@@ -568,11 +604,9 @@ stop_wpa_supplicant()
 {
     local ret=$SWI_OK
 
-    ps -ef | \
-            grep -v grep | \
-            grep wpa_supplicant | \
-            awk '{ print $2 }' | \
-            xargs kill -KILL >/dev/null 2>&1
+    # If interface does not exist, wpa_cli may complain, it looks bad and its
+    # output needs to be redirected.
+    wpa_cli -i${interface} terminate >/dev/null 2>&1
 
     return $ret
 }
@@ -586,7 +620,7 @@ get_dhcp_lease()
     # to prevent endless retries and blocking of this executable.
     # If lease could not be obtained, most likelly
     # device would not be able to obtain it at all.
-    udhcpc -i wlan0 -t 6 -n
+    udhcpc -i $interface -t 6 -n
     if [ $? -ne 0 ] ; then ret=$SWI_ERR ; fi
 
     return $ret
@@ -648,6 +682,22 @@ qca_wifi_start()
 
     return $ret
 
+}
+
+# QCA WiFi service init
+qca_wifi_init()
+{
+    local ret=$SWI_OK
+
+    # set gpios
+    set_gpios
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+
+    # Load kernel modules
+    load_wifi_modules
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+
+    return $ret
 }
 
 qca_wifi_stop()
@@ -736,6 +786,16 @@ qca_wifi()
             ret=$?
             if [ $ret -ne 0 ] ; then
                 # Failed to start, just clear everything.
+                qca_wifi_stop "$@"
+                clear_lock
+            fi
+        ;;
+
+        init )
+            qca_wifi_init "$@"
+            ret=$?
+            if [ $ret -ne 0 ] ; then
+                # Failed to init, just clear everything.
                 qca_wifi_stop "$@"
                 clear_lock
             fi

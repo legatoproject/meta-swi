@@ -9,11 +9,7 @@ IMAGE_INSTALL = "packagegroup-core-boot ${ROOTFS_PKGMANAGE_BOOTSTRAP} ${CORE_IMA
 # Enable debug packages
 IMAGE_INSTALL_append = " ${@bb.utils.contains('EXT_SWI_IMG', 'true', '${EXTENDED_SWI_IMAGE}', '', d)}"
 
-IMAGE_LINGUAS = " "
-
-LICENSE = "MIT"
-
-inherit core-image
+inherit swi-image
 inherit swi-version
 
 IMAGE_ROOTFS_SIZE ?= "8192"

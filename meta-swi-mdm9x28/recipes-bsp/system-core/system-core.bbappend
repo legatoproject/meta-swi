@@ -12,6 +12,8 @@ SRC_URI += "file://start_usb"
 SRC_URI += "file://0002-QTI9X07-125-Do-not-start-adb-if-not-enabled.patch"
 SRC_URI += "file://0001-Fix-adbd-crash-issue.patch"
 SRC_URI += "file://fix-big-endian-build.patch"
+SRC_URI += "file://use-accessors-for-rsa.patch"
+SRC_URI += "file://include-sysmacros-for-major.patch"
 
 do_install_append() {
     install -m 0755 ${WORKDIR}/composition-sierra_dev -D ${D}${bindir}/usb/compositions/sierra_dev

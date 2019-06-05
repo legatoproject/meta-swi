@@ -4,6 +4,9 @@ NUM_THREADS ?= 9
 DEFAULT_MDM_BUILD := bin
 
 # Yocto versions
+YOCTO_MAJOR = $(shell git --git-dir=poky/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\1/g')
+YOCTO_MINOR = $(shell git --git-dir=poky/.git describe --tags --match 'yocto-*' | sed 's/yocto-\([0-9]*\)\.\([0-9]*\).*/\2/g')
+
 POKY_VERSION ?= bda51ee7821de9120f6f536fcabe592f2a0c8a37
 META_OE_VERSION ?= 8e6f6e49c99a12a0382e48451f37adac0181362f
 
@@ -39,7 +42,6 @@ endif
 ifneq ($(MACH),)
   MACH_ARGS := -m swi-$(MACH)
 endif
-
 
 ifneq ($(PROD),)
   PROD_ARGS := -P $(PROD)
@@ -100,6 +102,10 @@ clean:
 
 ifeq ($(USE_ICECC),1)
   ICECC_ARGS = -h
+endif
+
+ifeq ($(SHARED_SSTATE),1)
+  SHARED_SSTATE_ARGS = -S
 endif
 
 # Use extended image.
@@ -179,17 +185,18 @@ BUILD_SCRIPT := "meta-swi/build.sh"
 # by the Yocto environment to be the ideal Linux distribution
 ifeq ($(USE_DOCKER),1)
   UID := $(shell id -u)
+  GID := $(shell id -g)
   HOSTNAME := $(shell hostname)
   DOCKER_BIN ?= docker
-  DOCKER_IMG ?= "quay.io/swi-infra/yocto-dev"
+  DOCKER_IMG ?= "quay.io/swi-infra/yocto-dev:yocto-${YOCTO_MAJOR}.${YOCTO_MINOR}"
   DOCKER_RUN := ${DOCKER_BIN} run \
                     --rm \
-                    --user=${UID} \
+                    --user=${UID}:${GID} \
                     --tty --interactive \
                     --hostname=${HOSTNAME} \
                     --volume ${PWD}:${PWD} \
-                    --volume /etc/passwd:/etc/passwd \
-                    --volume /etc/group:/etc/group \
+                    --volume /etc/passwd:/etc/passwd:ro \
+                    --volume /etc/group:/etc/group:ro \
                     --workdir ${PWD}
   BUILD_SCRIPT := ${DOCKER_RUN} ${DOCKER_IMG} ${BUILD_SCRIPT}
 endif
@@ -208,7 +215,8 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${HOSTNAME_ARGS} \
 				${IMA_ARGS} \
 				${BB_ARGS} \
-				${EXT_SWI_IMG_ARGS}
+				${EXT_SWI_IMG_ARGS} \
+				${SHARED_SSTATE_ARGS}
 
 # Machine: swi-mdm9x15
 

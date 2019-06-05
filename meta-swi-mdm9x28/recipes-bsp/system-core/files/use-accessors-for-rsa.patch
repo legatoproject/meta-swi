@@ -1,0 +1,51 @@
+Index: git/adb/adb_auth_host.c
+===================================================================
+--- git.orig/adb/adb_auth_host.c
++++ git/adb/adb_auth_host.c
+@@ -27,6 +27,7 @@
+ #endif
+ #include <string.h>
+ 
++#include "config.h"
+ #include "sysdeps.h"
+ #include "adb.h"
+ #include "adb_auth.h"
+@@ -79,7 +80,11 @@ static int RSA_to_RSAPublicKey(RSA *rsa,
+     }
+ 
+     BN_set_bit(r32, 32);
++#if HAVE_RSA_KEY_ACCESSORS
++    BN_copy(n, RSA_get0_n(rsa));
++#else
+     BN_copy(n, rsa->n);
++#endif
+     BN_set_bit(r, RSANUMWORDS * 32);
+     BN_mod_sqr(rr, r, n, ctx);
+     BN_div(NULL, rem, n, r32, ctx);
+@@ -93,7 +98,11 @@ static int RSA_to_RSAPublicKey(RSA *rsa,
+         BN_div(n, rem, n, r32, ctx);
+         pkey->n[i] = BN_get_word(rem);
+     }
++#if HAVE_RSA_KEY_ACCESSORS
++    pkey->exponent = BN_get_word(RSA_get0_e(rsa));
++#else
+     pkey->exponent = BN_get_word(rsa->e);
++#endif
+ 
+ out:
+     BN_free(n0inv);
+Index: git/configure.ac
+===================================================================
+--- git.orig/configure.ac
++++ git/configure.ac
+@@ -76,6 +76,10 @@
+ 
+   AM_CONDITIONAL([LINUX], [test "x$HOST_OS" = "xlinux"])
+ 
++  AC_SEARCH_LIBS([RSA_get0_e], [crypto],
++                 AC_DEFINE([HAVE_RSA_KEY_ACCESSORS], [1],
++                           [Have rsa_get0_e and related accessors in OpenSSL libcrypto]))
++
+   AC_OUTPUT([ \
+           Makefile \
+           libcutils/Makefile \

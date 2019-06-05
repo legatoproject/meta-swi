@@ -1,0 +1,12 @@
+Index: git/include/arch/linux-arm/OEConfig.h
+===================================================================
+--- git.orig/include/arch/linux-arm/OEConfig.h
++++ git/include/arch/linux-arm/OEConfig.h
+@@ -207,7 +207,6 @@
+ /*
+  * Add any extra platform-specific defines here.
+  */
+-#define __linux__
+ 
+ /*
+  * Define if we have <malloc.h> header
