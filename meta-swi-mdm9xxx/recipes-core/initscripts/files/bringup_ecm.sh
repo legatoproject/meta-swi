@@ -37,9 +37,13 @@ CreateLeaseFileRestartDnsmasq()
 
 BringUpEcm()
 {
-    gadget_mode=/sys/class/android_usb/android0/functions
     ecm_conf=/etc/legato/ecm.conf
     ecm_if=$(ls -1 /sys/class/net/ | egrep '(e[ec]m|usb)0')
+    gadget_mode=/sys/class/android_usb/android0/functions
+    if [ ! -f $gadget_mode ] ; then
+        # Not an Android gadget, try configfs gadget
+        gadget_mode=/sys/kernel/config/usb_gadget/g1/configs/c.1/strings/0x409/configuration
+    fi
 
     if [ -z "$ecm_if" ]; then
         return
@@ -61,7 +65,7 @@ BringUpEcm()
 
     # only do this if ecm or eem are part of usb composition
     if [ -f $gadget_mode ]; then
-        ecm=$(egrep "e[ce]m" ${gadget_mode})
+        ecm=$(egrep -i "e[ce]m" ${gadget_mode})
         if [ ! -z "$ecm" ]; then
             if [ -e "$SYSTEM_BIN_PATH/configEcm" ]; then
                 # Upgrade to new ecm file layout for dnsmasq
