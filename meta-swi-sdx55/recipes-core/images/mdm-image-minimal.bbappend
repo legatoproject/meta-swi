@@ -15,6 +15,7 @@ IMAGE_INSTALL_append = " start-scripts-firmware-links"
 
 IMAGE_INSTALL_append = " kernel-modules"
 IMAGE_INSTALL_append = " bsinfo-stub"
+IMAGE_INSTALL += "${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'systemd', '' ,d)}"
 
 create_ubinize_config() {
     local cfg_path=$1

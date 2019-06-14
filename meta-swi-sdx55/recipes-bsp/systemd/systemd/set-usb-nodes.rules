@@ -1,0 +1,2 @@
+ACTION=="add", KERNEL=="at_usb*", OWNER="radio", GROUP="radio", MODE="0640"
+ACTION=="add", KERNEL=="at_mdm*", OWNER="radio", GROUP="radio", MODE="0640"
