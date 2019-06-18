@@ -1,6 +1,8 @@
 # look for files in the layer first
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
+PR="r156"
+
 SRC_URI = "file://functions \
            file://devpts \
            file://mountall.sh \
@@ -141,7 +143,7 @@ do_install () {
     install -m 0755 ${WORKDIR}/restart_swi_apps -D ${D}${sbindir}/restart_swi_apps
     install -m 0755 ${WORKDIR}/restartNMEA -D ${D}${sbindir}/restartNMEA
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
-    install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sysconfdir}/init.d/run_getty.sh
+    install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
 
 
     install -D -m 0755 ${WORKDIR}/mount_unionfs -D ${D}${sysconfdir}/init.d/mount_unionfs
@@ -227,7 +229,7 @@ do_install_swi-mdm9x28-ar758x-rcy() {
     fi
 
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
-    install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sysconfdir}/init.d/run_getty.sh
+    install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
     install -m 0755 ${WORKDIR}/control_msm_watchdog.sh -D ${D}${sysconfdir}/init.d/control_msm_watchdog.sh
 }
 
@@ -265,6 +267,6 @@ do_install_swi-mdm9x40-ar759x-rcy() {
     fi
 
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
-    install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sysconfdir}/init.d/run_getty.sh
+    install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
     install -m 0755 ${WORKDIR}/control_msm_watchdog.sh -D ${D}${sysconfdir}/init.d/control_msm_watchdog.sh
 }
