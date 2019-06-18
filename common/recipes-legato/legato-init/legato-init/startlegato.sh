@@ -7,6 +7,16 @@ if [ -e "/etc/run.env" ]; then
     source /etc/run.env
 fi
 
+# Extra stuff to
+legato_cleanup()
+{
+    umount /etc/ld.so.conf
+    umount /etc/ld.so.cache
+    umount /etc/hosts
+
+    return 0
+}
+
 FLASH_MOUNTPOINT=${FLASH_MOUNTPOINT:-/mnt/flash}
 FLASH_MOUNTPOINT_LEGATO=${FLASH_MOUNTPOINT_LEGATO:-/mnt/legato}
 
@@ -38,6 +48,7 @@ case "$1" in
         echo "Legato shutdown sequence"
         test -x $LEGATO_START && $LEGATO_START stop
         umount /legato
+        legato_cleanup
         ;;
 
     *)

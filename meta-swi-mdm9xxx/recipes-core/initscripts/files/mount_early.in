@@ -866,13 +866,19 @@ mount_early_user_stop()
 
     # There is nothing we can do if umount fails, so do not check
     # the result of the operation. The same goes for ubidetach.
+    # Note that unmount will be successful, because it is "lazy". This will
+    # keep new clients away from this mount, but the old ones will still be
+    # there. The final cleanup would occur later in rcK.
     umount -l ${mntpt}
-    if [ ! -z ${is_ubifs} ] ; then
+    if [ -n "${is_ubifs}" ] ; then
         get_mtdpart_dev_num ${USER_MTDEV_NAME}
         mtd_dev_num=$?
         if [ ! ${mtd_dev_num} -eq $SWI_ERR_MAX ] ; then
             # detach takes care of the block device as well.
-            ubidetach -m ${mtd_dev_num}
+            ubidetach -m ${mtd_dev_num} >/dev/null 2>&1
+            if [ $? -ne 0 ] ; then
+                swi_log "ubidetach failed for device /dev/mtd${mtd_dev_num}, rcK should take care of it."
+            fi
         fi
     fi
 
@@ -1312,7 +1318,7 @@ mount_early_userrw_stop()
 @endif
     umount -l ${mntpt}
 @if !mdm9x15
-    if [ ! -z "${is_ubifs}" ] ; then
+    if [ -n "${is_ubifs}" ] ; then
         get_mtdpart_dev_num ${USERRW_MTDEV_NAME}
         mtd_dev_num=$?
         if [ ! ${mtd_dev_num} -lt 0 ] ; then
