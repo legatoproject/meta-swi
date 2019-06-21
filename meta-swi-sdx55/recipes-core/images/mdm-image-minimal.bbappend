@@ -175,3 +175,4 @@ do_setfileattr() {
 
 IMAGE_PREPROCESS_COMMAND += "do_setfileattr; "
 
+require mdm-image-cwe.inc
