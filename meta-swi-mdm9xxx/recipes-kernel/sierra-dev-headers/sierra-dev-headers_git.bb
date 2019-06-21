@@ -1,7 +1,7 @@
 SUMMARY = "Userspace headers for Sierra Wireless defined drivers"
 DESCRIPTION = "Adds userspace headers for SPI, I2C etc."
 LICENSE = "GPLv2+"
-LIC_FILES_CHKSUM = "file://${COREBASE}/meta/COPYING.GPLv2;md5=751419260aa954499f7abaabaa882bbe"
+LIC_FILES_CHKSUM = "file://../sierra_i2cdev.h;beginline=5;endline=12;md5=23a89ddd6c0ee9b05d0c7463c7ff4cb5"
 DEPENDS = "system-core"
 
 PN = "sierra-dev-headers"
