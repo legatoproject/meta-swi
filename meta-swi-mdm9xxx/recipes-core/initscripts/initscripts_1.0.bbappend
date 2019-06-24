@@ -27,7 +27,7 @@ SRC_URI = "file://functions \
            file://mount_early.in \
            file://loginNagger \
            file://load_modem.sh \
-	   file://accesses \
+           file://accesses \
            "
 
 SRC_URI_swi-mdm9x28-ar758x-rcy = "file://functions \
@@ -138,7 +138,9 @@ do_install () {
 
     install -m 0755 ${WORKDIR}/confighw.sh -D ${D}${sysconfdir}/init.d/confighw.sh
     install -m 0755 ${WORKDIR}/swiapplaunch.sh -D ${D}${sysconfdir}/init.d/swiapplaunch.sh
-    install -m 0755 ${WORKDIR}/restart_swi_apps -D ${D}${sbindir}/restart_swi_apps
+    if [[ "${MACHINE}" == "swi-mdm"* ]]; then
+        install -m 0755 ${WORKDIR}/restart_swi_apps -D ${D}${sbindir}/restart_swi_apps
+    fi
     install -m 0755 ${WORKDIR}/restartNMEA -D ${D}${sbindir}/restartNMEA
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
     install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sysconfdir}/init.d/run_getty.sh
