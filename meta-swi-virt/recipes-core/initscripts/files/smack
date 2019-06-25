@@ -1,0 +1,69 @@
+#!/bin/sh
+#
+
+# import run environment
+source /etc/run.env
+
+# Add SMACK rules considered to be system related.
+# All the rules must be located in /etc/smack/accesses, because
+# we could also use smack userland tools to load the rules from
+# this file (if we choose to do so later on).
+add_system_smack_rules()
+{
+    local smack_rules_src=/etc/smack/accesses
+    local smack_rules_dst=/sys/fs/smackfs/load2
+    local smack_delay=
+    local ret=${SWI_OK}
+
+    if [ ! -f ${smack_rules_src} ] ; then
+        echo "${this_e}: Cannot find ${smack_rules_src}."
+        return ${SWI_ERR}
+    fi
+
+    if [ ! -f ${smack_rules_dst} ] ; then
+        echo "${this_e}: Cannot find ${smack_rules_dst}."
+        return ${SWI_ERR}
+    fi
+
+    (   set -e; \
+        while read -r -u 10 i; do \
+            if ! echo "$i" | grep -q -e '^#' -e '^ *$'; then \
+                if echo $i; then \
+                    sleep ${smack_delay:-0}; \
+                else \
+                    echo "${this_e}: Invalid line in ${smack_rules_src}: $i" >&2; \
+                    return ${SWI_ERR}; \
+                fi; \
+            fi; \
+        done ) 10<${smack_rules_src} >${smack_rules_dst}
+    if [ $? -ne 0 ]; then
+        echo "${this_e}: Error loading system SMACK rules."
+        ret=${SWI_ERR}
+    fi
+
+    return ${ret}
+}
+
+#
+# Execution starts here.
+#
+case "$1" in
+    start)
+        add_system_smack_rules
+        if [ $? -ne 0 ] ; then
+            echo "${this_e}: Failed to add system SMACK rules."
+            exit 1
+        fi
+    ;;
+
+    stop)
+    ;;
+
+    *)
+        echo "Usage: ${this_e} {start | stop}"
+        exit 1
+    ;;
+esac
+
+exit 0
+
