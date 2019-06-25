@@ -8,5 +8,5 @@ SRC_URI += "\
     file://0004-Avoid-in6_addr-redefinition.patch \
 "
 
-SRC_URI[md5sum] = "40b69a0fcc3cb0829181d0aa0e3f4335"
-SRC_URI[sha256sum] = "04600ce96e4c7642b9eaa4814f4930c79b53010b1c155d23e5ac0aeba6f455e2"
+SRC_URI[md5sum] = "0829b850c32c9c36721a6efc0fb2f393"
+SRC_URI[sha256sum] = "18c38901c51373853435d364422c1931ed0520b16cc4ae9440d7b2095bdce2e0"
