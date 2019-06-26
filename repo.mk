@@ -7,6 +7,10 @@ APPS_DIR ?= $(firstword $(wildcard $(PWD)/mdm*[0-9]/apps_proc))
 ifneq ($(wildcard $(PWD)/mdm*[0-9]/common),)
   DEFAULT_MDM_BUILD := src
   MACH ?= $(patsubst $(PWD)/%/apps_proc,%,$(APPS_DIR))
+else ifneq ($(wildcard $(PWD)/sdx55/common),)
+  DEFAULT_MDM_BUILD := src
+  MACH ?= sdx55
+  APPS_DIR = $(firstword $(wildcard $(PWD)/sdx55/SDX55_apps/apps_proc))
 endif
 
 # Yocto versions
@@ -36,6 +40,8 @@ else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files
   ifeq ($(PROD),)
     PROD = ar759x
   endif
+else ifneq (,$(wildcard $(PWD)/sdx55))
+  MACH ?= sdx55
 endif
 # If the build is for virt, override.
 ifneq (,$(findstring virt,$(MAKECMDGOALS)))
@@ -178,6 +184,19 @@ else
   endif
 endif
 
+# Determine the location of edk2 bootloader
+ifneq (,$(wildcard $(PWD)/edk2/))
+  EDK2_REPO := "$(PWD)/edk2"
+  ifneq (, $(filter $(MACH), sdx55))
+    EDK2_ARGS := -a "EDK2_REPO=$(EDK2_REPO)"
+  endif
+else
+  # Enforce existence of EDK2 for SDX55; optional for others
+  ifneq (, $(filter $(MACH), sdx55))
+    $(error Missing EDK2 directory $(PWD)/edk2)
+  endif
+endif
+
 ifeq ($(RECOVERY_BUILD),1)
   RCY_ARGS = -e
 endif
@@ -207,7 +226,19 @@ ifeq ($(USE_DOCKER),1)
                     --volume ${PWD}:${PWD} \
                     --volume /etc/passwd:/etc/passwd:ro \
                     --volume /etc/group:/etc/group:ro \
-                    --workdir ${PWD}
+                    --workdir ${PWD} \
+                    --env USE_ICECC \
+                    --env SHARED_SSTATE \
+                    --env USE_UNSUPPORTED_DEBUG_IMG \
+                    --env FW_VERSION \
+                    --env LEGATO_BUILD \
+                    --env MANGOH_BUILD \
+                    --env IMA_BUILD \
+                    --env IMA_CONFIG \
+                    --env SDK_PREFIX \
+                    --env FIRMWARE_PATH \
+                    --env TARGET_HOSTNAME \
+                    --env RECOVERY_BUILD
   BUILD_SCRIPT := ${DOCKER_RUN} ${DOCKER_IMG} ${BUILD_SCRIPT}
 endif
 
@@ -306,6 +337,7 @@ COMMON_MACH := \
 				$(COMMON_ARGS) \
 				$(MANGOH_ARGS) \
 				$(LK_ARGS) \
+				$(EDK2_ARGS) \
 				$(MACH_ARGS) \
 				${PROD_ARGS} \
 				$(RCY_ARGS)

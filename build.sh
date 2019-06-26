@@ -50,7 +50,7 @@ $0 <options ...>
     -B Pass flags directly to bitbake (e.g. -vvv for verbose build)
     -E Enable extended SWI image (add additional developer packages)
 
-  Machine swi-mdmXXXX:
+  Machine swi-mdmXXXX/swi-sdxXX:
     -q (enable Qualcomm Proprietary bin)
     -s (enable Qualcomm Proprietary source)
     -w <Qualcomm source directory (apps_proc)>
@@ -268,6 +268,11 @@ enable_layer()
         fi
     fi
 
+    if [ ! -e "$layer_path" ]; then
+        echo "Error: layer $LAYER_PATH does not exist"
+        exit 1
+    fi
+
     # Avoid duplication
     for other_path in ${LAYER_PATHS[@]}; do
         if [[ "$other_path" == "$layer_path" ]]; then
@@ -338,6 +343,24 @@ case $MACH in
             DISTRO="poky-swi-ext"
         fi
         ;;
+    swi-sdx55 )
+        # Enable the common meta-swi-mdm9xxx layer
+        enable_layer "meta-swi/meta-swi-mdm9xxx" "$SWI/meta-swi-mdm9xxx"
+
+        # Enable the meta-swi-sdxXX layer
+        enable_layer "meta-swi/meta-$MACH" "$SWI/meta-$MACH"
+
+        # Enable the meta-swi-sdxXX-PROD layer, if it exists
+        if [ -n "$PROD" ] && [ -e "$SWI/meta-${MACH}-${PROD}" ]; then
+            enable_layer "meta-swi/meta-$MACH-$PROD" "$SWI/meta-$MACH-$PROD" "meta-$MACH"
+        fi
+
+        if [ $ENABLE_PROPRIETARY_SRC = true ] || [ $ENABLE_PROPRIETARY = true ]; then
+            # Distro to poky-swi-ext to change SDKPATH
+            DISTRO="poky-swi-ext"
+        fi
+        ;;
+
 esac
 
 # Enable proprietary layers: common
@@ -470,8 +493,8 @@ fi
 ## Conf: local.conf
 
 set_option() {
-    opt_name=$1
-    opt_val=$2
+    local opt_name=$1
+    local opt_val=$2
 
     if grep "$opt_name =" $BD/conf/local.conf > /dev/null; then
         # Update entry
@@ -690,6 +713,9 @@ if [ -z "$KERNEL_PROVIDER" ]; then
         swi-mdm9* )
             KERNEL_PROVIDER="linux-quic"
             ;;
+        swi-sdx* )
+            KERNEL_PROVIDER="linux-msm"
+            ;;
         * )
             KERNEL_PROVIDER="linux-yocto"
             ;;
@@ -728,6 +754,10 @@ case $MACH in
         else
             set_option 'INITRAMFS_IMAGE' "${MACH#swi-}-image-initramfs"
         fi
+        ;;
+    swi-sdx55* )
+        set_option 'INITRAMFS_IMAGE_BUNDLE' '1'
+        set_option 'INITRAMFS_IMAGE' "mdm-image-initramfs"
         ;;
     swi-virt* )
         set_option 'INITRAMFS_IMAGE_BUNDLE' '1'
@@ -787,6 +817,9 @@ else
             else
                 bitbake ${BB_FLAGS} ${MACH#swi-}-image-minimal
             fi
+            ;;
+        swi-sdx* )
+            bitbake ${BB_FLAGS} mdm-image-minimal
             ;;
         swi-virt* )
             bitbake ${BB_FLAGS} swi-virt-image-minimal
