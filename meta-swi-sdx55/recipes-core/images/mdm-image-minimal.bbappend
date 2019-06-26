@@ -18,6 +18,7 @@ IMAGE_INSTALL_append = " kernel-modules"
 IMAGE_INSTALL_append = " bsinfo-stub"
 IMAGE_INSTALL += "${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'systemd', '' ,d)}"
 IMAGE_INSTALL += "systemd-machine-units"
+IMAGE_INSTALL += "initscripts"
 
 create_ubinize_config() {
     local cfg_path=$1

@@ -28,6 +28,7 @@ SRC_URI = "file://functions \
            file://loginNagger \
            file://load_modem.sh \
            file://accesses \
+           file://swiapplaunch.service \
            "
 
 SRC_URI_swi-mdm9x28-ar758x-rcy = "file://functions \
@@ -119,7 +120,6 @@ do_install () {
     install -m 0644    ${WORKDIR}/accesses -D ${D}${sysconfdir}/smack/accesses
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
-    install -m 0755    ${WORKDIR}/hostname.sh   ${D}${sysconfdir}/init.d
     if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
         install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
         install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
@@ -136,22 +136,45 @@ do_install () {
         install -m 0755 ${WORKDIR}/alignment.sh ${D}${sysconfdir}/init.d
     fi
 
-    install -m 0755 ${WORKDIR}/confighw.sh -D ${D}${sysconfdir}/init.d/confighw.sh
-    install -m 0755 ${WORKDIR}/swiapplaunch.sh -D ${D}${sysconfdir}/init.d/swiapplaunch.sh
     if [[ "${MACHINE}" == "swi-mdm"* ]]; then
         install -m 0755 ${WORKDIR}/restart_swi_apps -D ${D}${sbindir}/restart_swi_apps
     fi
     install -m 0755 ${WORKDIR}/restartNMEA -D ${D}${sbindir}/restartNMEA
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
     install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sysconfdir}/init.d/run_getty.sh
-
-
-    install -D -m 0755 ${WORKDIR}/mount_unionfs -D ${D}${sysconfdir}/init.d/mount_unionfs
-    install -D -m 0755 ${WORKDIR}/mount_early -D ${D}${sysconfdir}/init.d/mount_early
-    install -D -m 0755 ${WORKDIR}/load_modem.sh -D ${D}${sysconfdir}/init.d/load_modem.sh
-
     install -d -m 0755 ${D}${sysconfdir}/profile.d
     install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sysconfdir}/profile.d/loginNagger
+
+    if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
+          install -d ${D}${sysconfdir}/initscripts
+          install -D -m 0755 ${WORKDIR}/swiapplaunch.sh -D ${D}${sysconfdir}/initscripts/swiapplaunch.sh
+
+          install -d ${D}/etc/systemd/system/
+          install -m 0644 ${WORKDIR}/swiapplaunch.service -D ${D}/etc/systemd/system/swiapplaunch.service
+          install -d ${D}/etc/systemd/system/multi-user.target.wants/
+          # enable the service for multi-user.target
+          ln -sf /etc/systemd/system/swiapplaunch.service \
+                ${D}/etc/systemd/system/multi-user.target.wants/swiapplaunch.service
+    else
+          install -D -m 0755 ${WORKDIR}/mount_unionfs -D ${D}${sysconfdir}/init.d/mount_unionfs
+          install -D -m 0755 ${WORKDIR}/mount_early -D ${D}${sysconfdir}/init.d/mount_early
+          install -D -m 0755 ${WORKDIR}/load_modem.sh -D ${D}${sysconfdir}/init.d/load_modem.sh
+          install -m 0755 ${WORKDIR}/confighw.sh -D ${D}${sysconfdir}/init.d/confighw.sh
+          install -m 0755    ${WORKDIR}/hostname.sh   ${D}${sysconfdir}/init.d
+          install -m 0755 ${WORKDIR}/swiapplaunch.sh -D ${D}${sysconfdir}/init.d/swiapplaunch.sh
+
+          update-rc.d $OPT -f mount_early remove
+          update-rc.d $OPT mount_early start 02 S . stop 98 S .
+          update-rc.d $OPT -f confighw.sh remove
+          update-rc.d $OPT confighw.sh start 03 S .
+          update-rc.d $OPT -f mount_unionfs remove
+          update-rc.d $OPT mount_unionfs start 04 S . stop 96 S .
+          update-rc.d $OPT -f hostname.sh remove
+          update-rc.d $OPT hostname.sh start 10 S .
+          update-rc.d $OPT -f swiapplaunch.sh remove
+          update-rc.d $OPT swiapplaunch.sh start 31 S . stop 69 S .
+          update-rc.d $OPT load_modem.sh start 09 S . stop 90 S .
+    fi
 
     case "${MACHINE}" in
     swi-mdm9x28 | swi-mdm9x28-qemu)
@@ -181,18 +204,6 @@ do_install () {
     if [ "${TARGET_ARCH}" = "arm" ]; then
         update-rc.d -r ${D} alignment.sh start 06 S .
     fi
-
-    update-rc.d $OPT -f mount_early remove
-    update-rc.d $OPT mount_early start 02 S . stop 98 S .
-    update-rc.d $OPT -f confighw.sh remove
-    update-rc.d $OPT confighw.sh start 03 S .
-    update-rc.d $OPT -f mount_unionfs remove
-    update-rc.d $OPT mount_unionfs start 04 S . stop 96 S .
-    update-rc.d $OPT -f hostname.sh remove
-    update-rc.d $OPT hostname.sh start 10 S .
-    update-rc.d $OPT -f swiapplaunch.sh remove
-    update-rc.d $OPT swiapplaunch.sh start 31 S . stop 69 S .
-    update-rc.d $OPT load_modem.sh start 09 S . stop 90 S .
 }
 
 do_install_swi-mdm9x28-ar758x-rcy() {
