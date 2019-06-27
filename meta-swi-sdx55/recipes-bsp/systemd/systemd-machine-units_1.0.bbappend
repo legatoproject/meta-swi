@@ -44,6 +44,7 @@ fix_sepolicies () {
     sed -i "s#,rootcontext=system_u:object_r:data_t:s0##g" ${WORKDIR}/data-ubi.mount
     sed -i "s#,rootcontext=system_u:object_r:system_data_t:s0##g"  ${WORKDIR}/systemrw.mount
     sed -i "s#,rootcontext=system_u:object_r:system_data_t:s0##g"  ${WORKDIR}/systemrw-ubi.mount
+    sed -i "s#,context=system_u:object_r:firmware_t:s0##g"  ${WORKDIR}/firmware-ubi-mount.sh
 }
 do_install[prefuncs] += " ${@bb.utils.contains('DISTRO_FEATURES', 'selinux', '', 'fix_sepolicies', d)}"
 
@@ -73,9 +74,9 @@ do_install_append () {
                     ln -sf ${systemd_unitdir}/system/systemd-fsck@.service \
                        ${D}${systemd_unitdir}/system/local-fs-pre.target.requires/systemd-fsck@dev-disk-by\\x2dpartlabel-userdata.service
                 else
-                    install -m 0644 ${WORKDIR}/data-ubi.mount ${D}${systemd_unitdir}/system/data.mount
+                    install -m 0644 ${WORKDIR}/data-ubi.mount ${D}${systemd_unitdir}/system/data-mount.service
                 fi
-                ln -sf ${systemd_unitdir}/system/data.mount ${D}${systemd_unitdir}/system/local-fs.target.wants/data.mount
+                ln -sf ${systemd_unitdir}/system/data-mount.service ${D}${systemd_unitdir}/system/local-fs.target.wants/data-mount.service
             fi
         fi
 
@@ -95,11 +96,11 @@ do_install_append () {
 
         if [ "$entry" == "/cache" ]; then
             if ${@bb.utils.contains('DISTRO_FEATURES','nand-boot','false','true',d)}; then
-                install -m 0644 ${WORKDIR}/cache.mount ${D}${systemd_unitdir}/system/cache.mount
+                install -m 0644 ${WORKDIR}/cache.mount ${D}${systemd_unitdir}/system/cache-mount.service
             else
-                install -m 0644 ${WORKDIR}/cache-ubi.mount ${D}${systemd_unitdir}/system/cache.mount
+                install -m 0644 ${WORKDIR}/cache-ubi.mount ${D}${systemd_unitdir}/system/cache-mount.service
             fi
-            ln -sf ${systemd_unitdir}/system/cache.mount ${D}${systemd_unitdir}/system/sysinit.target.wants/cache.mount
+            ln -sf ${systemd_unitdir}/system/cache-mount.service ${D}${systemd_unitdir}/system/sysinit.target.wants/cache-mount.service
         fi
 
         if [ "$entry" == "/persist" ]; then
@@ -110,7 +111,7 @@ do_install_append () {
                     install -m 0644 ${WORKDIR}/persist-ubi.mount ${D}${systemd_unitdir}/system/persist.mount
                 fi
             fi
-            ln -sf ${systemd_unitdir}/system/persist.mount ${D}${systemd_unitdir}/system/sysinit.target.wants/persist.mount
+            ln -sf ${systemd_unitdir}/system/persist.mount ${D}${systemd_unitdir}/system/sysinit.target.wants/persist-mount
         fi
 
         if [ "$entry" == "/firmware" ]; then
