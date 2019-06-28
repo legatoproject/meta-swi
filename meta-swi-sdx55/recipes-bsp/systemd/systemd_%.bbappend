@@ -94,10 +94,6 @@ do_install_append () {
    install -m 0644 ${WORKDIR}/logind.conf -D ${D}/etc/systemd/logind.conf
    install -m 0644 ${WORKDIR}/platform.conf -D ${D}/etc/tmpfiles.d/platform.conf
    #  Mask journaling services by default.
-   #  'systemctl unmask' can be used on device to enable them if needed.
-   ln -sf /dev/null ${D}/etc/systemd/system/systemd-journald.service
-   ln -sf /dev/null ${D}${systemd_unitdir}/system/sysinit.target.wants/systemd-journal-flush.service
-   ln -sf /dev/null ${D}${systemd_unitdir}/system/sysinit.target.wants/systemd-journal-catalog-update.service
    install -d ${D}${sysconfdir}/udev/rules.d/
    install -m 0644 ${WORKDIR}/ion.rules -D ${D}${sysconfdir}/udev/rules.d/ion.rules
    install -m 0644 ${WORKDIR}/kgsl.rules -D ${D}${sysconfdir}/udev/rules.d/kgsl.rules
