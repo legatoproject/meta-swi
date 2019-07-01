@@ -1,9 +1,8 @@
 DEPENDS += " \
-	edk2 \
-	mtd-utils-native \
-	cryptsetup-native \
-	ima-evm-utils-native \
-	libarchive-native"
+        edk2 \
+        mtd-utils-native \
+        cryptsetup-native \
+        libarchive-native"
 
 INC_PR = "r0"
 
