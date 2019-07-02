@@ -15,3 +15,7 @@ python() {
              ' file://0003-get_map_ranges-check-for-overflow.patch' \
              ' file://CVE-2017-12424.patch' )
 }
+
+do_install_append() {
+    sed -i 's/MOTD_FILE/#MOTD_FILE/g' ${D}${sysconfdir}/login.defs
+}
