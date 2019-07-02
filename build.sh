@@ -101,6 +101,7 @@ ENABLE_IMA=false
 IMA_CONFIG=""
 BB_FLAGS=""
 SHARED_SSTATE=false
+ENABLE_FX30=false
 
 while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQGS" arg
 do
@@ -433,6 +434,12 @@ if [ $ENABLE_PROPRIETARY_SRC = true ]; then
             "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-src"
     fi
 
+    # Add product-specific no-arch layer
+    if [ -n "$PROD" ] && [ -e "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD" ]; then
+        enable_layer "meta-swi-extras/meta-$MACH-$PROD" \
+            "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD"
+    fi
+
     copy_qmi_api() {
         cp -f $WORKSPACE/../modem_proc/sierra/src/dx/src/common/* $WORKSPACE/sierra/dx/common
         if [ $? != 0 ]; then
@@ -541,8 +548,7 @@ set_machine() {
 
 # Set IMA options. If IMA build is required, we need to add number
 # of options to our global, static configuration file.
-set_ima()
-{
+set_ima() {
     local ret=$SWI_OK
 
     # Always set this option, because it may have been set to something
@@ -602,6 +608,18 @@ set_ima()
     fi
 
     return $ret
+}
+
+# Setup FX30 related variables
+set_fx30() {
+
+    if [ "x${PROD}" = "xfx30" ] ; then
+        set_option "ENABLE_FX30" true
+    else
+        set_option "ENABLE_FX30"
+    fi
+
+    return 0
 }
 
 # Tune local.conf file
@@ -670,6 +688,10 @@ set_option "LEGATO_BUILD" $ENABLE_LEGATO
 
 # Set all IMA related build options
 set_ima
+if [ $? != $SWI_OK ]; then exit 1 ; fi
+
+# Set all FX30 related build options
+set_fx30
 if [ $? != $SWI_OK ]; then exit 1 ; fi
 
 if [ -n "$FW_VERSION" ]; then

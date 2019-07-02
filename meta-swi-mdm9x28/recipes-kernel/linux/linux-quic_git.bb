@@ -12,6 +12,10 @@ KERNEL_CC_prepend = "${LINUX_REPO_DIR}/scripts/gcc-wrapper.py "
 # Provide a config baseline for things so the kernel will build...
 KBUILD_DEFCONFIG ?= "mdm9607_defconfig"
 
+# Allow merging of multiple kernel configs. This must be space
+# separated list of files using absolute paths.
+KBUILD_DEFCONFIG_SNIPPETS ?= ""
+
 # Override for Qemu
 COMPATIBLE_MACHINE_swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
 KBUILD_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
@@ -52,6 +56,11 @@ do_configure_prepend() {
 
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper
     oe_runmake_call -C ${S} ARCH=${ARCH} ${KERNEL_EXTRA_ARGS} ${KBUILD_DEFCONFIG}
+
+    # Add kernel config file snippets.
+    for kconfig in ${KBUILD_DEFCONFIG_SNIPPETS} ; do
+        cat ${kconfig} >>${B}/.config
+    done
 }
 
 do_compile_append() {

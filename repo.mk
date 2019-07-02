@@ -40,6 +40,11 @@ else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files
   ifeq ($(PROD),)
     PROD = ar759x
   endif
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-fx30-bin/files))
+  MACH ?= mdm9x28
+  ifeq ($(PROD),)
+    PROD = fx30
+  endif
 else ifneq (,$(wildcard $(PWD)/sdx55))
   MACH ?= sdx55
 endif

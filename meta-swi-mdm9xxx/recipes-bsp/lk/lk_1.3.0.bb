@@ -40,6 +40,7 @@ EXTRA_OEMAKE = "-j 1 \
                 CC='${CC}' \
                 ${@oe.utils.conditional('ARM_FLOAT_ABI', 'hard', 'ENABLE_HARD_FPU=1', '', d)} \
                 ENABLE_IMA='${ENABLE_IMA}' \
+                ENABLE_FX30='${ENABLE_FX30}' \
                 IMA_KERNEL_CMDLINE_OPTIONS='${IMA_KERNEL_CMDLINE_OPTIONS}'"
 
 do_tag_lk() {

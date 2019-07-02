@@ -16,6 +16,9 @@ TARGET_LDFLAGS_prepend = " -li2c "
 
 TARGET_CFLAGS_swi-mdm9x15_append = " -DCONFIG_MDM9X15"
 TARGET_CFLAGS_swi-mdm9x28_append = " -DCONFIG_MDM9X28"
+# DM, FIXME: We could do '-DCONFIG_MDM9X28 -DCONFIG_MDM9X28_FX30' if it turns out
+# that all changes made for mdm9x28 apply to fx30 as well.
+TARGET_CFLAGS_swi-mdm9x28-fx30_append = " -DCONFIG_MDM9X28_FX30"
 
 do_compile() {
     cp -pv ${WORKDIR}/gpioexp.c .
