@@ -17,6 +17,7 @@ SRC_URI_append += " file://dash.mount"
 SRC_URI_append += " file://cache-ubi.mount"
 SRC_URI_append += " file://persist-ubi.mount"
 SRC_URI_append += " file://data-ubi.mount"
+SRC_URI_append += " file://data-ram.mount"
 SRC_URI_append += " file://systemrw-ubi.mount"
 SRC_URI_append += " file://firmware-ubi-mount.sh"
 SRC_URI_append += " file://firmware-ubi-mount.service"
@@ -42,6 +43,7 @@ fix_sepolicies () {
     sed -i "s#,rootcontext=system_u:object_r:var_t:s0##g"  ${WORKDIR}/var-volatile.mount
     sed -i "s#,rootcontext=system_u:object_r:data_t:s0##g" ${WORKDIR}/data.mount
     sed -i "s#,rootcontext=system_u:object_r:data_t:s0##g" ${WORKDIR}/data-ubi.mount
+    sed -i "s#,rootcontext=system_u:object_r:data_t:s0##g" ${WORKDIR}/data-ram.mount
     sed -i "s#,rootcontext=system_u:object_r:system_data_t:s0##g"  ${WORKDIR}/systemrw.mount
     sed -i "s#,rootcontext=system_u:object_r:system_data_t:s0##g"  ${WORKDIR}/systemrw-ubi.mount
     sed -i "s#,context=system_u:object_r:firmware_t:s0##g"  ${WORKDIR}/firmware-ubi-mount.sh
@@ -73,10 +75,13 @@ do_install_append () {
                     install -d 0644 ${D}${systemd_unitdir}/system/local-fs-pre.target.requires
                     ln -sf ${systemd_unitdir}/system/systemd-fsck@.service \
                        ${D}${systemd_unitdir}/system/local-fs-pre.target.requires/systemd-fsck@dev-disk-by\\x2dpartlabel-userdata.service
+                #As this folder include more log files, use ram to avoid flash broken.
+                elif ${@bb.utils.contains('DISTRO_FEATURES','userfs-in-ram','true','false',d)}; then
+                    install -m 0644 ${WORKDIR}/data-ram.mount ${D}${systemd_unitdir}/system/data.mount
                 else
-                    install -m 0644 ${WORKDIR}/data-ubi.mount ${D}${systemd_unitdir}/system/data-mount.service
+                    install -m 0644 ${WORKDIR}/data-ubi.mount ${D}${systemd_unitdir}/system/data.mount
                 fi
-                ln -sf ${systemd_unitdir}/system/data-mount.service ${D}${systemd_unitdir}/system/local-fs.target.wants/data-mount.service
+                ln -sf ${systemd_unitdir}/system/data.mount ${D}${systemd_unitdir}/system/local-fs.target.wants/data.mount
             fi
         fi
 
@@ -96,11 +101,11 @@ do_install_append () {
 
         if [ "$entry" == "/cache" ]; then
             if ${@bb.utils.contains('DISTRO_FEATURES','nand-boot','false','true',d)}; then
-                install -m 0644 ${WORKDIR}/cache.mount ${D}${systemd_unitdir}/system/cache-mount.service
+                install -m 0644 ${WORKDIR}/cache.mount ${D}${systemd_unitdir}/system/cache.mount
             else
-                install -m 0644 ${WORKDIR}/cache-ubi.mount ${D}${systemd_unitdir}/system/cache-mount.service
+                install -m 0644 ${WORKDIR}/cache-ubi.mount ${D}${systemd_unitdir}/system/cache.mount
             fi
-            ln -sf ${systemd_unitdir}/system/cache-mount.service ${D}${systemd_unitdir}/system/sysinit.target.wants/cache-mount.service
+            ln -sf ${systemd_unitdir}/system/cache.mount ${D}${systemd_unitdir}/system/sysinit.target.wants/cache.mount
         fi
 
         if [ "$entry" == "/persist" ]; then
@@ -111,7 +116,7 @@ do_install_append () {
                     install -m 0644 ${WORKDIR}/persist-ubi.mount ${D}${systemd_unitdir}/system/persist.mount
                 fi
             fi
-            ln -sf ${systemd_unitdir}/system/persist.mount ${D}${systemd_unitdir}/system/sysinit.target.wants/persist-mount
+            ln -sf ${systemd_unitdir}/system/persist.mount ${D}${systemd_unitdir}/system/sysinit.target.wants/persist.mount
         fi
 
         if [ "$entry" == "/firmware" ]; then
