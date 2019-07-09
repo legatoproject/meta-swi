@@ -30,6 +30,8 @@ SRC_URI = "file://functions \
            file://loginNagger \
            file://load_modem.sh \
            file://accesses \
+           file://ecm.conf.in \
+           file://dnsmasq.ecm.conf.in \
            "
 
 SRC_URI_swi-mdm9x28-ar758x-rcy = "file://functions \

@@ -13,9 +13,17 @@ SRC_URI_append = " file://prepro.awk \
                    file://rcS-default \
                    file://rcS \
                    file://rcK \
+                   file://ecm.conf.in \
+                   file://dnsmasq.ecm.conf.in \
                  "
 
 TMPL_FLAGS ??= ""
+
+ECM_INTERFACE ??="ecm0"
+ECM_TARGET_IP ?= "192.168.2.2"
+ECM_HOST_IP ?= "192.168.2.3"
+ECM_DHCP_RANGE_HIGH ?= "192.168.2.3"
+ECM_MASK ?= "255.255.255.0"
 
 # Required by mount_unionfs
 DATA_DIR = "/data"
@@ -40,9 +48,17 @@ process_templates() {
     mach_flag=${mach#swi-}
     mach_flag=${mach_flag//-/_}
 
+    sed -i 's/#ECM_TARGET_IP#/${ECM_TARGET_IP}/g' ${WORKDIR}/ecm.conf.in
+    sed -i 's/#ECM_HOST_IP#/${ECM_HOST_IP}/g' ${WORKDIR}/ecm.conf.in
+    sed -i 's/#ECM_INTERFACE#/${ECM_INTERFACE}/g' ${WORKDIR}/dnsmasq.ecm.conf.in
+    sed -i 's/#ECM_DHCP_RANGE_LOW#/${ECM_HOST_IP}/g' ${WORKDIR}/dnsmasq.ecm.conf.in
+    sed -i 's/#ECM_DHCP_RANGE_HIGH#/${ECM_DHCP_RANGE_HIGH}/g' ${WORKDIR}/dnsmasq.ecm.conf.in
+    sed -i 's/#ECM_MASK#/${ECM_MASK}/g' ${WORKDIR}/ecm.conf.in
+
     for file in ${WORKDIR}/*.in ; do
         ${WORKDIR}/prepro.awk -v CPPFLAGS="${TMPL_FLAGS} -D${mach_flag}" $file > ${file%.in}
     done
+
 }
 
 do_install_append () {
@@ -50,7 +66,11 @@ do_install_append () {
     process_templates
 
     # Environment file that should be sourced by other scripts
+
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
+    install -m 0644 ${WORKDIR}/ecm.conf -D ${D}${sysconfdir}/legato/ecm.conf
+    install -m 0644 ${WORKDIR}/dnsmasq.ecm.conf -D ${D}${sysconfdir}/dnsmasq.d/dnsmasq.ecm.conf
+
     install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
 
     install -m 0755 ${WORKDIR}/mountall.sh   ${D}${sysconfdir}/init.d
