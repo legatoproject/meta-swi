@@ -16,10 +16,16 @@ IMAGE_INSTALL_append = " start-scripts-firmware-links"
 
 IMAGE_INSTALL_append = " kernel-modules"
 IMAGE_INSTALL_append = " bsinfo-stub"
+IMAGE_INSTALL += "${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'systemd', '' ,d)}"
+IMAGE_INSTALL += "systemd-machine-units"
+IMAGE_INSTALL += "system-core-adbd"
+IMAGE_INSTALL += "system-core-usb"
+IMAGE_INSTALL += "volatile-binds"
 
 create_ubinize_config() {
     local cfg_path=$1
     local rootfs_type=$2
+    local vid=0
 
     if [[ "${DM_VERITY_ENCRYPT}" = "on" ]]; then
         local dm_hash_path=$3
@@ -31,7 +37,8 @@ create_ubinize_config() {
     echo \[sysfs_volume\] > $cfg_path
     echo mode=ubi >> $cfg_path
     echo image="$rootfs_path" >> $cfg_path
-    echo vol_id=0 >> $cfg_path
+    echo vol_id=$vid >> $cfg_path
+    let vid+=1
 
     if [[ "${rootfs_type}" = "squashfs" ]]; then
         echo vol_type=static >> $cfg_path
@@ -51,10 +58,11 @@ create_ubinize_config() {
             echo \[hash_volume\] >> $cfg_path
             echo mode=ubi >> $cfg_path
             echo image="$dm_hash_path" >> $cfg_path
-            echo vol_id=1 >> $cfg_path
+            echo vol_id=$vid >> $cfg_path
             echo vol_type=static >> $cfg_path
             echo vol_name=rootfs_hs >> $cfg_path
             echo vol_alignment=1 >> $cfg_path
+            let vid+=1
         fi
 
         #  dm-verity root hash is following the hash
@@ -63,12 +71,38 @@ create_ubinize_config() {
             echo \[rh_volume\] >> $cfg_path
             echo mode=ubi >> $cfg_path
             echo image="$dm_root_hash_path" >> $cfg_path
-            echo vol_id=2 >> $cfg_path
+            echo vol_id=$vid >> $cfg_path
             echo vol_type=static >> $cfg_path
             echo vol_name=rootfs_rhs >> $cfg_path
             echo vol_alignment=1 >> $cfg_path
+            let vid+=1
         fi
     fi
+    echo \[usrfs_volume\] >> $cfg_path
+    echo mode=ubi >> $cfg_path
+    #echo image="${OUTPUT_FILE_USR_UBIFS}" >> $cfg_path
+    echo vol_id=$vid >> $cfg_path
+    echo vol_type=dynamic >> $cfg_path
+    echo vol_name=usrfs >> $cfg_path
+    #echo vol_flags = autoresize >> $cfg_path
+    echo vol_size="6MiB"  >>$cfg_path
+    let vid+=1
+
+    echo \[cache_volume\] >> $cfg_path
+    echo mode=ubi >> $cfg_path
+    echo vol_id=$vid >> $cfg_path
+    echo vol_type=dynamic >> $cfg_path
+    echo vol_name=cachefs >> $cfg_path
+    echo vol_size="3MiB" >> $cfg_path
+    let vid+=1
+
+    echo \[systemrw_volume\] >> $cfg_path
+    echo mode=ubi >> $cfg_path
+    echo vol_id=$vid >> $cfg_path
+    echo vol_type=dynamic >> $cfg_path
+    echo vol_name=systemrw >> $cfg_path
+    echo vol_size="6MiB" >> $cfg_path
+    let vid+=1
 }
 
 prepare_ubi_ps() {
@@ -176,3 +210,11 @@ do_setfileattr() {
 
 IMAGE_PREPROCESS_COMMAND += "do_setfileattr; "
 
+ROOTFS_POSTPROCESS_COMMAND_append = " gen_buildprop;"
+EXTRA_IMAGE_FEATURES += "${@bb.utils.contains('DISTRO_FEATURES','ro-rootfs','read-only-rootfs','',d)}"
+gen_buildprop() {
+    mkdir -p ${IMAGE_ROOTFS}/cache
+    echo ${MACHINE} >> ${IMAGE_ROOTFS}/target
+}
+
+require mdm-image-cwe.inc

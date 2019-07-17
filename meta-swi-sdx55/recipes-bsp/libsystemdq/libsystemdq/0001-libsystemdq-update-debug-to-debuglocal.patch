@@ -1,0 +1,86 @@
+From e301921b925d336f1e2a5b5e2e6ac27d2e4e93ec Mon Sep 17 00:00:00 2001
+From: Jarch Hu <jarhu@sierrawireless.com>
+Date: Mon, 15 Jul 2019 10:27:09 +0800
+Subject: [PATCH] libsystemdq: update debug to debuglocal
+
+Description:
+as debug option is reserved for meson(0.49.2), it build with
+"meson_options.txt:51:0: ERROR:  Option name debug is reserved"
+error.
+
+Solution:
+update debug option to debuglocal.
+Signed-off-by: Jarch Hu <jarhu@sierrawireless.com>
+---
+ meson.build       | 22 +++++++++++-----------
+ meson_options.txt |  2 +-
+ 2 files changed, 12 insertions(+), 12 deletions(-)
+
+diff --git a/meson.build b/meson.build
+index 2e1befc..62a98ed 100644
+--- a/meson.build
++++ b/meson.build
+@@ -359,7 +359,7 @@ if cc.get_id() == 'clang'
+         ]
+ endif
+ 
+-if get_option('buildtype') != 'debug'
++if get_option('buildtype') != 'debuglocal'
+         possible_cc_flags += [
+                 '-ffunction-sections',
+                 '-fdata-sections',
+@@ -733,19 +733,19 @@ conf.set_quoted('GETTEXT_PACKAGE', meson.project_name())
+ substs.set('SUSHELL', get_option('debug-shell'))
+ substs.set('DEBUGTTY', get_option('debug-tty'))
+ 
+-enable_debug_hashmap = false
+-enable_debug_mmap_cache = false
+-foreach name : get_option('debug')
++enable_debuglocal_hashmap = false
++enable_debuglocal_mmap_cache = false
++foreach name : get_option('debuglocal')
+         if name == 'hashmap'
+-                enable_debug_hashmap = true
++                enable_debuglocal_hashmap = true
+         elif name == 'mmap-cache'
+-                enable_debug_mmap_cache = true
++                enable_debuglocal_mmap_cache = true
+         else
+-                message('unknown debug option "@0@", ignoring'.format(name))
++                message('unknown debuglocal option "@0@", ignoring'.format(name))
+         endif
+ endforeach
+-conf.set10('ENABLE_DEBUG_HASHMAP', enable_debug_hashmap)
+-conf.set10('ENABLE_DEBUG_MMAP_CACHE', enable_debug_mmap_cache)
++conf.set10('ENABLE_DEBUG_HASHMAP', enable_debuglocal_hashmap)
++conf.set10('ENABLE_DEBUG_MMAP_CACHE', enable_debuglocal_mmap_cache)
+ 
+ conf.set10('VALGRIND', get_option('valgrind'))
+ 
+@@ -2301,8 +2301,8 @@ foreach tuple : [
+         ['adm group',        get_option('adm-group')],
+         ['wheel group',      get_option('wheel-group')],
+         ['gshadow'],
+-        ['debug hashmap'],
+-        ['debug mmap cache'],
++        ['debuglocal hashmap'],
++        ['debuglocal mmap cache'],
+         ['valgrind',         conf.get('VALGRIND') == 1],
+ ]
+ 
+diff --git a/meson_options.txt b/meson_options.txt
+index aa9a333..a82933a 100644
+--- a/meson_options.txt
++++ b/meson_options.txt
+@@ -48,7 +48,7 @@ option('debug-shell', type : 'string', value : '/bin/sh',
+        description : 'path to debug shell binary')
+ option('debug-tty', type : 'string', value : '/dev/tty9',
+        description : 'specify the tty device for debug shell')
+-option('debug', type : 'array', choices : ['hashmap', 'mmap-cache'], value : [],
++option('debuglocal', type : 'array', choices : ['hashmap', 'mmap-cache'], value : [],
+        description : 'enable extra debugging')
+ option('memory-accounting-default', type : 'boolean',
+        description : 'enable MemoryAccounting= by default')
+-- 
+2.18.0
+
