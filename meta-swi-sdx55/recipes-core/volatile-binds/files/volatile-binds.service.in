@@ -1,8 +1,8 @@
 [Unit]
 Description=Bind mount volatile @where@
 DefaultDependencies=false
-After=systemrw.mount sysinit.target
-#Before=basic.target
+After=systemrw.mount
+Before=local-fs.target
 RequiresMountsFor=@whatparent@ @whereparent@
 ConditionPathIsReadWrite=@whatparent@
 ConditionPathExists=@where@
@@ -17,4 +17,4 @@ ExecStart=/sbin/mount-copybind @what@ @where@
 ExecStop=/bin/umount @where@
 
 [Install]
-WantedBy=basic.target
+WantedBy=local-fs.target

@@ -1,10 +1,13 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
+#override mount-copybind in recipes-bsp/volatile-binds,
+#as mount overlay is much faster than copying files.
+#the mount-copybind is copied from poky/meta/recipes-core/volatile-binds/files/mount-copybind
+#of warrior.
 SRC_URI += "\
             file://mount-copybind \
             file://volatile-binds.service.in \
            "
-
 do_compile_append() {
     if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
         for service in ${@volatile_systemd_services(d)}
@@ -20,4 +23,9 @@ do_compile_append() {
             esac
         done
     fi
+}
+
+do_install_append() {
+    #umount-copybind from bsp is unusable
+    rm -f umount-copybind ${D}${base_sbindir}/umount-copybind
 }
