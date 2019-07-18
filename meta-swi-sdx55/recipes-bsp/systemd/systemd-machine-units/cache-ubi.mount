@@ -26,10 +26,10 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 [Unit]
-After=sysinit.target
+After=basic.target
 
 [Mount]
 Type=ubifs
 What=ubi0:cachefs
-Where=cache
+Where=/cache
 Options=bulk_read

@@ -1,9 +1,9 @@
 [Unit]
 Description=Bind mount volatile @where@
-DefaultDependencies=no
+DefaultDependencies=false
 After=systemrw.mount sysinit.target
-Before=basic.target
-RequiresMountsFor=@whereparent@
+#Before=basic.target
+RequiresMountsFor=@whatparent@ @whereparent@
 ConditionPathIsReadWrite=@whatparent@
 ConditionPathExists=@where@
 ConditionPathIsReadWrite=!@where@
@@ -14,7 +14,7 @@ RemainAfterExit=Yes
 StandardOutput=syslog
 TimeoutSec=0
 ExecStart=/sbin/mount-copybind @what@ @where@
-ExecStop=/sbin/umount-copybind @where@
+ExecStop=/bin/umount @where@
 
 [Install]
 WantedBy=basic.target

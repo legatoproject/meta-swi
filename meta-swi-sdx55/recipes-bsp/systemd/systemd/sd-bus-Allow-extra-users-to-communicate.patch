@@ -1,0 +1,38 @@
+From bf013c53c131dd7643cf4cc54ac33157b38b6ea8 Mon Sep 17 00:00:00 2001
+From: Dennis Cagle <dcagle@codeaurora.org>
+Date: Thu, 6 Dec 2018 15:42:37 -0800
+Subject: [PATCH] sd-bus: Allow extra users to communicate
+
+Change-Id: I709b16940eba72609a2092b891884ec9b0f800e9
+---
+ src/libsystemd/sd-bus/bus-convenience.c | 6 ++++--
+ 1 file changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/src/libsystemd/sd-bus/bus-convenience.c b/src/libsystemd/sd-bus/bus-convenience.c
+index 04158ca..f02800b 100644
+--- a/src/libsystemd/sd-bus/bus-convenience.c
++++ b/src/libsystemd/sd-bus/bus-convenience.c
+@@ -565,9 +565,7 @@ _public_ int sd_bus_query_sender_privilege(sd_bus_message *call, int capability)
+ 
+         if (!BUS_IS_OPEN(call->bus->state))
+                 return -ENOTCONN;
+-
+         if (capability >= 0) {
+-
+                 r = sd_bus_query_sender_creds(call, SD_BUS_CREDS_UID|SD_BUS_CREDS_EUID|SD_BUS_CREDS_EFFECTIVE_CAPS, &creds);
+                 if (r < 0)
+                         return r;
+@@ -616,6 +614,10 @@ _public_ int sd_bus_query_sender_privilege(sd_bus_message *call, int capability)
+                         if (sender_uid == our_uid)
+                                 return 1;
+ 
++                        /* Other specific users also allowed access (radio) */
++                        if (sender_uid == 1001)
++                                return 1;
++
+                         /* Sender is root, we are not root. */
+                         if (our_uid != 0 && sender_uid == 0)
+                                 return 1;
+-- 
+1.9.1
+

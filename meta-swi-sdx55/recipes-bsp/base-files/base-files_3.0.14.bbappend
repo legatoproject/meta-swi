@@ -1,4 +1,4 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-${PV}:"
 DEPENDS = "base-passwd"
 
 SRC_URI_append += "file://fstab"
@@ -26,13 +26,10 @@ fix_sepolicies () {
 do_install[prefuncs] += " ${@bb.utils.contains('DISTRO_FEATURES', 'selinux', '', 'fix_sepolicies', d)}"
 
 do_install_append(){
-    install -m 755 -d ${D}/media
-    install -m 755 -d ${D}/mnt/sdcard
+    install -m 755 -o diag -g diag -d ${D}/media
+    install -m 755 -o diag -g diag -d ${D}/mnt/sdcard
 
     ln -s /mnt/sdcard ${D}/sdcard
-
-    rmdir ${D}/tmp
-    ln -s /var/tmp ${D}/tmp
 
     if [ ${BASEMACHINE} == "mdm9650" ]; then
       ln -s /etc/resolvconf/run/resolv.conf ${D}/etc/resolv.conf
@@ -40,12 +37,14 @@ do_install_append(){
       ln -s /var/run/resolv.conf ${D}/etc/resolv.conf
     fi
 
-    install -m 0644 ${WORKDIR}/fstab ${D}${sysconfdir}/fstab
 }
 
+# Don't install fstab for systemd targets
 do_install_append() {
     if ${@bb.utils.contains('DISTRO_FEATURES','systemd','true','false',d)}; then
-        install -d 0644 ${D}${sysconfdir}/systemd/system
-        install -d 0644 ${D}${sysconfdir}/systemd/system/local-fs.target.requires
+        rm ${D}${sysconfdir}/fstab
+    else
+        install -m 0644 ${WORKDIR}/fstab ${D}${sysconfdir}/fstab
     fi
+
 }

@@ -1,4 +1,5 @@
-# Copyright (c) 2018, 2019, The Linux Foundation. All rights reserved.
+#!/bin/sh
+# Copyright (c) 2019, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -25,23 +26,29 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
-[Unit]
-Description=Mount modem partition to /firmware mount point
+FindAndMountUBI () {
+   partition=$1
+   dir=$2
 
-# Env vars are not reflecting in [Unit] Section for selective wait.
-# Hence wait for both _a & _b dev nodes before attepting to mount
-BindsTo=dev-disk-by\x2dpartlabel-modem_a.device dev-disk-by\x2dpartlabel-modem_b.device
-After=dev-disk-by\x2dpartlabel-modem_a.device dev-disk-by\x2dpartlabel-modem_b.device
-DefaultDependencies=no
+   mtd_block_number=`cat $mtd_file | grep -i $partition | sed 's/^mtd//' | awk -F ':' '{print $1}'`
+   echo "MTD : Detected block device : $dir for $partition"
+   mkdir -p $dir
 
-IgnoreOnIsolate=true
+   ubiattach -m $mtd_block_number
+   non_hlos_block=`cat $mtd_file | grep -i nonhlos-fs | sed 's/^mtd//' | awk -F ':' '{print $1}'`
+   device=/dev/mtdblock$non_hlos_block
+   while [ 1 ]
+    do
+        if [ -b $device ]
+        then
+            mount $device /firmware
+            break
+        else
+            sleep 0.010
+        fi
+    done
+}
+mtd_file=/proc/mtd
+eval FindAndMountUBI modem /firmware
+exit 0
 
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-PassEnvironment="SLOT_SUFFIX"
-ExecStart=/bin/mount -o noexec,nodev,ro,context=system_u:object_r:firmware_t:s0 -t vfat /dev/disk/by-partlabel/modem${SLOT_SUFFIX} /firmware
-Nice=-20
-
-[Install]
-WantedBy=local-fs.target

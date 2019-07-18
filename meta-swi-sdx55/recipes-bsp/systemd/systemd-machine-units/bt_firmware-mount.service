@@ -1,4 +1,4 @@
-# Copyright (c) 2018, The Linux Foundation. All rights reserved.
+# Copyright (c) 2018, 2019, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -28,11 +28,20 @@
 [Unit]
 Description=Mount bluetooth partition to /bt_firmware mount point
 
+# Env vars are not reflecting in [Unit] Section for selective wait.
+# Hence wait for both _a & _b dev nodes before attepting to mount
+BindsTo=dev-disk-by\x2dpartlabel-bluetooth_a.device dev-disk-by\x2dpartlabel-bluetooth_b.device
+After=dev-disk-by\x2dpartlabel-bluetooth_a.device dev-disk-by\x2dpartlabel-bluetooth_b.device
+DefaultDependencies=no
+
+IgnoreOnIsolate=true
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 PassEnvironment="SLOT_SUFFIX"
 ExecStart=/bin/mount -o noexec,nodev,ro,context=system_u:object_r:firmware_t:s0 -t vfat /dev/disk/by-partlabel/bluetooth${SLOT_SUFFIX} /bt_firmware
+Nice=-20
 
 [Install]
 WantedBy=local-fs.target

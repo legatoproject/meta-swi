@@ -20,6 +20,7 @@ IMAGE_INSTALL += "systemd-machine-units"
 IMAGE_INSTALL += "system-core-adbd"
 IMAGE_INSTALL += "system-core-usb"
 IMAGE_INSTALL += "volatile-binds"
+IMAGE_INSTALL += "strace"
 
 create_ubinize_config() {
     local cfg_path=$1

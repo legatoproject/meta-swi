@@ -14,7 +14,7 @@ do_install() {
     install -m 0755 mount-copybind ${D}${base_sbindir}/
 if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
     install -d ${D}${systemd_unitdir}/system
-    for service in ${SYSTEMD_SERVICE_volatile-binds}; do
+    for service in ${SYSTEMD_SERVICE_${PN}}; do
         install -m 0644 $service ${D}${systemd_unitdir}/system/
         install -m 0755 umount-copybind ${D}${base_sbindir}/
     done

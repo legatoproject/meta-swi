@@ -26,7 +26,7 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 [Unit]
-After=sysinit.target
+Before=local-fs.target
 
 [Mount]
 What=/dev/disk/by-partlabel/userdata
