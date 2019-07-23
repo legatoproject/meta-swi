@@ -350,6 +350,15 @@ case $MACH in
         # Enable the meta-swi-sdxXX layer
         enable_layer "meta-swi/meta-$MACH" "$SWI/meta-$MACH"
 
+        # Enable the meta-swi-em/common layer
+        enable_layer "meta-swi-em/common" "$SWI/../meta-swi-em/common"
+
+        # Enable the meta-swi-em/meta-swi-em9xxx layer
+        enable_layer "meta-swi-em/meta-swi-em9xxx" "$SWI/../meta-swi-em/meta-swi-em9xxx"
+
+        # Enable the meta-swi-em/meta-swi-em9190 layer
+        enable_layer "meta-swi-em/meta-swi-em9190" "$SWI/../meta-swi-em/meta-swi-em9190"
+
         # Enable the meta-swi-sdxXX-PROD layer, if it exists
         if [ -n "$PROD" ] && [ -e "$SWI/meta-${MACH}-${PROD}" ]; then
             enable_layer "meta-swi/meta-$MACH-$PROD" "$SWI/meta-$MACH-$PROD" "meta-$MACH"
@@ -433,6 +442,13 @@ if [ $ENABLE_PROPRIETARY_SRC = true ]; then
             "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-src"
     fi
 
+    if [[ "$MACH" == "swi-sdx55" ]]; then
+        # Add meta-swi-em-extras layer
+        enable_layer "meta-swi-em-extras/common" "$scriptdir/../meta-swi-em-extras/common"
+        enable_layer "meta-swi-em-extras/meta-swi-em9xxx-src" "$scriptdir/../meta-swi-em-extras/meta-swi-em9xxx-src"
+        enable_layer "meta-swi-em-extras/meta-swi-em9190-src" "$scriptdir/../meta-swi-em-extras/meta-swi-em9190-src"
+    fi
+
     copy_qmi_api() {
         cp -f $WORKSPACE/../modem_proc/sierra/src/dx/src/common/* $WORKSPACE/sierra/dx/common
         if [ $? != 0 ]; then
@@ -482,6 +498,13 @@ if [ $ENABLE_PROPRIETARY = true ]; then
 
     # Add machine-specific binary layer
     enable_layer "meta-swi-extras/meta-$MACH-bin" "$scriptdir/../meta-swi-extras/meta-$MACH-bin"
+
+    if [[ "$MACH" == "swi-sdx55" ]]; then
+        # Add meta-swi-em-extras layer
+        enable_layer "meta-swi-em-extras/common" "$scriptdir/../meta-swi-em-extras/common"
+        enable_layer "meta-swi-em-extras/meta-swi-em9xxx-bin" "$scriptdir/../meta-swi-em-extras/meta-swi-em9xxx-bin"
+        enable_layer "meta-swi-em-extras/meta-swi-em9190-bin" "$scriptdir/../meta-swi-em-extras/meta-swi-em9190-bin"
+    fi
 
     # Add product-specific source layer
     if [ -n "$PROD" ] && [ -e "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-bin" ]; then
