@@ -23,6 +23,11 @@ YOCTO_MINOR = $(shell git --git-dir=poky/.git describe --tags --match 'yocto-*' 
 # provided when calling make.
 ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-bin/files))
   MACH ?= mdm9x15
+else ifneq (,$(wildcard $(PWD)/meta-swi-hl))
+  MACH ?= mdm9x28
+  ifeq ($(PROD),)
+    PROD = hl76
+  endif
 else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files))
   MACH ?= mdm9x28
   ifeq ($(PROD),)
