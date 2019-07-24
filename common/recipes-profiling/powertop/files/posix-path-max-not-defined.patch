@@ -1,0 +1,24 @@
+Index: powertop-v2.10/src/wakeup/wakeup_ethernet.h
+===================================================================
+--- powertop-v2.10.orig/src/wakeup/wakeup_ethernet.h
++++ powertop-v2.10/src/wakeup/wakeup_ethernet.h
+@@ -25,6 +25,7 @@
+ #ifndef _INCLUDE_GUARD_ETHERNET_WAKEUP_H
+ #define _INCLUDE_GUARD_ETHERNET_WAKEUP_H
+ 
++#include <limits.h>
+ #include <vector>
+ 
+ #include "wakeup.h"
+Index: powertop-v2.10/src/wakeup/wakeup_usb.h
+===================================================================
+--- powertop-v2.10.orig/src/wakeup/wakeup_usb.h
++++ powertop-v2.10/src/wakeup/wakeup_usb.h
+@@ -26,6 +26,7 @@
+ #define _INCLUDE_GUARD_USB_WAKEUP_H
+ 
+ #include <vector>
++#include <limits.h>
+ 
+ #include "wakeup.h"
+ 
