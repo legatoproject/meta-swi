@@ -1,0 +1,10 @@
+[Unit]
+SourcePath=/sbin/reboot-daemon
+Description= reboot-daemon service
+
+[Service]
+Restart=always
+ExecStart=/sbin/reboot-daemon
+
+[Install]
+WantedBy=multi-user.target
