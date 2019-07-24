@@ -5,7 +5,7 @@ generate_cwe_pid() {
     PLATFORM=$2
     PAGE_SIZE=$3
     OUTPUT=$4
-    BOOT_IMAGE=$5
+    EDK2_IMAGE=$5
     KERNEL_IMAGE=$6
     ROOTFS_IMAGE=$7
     LEGATO_IMAGE=$8
@@ -20,15 +20,32 @@ generate_cwe_pid() {
     unset ROOTFS_V_FILE
     unset ROOTFS_V_OPT
 
-    unset LK_IMG
-    unset LK_OPT
-    unset LK_V_FILE
-    unset LK_V_OPT
+    unset EDK2_IMG
+    unset EDK2_OPT
+    unset EDK2_V_FILE
+    unset EDK2_V_OPT
 
     unset LEGATO_IMG
     unset LEGATO_OPT
     unset LEGATO_V_OPT
     unset LEGATO_V_FILE
+
+    if [ "$EDK2_IMAGE" = "true" ]; then
+        EDK2_IMG=$(readlink -f ${DEPLOY_DIR_IMAGE}/abl.elf)
+
+        echo "EDK2: $EDK2_IMG"
+        EDK2_OPT="-fbt"
+    fi
+
+    if [ -n "$EDK2_IMG" ]; then
+        EDK2_V_FILE=$(readlink -f ${DEPLOY_DIR_IMAGE}/abl.version)
+        if [ -e "$EDK2_V_FILE" ]; then
+            echo "EDK2 version: $(cat $EDK2_V_FILE)"
+            EDK2_V_OPT="-vfbt"
+        else
+            unset EDK2_V_FILE
+        fi
+    fi
 
     if [ "$KERNEL_IMAGE" = "true" ]; then
         KERNEL_IMG="${DEPLOY_DIR_IMAGE}/boot-yocto-sdx55.${PAGE_SIZE}.img"
@@ -71,8 +88,8 @@ generate_cwe_pid() {
         -pid $PID \
         -platform $PLATFORM \
         -o $OUTPUT \
-        $LK_OPT $LK_IMG \
-        $LK_V_OPT $LK_V_FILE \
+        $EDK2_OPT $EDK2_IMG \
+        $EDK2_V_OPT $EDK2_V_FILE \
         $KERNEL_OPT $KERNEL_IMG \
         $KERNEL_V_OPT $KERNEL_V_FILE \
         $ROOTFS_OPT $ROOTFS_IMG \
@@ -117,7 +134,7 @@ generate_cwe_target() {
     for i in ${!PAGE_SIZE[@]};
     do
         echo "Generating CWE package for $TARGET (${PAGE_SIZE[$i]})"
-        generate_cwe_pid ${PID[$i]} $PLATFORM ${PAGE_SIZE[$i]} ${DEPLOY_DIR_IMAGE}/yocto${CWE_NAME_EXTRA}_$TARGET.${PAGE_SIZE[$i]}.cwe false true true false
+        generate_cwe_pid ${PID[$i]} $PLATFORM ${PAGE_SIZE[$i]} ${DEPLOY_DIR_IMAGE}/yocto${CWE_NAME_EXTRA}_$TARGET.${PAGE_SIZE[$i]}.cwe true true true false
 
     done
 }
