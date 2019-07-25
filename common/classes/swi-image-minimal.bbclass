@@ -43,9 +43,9 @@ fakeroot do_label_files() {
         setfattr -n security.SMACK64EXEC -v _ \
             "${IMAGE_ROOTFS}/usr/sbin/tzoneset"
     fi
-    if [ -f "${IMAGE_ROOTFS}/etc/init.d/run_getty.sh" ] ; then
+    if [ -f "${IMAGE_ROOTFS}/usr/sbin/run_getty.sh" ] ; then
         setfattr -n security.SMACK64EXEC -v admin \
-            "${IMAGE_ROOTFS}/etc/init.d/run_getty.sh"
+            "${IMAGE_ROOTFS}/usr/sbin/run_getty.sh"
     fi
     if [ -f "${IMAGE_ROOTFS}/usr/sbin/restart_swi_apps" ] ; then
         setfattr -n security.SMACK64EXEC -v admin \

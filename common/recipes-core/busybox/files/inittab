@@ -20,4 +20,4 @@
 ::restart:/sbin/init
 
 # Attempt to start getty on UARTx
-::respawn:/etc/init.d/run_getty.sh
+::respawn:/usr/sbin/run_getty.sh
