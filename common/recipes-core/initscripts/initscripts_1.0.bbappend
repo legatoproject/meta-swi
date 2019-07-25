@@ -51,7 +51,7 @@ do_install_append () {
 
     # Environment file that should be sourced by other scripts
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
-    install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sysconfdir}/init.d/run_getty.sh
+    install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
 
     install -m 0755 ${WORKDIR}/mountall.sh   ${D}${sysconfdir}/init.d
 
