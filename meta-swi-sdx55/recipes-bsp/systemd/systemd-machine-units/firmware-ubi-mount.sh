@@ -26,28 +26,90 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-FindAndMountUBI () {
-   partition=$1
-   dir=$2
-   extra_opts=$3
+# import run environment
+source /etc/run.env
 
-   mtd_block_number=`cat $mtd_file | grep -i $partition | sed 's/^mtd//' | awk -F ':' '{print $1}'`
-   echo "MTD : Detected block device : $dir for $partition"
-   mkdir -p $dir
-
-   ubiattach -m $mtd_block_number -d 1 /dev/ubi_ctrl
-   device=/dev/ubi1_0
-   while [ 1 ]
-    do
-        if [ -c $device ]
-        then
-            test -x /sbin/restorecon && /sbin/restorecon $device
-            mount -t ubifs /dev/ubi1_0 $dir -o bulk_read$extra_opts
+# Wait until device shows up. After testing, it spent about 6 msec to
+# find the devices of /dev/ubi1_0 and /dev/ubiblock1_0. So, limit the
+# maximum time spent here to about 60 msec.
+wait_on_dev()
+{
+    local cntmax=20
+    local ret=${SWI_OK}
+    while [ ! "$1" "$2" ]; do
+        # When sleep 3 msec, it actually sleep for 3~4 msec, so here
+        # sleep 3 msec every cycle.
+        usleep 3000
+        cntmax=$( echo $(( ${cntmax} - 1 )) )
+        if [ ${cntmax} -eq 0 ]; then
+            ret=${SWI_ERR}
             break
-        else
-            sleep 0.010
         fi
     done
+    return ${ret}
+}
+
+FindAndMountUBI () {
+    partition=$1
+    dir=$2
+    extra_opts=$3
+
+    mtd_block_number=`cat $mtd_file | grep -i $partition | sed 's/^mtd//' | awk -F ':' '{print $1}'`
+    swi_log "MTD : Detected block device : $dir for $partition"
+    mkdir -p $dir
+
+    BOOTTYPE="ubifs"
+    BOOTDEV="/dev/mtdblock${mtd_block_number}"
+    BOOTOPTS="ro"
+
+    # Detect ubi partition
+    UBI_FLAG=$(dd if=/dev/mtd$mtd_block_number count=1 bs=4 2>/dev/null)
+    if echo $UBI_FLAG | grep 'UBI#' > /dev/null; then
+        if ! [ -e "/dev/ubi1_0" ]; then
+            # UBI partition, attach device
+            ubiattach -m ${mtd_block_number} -d 1 /dev/ubi_ctrl
+            if [ $? -ne 0 ] ; then
+                swi_log "Unable to attach mtd partition ${partition} to UBI logical device ${mtd_block_number}"
+                return ${SWI_ERR}
+            fi
+            # Need to wait for the /dev/ubi1_0 device ready
+            wait_on_dev "-c" "/dev/ubi1_0"
+            if [ $? -ne ${SWI_OK} ]; then
+                swi_log "Failed to wait on /dev/ubi1_0, exiting."
+                return ${SWI_ERR}
+            fi
+        fi
+
+        SQFS_FLAG=$(dd if=/dev/ubi1_0 count=1 bs=4 2>/dev/null)
+        if echo $SQFS_FLAG | grep 'hsqs' > /dev/null; then
+            # squashfs volume, create UBI block device
+            if ! [ -e "/dev/ubiblock1_0" ]; then
+                ubiblock --create /dev/ubi1_0
+                # Need to wait for the block device ready
+                wait_on_dev "-b" "/dev/ubiblock1_0"
+                if [ $? -ne ${SWI_OK} ]; then
+                    swi_log "Failed to wait on /dev/ubiblock1_0, exiting."
+                    return ${SWI_ERR}
+                fi
+            fi
+            BOOTTYPE=squashfs
+            BOOTDEV="/dev/ubiblock1_0"
+        else
+            BOOTDEV="/dev/ubi1_0"
+            BOOTOPTS="bulk_read"
+        fi
+
+    # Fallback on yaffs2
+    else
+        BOOTTYPE="yaffs2"
+        BOOTOPTS="rw,tags-ecc-off"
+    fi
+
+    mount -t ${BOOTTYPE} ${BOOTDEV} $dir -o ${BOOTOPTS}$extra_opts
+    if [ $? -ne 0 ] ; then
+        swi_log "Unable to mount ${BOOTTYPE} onto ${BOOTDEV}."
+        return ${SWI_ERR}
+    fi
 }
 
 mtd_file=/proc/mtd
