@@ -1,7 +1,7 @@
 # look for files in the layer first
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-PR="r156"
+PR="r157"
 
 SRC_URI = "file://functions \
            file://devpts \
@@ -154,8 +154,10 @@ do_install () {
     install -D -m 0755 ${WORKDIR}/mount_early -D ${D}${sysconfdir}/init.d/mount_early
     install -D -m 0755 ${WORKDIR}/load_modem.sh -D ${D}${sysconfdir}/init.d/load_modem.sh
 
-    install -d -m 0755 ${D}${sysconfdir}/profile.d
-    install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sysconfdir}/profile.d/loginNagger
+    # profile.d is currently empty, and to avoid /etc/profile from complaining
+    # an empty profile.d dir, the below line is commented out.
+    #install -d -m 0755 ${D}${sysconfdir}/profile.d
+    install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sbindir}/loginNagger
 
     case "${MACHINE}" in
     swi-mdm9x28 | swi-mdm9x28-qemu)
@@ -197,6 +199,15 @@ do_install () {
     update-rc.d $OPT -f swiapplaunch.sh remove
     update-rc.d $OPT swiapplaunch.sh start 31 S . stop 69 S .
     update-rc.d $OPT load_modem.sh start 09 S . stop 90 S .
+}
+
+do_install_append() {
+    # Change root's default shell from /bin/sh to /usr/sbin/loginNagger
+    # FIXME: KeLiu:
+    # This line should be in do_install(). However, putting it there
+    # results a build failure where sed complains the passwd file does not
+    # exist. Leaving it in do_install_append() for now.
+    sed -i 's#\(root:x:0:0:.*\):/bin/.*sh#\1:/usr/sbin/loginNagger#' ${D}${sysconfdir}/passwd
 }
 
 do_install_swi-mdm9x28-ar758x-rcy() {
