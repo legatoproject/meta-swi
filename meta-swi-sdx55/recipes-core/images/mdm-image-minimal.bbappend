@@ -78,14 +78,6 @@ create_ubinize_config() {
             let vid+=1
         fi
     fi
-
-    echo \[systemrw_volume\] >> $cfg_path
-    echo mode=ubi >> $cfg_path
-    echo vol_id=$vid >> $cfg_path
-    echo vol_type=dynamic >> $cfg_path
-    echo vol_name=systemrw >> $cfg_path
-    echo vol_size="6MiB" >> $cfg_path
-    let vid+=1
 }
 
 prepare_ubi_ps() {

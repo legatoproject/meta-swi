@@ -1,0 +1,14 @@
+# Copyright (c) 2019 Sierra Wireless Inc.
+
+[Unit]
+Description=Mount swirw partition to "/systemrw" mount point
+SourcePath=/etc/initscripts/mount_swirw.sh
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+ExecStart=/etc/initscripts/mount_swirw.sh
+Nice=-20
+
+[Install]
+WantedBy=local-fs-pre.target

@@ -63,7 +63,7 @@ do_install_append () {
 MNT_POINTS  = "${@d.getVar('MACHINE_MNT_POINTS') or ""}"
 # /data is default. /systemrw is applicable only when rootfs is read only.
 MNT_POINTS += " /data"
-MNT_POINTS += " ${@bb.utils.contains('DISTRO_FEATURES', 'ro-rootfs', '/systemrw', '', d)}"
+MNT_POINTS += " ${@bb.utils.contains('DISTRO_FEATURES', 'ro-rootfs', '', '', d)}"
 
 do_install_append () {
     install -d 0644 ${D}${sysconfdir}/initscripts
