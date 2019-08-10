@@ -45,7 +45,7 @@ do_configure_prepend() {
 
     # Add ".system" public cert into kernel build area. Kernel build
     # will suck this cert in automatically.
-    if [ "x${IMA_BUILD}" == "xtrue" ] ; then
+    if [ "x${IMA_BUILD}" == "xtrue" ] && [ "x${IMA_INCLUDE_KERNEL_KEY}" == "xtrue" ] ; then
         echo "IMA: Copying ${IMA_LOCAL_CA_X509} to ${B} ..."
         cp -f ${IMA_LOCAL_CA_X509} ${B}/.
     fi
