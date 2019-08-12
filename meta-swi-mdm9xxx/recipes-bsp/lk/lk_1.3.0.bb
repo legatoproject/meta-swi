@@ -8,10 +8,16 @@ PROVIDES = "virtual/lk"
 PR = "r2"
 
 SECURITY_FLAGS_PATCH = "file://0001-arm-fix-dprintf-format.patch"
+
+# safe defaults for recipes/systems that do not set up these variables
+LK_REPO_DIR ?= "${THISDIR}"
+LK_REPO_NAME ?= "git"
+
+FILESPATH_prepend = "${LK_REPO_DIR}:"
+
 SRC_URI = "${LK_REPO} ${SECURITY_FLAGS_PATCH}"
 
-S = "${WORKDIR}/git"
-
+S = "${WORKDIR}/${LK_REPO_NAME}"
 B = "${WORKDIR}/build"
 
 LK_TARGET ?= "mdm9615"
