@@ -153,7 +153,8 @@ ifeq ($(IMA_BUILD),1)
 endif
 
 ifneq (,$(wildcard $(PWD)/legato/3rdParty/ima-support-tools/))
-  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REPO=git://$(PWD)/legato/3rdParty/ima-support-tools/.git;protocol=file;rev=HEAD"
+  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REPO=git://$(PWD)/legato/3rdParty/ima-support-tools/.git;protocol=file;usehead=1"
+  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REV=\$${AUTOREV}"
 endif
 
 ifneq ($(FIRMWARE_PATH),0)

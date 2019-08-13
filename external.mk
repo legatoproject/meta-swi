@@ -138,7 +138,9 @@ ifeq ($(IMA_BUILD),1)
 endif
 
 ifneq (,$(wildcard $(PWD)/legato/3rdParty/ima-support-tools/))
-  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REPO=file://$(PWD)/legato/3rdParty/ima-support-tools/"
+  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_DIR=$(PWD)/legato/3rdParty/"
+  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REPO=file://ima-support-tools"
+  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_NAME=ima-support-tools"
 endif
 
 ifneq ($(FIRMWARE_PATH),0)
