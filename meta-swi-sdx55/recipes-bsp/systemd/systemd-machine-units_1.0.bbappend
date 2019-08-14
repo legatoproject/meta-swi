@@ -121,7 +121,7 @@ do_install_append () {
                     install -m 0644 ${WORKDIR}/persist-ubi.mount ${D}${systemd_unitdir}/system/persist.mount
                 fi
             fi
-            ln -sf ${systemd_unitdir}/system/persist.mount ${D}${systemd_unitdir}/system/multi-user.target.wants/persist.mount
+            ln -sf ${systemd_unitdir}/system/persist.mount ${D}${systemd_unitdir}/system/sysinit.target.wants/persist.mount
         fi
 
         if [ "$entry" == "/firmware" ]; then

@@ -21,16 +21,11 @@ SRC_URI += "\
             file://sensors.sh \
 "
 SRC_URI_append_apq8053 += "file://apq8053/mdev.conf"
-SRC_URI_append += "${@bb.utils.contains('DISTRO_FEATURES', 'virtualization', 'file://0001-Remove-readprofile-and-brctl-from-busybox.links-file.patch', '', d)}"
 
 FILES_${PN}-syslog += "${@bb.utils.contains('DISTRO_FEATURES', "systemd","${systemd_unitdir}/system/busybox-klogd.service ${systemd_unitdir}/system/multi-user.target.wants/busybox-syslog.service",'', d)}"
 
 BUSYBOX_SPLIT_SUID = "0"
 FILES_${PN} += "/usr/bin/env"
-
-do_compile_append_mdm() {
-    sed -i '/modprobe/d' ./busybox.links
-}
 
 do_install_append() {
     # systemd is udev compatible.

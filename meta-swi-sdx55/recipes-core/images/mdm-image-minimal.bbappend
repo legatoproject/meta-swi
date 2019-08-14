@@ -206,7 +206,6 @@ ROOTFS_POSTPROCESS_COMMAND_append = " gen_buildprop;"
 EXTRA_IMAGE_FEATURES += "${@bb.utils.contains('DISTRO_FEATURES','ro-rootfs','read-only-rootfs','',d)}"
 gen_buildprop() {
     mkdir -p ${IMAGE_ROOTFS}/cache
-    echo ${MACHINE} >> ${IMAGE_ROOTFS}/target
 }
 
 require mdm-image-cwe.inc

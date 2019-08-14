@@ -12,6 +12,7 @@ SRC_URI += "file://sysctl.conf"
 SRC_URI += "file://platform.conf"
 SRC_URI += "file://sd-bus-Allow-extra-users-to-communicate.patch"
 SRC_URI += "file://systemd-namespace-mountflags-fix.patch"
+SRC_URI += "file://set-mhi-nodes.rules"
 
 # Custom setup for PACKAGECONFIG to get a slimmer systemd.
 # Removed following:
@@ -97,6 +98,7 @@ do_install_append () {
    install -d ${D}${sysconfdir}/udev/rules.d/
    install -m 0644 ${WORKDIR}/ion.rules -D ${D}${sysconfdir}/udev/rules.d/ion.rules
    install -m 0644 ${WORKDIR}/kgsl.rules -D ${D}${sysconfdir}/udev/rules.d/kgsl.rules
+   install -m 0644 ${WORKDIR}/set-mhi-nodes.rules -D ${D}${sysconfdir}/udev/rules.d/set-mhi-nodes.rules
 
    # Mask dev-ttyS0.device
    ln -sf /dev/null ${D}/etc/systemd/system/dev-ttyS0.device
@@ -105,6 +107,17 @@ do_install_append () {
    if [ "${MACHINE_SUPPORT_BLOCK_DEVICES}" == "false" ]; then
        sed -i '/SUBSYSTEM=="block", TAG+="systemd"/d' ${D}/lib/udev/rules.d/99-systemd.rules
        sed -i '/SUBSYSTEM=="block", ACTION=="add", ENV{DM_UDEV_DISABLE_OTHER_RULES_FLAG}=="1", ENV{SYSTEMD_READY}="0"/d' ${D}/lib/udev/rules.d/99-systemd.rules
+
+       # Remove generator binaries and ensure that we don't rely on generators for mount or service files.
+       rm -rf ${D}/lib/systemd/system-generators/systemd-debug-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-fstab-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-getty-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-gpt-auto-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-hibernate-resume-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-rc-local-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-system-update-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-sysv-generator
+
    fi
 }
 

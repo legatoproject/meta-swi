@@ -16,6 +16,7 @@ mountpoint=$2
 
 if [ -f "$mountpoint" ]; then
     if [ ! -f "$spec" ]; then
+        mkdir -p $(dirname $spec)
         cp -P --preserve=all "$mountpoint" "$spec"
     fi
   mount -o "bind" "$spec" "$mountpoint"
