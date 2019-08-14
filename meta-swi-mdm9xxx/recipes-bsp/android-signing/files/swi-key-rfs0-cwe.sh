@@ -1,8 +1,14 @@
 #!/bin/sh
-
-# make sure the following two folders fit into your environment
-CERTPEM="build_src/tmp/work-shared/android-signing/security/verity.x509.pem"
-DM_CERTPEM="build_src/tmp/work-shared/android-signing/security/testkey.x509.pem"
+###############################################################################
+# This will combine keys in a cwe for deployment on an oem rfs
+#
+# Copyright (c) 2019 Sierra Wireless Inc.
+#
+# Usage example: swi-key-rfs0-cwe.sh verity.x509.pem testkey.x509.pem
+# CERTPEM="build_src/tmp/work-shared/android-signing/security/verity.x509.pem"
+# DM_CERTPEM="build_src/tmp/work-shared/android-signing/security/testkey.x509.pem"
+#
+###############################################################################
 
 if [ "$#" -gt 0 ]; then
   CERTPEM=$1

@@ -94,6 +94,7 @@ DISTRO=poky-swi
 KERNEL_PROVIDER=
 X_OPTS=
 PROD=
+PROD_FAMILY=
 ENABLE_RECOVERY=
 QEMU=false
 ENABLE_IMA=false
@@ -199,6 +200,8 @@ do
     P)
         PROD=$OPTARG
         echo "SWI product: $PROD"
+        PROD_FAMILY=${PROD%%[0-9]*}  #  ar758x -> ar;  wp76 -> wp ; ...
+        [ "$PROD" == "$PROD_FAMILY" ] || echo "SWI product family: $PROD_FAMILY"
         ;;
     Q)
         QEMU=true
@@ -259,6 +262,10 @@ enable_layer()
 
     if command -v readlink >/dev/null; then
         layer_path="$(readlink -f "$layer_path")"
+        if ! [ -e "$layer_path" ] ; then
+            echo "  layer path ${layer_path} doesn't exist, skipping"
+            return
+        fi
     fi
 
     # Avoid duplication
@@ -279,6 +286,15 @@ enable_layer()
             echo "  error inserting layer $layer_name"
             exit 1
         fi
+    fi
+}
+
+enable_layer_if_exists()
+{
+    local layer_path="$2"
+
+    if [ -e "$layer_path" ] ; then
+        enable_layer "$@"
     fi
 }
 
@@ -334,6 +350,32 @@ fi
 # Enable meta-mangoh layer
 if [ $ENABLE_META_MANGOH = true ]; then
     enable_layer "meta-mangoh" "$scriptdir/../meta-mangoh"
+fi
+
+# Add new-style product-specific layer at the top level
+
+if [ -n "$PROD_FAMILY" ]; then
+    enable_layer_if_exists "meta-swi-$PROD_FAMILY" \
+                           "$scriptdir/../meta-swi-$PROD_FAMILY/common"
+
+    enable_layer_if_exists "meta-swi-$PROD" \
+                           "$scriptdir/../meta-swi-$PROD_FAMILY/meta-swi-$PROD"
+
+    if [ $ENABLE_PROPRIETARY = true ]; then
+        enable_layer_if_exists "meta-swi-$PROD_FAMILY-extras" \
+                               "$scriptdir/../meta-swi-$PROD_FAMILY-extras/common"
+
+        enable_layer_if_exists "meta-swi-$PROD-extras" \
+                               "$scriptdir/../meta-swi-$PROD_FAMILY-extras/meta-swi-$PROD-extras"
+
+        if [ $ENABLE_PROPRIETARY_SRC = true ] ; then
+            enable_layer_if_exists "meta-swi-$PROD-src" \
+                                   "$scriptdir/../meta-swi-$PROD_FAMILY-extras/meta-swi-$PROD-src"
+        else
+            enable_layer_if_exists "meta-swi-$PROD-bin" \
+                                   "$scriptdir/../meta-swi-$PROD_FAMILY-extras/meta-swi-$PROD-bin"
+        fi
+    fi
 fi
 
 # Enable proprietary layers: from sources

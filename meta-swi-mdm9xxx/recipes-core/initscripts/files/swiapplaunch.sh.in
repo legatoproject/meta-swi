@@ -38,7 +38,7 @@ case "$1" in
     stop)
         killall -q -HUP restart_swi_apps
         killall -q -HUP swisync
-        killall -q -HUP swiapp
+        killall -q -KILL swiapp
         killall -q -HUP restartNMEA
 @if !mdm9x15
         killall -q -HUP restart_at_uart

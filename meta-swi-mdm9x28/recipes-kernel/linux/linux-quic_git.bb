@@ -1,5 +1,5 @@
-inherit android-signing
 inherit kernel
+inherit android-signing
 
 require recipes-kernel/linux-quic/linux-quic.inc
 
@@ -172,6 +172,7 @@ do_bootimg() {
     image_name_2k=$(echo ${BOOTIMG_NAME_2k} | sed -e s/@{DATETIME}/$date/)
     image_name_4k=$(echo ${BOOTIMG_NAME_4k} | sed -e s/@{DATETIME}/$date/)
     gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_2K}" "${BOOTIMG_NAME_2k}" boot-yocto-mdm9x28.2k.unsigned masterDTB.2k 2048
+
     if [ $? -ne 0 ] ; then exit 1 ; fi
     gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" "${BOOTIMG_NAME_4k}" boot-yocto-mdm9x28.4k.unsigned masterDTB.4k 4096
     if [ $? -ne 0 ] ; then exit 1 ; fi

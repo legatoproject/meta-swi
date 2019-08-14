@@ -1,7 +1,13 @@
 #!/bin/sh
-
-# make sure the following two folders fit into your environment
-CERTPEM="build_src/tmp/work-shared/android-signing/security/verity.x509.pem"
+###############################################################################
+# This will combine keys in a cwe for deployment
+#
+# Copyright (c) 2019 Sierra Wireless Inc.
+#
+# Usage example: swi-key-cwe verity.x509.pem
+# CERTPEM="build_src/tmp/work-shared/android-signing/security/verity.x509.pem"
+#
+###############################################################################
 
 if [ "$#" -gt 0 ]; then
   CERTPEM=$1
@@ -13,7 +19,7 @@ echo "input cert: ${CERTPEM}"
 # HDRCNV="build_src/tmp/sysroots/x86_64-linux/usr/bin/hdrcnv"
 HDRCNV="hdrcnv"
 
-#convert the cert to der format
+# Convert the cert to der format
 openssl x509 -outform der -in ${CERTPEM} -out verity.x509.der
 
 # 8 zeros of control info
