@@ -195,10 +195,10 @@ do_generate_version_file() {
 IMAGE_PREPROCESS_COMMAND += "do_generate_version_file; "
 
 do_copy_swi_version() {
-    cd ${IMGDEPLOYDIR}
+    cd ${DEPLOY_DIR_IMAGE}
     cp ${IMAGE_ROOTFS}/etc/legato/version ${IMAGE_NAME}.build_package.version
-    cp ${IMAGE_ROOTFS}/etc/legato/version build_package.version
     ln -sf ${IMAGE_NAME}.build_package.version ${IMAGE_LINK_NAME}.build_package.version
+    ln -sf ${IMAGE_NAME}.build_package.version build_package.version
 
     TMP_VERSION=$(cat build_package.version | grep "build version" | cut -d' ' -f4)
     TMP_TIME=$(cat build_package.version | grep "Build created" | cut -d' ' -f4 | sed -r 's/-/\//g' | sed -r 's/_/ /g')
