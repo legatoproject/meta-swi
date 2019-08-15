@@ -8,6 +8,7 @@ do_generate_flashimage() {
         blank_flashimage
         echo "Installing ROOTFS into flash image"
         dd if=${IMGDEPLOYDIR}/${IMAGE_LINK_NAME}.${QEMU_ROOTFS_TYPE} of=${IMGDEPLOYDIR}/rawflash conv=notrunc bs=256K
+        cp -f ${IMGDEPLOYDIR}/rawflash ${DEPLOY_DIR_IMAGE}/rawflash
     fi
 }
 
