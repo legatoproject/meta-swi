@@ -1,5 +1,7 @@
 inherit localgit
 
+INSANE_SKIP_${PN} += "already-stripped"
+
 SRCREV = "${AUTOREV}"
 
 SRC_URI = ""
@@ -8,6 +10,7 @@ SRC_DIR = "${LK_REPO}"
 LK_TARGET = "mdm9607"
 
 inherit android-signing
+LK_HASH_MODE = "android_signing"
 
 EXTRA_OEMAKE += "LINUX_KERNEL_DIR='${LINUX_REPO_DIR}'"
 EXTRA_OEMAKE_append = " SIGNED_KERNEL=1"
@@ -20,7 +23,9 @@ do_patch() {
 }
 
 do_install_prepend() {
-    install ${B}/../../appsboot.mbn ${B}/build-${LK_TARGET}/
+    if [ -f "${B}/../../appsboot.mbn" ] ; then
+        install ${B}/../../appsboot.mbn ${B}/build-${LK_TARGET}/
+    fi
     if [ -f "${B}/../../appsboot_rw.mbn" ] ; then
         install ${B}/../../appsboot_rw.mbn ${B}/build-${LK_TARGET}/
     fi
