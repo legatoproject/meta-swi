@@ -16,3 +16,5 @@ python() {
 }
 
 SRC_URI_append_class-native = " file://Retry-device_open-without-direct-io.patch"
+
+PACKAGECONFIG = "gcrypt"

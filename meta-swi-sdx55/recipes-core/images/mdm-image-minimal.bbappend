@@ -21,6 +21,7 @@ IMAGE_INSTALL += "system-core-usb"
 IMAGE_INSTALL += "volatile-binds"
 IMAGE_INSTALL += "strace"
 IMAGE_INSTALL += "reboot-daemon"
+IMAGE_INSTALL += "cryptsetup"
 
 create_ubinize_config() {
     local cfg_path=$1
