@@ -11,9 +11,6 @@
 # Allow traffic on already established connections
 -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 
-# Allow DNS replies
--A INPUT -p udp -m udp --sport 53 -j ACCEPT
-
 # Allow PING replies
 -A INPUT -p icmp -m icmp --icmp-type 0 -j ACCEPT
 
@@ -21,11 +18,6 @@
 -A INPUT -i @ECM_IF@ -p tcp -m tcp --dport 22 -j ACCEPT
 -A INPUT -i @ECM_IF@ -p icmp -m icmp --icmp-type 8 -j ACCEPT
 -A INPUT -i @ECM_IF@ -p udp --dport 67:68 --sport 67:68 -j ACCEPT
-
-# Allow SSH, PING and DHCP over bridge0 interface
--A INPUT -i bridge0 -p tcp -m tcp --dport 22 -j ACCEPT
--A INPUT -i bridge0 -p icmp -m icmp --icmp-type 8 -j ACCEPT
--A INPUT -i bridge0 -p udp --dport 67:68 --sport 67:68 -j ACCEPT
 
 # Create more custom rules here, e.g.:
 # Allow incoming TCP connections for service port <port> on interface <if>
