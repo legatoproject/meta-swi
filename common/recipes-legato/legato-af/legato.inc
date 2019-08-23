@@ -41,8 +41,8 @@ def list_legato_files(d):
                 continue
             if " " in f:
                 continue # Unable to handle files that contain a space
-            # Skip .patch files as they would be handled by the do_patch task
-            if f.endswith(".patch"):
+            # Skip .patch & .diff files as they would be handled by the do_patch task
+            if f.endswith(".patch") or f.endswith(".diff"):
                 continue
             if f.startswith(".config"):
                 continue
