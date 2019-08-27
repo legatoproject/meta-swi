@@ -42,9 +42,9 @@ fakeroot do_filter_rootfs () {
 
     # Populate rootfs with some devices
     [ -e "dev/console" ] || mknod dev/console c 5 1
-    mknod dev/null c 1 3
-    mknod dev/urandom c 1 9
-    mknod dev/zero c 1 5
+    [ -e "dev/null" ] || mknod dev/null c 1 3
+    [ -e "dev/urandom" ] || mknod dev/urandom c 1 9
+    [ -e "dev/zero" ] || mknod dev/zero c 1 5
 
     # remove things not handled by garbage collection below.
     for item in ./etc/busybox.links.suid \
