@@ -4,6 +4,7 @@ SRC_URI += "file://usb/target \
             file://usb/compositions/90FE \
             file://usb/compositions/90DB \
             file://usb/usb.service \
+            file://usb/start_usb \
             "
 
 # Customize gadget composition for Sierra Wireless design
@@ -20,4 +21,9 @@ do_install_append() {
    install -m 0644 ${WORKDIR}/usb/usb.service -D ${D}${systemd_unitdir}/system/usb.service
    ln -sf ${systemd_unitdir}/system/usb.service ${D}${systemd_unitdir}/system/multi-user.target.wants/usb.service
    ln -sf ${systemd_unitdir}/system/usb.service ${D}${systemd_unitdir}/system/ffbm.target.wants/usb.service
+
+   if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
+       rm -f ${D}${sysconfdir}/initscripts/usb
+       install -m 0755 ${WORKDIR}/usb/start_usb -D ${D}${sysconfdir}/initscripts/usb
+   fi
 }
