@@ -1,6 +1,13 @@
 # Set number of threads
 NUM_THREADS ?= 9
 
+# Check for accidental recursion: user running "make" again after stepping into
+# bitbake environment with make dev.
+
+ifneq ($(BBPATH)$(BB_ENV_EXTRAWHITE),)
+$(error "Detected Makefile being re-invoked from within bitbake environment!")
+endif
+
 DEFAULT_MDM_BUILD := bin
 
 # Yocto versions

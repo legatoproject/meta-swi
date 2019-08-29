@@ -1,6 +1,13 @@
 # Set number of threads
 NUM_THREADS ?= 9
 
+# Check for accidental recursion: user running "make" again after stepping into
+# bitbake environment with make dev.
+
+ifneq ($(BBPATH)$(BB_ENV_EXTRAWHITE),)
+$(error "Detected Makefile being re-invoked from within bitbake environment!")
+endif
+
 # Set workspace directory
 DEFAULT_MDM_BUILD := bin
 APPS_DIR ?= $(firstword $(wildcard $(PWD)/mdm*[0-9]/apps_proc))
