@@ -142,7 +142,7 @@ prepare_ubi_ps() {
 
         # Now Dm-verity only work with squashfs
         if [ "${DM_VERITY_ENCRYPT}" = "on" -a "${rootfs_type}" = "squashfs" ]; then
-            dm_hash_path="${image_path}.hash"
+            dm_hash_path="${DEPLOY_DIR_IMAGE}/rootfs.hash"
             dm_hash_filename="${dm_hash_path}.txt"
             dm_root_hash_path="${DEPLOY_DIR_IMAGE}/rootfs.rhash"
 
