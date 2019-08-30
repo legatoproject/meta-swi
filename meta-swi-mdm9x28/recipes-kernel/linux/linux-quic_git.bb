@@ -46,6 +46,9 @@ do_unpack_append() {
     os.system("cp -drl %s/kernel/. %s/." % (wrkdir, srcdir))
 }
 
+# Use this to include the IMA kernel key into the trusted keyring
+IMA_INCLUDE_KERNEL_KEY ?= "true"
+
 do_configure_prepend() {
     cp ${S}/arch/arm/configs/${KBUILD_DEFCONFIG} ${WORKDIR}/defconfig
 
