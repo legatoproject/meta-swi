@@ -47,6 +47,18 @@ SDK_POST_INSTALL_COMMAND = \
          exit 1; \
        fi"
 
+# copy of Poky's definition, with fix_symlinks inserted
+SDK_POSTPROCESS_COMMAND = \
+" create_sdk_files; check_sdk_sysroots; fix_symlinks; tar_sdk; ${SDK_PACKAGING_COMMAND} "
+
+fakeroot fix_symlinks() {
+    # Fix bad symlinks
+    for root in ${SDK_OUTPUT}/${SDKPATH}/sysroots/* ; do
+        printf "Fixing bad absolute symlinks in %s\n" "$root"
+        ${META_SWI_SCRIPTS}/fixlink.py "$root" "${SDKPATHNATIVE}"
+    done
+}
+
 repack_tarball() {
     TARBALL_XZ="${SDKDEPLOYDIR}/${TOOLCHAIN_OUTPUTNAME}.tar.xz"
 
