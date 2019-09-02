@@ -2,8 +2,14 @@ This package will provide necessary image signing tool
 based on AndroidVerifiedBootSignature
 
 1. Default dev keys:
-- security/verity.pk8 -- private key used to sign LK, kernel and other images
+- security/verity.pk8 -- private key used to sign LK, kernel images
 - security/verity.x509.pem -- certificate including public key
+
+- security/testkey.pk8 -- private key used to sign RootFS
+- security/testkey.x509.pem -- certificate including public key
+
+- security/media.pk8 -- private key used to sign LegatoFS
+- security/media.x509.pem -- certificate including public key
 
 2. To generate a new set of key:
 - make sure openssl is installed on your Linux host.
@@ -19,3 +25,19 @@ after the CWE file is loaded into the device. Once it is loaded, it cannot be
 removed or replaced.
 - To re-generate the CWE file after a new key pair is generated, please run
   the script swi-key-cwe.sh
+
+4. Key CWE file to be injected to device: RFS0-keys.cwe. RootFS signing will be enabled
+after the CWE file is loaded into the device. Once it is loaded, it cannot be
+removed or replaced.
+- To re-generate the CWE file after a new key pair is generated, please run
+  the script swi-key-cwe.sh
+  e.g.
+    ./swi-key-cwe.sh cert.pem RFS0
+
+5. Key CWE file to be injected to device: LGT0-keys.cwe. LegatoFS signing will be enabled
+after the CWE file is loaded into the device. Once it is loaded, it cannot be
+removed or replaced.
+- To re-generate the CWE file after a new key pair is generated, please run
+  the script swi-key-cwe.sh
+  e.g.
+    ./swi-key-cwe.sh cert.pem LGT0
