@@ -6,4 +6,6 @@ SRC_URI += " \
 
 do_install_append() {
     install -m 0755 ${WORKDIR}/rs485.py -D ${D}/usr/bin/rs485.py
+
+    echo "/usr/sbin/loginNagger" >> ${D}${sysconfdir}/shells
 }

@@ -1,6 +1,8 @@
 #!/bin/sh
 
+DONT_NAG_FILE=/mnt/flash/config/system/etc/noLoginNag
 TOOLS_PATH=/legato/systems/current/bin
+CALLED_AS=$0
 
 PASSWORD_SET=false
 
@@ -11,6 +13,17 @@ CheckRet()
 
     if [ $RETVAL -ne 0 ]; then
         exit $RETVAL
+    fi
+}
+
+
+DontNag()
+{
+    # if the nagger is run as the login shell, we don't need to create the
+    # noLoginNag file
+    if [[ "$CALLED_AS" != "/usr/sbin/loginNagger" ]]; then
+        mkdir -p $( dirname $DONT_NAG_FILE ) &&
+        touch $DONT_NAG_FILE
     fi
 }
 
@@ -116,11 +129,11 @@ LocalAccess()
                 [yY] | "" )
                     DisableConsole
                     if [ $? -eq 0 ]; then
-                        break
+                        DontNag; break
                     fi
                     break
                     ;;
-                [nN] ) break;;
+                [nN] ) DontNag; break;;
 
                 * );;
             esac
@@ -139,16 +152,16 @@ LocalAccess()
                 [1] )
                    DisableConsole
                    if [ $? -eq 0 ]; then
-                       break
+                       DontNag; break
                    fi
                    ;;
                 [2] )
                    DisablePasswordLogin
                    if [ $? -eq 0 ]; then
-                       break
+                       DontNag; break
                    fi
                    ;;
-                [3] ) EnableConsolePassword; break;;
+                [3] ) EnableConsolePassword; DontNag; break;;
 
                 * );;
             esac
@@ -240,38 +253,41 @@ SelectCredMethod()
 }
 
 
-
-if [ ! -f ~/.ssh/authorized_keys ]; then
-    # SSH credentials have not been set, ask the user to setup credentials.
-    SelectCredMethod
-else
-    nopass=`grep DROPBEAR_EXTRA_ARGS /etc/default/dropbear | grep "\-s" | grep "\-g"`
-    if [ -z $nopass ]; then
-        echo "Apparently ssh keys have been set but password-based authentication via ssh"
-        echo "is still enabled. It is recommended to disable password-based authentication"
-        echo "when using ssh keys."
-        while true; do
-            echo "Do you want to disable password-based authentication via ssh [Y/n]?"
-            read -r choice
-            case $choice in
-                [Nn] ) break;;
-                [Yy] | "" )
-                    DisableSshPasswords
-                    if [ $? -eq 0 ]; then
-                        break
-                    fi
-                    ;;
-
-                * ) ;;
-            esac
-        done
+# main execution starts here
+if [ ! -f $DONT_NAG_FILE ]; then
+    if [ ! -f ~/.ssh/authorized_keys ]; then
+        # SSH credentials have not been set, ask the user to setup credentials.
+        SelectCredMethod
+    else
+        nopass=`grep DROPBEAR_EXTRA_ARGS /etc/default/dropbear | grep "\-s" | grep "\-g"`
+        if [ -z $nopass ]; then
+            echo "Apparently ssh keys have been set but password-based authentication via ssh"
+            echo "is still enabled. It is recommended to disable password-based authentication"
+            echo "when using ssh keys."
+            while true; do
+                echo "Do you want to disable password-based authentication via ssh [Y/n]?"
+                read -r choice
+                case $choice in
+                    [Nn] ) break;;
+                    [Yy] | "" )
+                        DisableSshPasswords
+                        if [ $? -eq 0 ]; then
+                            break
+                        fi
+                        ;;
+                    * ) ;;
+                esac
+            done
+        fi
+        # SSH credentials already set, ask the user how to handle local access.
+        LocalAccess
     fi
-    # SSH credentials already set, ask the user how to handle local access.
-    LocalAccess
 fi
 
-# Sets /bin/sh as the default shell.
-chsh -s /bin/sh
+# if the nagger is invoked as the default login shell, we need to change login
+# shell then start a bash login session
+if [[ "$CALLED_AS" = "/usr/sbin/loginNagger" ]]; then
+    chsh -s /bin/sh
 
-/bin/sh --login "$@"
-
+    /bin/sh --login "$@"
+fi
