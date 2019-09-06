@@ -49,8 +49,6 @@ USBCOMPOSITION_sdxpoorwills = "90DB"
 USBCOMPOSITION_sdxprairie = "90DB"
 USBCOMPOSITION_sdmsteppe = "901D"
 
-QPERM_SERVICE = "${S}/logd/logd.service ${S}/leproperties/leprop.service"
-
 do_install_append() {
    install -m 0755 ${S}/adb/launch_adbd -D ${D}${sysconfdir}/launch_adbd
    install -b -m 0644 /dev/null ${D}${sysconfdir}/adb_devid

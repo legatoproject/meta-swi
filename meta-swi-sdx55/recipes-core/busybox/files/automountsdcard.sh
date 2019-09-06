@@ -4,6 +4,7 @@ destdir=/mnt/sdcard/
 
 umount_partition()
 {
+        check_umount_point $1
         if grep -qs "^/dev/$1 " /proc/mounts ; then
                 umount -lf "${destdir}";
         fi
@@ -11,10 +12,11 @@ umount_partition()
 
 mount_partition()
 {
+        check_mount_point $1
         if [ ! -d "${destdir}" ]; then
             mkdir "${destdir}"
         fi
-        if ! mount -t auto "/dev/$1" "${destdir}" -o nodev,noexec,nosuid; then
+        if ! mount -t auto "/dev/$1" "${destdir}" -o context=system_u:object_r:sdcard_t:s0,nodev,noexec,nosuid; then
                 # failed to mount
                 exit 1
         fi
@@ -42,6 +44,50 @@ create_symlink()
                 target_dev=/dev/$1
                 ln -s $target_dev $partition_name
 }
+
+check_mount_point()
+{
+    case `cat /sys/devices/soc0/machine` in
+        *845* )
+    ret_val=`echo $1 | grep mmcblk | wc -l`
+    if [ $ret_val -eq 0 ];then
+        folder_list=`grep "/mnt/usb*" /proc/mounts | awk '{print $2}'`
+
+        if [ "$folder_list" ];then
+            for i in 0 1 2
+            do
+                destdir=/mnt/usbstorage$i
+                for dir in $folder_list
+                do
+                    if [ "$dir" != "$destdir" ];then
+                        break 2
+                    fi
+                done
+            done
+        else
+            destdir=/mnt/usbstorage0
+        fi
+    fi
+            ;;
+        * )
+            ;;
+    esac
+}
+
+check_umount_point()
+{
+    case `cat /sys/devices/soc0/machine` in
+         *845* )
+    ret_val=`echo $1 | grep mmcblk | wc -l`
+    if [ $ret_val -eq 0 ];then
+        destdir=`grep $1 /proc/mounts | awk '{print $2}'`
+    fi
+            ;;
+        * )
+            ;;
+    esac
+}
+
 
 case "${ACTION}" in
 add|"")

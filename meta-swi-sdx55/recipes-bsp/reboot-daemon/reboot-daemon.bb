@@ -14,6 +14,7 @@ S = "${WORKDIR}/reboot-daemon"
 
 EXTRA_OEMAKE_append = " CROSS=${HOST_PREFIX}"
 FILES_${PN} += "${systemd_unitdir}/system/"
+EXTRA_OECONF += "${@bb.utils.contains('DISTRO_FEATURES', 'systemd', '--with-systemd', '', d)}"
 
 do_install() {
     install -m 0755 ${S}/reboot-daemon -D ${D}/sbin/reboot-daemon

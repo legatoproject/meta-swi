@@ -27,5 +27,5 @@ do_compile_append() {
 
 do_install_append() {
     #umount-copybind from bsp is unusable
-    rm -f umount-copybind ${D}${base_sbindir}/umount-copybind
+    rm -f ${D}${base_sbindir}/umount-copybind
 }

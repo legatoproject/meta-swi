@@ -68,7 +68,7 @@ CFLAGS_append = " -fPIC"
 # So temporarily revert to default optimizations for systemd.
 SELECTED_OPTIMIZATION = "-O2 -fexpensive-optimizations -frename-registers -fomit-frame-pointer -ftree-vectorize"
 
-MACHINE_SUPPORT_BLOCK_DEVICES = "${@bb.utils.contains_any('BASEMACHINE', 'qcs403-som2 sdxprairie', 'false', 'true', d)}"
+MACHINE_SUPPORT_BLOCK_DEVICES = "${@bb.utils.contains('DISTRO_FEATURES','nand-boot', 'false', 'true', d)}"
 
 do_install_append () {
    install -d ${D}/etc/systemd/system/
@@ -118,6 +118,11 @@ do_install_append () {
        rm -rf ${D}/lib/systemd/system-generators/systemd-system-update-generator
        rm -rf ${D}/lib/systemd/system-generators/systemd-sysv-generator
 
+       # Start systemd-udev-trigger.service after sysinit.target
+       if ${@bb.utils.contains_any('DISTRO_NAME','mdm auto', 'true', 'false', d)}; then
+           sed -i '/Before=sysinit.target/a After=sysinit.target init_sys_mss.service' ${D}${systemd_unitdir}/system/systemd-udev-trigger.service
+           sed -i '/Before=sysinit.target/d' ${D}${systemd_unitdir}/system/systemd-udev-trigger.service
+       fi
    fi
 }
 
