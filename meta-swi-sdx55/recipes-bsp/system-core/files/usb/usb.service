@@ -28,9 +28,9 @@
 [Unit]
 SourcePath=/etc/initscripts/usb
 Description=usb Service
-After=mount_swirw.service start_stop_ipa_fws.service
-Requires=mount_swirw.service
-RequiresMountsFor=/systemrw
+After=tmp.mount start_stop_ipa_fws.service tmp-systemrw-adb_devid.service tmp-systemrw-boot_hsusb_comp.service
+Requires=tmp.mount
+RequiresMountsFor=/tmp/systemrw
 DefaultDependencies=no
 
 [Service]

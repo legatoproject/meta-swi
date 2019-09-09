@@ -1,7 +1,7 @@
 [Unit]
 Description=Bind mount volatile @where@
 DefaultDependencies=false
-After=mount_swirw.service
+After=tmp.mount
 Before=local-fs.target
 RequiresMountsFor=@whatparent@ @whereparent@
 ConditionPathIsReadWrite=@whatparent@
