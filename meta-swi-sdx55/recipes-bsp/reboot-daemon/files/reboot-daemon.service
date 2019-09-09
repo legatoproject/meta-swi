@@ -4,7 +4,11 @@ Description= reboot-daemon service
 
 [Service]
 Restart=always
+ExecStartPre=mkfifo /dev/rebooterdev
+ExecStartPre=chown root:root /dev/rebooterdev
+ExecStartPre=chmod 0620 /dev/rebooterdev
 ExecStart=/sbin/reboot-daemon
+ExecStopPost=rm -rf /dev/rebooterdev
 
 [Install]
 WantedBy=multi-user.target
