@@ -6,6 +6,8 @@ DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"
 
 inherit legato
+inherit ubi-image
+inherit android-signing
 
 gen_version() {
     version_file="${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET/system/version"
@@ -52,6 +54,21 @@ generate_images_mklegatoimg() {
     for file in $(ls -1 | grep -e "legato[z]*.cwe"); do
         copy_image $file
     done
+
+    # sign the image with single cert
+    cp rhash.bin rhash-unsigned.bin
+    android_signature_add /legato rhash-unsigned.bin rhash.bin media
+
+    # ubi
+    create_ubi_image '4k' legatoimg/ubi/ubinize.cfg legato-signed.ubi legato-signed-link.ubi
+
+    # cwe
+    hdrcnv legato-signed.ubi -OH user.hdr -IT USER -PT 9X28 -V "Legato" -B 00000001
+    cat user.hdr legato-signed.ubi > legato-signed.user
+
+    hdrcnv legato-signed.user -OH appl.hdr -IT APPL -PT 9X28 -V "Legato" -B 00000001
+    cat appl.hdr legato-signed.user > legato-signed.cwe
+    cp legato-signed.cwe ${DEPLOY_DIR_IMAGE}/legato-image-signed.$LEGATO_TARGET.cwe
 }
 
 compile_target() {
