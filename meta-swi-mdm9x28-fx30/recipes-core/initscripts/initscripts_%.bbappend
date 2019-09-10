@@ -15,5 +15,10 @@ do_install_append() {
     # removed
     if [ -h ${D}${sysconfdir}/profile.d/loginNagger ]; then
         rm ${D}${sysconfdir}/profile.d/loginNagger
+
+        # Also remove the profile.d directory if empty
+        if [ $(ls -1 "${D}${sysconfdir}/profile.d/" | wc -l) -eq 0 ]; then
+            rm -r "${D}${sysconfdir}/profile.d/"
+        fi
     fi
 }

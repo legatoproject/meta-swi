@@ -124,7 +124,9 @@ do_install () {
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/hostname.sh   ${D}${sysconfdir}/init.d
-    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
+    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && \
+       [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && \
+       [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
         install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
         install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
     fi
@@ -162,7 +164,7 @@ do_install () {
     ln -s ${sbindir}/loginNagger ${D}${sysconfdir}/profile.d/loginNagger
 
     case "${MACHINE}" in
-    swi-mdm9x28 | swi-mdm9x28-qemu)
+    swi-mdm9x28 | swi-mdm9x28-qemu | swi-mdm9x28-fx30*)
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
         ;;
     swi-mdm9x28-ar758x | swi-mdm9x28-ar758x-qemu | swi-mdm9x40-ar759x)
@@ -183,7 +185,9 @@ do_install () {
     update-rc.d -r ${D} urandom start 08 S .
     update-rc.d -r ${D} mountall.sh start 07 S .
     update-rc.d -r ${D} bootmisc.sh start 55 S .
-    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
+    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && \
+       [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && \
+       [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
         update-rc.d -r ${D} bringup_ecm.sh start 95 S .
     fi
     if [ "${TARGET_ARCH}" = "arm" ]; then
