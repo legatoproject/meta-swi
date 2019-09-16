@@ -53,6 +53,10 @@ RDEPENDS_${PN} += "rng-tools"
 RDEPENDS_${PN} += "libgcc"
 RDEPENDS_${PN} += "libstdc++"
 
+# IMA/EVM support tools
+RDEPENDS_${PN} += "ima-evm-utils"
+RDEPENDS_${PN} += "keyutils"
+
 # Transparently update ld cache.
 RDEPENDS_${PN} += "update-ld-cache"
 
