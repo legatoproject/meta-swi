@@ -127,7 +127,7 @@ do_install () {
     if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && \
        [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && \
        [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
-        install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
+        install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/mdev
         install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
     fi
     install -m 0755    ${WORKDIR}/mountall.sh   ${D}${sysconfdir}/init.d
@@ -183,11 +183,6 @@ do_install () {
     update-rc.d -r ${D} urandom start 08 S .
     update-rc.d -r ${D} mountall.sh start 07 S .
     update-rc.d -r ${D} bootmisc.sh start 55 S .
-    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && \
-       [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && \
-       [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
-        update-rc.d -r ${D} bringup_ecm.sh start 95 S .
-    fi
     if [ "${TARGET_ARCH}" = "arm" ]; then
         update-rc.d -r ${D} alignment.sh start 06 S .
     fi
@@ -224,7 +219,7 @@ do_install_swi-mdm9x28-ar758x-rcy() {
     install -m 0755    ${WORKDIR}/find-touchscreen.sh   ${D}${sysconfdir}/mdev/find-touchscreen.sh
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
-    install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
+    install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/mdev
     install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/mountall.sh   ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/single        ${D}${sysconfdir}/init.d
@@ -262,7 +257,7 @@ do_install_swi-mdm9x40-ar759x-rcy() {
     install -m 0755    ${WORKDIR}/find-touchscreen.sh   ${D}${sysconfdir}/mdev/find-touchscreen.sh
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
-    install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
+    install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/mdev
     install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/mountall.sh   ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/single        ${D}${sysconfdir}/init.d

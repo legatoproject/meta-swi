@@ -59,20 +59,15 @@ case "$1" in
 start)
 	echo -n "Configuring network interfaces... "
 	sysctl -e -p /etc/sysctl.conf >/dev/null 2>&1
-	# ECM name is platform-specific - use @ECM_IF@ macro in rules
-	ecm_if=$(ls -1 /sys/class/net/ | egrep '(e[ec]m|usb)0' || true)
-	if [ -z "$ecm_if" ] ; then
-		cmd=/@ECM_IF@/d
-	else
-		cmd=s/@ECM_IF@/$ecm_if/
-	fi
+
 	if [ -x /usr/sbin/iptables-restore ] && [ -f /etc/iptables/rules.v4 ] ; then
-		sed -e $cmd /etc/iptables/rules.v4 | /usr/sbin/iptables-restore
+		/usr/sbin/iptables-restore < /etc/iptables/rules.v4
 	fi
 	if [ -x /usr/sbin/ip6tables-restore ] && [ -f /etc/iptables/rules.v6 ] ; then
-		sed -e $cmd /etc/iptables/rules.v6 | /usr/sbin/ip6tables-restore
+		/usr/sbin/ip6tables-restore < /etc/iptables/rules.v6
 	fi
 	ifup -a &
+
 	echo "done."
 	;;
 
