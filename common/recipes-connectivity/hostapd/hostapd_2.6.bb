@@ -5,7 +5,7 @@ LIC_FILES_CHKSUM = "file://${B}/README;md5=8aa4e8c78b59b12016c4cb2d0a8db350"
 DEPENDS = "libnl openssl"
 SUMMARY = "User space daemon for extended IEEE 802.11 management"
 
-inherit update-rc.d systemd
+inherit update-rc.d systemd pkgconfig
 INITSCRIPT_NAME = "hostapd"
 
 SYSTEMD_SERVICE_${PN} = "hostapd.service"
