@@ -25,8 +25,11 @@ INITSCRIPT_PACKAGES = "${PN}-adbd ${PN}-usb"
 
 INITSCRIPT_NAME_${PN}-adbd = "adbd"
 INITSCRIPT_PARAMS_${PN}-adbd = "start 96 S ."
+
+# Start USB after networking, so hotplug-driven ECM bringup can rely on network
+# config (like iptables) being in place.
 INITSCRIPT_NAME_${PN}-usb = "usb"
-INITSCRIPT_PARAMS_${PN}-usb = "start 09 S ."
+INITSCRIPT_PARAMS_${PN}-usb = "start 21 S ."
 
 inherit update-rc.d
 

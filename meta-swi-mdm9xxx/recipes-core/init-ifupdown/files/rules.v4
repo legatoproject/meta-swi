@@ -14,11 +14,6 @@
 # Allow PING replies
 -A INPUT -p icmp -m icmp --icmp-type 0 -j ACCEPT
 
-# Allow SSH, PING and DHCP over ECM interface, however it was named
--A INPUT -i @ECM_IF@ -p tcp -m tcp --dport 22 -j ACCEPT
--A INPUT -i @ECM_IF@ -p icmp -m icmp --icmp-type 8 -j ACCEPT
--A INPUT -i @ECM_IF@ -p udp --dport 67:68 --sport 67:68 -j ACCEPT
-
 # Create more custom rules here, e.g.:
 # Allow incoming TCP connections for service port <port> on interface <if>
 # -A INPUT -i <if> -p tcp -m tcp --dport <port> -j ACCEPT
