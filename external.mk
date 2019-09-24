@@ -4,7 +4,7 @@ NUM_THREADS ?= 9
 # Check for accidental recursion: user running "make" again after stepping into
 # bitbake environment with make dev.
 
-ifneq ($(BBPATH)$(BB_ENV_EXTRAWHITE),)
+ifneq ($(BBPATH)$(BUILDDIR),)
 $(error "Detected Makefile being re-invoked from within bitbake environment!")
 endif
 
