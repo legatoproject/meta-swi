@@ -26,44 +26,73 @@ ALL_ARGS="$*"
 SWI_OK=0
 SWI_ERR=1
 
+ENABLE_IMA=false
+ENABLE_LEGATO=false
+ENABLE_EXT_SWI_IMG=false
+DISTRO=poky-swi
+
 usage()
 {
     cat << EOF
 Usage:
 $0 <options ...>
 
-  Global:
-    -p <poky_dir>
-    -o <meta-openembedded dir>
-    -l <SWI meta layer>
-    -x <linux repo directory>
-    -m <SWI machine type>
-    -b <build_dir>
-    -t <number of bitbake tasks>
-    -j <number of make threads>
-    -r (enable preempt-rt kernel <Test-only. Not supported>)
-    -g (enable Legato setup and build Legato images)
-    -a (pass extra options for recipes, key=value separated by ::)
-    -K <kernel provider>
-    -e (enable build recovery image or normal image)
-    -i <ima-config-file> (enable IMA build, pass full path to ima.conf as a parameter)
-    -B Pass flags directly to bitbake (e.g. -vvv for verbose build)
-    -E Enable extended SWI image (add additional developer packages)
-    -D Build debug image (with additional developer packages)
+  Option syntax:
 
-  Machine swi-mdmXXXX/swi-sdxXX:
-    -q (enable Qualcomm Proprietary bin)
-    -s (enable Qualcomm Proprietary source)
-    -w <Qualcomm source directory (apps_proc)>
-    -v <version of Qualcomm sources>
-    -F <path to ar_yocto-cwe.tar.bz2>
-    -M (enable mangoh meta layer)
-    -Q (building for Qemu)
+    Options have a name represented here as <ident>, which begins
+    with a letter, followed by any mixture of letters, digits and dashes,
+    including empty:
+
+      <ident> := { <letter> | - } { <letter> | <digit> | - }*
+
+    Option syntax is then one of these forms:
+
+      --<ident>         Boolean true.
+      --no-<ident>      Boolean false.
+      --<ident>=<val>   Textual value.
+      --<ident>=        Empty value
+      <ident>=<val>     Shorthand for --<ident>=<val>
+      <ident>=          Shorthand for --<ident>=
+
+  Global options:
+
+    poky-dir
+    meta-oe-dir         Path to meta-openembedded directory.
+    meta-swi-dir        Path to meta-swi directory.
+    linux-repo-dir
+    distro              Defaults to poky-swi.
+    machine-type        Defaults to mdm9x28; some types override distro.
+    product
+    build-dir
+    bitbake-tasks
+    make-threads
+    enable-preempt-rt   Enable PREEMPT_RT kernel (test only--not supported)
+    enable-legato       Enable Legato setup and build Legato images
+    recipe-args         Extra args passed ot recipes, key=value separted by ::
+    kernel-provider
+    enable-recovery-image       Enable recovery image
+    enable-extended-image       Enable extended image (additional packages)
+    enable-debug-image          Enable debug image (additional packages)
+    ima-config-file     Path to ima.conf; enables IMA build if specified
+    bitbake-flags       Flags to pass through to bitbake
+    enable-icecc
+    enable-shared-sstate
+
+  Machine options related to swi-mdmXXXX/swi-sdXX:
+
+    enable-prop-bin     Enable Qualcomm Proprietary bin
+    enable-prop-src     Enable Qualcomm Proprietary src
+    apps-proc-dir       Qualcomm source directory ("apps_proc")
+    firmware-version    Version of Qualcomm sources
+    ar-yocto-path       Path to ar_yocto-cwe.tar.bz2 file
+    enable-mangoh       Enable mangOH meta layer
+    enable-qemu         Enable building for Qemu.
 
   Task control:
-    -c (enable command line mode)
-    -d (build the full debug image)
-    -k (build the toolchain)
+
+    cmdline-mode        Do not build; go to command-line mode.
+    debug-image         Build full debug image.
+    build-toolchain     Build the toolchain and quit.
 EOF
 }
 
@@ -77,164 +106,206 @@ if [ $# = 0 ]; then
     usage_and_exit 1
 fi
 
-# Default options
-BD="$scriptdir/../build"
-MACH=swi-mdm9x28
-DEBUG=false
-TASKS=4
-THREADS=4
-CMD_LINE=false
-TOOLCHAIN=false
-ENABLE_PROPRIETARY=false
-ENABLE_PROPRIETARY_SRC=false
-ENABLE_ICECC=false
-ENABLE_EXT_SWI_IMG=false
-ENABLE_LEGATO=false
-ENABLE_META_MANGOH=false
-ENABLE_DEBUG_IMG=false
-DISTRO=poky-swi
-KERNEL_PROVIDER=
-X_OPTS=
-PROD=
-PROD_FAMILY=
-ENABLE_RECOVERY=
-QEMU=false
-ENABLE_IMA=false
-IMA_CONFIG=""
-BB_FLAGS=""
-SHARED_SSTATE=false
-ENABLE_FX30=false
+poky_dir=
+meta_oe_dir=
+meta_swi_dir=
+linux_repo_dir=
+distro=poky-swi
+machine_type=swi-mdm9x28
+product=
+build_dir="$scriptdir/../build"
+bitbake_tasks=4
+make_threads=4
+enable_preempt_rt=
+enable_legato=
+recipe_args=
+recipe_args_cumulative=y
+kernel_provider=
+enable_recovery_image=
+enable_extended_image=
+enable_debug_image=
+ima_config_file=
+bitbake_flags=
+enable_icecc=
+enable_shared_sstate=
 
+enable_prop_bin=
+enable_prop_src=
+apps_proc_dir=
+firmware_version=
+ar_yocto_path=
+enable_mangoh=
+enable_qemu=
 
-while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEDQGS" arg
-do
-    case $arg in
-    p)
-        WS=$(readlink -f $OPTARG)
-        echo "Poky dir: $WS"
-        ;;
-    o)
-        OE=$(readlink -f $OPTARG)
-        echo "OE meta: $OE"
-        ;;
-    b)
-        BD=$(readlink -f $OPTARG)
-        echo "Build dir: $BD"
-        ;;
-    l)
-        SWI=$(readlink -f $OPTARG)
-        echo "SWI meta dir: $SWI"
-        ;;
-    x)
-        LINUXDIR=$(readlink -f $OPTARG)
-        echo "Linux repo dir: $LINUXDIR"
-        ;;
-    m)
-        MACH=$OPTARG
-        echo "SWI machine: $MACH"
-        ;;
-    d)
-        DEBUG=true
-        echo "Enable more packages for debugging"
-        ;;
-    t)
-        TASKS=$OPTARG
-        echo "Number of bitbake tasks $TASKS"
-        ;;
-    j)
-        THREADS=$OPTARG
-        echo "Number of make threads $THREADS"
-        ;;
-    a)
-        X_OPTS="$X_OPTS $OPTARG"
-        echo "Extra options added -  $OPTARG"
-        ;;
-    K)
-        KERNEL_PROVIDER="$OPTARG"
-        echo "Kernel provider: $KERNEL_PROVIDER"
-        ;;
-    e)
-        ENABLE_RECOVERY="true"
-        echo "Enable recovery image: $ENABLE_RECOVERY"
-        ;;
-    c)
-        CMD_LINE=true
-        echo "Enable command line mode"
-        ;;
-    q)
-        ENABLE_PROPRIETARY=true
-        echo "Enable Qualcomm Proprietary bin"
-        ;;
-    s)
-        ENABLE_PROPRIETARY_SRC=true
-        echo "Enable Qualcomm Proprietary source - overrides binary option"
-        ;;
-    w)
-        WK=$(readlink -f $OPTARG)
-        [ -n "$WK" ] || echo "warning: -w $OPTARG (for WK variable) doesn't resolve"
-        ;;
-    v)
-        FW_VERSION=$OPTARG
-        echo "FW Version: $FW_VERSION"
-        ;;
-    g)
-        ENABLE_LEGATO="true"
-        echo "With Legato"
-        ;;
-    k)
-        TOOLCHAIN=true
-        echo "Build toolchain"
-        ;;
-    h)
-         ENABLE_ICECC=true
-        echo "Build using icecc"
-        ;;
-    E)
-        ENABLE_EXT_SWI_IMG=true
-        echo "Sierra Wireless extended packages are enabled"
-        ;;
-    D)
-        ENABLE_DEBUG_IMG=true
-        echo "Build and generate debug image"
-        ;;
+cmdline_mode=
+debug_image=
+build_toolchain=
 
-    F)
-        FIRMWARE_PATH=$(readlink -f $OPTARG)
-        echo "Use FIRWARE_PATH=${FIRMWARE_PATH} to fetch ar_yocto-cwe.tar.bz2 binary"
-        ;;
-    M)
-        ENABLE_META_MANGOH=true
-        echo "With mangOH"
-        ;;
-    P)
-        PROD=$OPTARG
-        echo "SWI product: $PROD"
-        PROD_FAMILY=${PROD%%[0-9]*}  #  ar758x -> ar;  wp76 -> wp ; ...
-        [ "$PROD" == "$PROD_FAMILY" ] || echo "SWI product family: $PROD_FAMILY"
-        ;;
-    Q)
-        QEMU=true
-        echo "Building for QEMU"
-        ;;
-    S)
-        SHARED_SSTATE=true
-        echo "Enable shared sstate"
-        ;;
-    i)
-        ENABLE_IMA=true
-        IMA_CONFIG=$OPTARG
-        echo "IMA is required."
-        ;;
-    B)
-        BB_FLAGS=$OPTARG
-        echo "bitbake flags: [$BB_FLAGS]"
-        ;;
-    ?)
-        echo "$0: invalid option -$OPTARG" 1>&2
-        usage_and_exit 1
-        ;;
-    esac
+while [ $# -gt 0 ] ; do
+  case $1 in
+  --no-* )
+    var=${1#--no?}
+    val=
+    ;;
+  --*=* )
+    var=${1%%=*}
+    var=${var#--}
+    val=${1#*=}
+    ;;
+  --*= )
+    var=${1%%=*}
+    var=${var#--}
+    val=
+    ;; --* )
+    var=${1#--}
+    val=y
+    ;;
+  *=* )
+    var=${1%%=*}
+    val=${1#*=}
+    ;;
+  *= )
+    var=${1%%=*}
+    val=
+    ;;
+  * )
+    printf "$0: '$1' doesn't look like a configuration variable assignment\n"
+    printf "$0: use --help to get help\n"
+    exit 1
+  esac
+
+  if ! printf "%s" "$var" | grep -q -E '^[A-Za-z][A-Za-z0-9-]*$' ; then
+    printf "$0: '%s' isn't a valid configuration variable name\n" "$var"
+    exit 1
+  fi
+
+  var=$(echo "$var" | tr - _)
+
+  eval "var_exists=\${$var+y}"
+
+  if [ "$var_exists" != y ] ; then
+    printf "$0: nonexistent option: '%s'\n" "$var"
+    exit 1
+  fi
+
+  eval "var_cumulative=\${${var}_cumulative-}"
+
+  if [ "$var_cumulative" = y ] ; then
+    eval "${var}=\${$var}' $val'"
+  else
+    eval "${var}='$val'"
+  fi
+
+  eval "var_given_exists=\${${var}_given+y}"
+
+  if [ "$var_given_exists" = y ] ; then
+    eval "${var}_given=y"
+  fi
+
+  shift
 done
+
+WS=$(readlink -f "$poky_dir")
+echo "Poky dir: $WS"
+
+OE=$(readlink -f "$meta_oe_dir")
+echo "OE meta: $OE"
+
+BD=$(readlink -f "$build_dir")
+echo "Build dir: $BD"
+
+SWI=$(readlink -f "$meta_swi_dir")
+echo "SWI meta dir: $SWI"
+
+LINUXDIR=$(readlink -f "$linux_repo_dir")
+echo "Linux repo dir: $LINUXDIR"
+
+MACH=$machine_type
+echo "SWI machine: $MACH"
+
+DEBUG=$debug_image
+echo "Enable more packages for debugging"
+
+TASKS=$bitbake_tasks
+echo "Number of bitbake tasks $TASKS"
+
+THREADS=$make_threads
+echo "Number of make threads $THREADS"
+
+X_OPTS=$recipe_args
+echo "Extra options added: $X_OPTS"
+
+KERNEL_PROVIDER=$kernel_provider
+echo "Kernel provider: $KERNEL_PROVIDER"
+
+ENABLE_RECOVERY=$enable_recovery_image
+echo "Enable recovery image: $ENABLE_RECOVERY"
+
+CMD_LINE=$cmdline_mode
+[ -n "$CMD_LINE" ] && echo "Enable command line mode"
+
+ENABLE_PROPRIETARY=$enable_prop_bin
+[ -n "$enable_prop_bin" ] && echo "Enable Qualcomm Proprietary bin"
+
+ENABLE_PROPRIETARY_SRC=$enable_prop_src
+[ -n "$enable_prop_src" ] && echo "Enable Qualcomm Proprietary source - overrides binary option"
+
+WK=$(readlink -f "$apps_proc_dir")
+#[ -n "$WK" ] || echo "warning: -w $OPTARG (for WK variable) doesn't resolve"
+if [ "$WK" == "" ] ; then
+  echo "warning: -w $OPTARG (for WK variable) doesn't resolve for $apps_proc_dir"
+fi
+
+FW_VERSION=$firmware_version
+echo "FW Version: $FW_VERSION"
+
+LEGATO_CONFIG=$enable_legato
+if [ -n "$LEGATO_CONFIG" ] ; then
+  echo "With Legato"
+  ENABLE_LEGATO=true
+fi
+
+TOOLCHAIN=$build_toolchain
+[ -n "$TOOLCHAIN" ] && echo "Build toolchain"
+
+ENABLE_ICECC=$enable_icecc
+[ -n "$enable_icecc" ] && echo "Build using icecc"
+
+EXT_SWI_IMG_CONFIG=$enable_extended_image
+if [ -n "$EXT_SWI_IMG_CONFIG" ] ; then
+  echo "Sierra Wireless extended packages are enabled"
+  ENABLE_EXT_SWI_IMG=true
+fi
+
+ENABLE_DEBUG_IMG=$enable_debug_image
+[ -n "$ENABLE_DEBUG_IMG" ] && echo "Sierra Wireless extended packages are enabled"
+
+FIRMWARE_PATH=$(readlink -f "$ar_yocto_path")
+echo "Use FIRWARE_PATH=${FIRMWARE_PATH} to fetch ar_yocto-cwe.tar.bz2 binary"
+
+ENABLE_META_MANGOH=$enable_mangoh
+[ -n "$ENABLE_META_MANGOH" ] && echo "With mangOH"
+
+PROD=$product
+echo "SWI product: $PROD"
+PROD_FAMILY=${PROD%%[0-9]*}  #  ar758x -> ar;  wp76 -> wp ; ...
+[ "$PROD" == "$PROD_FAMILY" ] || echo "SWI product family: $PROD_FAMILY"
+
+QEMU=$enable_qemu
+[ -n "$QEMU" ] && echo "Building for QEMU"
+
+SHARED_SSTATE=$enable_shared_sstate
+[ -n "$SHARED_SSTATE" ] && echo "Enable shared sstate"
+
+IMA_CONFIG=$ima_config_file
+
+if [ -n "$IMA_CONFIG" ] ; then
+  echo "IMA is required."
+  ENABLE_IMA=true
+fi
+
+BB_FLAGS=$bitbake_flags
+echo "bitbake flags: [$BB_FLAGS]"
 
 . ${WS}/oe-init-build-env $BD
 
@@ -347,7 +418,7 @@ case $MACH in
             enable_layer "meta-swi/meta-$MACH-$PROD" "$SWI/meta-$MACH-$PROD"
         fi
 
-        if [ $ENABLE_PROPRIETARY_SRC = true ] || [ $ENABLE_PROPRIETARY = true ]; then
+        if [ $ENABLE_PROPRIETARY_SRC ] || [ $ENABLE_PROPRIETARY ]; then
             # Distro to poky-swi-ext to change SDKPATH
             DISTRO="poky-swi-ext"
         fi
@@ -373,7 +444,7 @@ case $MACH in
             enable_layer "meta-swi/meta-$MACH-$PROD" "$SWI/meta-$MACH-$PROD" "meta-$MACH"
         fi
 
-        if [ $ENABLE_PROPRIETARY_SRC = true ] || [ $ENABLE_PROPRIETARY = true ]; then
+        if [ $ENABLE_PROPRIETARY_SRC ] || [ $ENABLE_PROPRIETARY ]; then
             # Distro to poky-swi-ext to change SDKPATH
             DISTRO="poky-swi-ext"
         fi
@@ -382,14 +453,14 @@ case $MACH in
 esac
 
 # Enable proprietary layers: common
-if [ $ENABLE_PROPRIETARY_SRC = true ] || [ $ENABLE_PROPRIETARY = true ]; then
+if [ $ENABLE_PROPRIETARY_SRC ] || [ $ENABLE_PROPRIETARY ]; then
     enable_layer "meta-swi-extras/common" "$scriptdir/../meta-swi-extras/common"
 
     enable_layer "meta-swi-extras/meta-$MACH" "$scriptdir/../meta-swi-extras/meta-$MACH"
 fi
 
 # Enable meta-mangoh layer
-if [ $ENABLE_META_MANGOH = true ]; then
+if [ $ENABLE_META_MANGOH ]; then
     enable_layer "meta-mangoh" "$scriptdir/../meta-mangoh"
 fi
 
@@ -402,14 +473,14 @@ if [ -n "$PROD_FAMILY" ]; then
     enable_layer_if_exists "meta-swi-$PROD" \
                            "$scriptdir/../meta-swi-$PROD_FAMILY/meta-swi-$PROD"
 
-    if [ $ENABLE_PROPRIETARY = true ]; then
+    if [ $ENABLE_PROPRIETARY ]; then
         enable_layer_if_exists "meta-swi-$PROD_FAMILY-extras" \
                                "$scriptdir/../meta-swi-$PROD_FAMILY-extras/common"
 
         enable_layer_if_exists "meta-swi-$PROD-extras" \
                                "$scriptdir/../meta-swi-$PROD_FAMILY-extras/meta-swi-$PROD-extras"
 
-        if [ $ENABLE_PROPRIETARY_SRC = true ] ; then
+        if [ $ENABLE_PROPRIETARY_SRC ] ; then
             enable_layer_if_exists "meta-swi-$PROD-src" \
                                    "$scriptdir/../meta-swi-$PROD_FAMILY-extras/meta-swi-$PROD-src"
         else
@@ -420,7 +491,7 @@ if [ -n "$PROD_FAMILY" ]; then
 fi
 
 # Enable proprietary layers: from sources
-if [ $ENABLE_PROPRIETARY_SRC = true ]; then
+if [ $ENABLE_PROPRIETARY_SRC ]; then
     # Check that we have a source workspace to point to
     WK=${WK:-$WORKSPACE}
     WORKSPACE=${WK:?"Not set - must point to apps_proc of firmware build"}
@@ -507,7 +578,7 @@ if [ $ENABLE_PROPRIETARY_SRC = true ]; then
 fi
 
 # Enable proprietary layers: from binaries
-if [ $ENABLE_PROPRIETARY = true ]; then
+if [ $ENABLE_PROPRIETARY ]; then
     # Add common mdm9xxx binary layer
     enable_layer "meta-swi-extras/meta-swi-mdm9xxx-bin" "$scriptdir/../meta-swi-extras/meta-swi-mdm9xxx-bin"
 
@@ -567,7 +638,7 @@ set_machine() {
         return 1
     fi
 
-    if [ $QEMU = true ]; then
+    if [ $QEMU ]; then
         MACH_LOCAL_CONF="${machine}-qemu"
     else
         MACH_LOCAL_CONF=$machine
@@ -586,7 +657,7 @@ set_ima() {
     # else previously. This will enable or disable IMA build.
     set_option "IMA_BUILD" $ENABLE_IMA
 
-    if [ "$ENABLE_IMA" == "true" ] ; then
+    if [ $ENABLE_IMA == true ] ; then
 
         # IMA build should be enabled, make sure we know what the IMA config is.
         # Variable names here must match variable names in ima.conf .
@@ -703,7 +774,7 @@ if [ $? != 0 ]; then
         EXTRA_MIRROR_OPTS+='\"\n'
     fi
 
-    if [[ "$SHARED_SSTATE" == "true" ]] && [ -n "$SSTATE_MIRROR_URL" ]; then
+    if [[ "$SHARED_SSTATE" == y ]] && [ -n "$SSTATE_MIRROR_URL" ]; then
         EXTRA_MIRROR_OPTS+='SSTATE_MIRRORS = \"'
         EXTRA_MIRROR_OPTS+='    file://.*'
         EXTRA_MIRROR_OPTS+='    '"${SSTATE_MIRROR_URL}"'/PATH;downloadfilename=PATH'
@@ -783,7 +854,7 @@ else
 fi
 
 # IceCC
-if [ $ENABLE_ICECC = true ]; then
+if [ $ENABLE_ICECC ]; then
     if ! grep icecc $BD/conf/local.conf > /dev/null; then
         echo 'INHERIT += "icecc"' >> $BD/conf/local.conf
         echo 'ICECC_PARALLEL_MAKE = "-j 20"' >> $BD/conf/local.conf
@@ -793,7 +864,7 @@ fi
 
 # SWI extended packages.
 set_option "EXT_SWI_IMG" $ENABLE_EXT_SWI_IMG
-if [ $ENABLE_EXT_SWI_IMG = true ] ; then
+if [ $ENABLE_EXT_SWI_IMG == true ] ; then
     # Not supported for deployment for various reasons, warn the users.
     echo "warning: You are building debug image not intended for deployment. Use it at your own risk."
 fi
@@ -830,13 +901,13 @@ cd $BD
 sed -e 's:^\(PACKAGE_CLASSES\).*:\1 = \"package_ipk\":' -i $BD/conf/local.conf
 
 # Command line
-if [ $CMD_LINE = true ]; then
+if [ $CMD_LINE ]; then
     /bin/bash
     exit $?
 fi
 
 # Toolchain
-if [ $TOOLCHAIN = true ]; then
+if [ $TOOLCHAIN ]; then
     case $MACH in
        * )
            bitbake ${BB_FLAGS} meta-toolchain-swi
@@ -847,7 +918,7 @@ fi
 
 # Images
 echo -n "Build image of "
-if [ $DEBUG = true ]; then
+if [ $DEBUG ]; then
     echo "dev rootfs (for $MACH)."
     case $MACH in
         swi-mdm* )
@@ -865,7 +936,7 @@ else
     echo "minimal rootfs (for $MACH)."
     case $MACH in
         swi-mdm* )
-            if test x$ENABLE_RECOVERY = "xtrue"; then
+            if [ $ENABLE_RECOVERY ] ; then
                 bitbake ${BB_FLAGS} mdm-image-recovery
             else
                 bitbake ${BB_FLAGS} ${MACH#swi-}-image-minimal
@@ -887,10 +958,10 @@ else
     fi
 
     # Build debug image if ENABLE_DEBUG_IMG is true.
-    if [ $ENABLE_DEBUG_IMG = true ]; then
+    if [ $ENABLE_DEBUG_IMG ]; then
         case $MACH in
             swi-* )
-                if test x$ENABLE_RECOVERY != "xtrue"; then
+                if [ $ENABLE_RECOVERY ]; then
                     echo -n "Build image of debug (for $MACH)."
                     bitbake ${BB_FLAGS} debug-image
                 fi

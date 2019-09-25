@@ -52,11 +52,11 @@ ifneq (,$(findstring virt,$(MAKECMDGOALS)))
 endif
 
 ifneq ($(MACH),)
-  MACH_ARGS := -m swi-$(MACH)
+  MACH_ARGS := --machine-type=swi-$(MACH)
 endif
 
 ifneq ($(PROD),)
-  PROD_ARGS := -P $(PROD)
+  PROD_ARGS := --product=$(PROD)
 endif
 
 # This assumes you have a legato dir at the root level of
@@ -116,65 +116,65 @@ clean:
 	rm -rf build_*
 
 ifeq ($(USE_ICECC),1)
-  ICECC_ARGS = -h
+  ICECC_ARGS = --enable-icecc
 endif
 
 ifeq ($(SHARED_SSTATE),1)
-  SHARED_SSTATE_ARGS = -S
+  SHARED_SSTATE_ARGS = --enable-shared-sstate
 endif
 
 # Use extended image.
 ifeq ($(USE_UNSUPPORTED_DEBUG_IMG),1)
-  EXT_SWI_IMG_ARGS = -E
+  EXT_SWI_IMG_ARGS = --enable-extended-image
 endif
 
 # Build extended packages and generate debug image.
 ifeq ($(DEBUG_IMG_BUILD),1)
   ifeq ($(USE_UNSUPPORTED_DEBUG_IMG),0)
-    DEBUG_IMG_ARGS = -D
+    DEBUG_IMG_ARGS = --enable-debug-image
   endif
 endif
 
 ifdef FW_VERSION
-  FW_VERSION_ARG := -v $(FW_VERSION)
+  FW_VERSION_ARG := --qct-version=$(FW_VERSION)
 endif
 
 ifeq ($(LEGATO_BUILD),1)
   ifdef LEGATO_WORKDIR
-    LEGATO_ARGS := -g -a "LEGATO_WORKDIR=${LEGATO_WORKDIR}"
+    LEGATO_ARGS := --enable-legato --recipe-args="LEGATO_WORKDIR=${LEGATO_WORKDIR}"
   endif
 endif
 
 ifeq ($(MANGOH_BUILD),1)
   MANGOH_WIFI_REPO := "$(PWD)/mangOH/WiFi"
-  MANGOH_ARGS := -M \
-                 -a "MANGOH_WIFI_REPO=${MANGOH_WIFI_REPO}"
+  MANGOH_ARGS := --enable-mangoh \
+                 --recipe-args="MANGOH_WIFI_REPO=${MANGOH_WIFI_REPO}"
 endif
 
 ifeq ($(IMA_BUILD),1)
  ifeq (,$(filter $(MACH),virt)$(filter $(MACH),mdm9x28))
     $(error "IMA is not supported for [${MACH}][${PROD}]")
   else
-    IMA_ARGS := -i ${IMA_CONFIG}
+    IMA_ARGS := --ima-config-file=${IMA_CONFIG}
   endif
 endif
 
 ifneq (,$(wildcard $(PWD)/legato/3rdParty/ima-support-tools/))
-  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_DIR=$(PWD)/legato/3rdParty/"
-  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REPO=file://ima-support-tools"
-  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_NAME=ima-support-tools"
+  IMA_ARGS += --recipe-args="IMA_SUPPORT_TOOLS_DIR=$(PWD)/legato/3rdParty/"
+  IMA_ARGS += --recipe-args="IMA_SUPPORT_TOOLS_REPO=file://ima-support-tools"
+  IMA_ARGS += --recipe-args="IMA_SUPPORT_TOOLS_NAME=ima-support-tools"
 endif
 
 ifneq ($(FIRMWARE_PATH),0)
-  FIRMWARE_PATH_ARGS := -F $(FIRMWARE_PATH)
+  FIRMWARE_PATH_ARGS := --ar-yocto-path=$(FIRMWARE_PATH)
 endif
 
 ifneq ($(SDK_PREFIX),0)
-  SDK_PREFIX_ARGS := -a "SDKPATH_PREFIX=${SDK_PREFIX}"
+  SDK_PREFIX_ARGS := --recipe-args="SDKPATH_PREFIX=${SDK_PREFIX}"
 endif
 
 ifdef TARGET_HOSTNAME
-  HOSTNAME_ARGS := -a "hostname_pn-base-files=${TARGET_HOSTNAME}"
+  HOSTNAME_ARGS := --recipe-args="hostname_pn-base-files=${TARGET_HOSTNAME}"
 endif
 
 # Determine location of LK.
@@ -198,7 +198,7 @@ endif
 #
 ifneq (,$(wildcard $(PWD)/lk/))
   # If we have an in-tree lk, then set up all three variables accordingly.
-  LK_ARGS := -a LK_REPO_DIR="$(PWD)" -a LK_REPO_NAME="lk" -a LK_REPO="file://lk"
+  LK_ARGS := --recipe-args=LK_REPO_DIR="$(PWD)"\ LK_REPO_NAME="lk"\ LK_REPO="file://lk"
 else
   # Enforce existence of LK for 9x28 and 9x40; optional for others
   ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
@@ -209,11 +209,11 @@ else
 endif
 
 ifeq ($(RECOVERY_BUILD),1)
-  RCY_ARGS = -e
+  RCY_ARGS = --enable-recovery-image
 endif
 
 ifdef BB_FLAGS
-  BB_ARGS := -B "${BB_FLAGS}"
+  BB_ARGS := --bitbake-flags="${BB_FLAGS}"
 endif
 
 # Replaces this Makefile by a symlink to external.mk
@@ -261,12 +261,12 @@ ifeq ($(USE_DOCKER),1)
 endif
 
 COMMON_ARGS := ${BUILD_SCRIPT} \
-				-p poky/ \
-				-o meta-openembedded/ \
-				-l meta-swi \
-				-x "kernel" \
-				-j $(NUM_THREADS) \
-				-t $(NUM_THREADS) \
+				--poky-dir=poky/ \
+				--meta-oe-dir=meta-openembedded/ \
+				--meta-swi-dir=meta-swi \
+				--linux-repo-dir="kernel" \
+				--make-threads=$(NUM_THREADS) \
+				--bitbake-tasks=$(NUM_THREADS) \
 				${ICECC_ARGS} \
 				${LEGATO_ARGS} \
 				${FIRMWARE_PATH_ARGS} \
@@ -284,8 +284,8 @@ ifeq ($(MACH),mdm9x15)
   KBRANCH_mdm9x15 := $(shell git --git-dir=kernel/.git branch | grep -oe 'standard/.*')
   KMETA_mdm9x15 := $(shell git --git-dir=kernel/.git branch | grep -oe 'meta-.*')
 
-  MACH_ARGS += -a KBRANCH_DEFAULT_MDM9X15=${KBRANCH_mdm9x15} \
-               -a KMETA_DEFAULT_MDM9X15=${KMETA_mdm9x15}
+  MACH_ARGS += --recipe-args=KBRANCH_DEFAULT_MDM9X15=${KBRANCH_mdm9x15} \
+               --recipe-args=KMETA_DEFAULT_MDM9X15=${KMETA_mdm9x15}
 endif
 
 ## extras needed for building
@@ -311,10 +311,10 @@ COMMON_MACH := \
 
 COMMON_BIN := \
 				$(COMMON_MACH) \
-				-b build_bin
+				--build-dir=build_bin
 
 ifeq ($(PROPRIETARY_BUILD),1)
-  COMMON_BIN += -q
+  COMMON_BIN += --enable-prop-bin
 endif
 
 ## images
@@ -327,14 +327,14 @@ image: image_$(DEFAULT_MDM_BUILD)
 ## toolchains
 
 toolchain_bin: prepare
-	$(COMMON_BIN) -k
+	$(COMMON_BIN) --build-toolchain
 
 toolchain: toolchain_$(DEFAULT_MDM_BUILD)
 
 ## dev shell
 
 dev_bin: prepare
-	$(COMMON_BIN) -c
+	$(COMMON_BIN) --cmdline-mode
 
 dev: dev_$(DEFAULT_MDM_BUILD)
 
@@ -342,13 +342,13 @@ dev: dev_$(DEFAULT_MDM_BUILD)
 
 COMMON_VIRT_ARM := \
 				$(COMMON_ARGS) \
-				-m swi-virt-arm \
-				-b build_virt-arm
+				--machine-type=swi-virt-arm \
+				--build-dir=build_virt-arm
 
 COMMON_VIRT_X86 := \
 				$(COMMON_ARGS) \
-				-m swi-virt-x86 \
-				-b build_virt-x86
+				--machine-type=swi-virt-x86 \
+				--build-dir=build_virt-x86
 
 ## images
 
@@ -363,20 +363,20 @@ image_virt: image_virt_arm
 ## toolchains
 
 toolchain_virt_arm:
-	$(COMMON_VIRT_ARM) -k
+	$(COMMON_VIRT_ARM) --build-toolchain
 
 toolchain_virt_x86:
-	$(COMMON_VIRT_X86) -k
+	$(COMMON_VIRT_X86) --build-toolchain
 
 toolchain_virt: toolchain_virt_arm
 
 ## dev shell
 
 dev_virt_arm:
-	$(COMMON_VIRT_ARM) -c
+	$(COMMON_VIRT_ARM) --cmdline-mode
 
 dev_virt_x86:
-	$(COMMON_VIRT_X86) -c
+	$(COMMON_VIRT_X86) --cmdline-mode
 
 dev_virt: dev_virt_arm
 
