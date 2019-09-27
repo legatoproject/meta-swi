@@ -17,7 +17,6 @@ SRC_URI_append += " file://dash.mount"
 SRC_URI_append += " file://cache-ubi.mount"
 SRC_URI_append += " file://persist-ubi.mount"
 SRC_URI_append += " file://data-ubi.mount"
-SRC_URI_append += " file://data-ram.mount"
 SRC_URI_append += " file://systemrw-ubi.mount"
 SRC_URI_append += " file://firmware-ubi-mount.sh"
 SRC_URI_append += " file://firmware-ubi-mount.service"
@@ -43,46 +42,52 @@ fix_sepolicies () {
     sed -i "s#,rootcontext=system_u:object_r:var_t:s0##g"  ${WORKDIR}/var-volatile.mount
     sed -i "s#,rootcontext=system_u:object_r:data_t:s0##g" ${WORKDIR}/data.mount
     sed -i "s#,rootcontext=system_u:object_r:data_t:s0##g" ${WORKDIR}/data-ubi.mount
-    sed -i "s#,rootcontext=system_u:object_r:data_t:s0##g" ${WORKDIR}/data-ram.mount
+    sed -i "s#,rootcontext=system_u:object_r:persist_t:s0##g" ${WORKDIR}/persist-ubi.mount
     sed -i "s#,rootcontext=system_u:object_r:system_data_t:s0##g"  ${WORKDIR}/systemrw.mount
     sed -i "s#,rootcontext=system_u:object_r:system_data_t:s0##g"  ${WORKDIR}/systemrw-ubi.mount
-    sed -i "s#,context=system_u:object_r:firmware_t:s0##g"  ${WORKDIR}/firmware-ubi-mount.sh
 }
 do_install[prefuncs] += " ${@bb.utils.contains('DISTRO_FEATURES', 'selinux', '', 'fix_sepolicies', d)}"
 
+# Install var-volatile.mount for tmpfs
+do_install_append () {
+    install -d 0644 ${D}${systemd_unitdir}/system
+    install -d 0644 ${D}${systemd_unitdir}/system/local-fs.target.wants
+    install -m 0644 ${WORKDIR}/var-volatile.mount \
+            ${D}${systemd_unitdir}/system/var-volatile.mount
+
+    ln -sf ${systemd_unitdir}/system/var-volatile.mount \
+           ${D}${systemd_unitdir}/system/local-fs.target.wants/var-volatile.mount
+}
+
+# Install mount and service units for mounting hard parititions.
 MNT_POINTS  = "${@d.getVar('MACHINE_MNT_POINTS') or ""}"
 # /data is default. /systemrw is applicable only when rootfs is read only.
 MNT_POINTS += " /data"
-MNT_POINTS += " ${@bb.utils.contains('DISTRO_FEATURES', 'ro-rootfs', '/systemrw', '', d)}"
+MNT_POINTS += " ${@bb.utils.contains('DISTRO_FEATURES', 'ro-rootfs', '', '', d)}"
 
-# Install various mount and service units for mounting parititions.
 do_install_append () {
     install -d 0644 ${D}${sysconfdir}/initscripts
     install -d 0644 ${D}${systemd_unitdir}/system
     install -d 0644 ${D}${systemd_unitdir}/system/local-fs.target.requires
     install -d 0644 ${D}${systemd_unitdir}/system/local-fs.target.wants
     install -d 0644 ${D}${systemd_unitdir}/system/sysinit.target.wants
+    install -d 0644 ${D}${systemd_unitdir}/system/multi-user.target.wants
 
     # If the AB boot feature is enabled, then instead of <partition>.mount,
     # a <partition-mount>.service invokes mounting the A/B partition as detected at the time of boot.
     for entry in ${MNT_POINTS}; do
         if [ "$entry" == "$userfsdatadir" ]; then
-            if ${@bb.utils.contains('DISTRO_FEATURES', 'full-disk-encryption', 'false', 'true', d)}; then
-                if ${@bb.utils.contains('DISTRO_FEATURES','nand-boot','false','true',d)}; then
-                    install -m 0644 ${WORKDIR}/data.mount ${D}${systemd_unitdir}/system/data.mount
+            if ${@bb.utils.contains('DISTRO_FEATURES','nand-boot','false','true',d)}; then
+                install -m 0644 ${WORKDIR}/data.mount ${D}${systemd_unitdir}/system/data.mount
 
-                    # Run fsck at boot
-                    install -d 0644 ${D}${systemd_unitdir}/system/local-fs-pre.target.requires
-                    ln -sf ${systemd_unitdir}/system/systemd-fsck@.service \
-                       ${D}${systemd_unitdir}/system/local-fs-pre.target.requires/systemd-fsck@dev-disk-by\\x2dpartlabel-userdata.service
-                #As this folder include more log files, use ram to avoid flash broken.
-                elif ${@bb.utils.contains('DISTRO_FEATURES','userfs-in-ram','true','false',d)}; then
-                    install -m 0644 ${WORKDIR}/data-ram.mount ${D}${systemd_unitdir}/system/data.mount
-                else
-                    install -m 0644 ${WORKDIR}/data-ubi.mount ${D}${systemd_unitdir}/system/data.mount
-                fi
-                ln -sf ${systemd_unitdir}/system/data.mount ${D}${systemd_unitdir}/system/local-fs.target.wants/data.mount
+                # Run fsck at boot
+                install -d 0644 ${D}${systemd_unitdir}/system/local-fs-pre.target.requires
+                ln -sf ${systemd_unitdir}/system/systemd-fsck@.service \
+                   ${D}${systemd_unitdir}/system/local-fs-pre.target.requires/systemd-fsck@dev-disk-by\\x2dpartlabel-userdata.service
+            else
+                install -m 0644 ${WORKDIR}/data-ubi.mount ${D}${systemd_unitdir}/system/data.mount
             fi
+            ln -sf ${systemd_unitdir}/system/data.mount ${D}${systemd_unitdir}/system/local-fs.target.wants/data.mount
         fi
 
         if [ "$entry" == "/systemrw" ]; then
@@ -105,7 +110,7 @@ do_install_append () {
             else
                 install -m 0644 ${WORKDIR}/cache-ubi.mount ${D}${systemd_unitdir}/system/cache.mount
             fi
-            ln -sf ${systemd_unitdir}/system/cache.mount ${D}${systemd_unitdir}/system/sysinit.target.wants/cache.mount
+            ln -sf ${systemd_unitdir}/system/cache.mount ${D}${systemd_unitdir}/system/multi-user.target.wants/cache.mount
         fi
 
         if [ "$entry" == "/persist" ]; then

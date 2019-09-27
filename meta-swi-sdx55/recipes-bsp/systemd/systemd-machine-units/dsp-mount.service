@@ -1,4 +1,4 @@
-# Copyright (c) 2018, The Linux Foundation. All rights reserved.
+# Copyright (c) 2018, 2019, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -28,11 +28,20 @@
 [Unit]
 Description=Mount dsp partition to /dsp mount point
 
+# Env vars are not reflecting in [Unit] Section for selective wait.
+# Hence wait for both _a & _b dev nodes before attepting to mount
+BindsTo=dev-disk-by\x2dpartlabel-dsp_a.device dev-disk-by\x2dpartlabel-dsp_b.device
+After=dev-disk-by\x2dpartlabel-dsp_a.device dev-disk-by\x2dpartlabel-dsp_b.device
+DefaultDependencies=no
+
+IgnoreOnIsolate=true
+
 [Service]
 Type=oneshot
 RemainAfterExit=yes
 PassEnvironment="SLOT_SUFFIX"
-ExecStart=/bin/mount -o relatime,data=ordered,noauto_da_alloc,discard,ro,noexec,nodev,nosuid,context=system_u:object_r:adsprpcd_t:s0 -t ext4 /dev/disk/by-partlabel/dsp${SLOT_SUFFIX} /dsp
+ExecStart=/bin/mount -o noatime,data=ordered,noauto_da_alloc,discard,ro,noexec,nodev,nosuid,context=system_u:object_r:adsprpcd_t:s0 -t ext4 /dev/disk/by-partlabel/dsp${SLOT_SUFFIX} /dsp
+Nice=-20
 
 [Install]
 WantedBy=local-fs.target

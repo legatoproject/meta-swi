@@ -26,10 +26,10 @@
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
 
 [Unit]
-After=sysinit.target
+Before=sysinit.target
 
 [Mount]
 Type=ubifs
 What=ubi0:persist
-Where=persist
+Where=/persist
 Options=bulk_read,rootcontext=system_u:object_r:persist_t:s0

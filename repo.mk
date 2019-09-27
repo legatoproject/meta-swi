@@ -104,6 +104,9 @@ SHARED_SSTATE ?= 0
 # Enable extended package group (mostly to aid debugging)
 USE_UNSUPPORTED_DEBUG_IMG ?= 0
 
+# Build and generate additional debug image which includes extended packages
+DEBUG_IMG_BUILD ?= 0
+
 # Firmware path pointing to ar_yocto-cwe.tar.bz2
 FIRMWARE_PATH ?= 0
 
@@ -139,6 +142,13 @@ endif
 # Use extended image.
 ifeq ($(USE_UNSUPPORTED_DEBUG_IMG),1)
   EXT_SWI_IMG_ARGS = -E
+endif
+
+# Build extended packages and generate debug image.
+ifeq ($(DEBUG_IMG_BUILD),1)
+  ifeq ($(USE_UNSUPPORTED_DEBUG_IMG),0)
+    DEBUG_IMG_ARGS = -D
+  endif
 endif
 
 ifdef FW_VERSION
@@ -286,7 +296,8 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${IMA_ARGS} \
 				${BB_ARGS} \
 				${EXT_SWI_IMG_ARGS} \
-				${SHARED_SSTATE_ARGS}
+				${SHARED_SSTATE_ARGS} \
+				${DEBUG_IMG_ARGS}
 
 # Machine:
 

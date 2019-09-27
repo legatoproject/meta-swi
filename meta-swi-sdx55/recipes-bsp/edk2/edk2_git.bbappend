@@ -35,3 +35,16 @@ do_install() {
     install -m 644 ${BOOTLOADER_OUT}/../../abl.elf -D ${D}/boot/abl.elf
     rm -f ${WORKDIR}/out/../../abl.elf
 }
+
+do_tag_edk2() {
+    if [ -z "${FW_VERSION}" ]; then
+        if [ -d ${EDK2_REPO} ]; then
+            cd ${EDK2_REPO}
+            FW_VERSION=$(git describe --tag)
+        fi
+    fi
+
+    echo "#define EDK2_VERSION  \"${FW_VERSION}\"" >${S}/QcomModulePkg/Library/BootLib/sierra_edk2version.h
+}
+addtask do_tag_edk2 before do_compile after do_configure
+

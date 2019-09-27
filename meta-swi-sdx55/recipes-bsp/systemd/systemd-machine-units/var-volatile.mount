@@ -27,7 +27,6 @@
 
 
 [Unit]
-SourcePath=/etc/fstab
 Before=local-fs.target
 
 [Mount]

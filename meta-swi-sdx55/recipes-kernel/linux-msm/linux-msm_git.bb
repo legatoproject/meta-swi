@@ -1,7 +1,5 @@
 require recipes-kernel/linux-msm/linux-msm.inc
 
-#inherit sdllvm
-
 # if is TARGET_KERNEL_ARCH is set inherit qtikernel-arch to compile for that arch.
 inherit ${@bb.utils.contains('TARGET_KERNEL_ARCH', 'aarch64', 'qtikernel-arch', '', d)}
 
@@ -9,7 +7,6 @@ COMPATIBLE_MACHINE = "(qcs40x|sdxprairie|sdmsteppe|swi-sdx55)"
 KERNEL_IMAGEDEST = "boot"
 
 DEPENDS += "dtc-native"
-#DEPENDS += " llvm-arm-toolchain-native"
 
 LDFLAGS_aarch64 = "-O1 --hash-style=gnu --as-needed"
 TARGET_CXXFLAGS += "-Wno-format"
@@ -58,9 +55,8 @@ do_shared_workdir_append () {
 
         cp ${STAGING_KERNEL_DIR}/scripts/gen_initramfs_list.sh $kerneldir/scripts/
 
-        # Copy vmlinux and zImage into deplydir for boot.img creation
+        # Copy zImage into deplydir for boot.img creation
         install -m 0644 ${KERNEL_OUTPUT_DIR}/${KERNEL_IMAGETYPE} ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}
-        install -m 0644 vmlinux ${DEPLOY_DIR_IMAGE}
 
         # Generate kernel headers
         oe_runmake_call -C ${STAGING_KERNEL_DIR} ARCH=${ARCH} CC="${KERNEL_CC}" LD="${KERNEL_LD}" headers_install O=${STAGING_KERNEL_BUILDDIR}

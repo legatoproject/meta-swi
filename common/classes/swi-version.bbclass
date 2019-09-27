@@ -197,6 +197,8 @@ IMAGE_PREPROCESS_COMMAND += "do_generate_version_file; "
 do_copy_swi_version() {
     cd ${DEPLOY_DIR_IMAGE}
     cp ${IMAGE_ROOTFS}/etc/legato/version ${IMAGE_NAME}.build_package.version
+    cp ${IMAGE_ROOTFS}/etc/legato/version build_package.version
+    cp  build_package.version ${DEPLOY_DIR_IMAGE}
     ln -sf ${IMAGE_NAME}.build_package.version ${IMAGE_LINK_NAME}.build_package.version
     ln -sf ${IMAGE_NAME}.build_package.version build_package.version
 

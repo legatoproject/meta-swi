@@ -1,0 +1,26 @@
+From c160371e722f3d1de5cde5657d6e72ae592d5b95 Mon Sep 17 00:00:00 2001
+From: Peter Chen <pechen@sierrawireless.com>
+Date: Fri, 23 Aug 2019 15:16:28 +0800
+Subject: [PATCH] swi-qualcomm-handlepowerkey-ingore
+
+Signed-off-by: Peter Chen <pechen@sierrawireless.com>
+---
+ src/login/logind.conf.in | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/login/logind.conf.in b/src/login/logind.conf.in
+index 1029e29bc7..0c35496569 100644
+--- a/src/login/logind.conf.in
++++ b/src/login/logind.conf.in
+@@ -18,7 +18,7 @@
+ #KillOnlyUsers=
+ #KillExcludeUsers=root
+ #InhibitDelayMaxSec=5
+-#HandlePowerKey=poweroff
++HandlePowerKey=ignore
+ #HandleSuspendKey=suspend
+ #HandleHibernateKey=hibernate
+ #HandleLidSwitch=suspend
+-- 
+2.14.2
+

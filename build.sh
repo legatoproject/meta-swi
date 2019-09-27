@@ -49,6 +49,7 @@ $0 <options ...>
     -i <ima-config-file> (enable IMA build, pass full path to ima.conf as a parameter)
     -B Pass flags directly to bitbake (e.g. -vvv for verbose build)
     -E Enable extended SWI image (add additional developer packages)
+    -D Build debug image (with additional developer packages)
 
   Machine swi-mdmXXXX/swi-sdxXX:
     -q (enable Qualcomm Proprietary bin)
@@ -90,6 +91,7 @@ ENABLE_ICECC=false
 ENABLE_EXT_SWI_IMG=false
 ENABLE_LEGATO=false
 ENABLE_META_MANGOH=false
+ENABLE_DEBUG_IMG=false
 DISTRO=poky-swi
 KERNEL_PROVIDER=
 X_OPTS=
@@ -103,7 +105,8 @@ BB_FLAGS=""
 SHARED_SSTATE=false
 ENABLE_FX30=false
 
-while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEQGS" arg
+
+while getopts ":p:o:b:l:x:m:t:j:w:v:a:F:P:i:B:MecdrqsgkhEDQGS" arg
 do
     case $arg in
     p)
@@ -190,6 +193,11 @@ do
         ENABLE_EXT_SWI_IMG=true
         echo "Sierra Wireless extended packages are enabled"
         ;;
+    D)
+        ENABLE_DEBUG_IMG=true
+        echo "Build and generate debug image"
+        ;;
+
     F)
         FIRMWARE_PATH=$(readlink -f $OPTARG)
         echo "Use FIRWARE_PATH=${FIRMWARE_PATH} to fetch ar_yocto-cwe.tar.bz2 binary"
@@ -351,6 +359,15 @@ case $MACH in
         # Enable the meta-swi-sdxXX layer
         enable_layer "meta-swi/meta-$MACH" "$SWI/meta-$MACH"
 
+        # Enable the meta-swi-em/common layer
+        enable_layer "meta-swi-em/common" "$SWI/../meta-swi-em/common"
+
+        # Enable the meta-swi-em/meta-swi-em9xxx layer
+        enable_layer "meta-swi-em/meta-swi-em9xxx" "$SWI/../meta-swi-em/meta-swi-em9xxx"
+
+        # Enable the meta-swi-em/meta-swi-em9190 layer
+        enable_layer "meta-swi-em/meta-swi-em9190" "$SWI/../meta-swi-em/meta-swi-em9190"
+
         # Enable the meta-swi-sdxXX-PROD layer, if it exists
         if [ -n "$PROD" ] && [ -e "$SWI/meta-${MACH}-${PROD}" ]; then
             enable_layer "meta-swi/meta-$MACH-$PROD" "$SWI/meta-$MACH-$PROD" "meta-$MACH"
@@ -440,6 +457,13 @@ if [ $ENABLE_PROPRIETARY_SRC = true ]; then
             "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD"
     fi
 
+    if [[ "$MACH" == "swi-sdx55" ]]; then
+        # Add meta-swi-em-extras layer
+        enable_layer "meta-swi-em-extras/common" "$scriptdir/../meta-swi-em-extras/common"
+        enable_layer "meta-swi-em-extras/meta-swi-em9xxx-src" "$scriptdir/../meta-swi-em-extras/meta-swi-em9xxx-src"
+        enable_layer "meta-swi-em-extras/meta-swi-em9190-src" "$scriptdir/../meta-swi-em-extras/meta-swi-em9190-src"
+    fi
+
     copy_qmi_api() {
         cp -f $WORKSPACE/../modem_proc/sierra/src/dx/src/common/* $WORKSPACE/sierra/dx/common
         if [ $? != 0 ]; then
@@ -489,6 +513,13 @@ if [ $ENABLE_PROPRIETARY = true ]; then
 
     # Add machine-specific binary layer
     enable_layer "meta-swi-extras/meta-$MACH-bin" "$scriptdir/../meta-swi-extras/meta-$MACH-bin"
+
+    if [[ "$MACH" == "swi-sdx55" ]]; then
+        # Add meta-swi-em-extras layer
+        enable_layer "meta-swi-em-extras/common" "$scriptdir/../meta-swi-em-extras/common"
+        enable_layer "meta-swi-em-extras/meta-swi-em9xxx-bin" "$scriptdir/../meta-swi-em-extras/meta-swi-em9xxx-bin"
+        enable_layer "meta-swi-em-extras/meta-swi-em9190-bin" "$scriptdir/../meta-swi-em-extras/meta-swi-em9190-bin"
+    fi
 
     # Add product-specific source layer
     if [ -n "$PROD" ] && [ -e "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-bin" ]; then
@@ -850,6 +881,18 @@ else
             bitbake ${BB_FLAGS} core-image-minimal
             ;;
     esac
+
+    # Build debug image if ENABLE_DEBUG_IMG is true.
+    if [ $ENABLE_DEBUG_IMG = true ]; then
+        case $MACH in
+            swi-* )
+                if test x$ENABLE_RECOVERY != "xtrue"; then
+                    echo -n "Build image of debug (for $MACH)."
+                    bitbake ${BB_FLAGS} debug-image
+                fi
+                ;;
+        esac
+    fi
     exit $?
 fi
 

@@ -2,7 +2,6 @@ DEPENDS += " \
 	edk2 \
 	mtd-utils-native \
 	cryptsetup-native \
-	ima-evm-utils-native \
 	libarchive-native"
 
 INC_PR = "r0"
@@ -11,7 +10,6 @@ inherit ubi-image
 inherit dm-verity-hash
 inherit set-files-attr
 
-IMAGE_INSTALL_append = " start-scripts-find-partitions"
 IMAGE_INSTALL_append = " start-scripts-firmware-links"
 
 IMAGE_INSTALL_append = " kernel-modules"
@@ -21,6 +19,9 @@ IMAGE_INSTALL += "systemd-machine-units"
 IMAGE_INSTALL += "system-core-adbd"
 IMAGE_INSTALL += "system-core-usb"
 IMAGE_INSTALL += "volatile-binds"
+IMAGE_INSTALL += "strace"
+IMAGE_INSTALL += "reboot-daemon"
+IMAGE_INSTALL += "cryptsetup"
 
 create_ubinize_config() {
     local cfg_path=$1
@@ -78,31 +79,6 @@ create_ubinize_config() {
             let vid+=1
         fi
     fi
-    echo \[usrfs_volume\] >> $cfg_path
-    echo mode=ubi >> $cfg_path
-    #echo image="${OUTPUT_FILE_USR_UBIFS}" >> $cfg_path
-    echo vol_id=$vid >> $cfg_path
-    echo vol_type=dynamic >> $cfg_path
-    echo vol_name=usrfs >> $cfg_path
-    #echo vol_flags = autoresize >> $cfg_path
-    echo vol_size="6MiB"  >>$cfg_path
-    let vid+=1
-
-    echo \[cache_volume\] >> $cfg_path
-    echo mode=ubi >> $cfg_path
-    echo vol_id=$vid >> $cfg_path
-    echo vol_type=dynamic >> $cfg_path
-    echo vol_name=cachefs >> $cfg_path
-    echo vol_size="3MiB" >> $cfg_path
-    let vid+=1
-
-    echo \[systemrw_volume\] >> $cfg_path
-    echo mode=ubi >> $cfg_path
-    echo vol_id=$vid >> $cfg_path
-    echo vol_type=dynamic >> $cfg_path
-    echo vol_name=systemrw >> $cfg_path
-    echo vol_size="6MiB" >> $cfg_path
-    let vid+=1
 }
 
 prepare_ubi_ps() {
@@ -214,7 +190,6 @@ ROOTFS_POSTPROCESS_COMMAND_append = " gen_buildprop;"
 EXTRA_IMAGE_FEATURES += "${@bb.utils.contains('DISTRO_FEATURES','ro-rootfs','read-only-rootfs','',d)}"
 gen_buildprop() {
     mkdir -p ${IMAGE_ROOTFS}/cache
-    echo ${MACHINE} >> ${IMAGE_ROOTFS}/target
 }
 
 require mdm-image-cwe.inc

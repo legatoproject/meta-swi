@@ -77,6 +77,9 @@ do_deploy_prepend() {
     if [ -f ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE} ] ; then
         rm -f ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}
     fi
+
+    # Copy vmlinux into deplydir.
+    install -m 0644 vmlinux ${DEPLOY_DIR_IMAGE}
 }
 
 # Put the zImage in the kernel-dev pkg

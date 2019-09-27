@@ -12,6 +12,7 @@ RDEPENDS_${PN} += "usbutils"
 RDEPENDS_${PN} += "opkg"
 RDEPENDS_${PN} += "openssh-sftp-server"
 RDEPENDS_${PN} += "tcf-agent"
+RDEPENDS_${PN} += "systemtap"
 
 RDEPENDS_${PN} += "lttng-ust"
 # RDEPENDS_${PN} += "lttng-modules"

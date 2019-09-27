@@ -5,14 +5,14 @@ SRC_URI += "file://mountpartitions.rules"
 SRC_URI += "file://systemd-udevd.service"
 SRC_URI += "file://ffbm.target"
 SRC_URI += "file://mtpserver.rules"
-SRC_URI += "file://sysctl-core.conf"
-SRC_URI += "file://limit-core.conf"
-SRC_URI += "file://logind.conf"
 SRC_URI += "file://ion.rules"
 SRC_URI += "file://kgsl.rules"
 SRC_URI += "file://set-usb-nodes.rules"
 SRC_URI += "file://sysctl.conf"
 SRC_URI += "file://platform.conf"
+SRC_URI += "file://sd-bus-Allow-extra-users-to-communicate.patch"
+SRC_URI += "file://systemd-namespace-mountflags-fix.patch"
+SRC_URI += "file://set-mhi-nodes.rules"
 
 # Custom setup for PACKAGECONFIG to get a slimmer systemd.
 # Removed following:
@@ -32,6 +32,7 @@ SRC_URI += "file://platform.conf"
 #   * localed   - Service used to change the system locale settings, not needed.
 #   * machined  - For tracking local Virtual Machines and Containers, not needed.
 #   * networkd  - Manages network configurations, custom solution is used.
+#   * polkit    - Not used.
 #   * quotacheck- Not using Quota.
 #   * resolvd   - Use custom network name resolution manager.
 #   * smack     - Not used.
@@ -47,14 +48,17 @@ PACKAGECONFIG = " \
     hibernate \
     hostnamed \
     ima \
-    kmod \
+    ${@bb.utils.contains('DISTRO_NAME', 'mdm', '', 'kmod', d)} \
     logind \
-    polkit \
     randomseed \
     sysusers \
     timedated \
     xz \
 "
+
+# Enable coredump support when needed
+PACKAGECONFIG_append = " ${@bb.utils.contains('SYSTEMD_ENABLE_COREDUMP', '1', 'coredump', '', d)}"
+
 EXTRA_OEMESON += " -Defi=false"
 EXTRA_OEMESON += " -Dhwdb=false"
 
@@ -64,41 +68,62 @@ CFLAGS_append = " -fPIC"
 # So temporarily revert to default optimizations for systemd.
 SELECTED_OPTIMIZATION = "-O2 -fexpensive-optimizations -frename-registers -fomit-frame-pointer -ftree-vectorize"
 
-MACHINE_COREDUMP_ENABLE = "${@bb.utils.contains_any('BASEMACHINE', 'qcs605 sdmsteppe', 'true', 'false', d)}"
+MACHINE_SUPPORT_BLOCK_DEVICES = "${@bb.utils.contains('DISTRO_FEATURES','nand-boot', 'false', 'true', d)}"
 
-# Place systemd-udevd.service in /etc/systemd/system
 do_install_append () {
-
-   if [ "${MACHINE_COREDUMP_ENABLE}" == "true" ]; then
-       sed -i "s#var\/tmp#data\/coredump#g" ${WORKDIR}/sysctl-core.conf
-       #create coredump folder in data
-       install -d ${D}${userfsdatadir}/coredump
-   fi
    install -d ${D}/etc/systemd/system/
    install -d ${D}/lib/systemd/system/ffbm.target.wants
    install -d ${D}/etc/systemd/system/ffbm.target.wants
    rm ${D}/lib/udev/rules.d/60-persistent-v4l.rules
+
+   # Place systemd-udevd.service in /etc/systemd/system
    install -m 0644 ${WORKDIR}/systemd-udevd.service \
        -D ${D}/etc/systemd/system/systemd-udevd.service
    install -m 0644 ${WORKDIR}/ffbm.target \
        -D ${D}/etc/systemd/system/ffbm.target
+
    # Enable logind/getty/password-wall service in FFBM mode
    ln -sf /lib/systemd/system/systemd-logind.service ${D}/lib/systemd/system/ffbm.target.wants/systemd-logind.service
    ln -sf /lib/systemd/system/getty.target ${D}/lib/systemd/system/ffbm.target.wants/getty.target
    ln -sf /lib/systemd/system/systemd-ask-password-wall.path ${D}/lib/systemd/system/ffbm.target.wants/systemd-ask-password-wall.path
-   install -d ${D}/etc/security/limits.d/
-   install -m 0644 ${WORKDIR}/limit-core.conf -D ${D}/etc/security/limits.d/core.conf
    install -d /etc/sysctl.d/
-   install -m 0644 ${WORKDIR}/sysctl-core.conf -D ${D}/etc/sysctl.d/core.conf
    install -m 0644 ${WORKDIR}/sysctl.conf -D ${D}/etc/sysctl.d/sysctl.conf
-   install -m 0644 ${WORKDIR}/logind.conf -D ${D}/etc/systemd/logind.conf
    install -m 0644 ${WORKDIR}/platform.conf -D ${D}/etc/tmpfiles.d/platform.conf
+
    #  Mask journaling services by default.
+   #  'systemctl unmask' can be used on device to enable them if needed.
+   ln -sf /dev/null ${D}/etc/systemd/system/systemd-journald.service
+   ln -sf /dev/null ${D}${systemd_unitdir}/system/sysinit.target.wants/systemd-journal-flush.service
+   ln -sf /dev/null ${D}${systemd_unitdir}/system/sysinit.target.wants/systemd-journal-catalog-update.service
    install -d ${D}${sysconfdir}/udev/rules.d/
    install -m 0644 ${WORKDIR}/ion.rules -D ${D}${sysconfdir}/udev/rules.d/ion.rules
    install -m 0644 ${WORKDIR}/kgsl.rules -D ${D}${sysconfdir}/udev/rules.d/kgsl.rules
+   install -m 0644 ${WORKDIR}/set-mhi-nodes.rules -D ${D}${sysconfdir}/udev/rules.d/set-mhi-nodes.rules
+
    # Mask dev-ttyS0.device
    ln -sf /dev/null ${D}/etc/systemd/system/dev-ttyS0.device
+
+   # Remove rules to automount block devices.
+   if [ "${MACHINE_SUPPORT_BLOCK_DEVICES}" == "false" ]; then
+       sed -i '/SUBSYSTEM=="block", TAG+="systemd"/d' ${D}/lib/udev/rules.d/99-systemd.rules
+       sed -i '/SUBSYSTEM=="block", ACTION=="add", ENV{DM_UDEV_DISABLE_OTHER_RULES_FLAG}=="1", ENV{SYSTEMD_READY}="0"/d' ${D}/lib/udev/rules.d/99-systemd.rules
+
+       # Remove generator binaries and ensure that we don't rely on generators for mount or service files.
+       rm -rf ${D}/lib/systemd/system-generators/systemd-debug-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-fstab-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-getty-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-gpt-auto-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-hibernate-resume-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-rc-local-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-system-update-generator
+       rm -rf ${D}/lib/systemd/system-generators/systemd-sysv-generator
+
+       # Start systemd-udev-trigger.service after sysinit.target
+       if ${@bb.utils.contains_any('DISTRO_NAME','mdm auto', 'true', 'false', d)}; then
+           sed -i '/Before=sysinit.target/a After=sysinit.target init_sys_mss.service' ${D}${systemd_unitdir}/system/systemd-udev-trigger.service
+           sed -i '/Before=sysinit.target/d' ${D}${systemd_unitdir}/system/systemd-udev-trigger.service
+       fi
+   fi
 }
 
 # Run fsck as part of local-fs-pre.target instead of local-fs.target
@@ -112,11 +137,5 @@ do_install_append () {
 RRECOMMENDS_${PN}_remove += "systemd-extra-utils"
 PACKAGES_remove += "${PN}-extra-utils"
 
-do_install_append_robot-som-ros () {
-    rm ${D}/etc/sysctl.d/core.conf
-}
-
-PACKAGES +="${PN}-coredump"
 FILES_${PN} += "/etc/initscripts \
                 ${sysconfdir}/udev/rules.d ${userfsdatadir}/*"
-FILES_${PN}-coredump = "/etc/sysctl.d/core.conf /etc/security/limits.d/core.conf  ${userfsdatadir}/coredump"
