@@ -28,7 +28,6 @@ IMAGE_INSTALL_append = " ti-wifi-utils-wl18xx"
 IMAGE_INSTALL_append = " crda"
 IMAGE_INSTALL_append = " i2cgpioctl"
 IMAGE_INSTALL_append = " sierra-init-tiwifi"
-IMAGE_INSTALL_append = " sierra-ks"
 
 #================
 # QCA9377 support
