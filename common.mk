@@ -199,7 +199,7 @@ endif
 #
 ifneq (,$(wildcard $(PWD)/lk/))
   # If we have an in-tree lk, then set up all three variables accordingly.
-  LK_ARGS := --recipe-args=LK_REPO_DIR="$(PWD)"\ LK_REPO_NAME="lk"\ LK_REPO="file://lk"
+  LK_ARGS := --recipe-args=LK_REPO_DIR="$(PWD)"::LK_REPO_NAME="lk"::LK_REPO="file://lk"
 else
   # Enforce existence of LK for 9x28 and 9x40; optional for others
   ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
