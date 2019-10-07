@@ -5,7 +5,7 @@ def get_default_sdkpath_prefix(d, suffix=""):
         return "yXX%s" % suffix
 
     import re
-    m = re.match("(\d*)\.(\d*)\.", distro_version)
+    m = re.match("^(\d*)\.(\d*)", distro_version)
     if not m:
         return "%s%s" % (distro_version, suffix)
 
