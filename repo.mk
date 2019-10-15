@@ -233,10 +233,17 @@ ifeq ($(USE_DOCKER),1)
   HOSTNAME := $(shell hostname)
   DOCKER_BIN ?= docker
   DOCKER_IMG ?= "quay.io/swi-infra/yocto-dev:yocto-${YOCTO_MAJOR}.${YOCTO_MINOR}"
+  INTERACTIVE := $(shell [ -t 0 ] && echo 1)
+  ifdef INTERACTIVE
+    DOCKER_TTY ?= --tty --interactive
+  else
+    DOCKER_TTY =
+  endif
   DOCKER_RUN := ${DOCKER_BIN} run \
                     --rm \
                     --user=${UID}:${GID} \
-                    --tty --interactive \
+                    ${DOCKER_TTY} \
+                    --init \
                     --hostname=${HOSTNAME} \
                     --volume ${PWD}:${PWD} \
                     --volume /etc/passwd:/etc/passwd:ro \
