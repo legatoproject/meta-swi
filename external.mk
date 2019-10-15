@@ -28,6 +28,11 @@ else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-ar758x-bin/files
   ifeq ($(PROD),)
     PROD = ar758x
   endif
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-wp-bin/files))
+  MACH ?= mdm9x28
+  ifeq ($(PROD),)
+    PROD = wp
+  endif
 else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-bin/files))
   MACH ?= mdm9x28
 else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files))
