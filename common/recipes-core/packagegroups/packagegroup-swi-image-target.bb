@@ -64,4 +64,4 @@ RDEPENDS_${PN} += "update-ld-cache"
 RDEPENDS_${PN} += "bsdiff"
 
 # Add ntpdate from ntp package
-IMAGE_INSTALL_append = " ntpdate"
+RDEPENDS_${PN} += "ntpdate"
