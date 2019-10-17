@@ -1,9 +1,4 @@
-inherit localgit
-
 SRCREV = "${AUTOREV}"
-
-SRC_URI = ""
-SRC_DIR = "${LK_REPO}"
 
 LK_TARGET = "mdm9640"
 

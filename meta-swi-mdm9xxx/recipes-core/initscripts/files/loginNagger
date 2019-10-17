@@ -1,8 +1,8 @@
 #!/bin/sh
 
-
 DONT_NAG_FILE=/mnt/flash/config/system/etc/noLoginNag
 TOOLS_PATH=/legato/systems/current/bin
+CALLED_AS=$0
 
 PASSWORD_SET=false
 
@@ -19,8 +19,12 @@ CheckRet()
 
 DontNag()
 {
-    mkdir -p $( dirname $DONT_NAG_FILE ) &&
-    touch $DONT_NAG_FILE
+    # if the nagger is run as the login shell, we don't need to create the
+    # noLoginNag file
+    if [[ "$CALLED_AS" != "/usr/sbin/loginNagger" ]]; then
+        mkdir -p $( dirname $DONT_NAG_FILE ) &&
+        touch $DONT_NAG_FILE
+    fi
 }
 
 
@@ -50,6 +54,11 @@ DisablePasswordLogin()
 
 DisableUartForConsole()
 {
+    if [ ! -x "$TOOLS_PATH/uartMode" ]; then
+        echo "Unable to disable UART $1, uartMode is missing."
+        return 1
+    fi
+
     # Get the uart mode.
     mode="$($TOOLS_PATH/uartMode get $1)"
     CheckRet
@@ -79,6 +88,8 @@ DisableConsole()
             [yY] )
                 if [ -f /etc/securetty ]; then
                     echo > /etc/securetty
+                else
+                    touch /etc/securetty
                 fi
 
                 # Disable both uart 1 and 2 for use as /dev/console.
@@ -118,8 +129,9 @@ LocalAccess()
                 [yY] | "" )
                     DisableConsole
                     if [ $? -eq 0 ]; then
-                       DontNag; break
+                        DontNag; break
                     fi
+                    break
                     ;;
                 [nN] ) DontNag; break;;
 
@@ -219,24 +231,6 @@ SetupPassword()
 }
 
 
-ReminderMenu()
-{
-    echo "";
-
-    while true; do
-        echo "Would you like a reminder next time you log in [Y/n]?"
-
-        read -r choice
-        case $choice in
-            [yY] | "" ) echo "OK, I will remind you next time."; break;;
-            [nN] ) echo "OK, I will not bug you again"; DontNag; break;;
-
-            * );;
-        esac
-    done
-}
-
-
 SelectCredMethod()
 {
     echo "";
@@ -247,13 +241,11 @@ SelectCredMethod()
         echo "  1) Setup ssh keys and disable passwords-based authentication via ssh"
         echo "     (the most secure)"
         echo "  2) Setup password (better than nothing)"
-        echo "  3) Do nothing"
 
         read -r choice
         case $choice in
             [1] ) ConfigureSshKey; break;;
             [2] ) SetupPassword; break;;
-            [3] ) ReminderMenu; break;;
 
             * );;
         esac
@@ -261,7 +253,7 @@ SelectCredMethod()
 }
 
 
-
+# main execution starts here
 if [ ! -f $DONT_NAG_FILE ]; then
     if [ ! -f ~/.ssh/authorized_keys ]; then
         # SSH credentials have not been set, ask the user to setup credentials.
@@ -283,7 +275,6 @@ if [ ! -f $DONT_NAG_FILE ]; then
                             break
                         fi
                         ;;
-
                     * ) ;;
                 esac
             done
@@ -291,4 +282,12 @@ if [ ! -f $DONT_NAG_FILE ]; then
         # SSH credentials already set, ask the user how to handle local access.
         LocalAccess
     fi
+fi
+
+# if the nagger is invoked as the default login shell, we need to change login
+# shell then start a bash login session
+if [[ "$CALLED_AS" = "/usr/sbin/loginNagger" ]]; then
+    chsh -s /bin/sh
+
+    /bin/sh --login "$@"
 fi

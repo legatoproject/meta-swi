@@ -1,0 +1,3 @@
+#!/bin/sh
+/usr/sbin/ip6tables-restore < /etc/ip6tables.rules
+exit $?

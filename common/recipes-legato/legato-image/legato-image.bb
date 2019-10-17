@@ -33,15 +33,14 @@ copy_image() {
 }
 
 generate_images_mklegatoimg() {
-    IMG_DIR="${WORKDIR}/images-${LEGATO_TARGET}"
-
     mkdir -p ${DEPLOY_DIR_IMAGE}
 
     gen_version
 
-    rm -rf $IMG_DIR
-    mkdir -p $IMG_DIR
-    mklegatoimg -t $LEGATO_TARGET -d "${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET" -o $IMG_DIR -v $VERSION
+    mklegatoimg -t $LEGATO_TARGET \
+                -d "${LEGATO_STAGING_DIR}/$LEGATO_VERSION/$LEGATO_TARGET" \
+                -o "$IMG_DIR" \
+                -v $VERSION
 
     # Copy
     cd $IMG_DIR
@@ -71,12 +70,33 @@ generate_images_mklegatoimg() {
     cp legato-signed.cwe ${DEPLOY_DIR_IMAGE}/legato-image-signed.$LEGATO_TARGET.cwe
 }
 
+generate_images_qemu() {
+    set -x
+    QEMU_LEGATO_NAME="${DEPLOY_DIR_IMAGE}/${PN}.$LEGATO_TARGET.qemu.ubi"
+
+    UBINIZE_CFG="$(find "$IMG_DIR" \
+                        -name ubinize.cfg)"
+    [ -n "$UBINIZE_CFG" ] || exit 1
+
+    ubinize -o ${QEMU_LEGATO_NAME} \
+            -m 1 \
+            -p 256KiB \
+            "${UBINIZE_CFG}"
+}
+
 compile_target() {
     if [ -z "${LEGATO_VERSION}" ]; then
         get_legato_version
     fi
 
+    IMG_DIR="${WORKDIR}/images-${LEGATO_TARGET}"
+    rm -rf $IMG_DIR
+    mkdir -p $IMG_DIR
+
     generate_images_mklegatoimg
+    if [[ "${QEMU_BUILD}" == "on" ]]; then
+        generate_images_qemu
+    fi
 }
 
 do_compile[deptask] = "do_install_image"

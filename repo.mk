@@ -1,6 +1,13 @@
 # Set number of threads
 NUM_THREADS ?= 9
 
+# Check for accidental recursion: user running "make" again after stepping into
+# bitbake environment with make dev.
+
+ifneq ($(BBPATH)$(BUILDDIR),)
+$(error "Detected Makefile being re-invoked from within bitbake environment!")
+endif
+
 # Set workspace directory
 DEFAULT_MDM_BUILD := bin
 APPS_DIR ?= $(firstword $(wildcard $(PWD)/mdm*[0-9]/apps_proc))
@@ -40,6 +47,11 @@ else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x40-ar759x-bin/files
   MACH ?= mdm9x40
   ifeq ($(PROD),)
     PROD = ar759x
+  endif
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-fx30-bin/files))
+  MACH ?= mdm9x28
+  ifeq ($(PROD),)
+    PROD = fx30
   endif
 endif
 # If the build is for virt, override.
@@ -153,7 +165,8 @@ ifeq ($(IMA_BUILD),1)
 endif
 
 ifneq (,$(wildcard $(PWD)/legato/3rdParty/ima-support-tools/))
-  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REPO=git://$(PWD)/legato/3rdParty/ima-support-tools/.git;protocol=file;rev=HEAD"
+  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REPO=git://$(PWD)/legato/3rdParty/ima-support-tools/.git;protocol=file;usehead=1"
+  IMA_ARGS += -a "IMA_SUPPORT_TOOLS_REV=\$${AUTOREV}"
 endif
 
 ifneq ($(FIRMWARE_PATH),0)
@@ -168,19 +181,35 @@ ifdef TARGET_HOSTNAME
   HOSTNAME_ARGS := -a "hostname_pn-base-files=${TARGET_HOSTNAME}"
 endif
 
-# Determine path for LK repository
-# On mdm9x15, lk is built using CAF revision + patches
+# Determine location of LK.
+#
+# This potentially establishes three bitbake variables, which are all used in
+# the base lk recipe.
+#
+# LK_REPO_DIR:  parent directory in which lk is located, added by
+#               the lk base recipe to FILESPATH. If it is not defined,
+#               the base recipe safely defaults it to ${THISDIR}.
+# LK_REPO:      The fetch URI designating lk. The base recipe interpolates
+#               this into the SRC_URI variable. It provides no default;
+#               systems that don't have a lk directory in the tree must
+#               set this variable in their lk bbappend recipe to point
+#               to some external lk repository.
+# LK_REPO_NAME: The subdirectory name where lk is fetched inside ${WORKDIR}.
+#               If it is not defined, it defaults to "git", which works
+#               for overriding recipes like mdm9x15 that specify an
+#               external git URL. The base recipe uses this to define
+#               the ${S} directory as "${WORKDIR}/${LK_REPO_NAME}".
+#
 ifneq (,$(wildcard $(PWD)/lk/))
-  LK_REPO := "$(PWD)/lk"
-  # Append LK_REPO argument for 9x28 and 9x40 targets
-  ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
-    LK_ARGS := -a "LK_REPO=$(LK_REPO)"
-  endif
+  # If we have an in-tree lk, then set up all three variables accordingly.
+  LK_ARGS := -a LK_REPO_DIR="$(PWD)" -a LK_REPO_NAME="lk" -a LK_REPO="file://lk"
 else
   # Enforce existence of LK for 9x28 and 9x40; optional for others
   ifneq (, $(filter $(MACH), mdm9x28 mdm9x40))
     $(error Missing LK directory $(PWD)/lk)
   endif
+  # If we don't have an lk directory, LK_REPO_NAME and LK_REPO_DIR
+  # default as describe above, and a lk bbappend is expected to supply LK_REPO.
 endif
 
 ifeq ($(RECOVERY_BUILD),1)

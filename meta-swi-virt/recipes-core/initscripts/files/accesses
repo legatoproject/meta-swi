@@ -1,0 +1,4 @@
+admin _ rwx
+_ syslog rw
+admin syslog rw
+_ admin rwx

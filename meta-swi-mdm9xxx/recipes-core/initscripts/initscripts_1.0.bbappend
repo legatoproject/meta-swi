@@ -1,7 +1,7 @@
 # look for files in the layer first
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-PR="r156"
+PR="r158"
 
 SRC_URI = "file://functions \
            file://devpts \
@@ -129,7 +129,9 @@ do_install () {
     install -m 0644    ${WORKDIR}/functions     ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/bootmisc.sh   ${D}${sysconfdir}/init.d
     install -m 0755    ${WORKDIR}/hostname.sh   ${D}${sysconfdir}/init.d
-    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
+    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && \
+       [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && \
+       [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
         install -m 0755    ${WORKDIR}/bringup_ecm.sh    ${D}${sysconfdir}/init.d
         install -m 0755    ${WORKDIR}/bridge_ecm.sh ${D}${sysconfdir}/init.d
     fi
@@ -157,11 +159,15 @@ do_install () {
     install -D -m 0755 ${WORKDIR}/mount_early -D ${D}${sysconfdir}/init.d/mount_early
     install -D -m 0755 ${WORKDIR}/load_modem.sh -D ${D}${sysconfdir}/init.d/load_modem.sh
 
+    # Because putting the loginNager in /usr/sbin (read-only) better enforces
+    # security and we don't want to run it as login shell for the moment, making
+    # a symoblic link in /etc/profile.d/ allows it to be run after login.
+    install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sbindir}/loginNagger
     install -d -m 0755 ${D}${sysconfdir}/profile.d
-    install -m 0755 ${WORKDIR}/loginNagger -D ${D}${sysconfdir}/profile.d/loginNagger
+    ln -s ${sbindir}/loginNagger ${D}${sysconfdir}/profile.d/loginNagger
 
     case "${MACHINE}" in
-    swi-mdm9x28 | swi-mdm9x28-qemu | swi-mdm9x28-wp)
+    swi-mdm9x28 | swi-mdm9x28-qemu | swi-mdm9x28-wp | swi-mdm9x28-fx30*)
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
         install -m 0755 ${WORKDIR}/start_at_cmux_le -D ${D}${sbindir}/start_at_cmux_le
         ;;
@@ -183,7 +189,9 @@ do_install () {
     update-rc.d -r ${D} urandom start 08 S .
     update-rc.d -r ${D} mountall.sh start 07 S .
     update-rc.d -r ${D} bootmisc.sh start 55 S .
-    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
+    if [ "${MACHINE}" != "swi-mdm9x28-ar758x" ] && \
+       [ "${MACHINE}" != "swi-mdm9x28-ar758x-qemu" ] && \
+       [ "${MACHINE}" != "swi-mdm9x40-ar759x" ]; then
         update-rc.d -r ${D} bringup_ecm.sh start 95 S .
     fi
     if [ "${TARGET_ARCH}" = "arm" ]; then

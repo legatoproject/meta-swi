@@ -8,10 +8,16 @@ PROVIDES = "virtual/lk"
 PR = "r2"
 
 SECURITY_FLAGS_PATCH = "file://0001-arm-fix-dprintf-format.patch"
+
+# safe defaults for recipes/systems that do not set up these variables
+LK_REPO_DIR ?= "${THISDIR}"
+LK_REPO_NAME ?= "git"
+
+FILESPATH_prepend = "${LK_REPO_DIR}:"
+
 SRC_URI = "${LK_REPO} ${SECURITY_FLAGS_PATCH}"
 
-S = "${WORKDIR}/git"
-
+S = "${WORKDIR}/${LK_REPO_NAME}"
 B = "${WORKDIR}/build"
 
 LK_TARGET ?= "mdm9615"
@@ -22,16 +28,20 @@ LK_TARGET ?= "mdm9615"
 # 2 - SPEW
 LK_DEBUG ?= "0"
 
+MANGOH_BOARD_PROBE ?= "0"
+
 EXTRA_OEMAKE = "-j 1 \
                 TOOLCHAIN_PREFIX='${TARGET_PREFIX}' \
                 TOOLCHAIN_OPTIONS='${TOOLCHAIN_OPTIONS}' \
                 ${LK_TARGET} \
                 DEBUG=${LK_DEBUG} \
+                MANGOH_BOARD_PROBE=${MANGOH_BOARD_PROBE} \
                 BOOTLOADER_OUT='${B}' \
                 ARCH='${TARGET_ARCH}' \
                 CC='${CC}' \
                 ${@oe.utils.conditional('ARM_FLOAT_ABI', 'hard', 'ENABLE_HARD_FPU=1', '', d)} \
                 ENABLE_IMA='${ENABLE_IMA}' \
+                ENABLE_FX30='${ENABLE_FX30}' \
                 IMA_KERNEL_CMDLINE_OPTIONS='${IMA_KERNEL_CMDLINE_OPTIONS}'"
 
 do_tag_lk() {

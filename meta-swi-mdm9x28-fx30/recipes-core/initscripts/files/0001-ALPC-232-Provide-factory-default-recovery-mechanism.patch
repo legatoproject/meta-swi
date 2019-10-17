@@ -1,0 +1,37 @@
+From b401ca79ae0f2d48f94a8e129827a8cc75b1dffe Mon Sep 17 00:00:00 2001
+From: gterrissol <gterrissol@sierrawireless.com>
+Date: Wed, 7 Dec 2016 10:06:25 -0800
+Subject: [PATCH] ALPC-232 : Provide factory default recovery mechanism     -
+ Added call to factory default recovery script.
+
+---
+ rcS | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/rcS b/rcS
+index 23b79b8..1281913 100644
+--- a/rcS
++++ b/rcS
+@@ -48,6 +48,11 @@ simple_network()
+     return ${ret}
+ }
+ 
++check_recovery()
++{
++    /etc/init.d/factory_default_recovery.sh
++}
++
+ # Execute 'S' scripts. This method will not execute scripts
+ # which are not executable.
+ run_S_scripts()
+@@ -81,6 +86,7 @@ rcS_main()
+     local method_list="
+                        mount_essential_fs
+                        simple_network
++                       check_recovery
+                        run_S_scripts
+                       "
+ 
+-- 
+1.9.1
+

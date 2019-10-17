@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# Install default routes to private networks so that internal requests can be routed
+# back to the client.
+if [[ "$IFACE" == "eth0" ]]; then
+    GW=$(grep routers /var/run/udhcpc.${IFACE}.leases | sed 's/.*routers \(.*\);/\1/')
+    if [ -n "$GW" ]; then
+        # Route private networks through the ethernet interface
+        ip route add 10.0.0.0/8 via ${GW} dev ${IFACE} 2>/dev/null
+        ip route add 172.16.0.0/12 via ${GW} dev ${IFACE} 2>/dev/null
+        ip route add 192.168.0.0/16 via ${GW} dev ${IFACE} 2>/dev/null
+    fi
+fi

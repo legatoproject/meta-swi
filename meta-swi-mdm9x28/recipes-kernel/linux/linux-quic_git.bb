@@ -12,9 +12,15 @@ KERNEL_CC_prepend = "${LINUX_REPO_DIR}/scripts/gcc-wrapper.py "
 # Provide a config baseline for things so the kernel will build...
 KBUILD_DEFCONFIG ?= "mdm9607_defconfig"
 
+# Allow merging of multiple kernel configs. This must be space
+# separated list of files using absolute paths.
+KBUILD_DEFCONFIG_SNIPPETS ?= ""
+
 # Override for Qemu
 COMPATIBLE_MACHINE_swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
 KBUILD_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
+COMPATIBLE_MACHINE_swi-mdm9x28-fx30-qemu = "swi-mdm9x28-fx30-qemu"
+KBUILD_DEFCONFIG_swi-mdm9x28-fx30-qemu = "mdm9607-swi-qemu_defconfig"
 COMPATIBLE_MACHINE_swi-mdm9x28-qemu = "swi-mdm9x28-qemu"
 KBUILD_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
 
@@ -55,6 +61,11 @@ do_configure_prepend() {
 
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper
     oe_runmake_call -C ${S} ARCH=${ARCH} ${KERNEL_EXTRA_ARGS} ${KBUILD_DEFCONFIG}
+
+    # Add kernel config file snippets.
+    for kconfig in ${KBUILD_DEFCONFIG_SNIPPETS} ; do
+        cat ${kconfig} >>${B}/.config
+    done
 }
 
 do_compile_append() {
@@ -87,24 +98,6 @@ gen_master_dtb() {
     master_dtb_name=$1
     page_size=$2
 
-    kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
-    if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
-        kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
-    fi
-    kernel_img=$(readlink -f $kernel_img)
-    ls -al $kernel_img
-
-    set -xe
-
-    ver=$(sed -r 's/#define UTS_RELEASE "(.*)"/\1/' ${B}/include/generated/utsrelease.h)
-    dtb_files=$(find ${B}/arch/arm/boot/dts -iname "*${BASEMACHINE_QCOM}*.dtb" | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
-
-    # Create separate images with dtb appended to zImage for all targets.
-    for d in ${dtb_files}; do
-       targets=$(echo ${d#${BASEMACHINE_QCOM}-})
-       cat $kernel_img ${B}/arch/arm/boot/dts/qcom/${d}.dtb > ${B}/arch/arm/boot/dts/dtb-zImage-${ver}-${targets}.dtb
-    done
-
     ${STAGING_BINDIR_NATIVE}/dtbtool \
         ${B}/arch/arm/boot/dts/qcom/ \
         -s $page_size \
@@ -119,6 +112,28 @@ gen_master_dtb() {
 }
 
 do_deploy_append() {
+    kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
+    if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
+        kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
+    fi
+    kernel_img=$(readlink -f $kernel_img)
+    ls -al $kernel_img
+
+    set -xe
+
+    ver=$(sed -r 's/#define UTS_RELEASE "(.*)"/\1/' ${B}/include/generated/utsrelease.h)
+    dtb_files=$(find ${B}/arch/arm/boot/dts/qcom -iname "*${BASEMACHINE_QCOM}*.dtb" | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
+
+    mkdir -p ${DEPLOYDIR}/dtb/qcom
+
+    # Create separate images with dtb appended to zImage for all targets.
+    # Also ship each dtb file individually
+    for d in ${dtb_files}; do
+        targets=$(echo ${d#${BASEMACHINE_QCOM}-})
+        cat $kernel_img ${B}/arch/arm/boot/dts/qcom/${d}.dtb > ${B}/arch/arm/boot/dts/qcom/dtb-zImage-${ver}-${targets}.dtb
+        cp ${B}/arch/arm/boot/dts/qcom/${d}.dtb ${DEPLOYDIR}/dtb/qcom/
+    done
+
     gen_master_dtb masterDTB.2k 2048
     gen_master_dtb masterDTB.4k 4096
     cp ${B}/vmlinux ${DEPLOYDIR}/vmlinux

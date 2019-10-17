@@ -1,11 +1,6 @@
-inherit localgit
-
 INSANE_SKIP_${PN} += "already-stripped"
 
 SRCREV = "${AUTOREV}"
-
-SRC_URI = ""
-SRC_DIR = "${LK_REPO}"
 
 LK_TARGET = "mdm9607"
 
@@ -16,8 +11,9 @@ EXTRA_OEMAKE += "LINUX_KERNEL_DIR='${LINUX_REPO_DIR}'"
 EXTRA_OEMAKE_append = " SIGNED_KERNEL=1"
 CC_append += " -Wno-error=format-security"
 
-do_patch() {
-    if [ ! -L "${S}/app/aboot/sierra" -a -d "${LINUX_REPO_DIR}/arch/arm/mach-msm/sierra" ]; then
+do_configure_prepend() {
+    if [ -d "${LINUX_REPO_DIR}/arch/arm/mach-msm/sierra" ]; then
+        rm -f ${S}/app/aboot/sierra
         ln -sf ${LINUX_REPO_DIR}/arch/arm/mach-msm/sierra ${S}/app/aboot/sierra
     fi
 }

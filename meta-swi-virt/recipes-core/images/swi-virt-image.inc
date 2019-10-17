@@ -17,61 +17,110 @@ DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 IMAGE_INSTALL_append = " tzdata"
 IMAGE_INSTALL_append = " tzone-utils"
 
-# Prepare a package with kernel + hdd image
-do_prepare_virt[depends] += "virtual/kernel:do_deploy"
-do_prepare_virt() {
-    VIRT_DIR=${WORKDIR}/virt
+append_cfg_json() {
+    echo "$1" >> $CFG_JSON
+}
 
-    IMG_NAME=img-virt-${VIRT_ARCH}
+# Prepare a package with kernel + hdd image + config
+do_prepare_qemu_pkg[depends] += "virtual/kernel:do_deploy"
+do_prepare_qemu_pkg() {
+    export LEGATO_TARGET="$(echo ${LEGATO_ROOTFS_TARGETS} | awk '{print $1}')"
+    if [ -z "$LEGATO_TARGET" ]; then
+        exit 1
+    fi
+
+    IMG_BASENAME="img-$LEGATO_TARGET"
+    IMG_NAME="$IMG_BASENAME-$(date +"%Y%m%d-%H%M")"
 
     CFG=qemu-config
-    KERNEL=kernel
-    ROOTFS=rootfs.qcow2
+    CFG_JSON=qemu.json
 
-    VIRT_NAME=$IMG_NAME-`date +"%Y%m%d-%H%M"`.tar.bz2
-
-    echo "Staging: ${VIRT_DIR}"
-    if [ -e "${VIRT_DIR}" ]; then
-        rm -rf ${VIRT_DIR}
+    QEMU_DIR=${WORKDIR}/virt
+    echo "Staging: ${QEMU_DIR}"
+    if [ -e "${QEMU_DIR}" ]; then
+        rm -rf ${QEMU_DIR}
     fi
-    mkdir ${VIRT_DIR}
+    mkdir ${QEMU_DIR}
 
     echo "Delivery: ${DEPLOY_DIR_IMAGE}"
     mkdir -p ${DEPLOY_DIR_IMAGE}
 
-    cd ${VIRT_DIR}
+    cd ${QEMU_DIR}
 
-    # QEmu Config
+    # QEmu Config (shell)
     touch $CFG
 
+    # Kernel
+    KERNEL=kernel
     if [[ "${FSTYPE_VIRT}" == "squashfs"* ]]; then
-        echo 'CMDLINE="rootfstype=ramfs rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=squashfs"' >> $CFG
+        CMDLINE="rootfstype=ramfs rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=squashfs" >> $CFG
     else
-        echo "CMDLINE='rootfstype=ramfs rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=${FSTYPE_VIRT}'" >> $CFG
+        CMDLINE="rootfstype=ramfs rootfs.dev=/dev/sda1 rootfs.wait=true rootfs.type=${FSTYPE_VIRT}" >> $CFG
     fi
+    echo "CMDLINE='$CMDLINE'" >> $CFG
 
-    echo "CONSOLE_TTY=$(echo ${SERIAL_CONSOLE} | awk '{print $2}')" >> $CFG
+    # Console
+    CONSOLE_TTY="$(echo ${SERIAL_CONSOLE} | awk '{print $2}')"
+    CONSOLE_BAUDRATE="$(echo ${SERIAL_CONSOLE} | awk '{print $1}')"
+    echo "CONSOLE_TTY=$CONSOLE_TTY" >> $CFG
 
+    # Machine
+    MEM="192"
     if [[ "${VIRT_ARCH}" == "x86" ]]; then
-        echo 'ARG_TARGET="-machine q35 -m 192M"' >> $CFG
-        echo 'ROOTFS_METHOD=-hda' >> $CFG
-
+        MACHINE="q35"
     elif [[ "${VIRT_ARCH}" == "arm" ]]; then
-        echo 'ARG_TARGET="-machine versatilepb -m 192M"' >> $CFG
-        echo 'ROOTFS_METHOD=-hda' >> $CFG
+        MACHINE="versatilepb"
     fi
+    echo "ARG_TARGET='-machine $MACHINE -m $MEM'" >> $CFG
+
+    # Rootfs
+    ROOTFS=rootfs.qcow2
+    ROOTFS_METHOD="-hda"
+    echo "ROOTFS_METHOD=$ROOTFS_METHOD" >> $CFG
 
     # ... IMA
     if [[ "${IMA_BUILD}" == "true" ]]; then
         echo 'IMA_BUILD=1' >> $CFG
-        echo "IMA_KERNEL_CMDLINE_OPTIONS=\"${IMA_KERNEL_CMDLINE_OPTIONS}\"" >> $CFG
+        echo "IMA_KERNEL_CMDLINE_OPTIONS='${IMA_KERNEL_CMDLINE_OPTIONS}'" >> $CFG
     fi
 
     # Network
-    echo "NET_DRV=virtio" >> $CFG
+    NET_DRV="virtio"
+    echo "NET_DRV=$NET_DRV" >> $CFG
+
+    # QEmu Config (JSON)
+    append_cfg_json "{"
+    append_cfg_json '    "files": {'
+    append_cfg_json '        "kernel": {'
+    append_cfg_json '            "name": "'$KERNEL'"'
+    append_cfg_json '        },'
+    append_cfg_json '        "rootfs": {'
+    append_cfg_json '            "name": "'$ROOTFS'",'
+    append_cfg_json '            "method": "'$ROOTFS_METHOD'"'
+    append_cfg_json '        }'
+    append_cfg_json '    },'
+    append_cfg_json '    "cmdline": "'"$CMDLINE"'",'
+
+    if [[ "${IMA_BUILD}" == "true" ]]; then
+        append_cfg_json '    "ima": {'
+        append_cfg_json '        "signed": true,'
+        append_cfg_json '        "cmdline": "'"${IMA_KERNEL_CMDLINE_OPTIONS}"'"'
+        append_cfg_json '    },'
+    fi
+
+    append_cfg_json '    "machine": "'$MACHINE'",'
+    append_cfg_json '    "memory": "'$MEM'",'
+    append_cfg_json '    "console": {'
+    append_cfg_json '        "tty": "'$CONSOLE_TTY'",'
+    append_cfg_json '        "baudrate": "'$CONSOLE_BAUDRATE'"'
+    append_cfg_json '    },'
+    append_cfg_json '    "net": {'
+    append_cfg_json '        "driver": "'$NET_DRV'"'
+    append_cfg_json '    }'
+    append_cfg_json '}'
 
     # Kernel
-    cp -H "${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin" ${VIRT_DIR}/kernel
+    cp -H "${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin" "$QEMU_DIR/$KERNEL"
 
     # Hard drive
     dd if=/dev/zero of=hda.raw bs=1M count=1k
@@ -105,18 +154,17 @@ do_prepare_virt() {
 
     fdisk -l hda.raw
 
-    qemu-img convert -f raw -O qcow2 hda.raw rootfs.qcow2
+    qemu-img convert -f raw -O qcow2 hda.raw $ROOTFS
 
-    # release
-    tar jcf $VIRT_NAME $CFG $KERNEL $ROOTFS
+    # Package
+    tar jcf "$IMG_NAME.tar.bz2" $CFG $CFG_JSON $KERNEL $ROOTFS
 
-    cp $VIRT_NAME ${DEPLOY_DIR_IMAGE}
-
-    cd ${DEPLOY_DIR_IMAGE}
-    ln -sf $VIRT_NAME $IMG_NAME.tar.bz2
+    # Deploy
+    cp "$IMG_NAME.tar.bz2" "${DEPLOY_DIR_IMAGE}/"
+    ln -sf "$IMG_NAME.tar.bz2" "${DEPLOY_DIR_IMAGE}/$IMG_BASENAME.tar.bz2"
 }
 
-addtask prepare_virt after do_image_complete before do_build
+addtask prepare_qemu_pkg after do_image_complete before do_build
 
 ## Sign rootfs using IMA/EVM tools
 # Highly inspired from https://github.com/intel/meta-intel-iot-security/blob/master/meta-integrity/classes/ima-evm-rootfs.bbclass

@@ -62,6 +62,7 @@ simple_network()
 run_S_scripts()
 {
     local ret=0
+    local log_level=$kern_debug
     local root_path=""
     local file=""
 
@@ -70,7 +71,9 @@ run_S_scripts()
     for s in ${root_path}/etc/rcS.d/S* ; do
         file=$( realpath ${s} )
         if [ -x ${file} ] ; then
+            kern_log $log_level "LE_KPI: start initscript %s\n" ${s}
             ${s} start
+            kern_log $log_level "LE_KPI: end initscript %s\n" ${s}
             # Kick MSM_WATCHDOG one time.
             ${CONTROL_WDT} kick
         else
