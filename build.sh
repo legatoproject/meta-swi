@@ -881,6 +881,10 @@ else
             bitbake ${BB_FLAGS} core-image-minimal
             ;;
     esac
+    rc=$?
+    if [ $rc -ne $SWI_OK ]; then
+        exit $rc
+    fi
 
     # Build debug image if ENABLE_DEBUG_IMG is true.
     if [ $ENABLE_DEBUG_IMG = true ]; then
@@ -892,7 +896,7 @@ else
                 fi
                 ;;
         esac
+        exit $?
     fi
-    exit $?
 fi
 
