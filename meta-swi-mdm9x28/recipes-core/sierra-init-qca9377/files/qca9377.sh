@@ -23,8 +23,8 @@
 # action - "start", "init" or "stop"
 # iface - WiFi interface (optional)
 
-# Currently, this implementation works for MangOH Red with WP76
-# module only.
+# Currently, this implementation works for MangOH Red with WP76/77xx
+# module and WP76/77xx based FX30 (e.g. CAT1/M).
 #
 
 # import run environment
@@ -80,6 +80,14 @@ if [ ! -e ${GPIO_EXPORT} ]; then
     GPIO_UNEXPORT=/sys/class/gpio/unexport
     GPIO_DIR=/sys/class/gpio/gpio
 fi
+
+# Also set local system id.
+system_id_local=$SYSTEM_ID
+if [ "x$SYSTEM_ID" = "xfx30" -o "x$SYSTEM_ID" = "xfx30s" ] ; then
+    # Set it as generic
+    system_id_local="fx30"
+fi
+
 
 #
 # Some useful methods
@@ -222,6 +230,7 @@ check_env()
     local iface=$4
     local clogging_hide_warn=3
     local clogging=
+    local enable_all_gpios=true
 
     # Check if services are correct.
     if [ "x$service" != "xwifi" -a \
@@ -311,13 +320,21 @@ check_env()
     clogging=$( cat /proc/sys/kernel/printk | awk '{ print $1 }' )
     echo $clogging_hide_warn >/proc/sys/kernel/printk
 
-    # Enable all GPIOs on all EXPANDERs
-    gpioexp 1 1 enable >/dev/null
-    if [ $? -ne 0 ] ; then
-        swi_log "Cannot enable GPIOs".
-        clear_lock
-        echo $clogging >/proc/sys/kernel/printk
-        return $SWI_ERR
+    # qca9377 cards are supported on both MangOH red and FX30 hosts. But,
+    # not all statements could be executed on all platforms.
+    if [ "x${system_id_local}" = "xfx30" ] ; then
+        enable_all_gpios=false
+    fi
+
+    if [ "x$enable_all_gpios" = "xtrue" ] ; then
+        # Enable all GPIOs on all EXPANDERs
+        gpioexp 1 1 enable >/dev/null
+        if [ $? -ne 0 ] ; then
+            swi_log "Cannot enable GPIOs".
+            clear_lock
+            echo $clogging >/proc/sys/kernel/printk
+            return $SWI_ERR
+        fi
     fi
 
     # Let's see if this is the right platform for us. For example,
@@ -325,7 +342,7 @@ check_env()
     # on MangOH green.
     gpioexp 3 4 output normal high >/dev/null 2>&1
     if [ $? -eq 0 ] ; then
-        swi_log "This is not MangOH Red platform, giving up."
+        swi_log "This is not supported platform, giving up."
         clear_lock
         echo $clogging >/proc/sys/kernel/printk
         return $SWI_ERR
@@ -336,10 +353,88 @@ check_env()
     return $ret
 }
 
-# Set all GPIOs to support QCA IoT operation
-set_gpios()
+# Set required FX30 GPIOs
+set_gpios_fx30()
 {
     local ret=$SWI_OK
+
+    # If there is no card, we go out
+    is_iot_card_present
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+
+    # Set IOT_GPIO2=1 (GPIO33)
+    if [ ! -d ${GPIO_DIR}33 ] ; then
+        swi_log "Setting up IOT_GPIO2 (GPIO33)..."
+        echo 33 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}33/direction
+        echo 1 >${GPIO_DIR}33/value
+    fi
+
+    # Set IOT_GPIO3=1 (GPIO13)
+    if [ ! -d ${GPIO_DIR}13 ] ; then
+        swi_log "Setting up IOT_GPIO3 (GPIO13)..."
+        echo 13 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}13/direction
+        echo 1 >${GPIO_DIR}13/value
+    fi
+
+    # Set RESET_OUT (GPIO6)
+    if [ ! -d ${GPIO_DIR}6 ] ; then
+        swi_log "Setting up RESET_OUT (GPIO6)..."
+        echo 6 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}6/direction
+        echo 1 >${GPIO_DIR}6/value
+    fi
+
+    # Set IOT0_GPIO4=1 (GPIO8)
+    if [ ! -d ${GPIO_DIR}8 ] ; then
+        swi_log "Setting up IOT0_GPIO4 (GPIO8)..."
+        echo 8 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}8/direction
+        echo 1 >${GPIO_DIR}8/value
+    fi
+
+    # Need to wait for GPIOs to stabilize before returning.
+    sleep 1
+
+    return $ret
+}
+
+# Detects if there is IOT card present
+is_iot_card_present()
+{
+    local gpio=
+    local ret=$SWI_OK
+
+    if [ "x${system_id_local}" = "xfx30" ] ; then
+        gpio=25
+    else
+        gpio=33
+    fi
+
+    # Set IOT_DETECT
+    if [ ! -d ${GPIO_DIR}${gpio} ] ; then
+        echo ${gpio} >${GPIO_EXPORT}
+        echo in >${GPIO_DIR}${gpio}/direction
+    fi
+
+    # Check if IoT card is present
+    if [ $( cat ${GPIO_DIR}${gpio}/value ) -ne 0 ] ; then
+        swi_log "There is no card in IoT slot."
+        return ${SWI_ERR}
+    fi
+
+    return $ret
+}
+
+# Set required WP76xx based MangOH Red
+set_gpios_MangOH_Red_WP76xx()
+{
+    local ret=$SWI_OK
+
+    # If there is no card, we go out
+    is_iot_card_present
+    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
 
     # Set IOT0_GPIO2 = 1 (WP GPIO13)
     if [ ! -d ${GPIO_DIR}13 ] ; then
@@ -377,23 +472,83 @@ set_gpios()
         echo 1 >${GPIO_DIR}8/value
     fi
 
-    # Set CARD_DETECT_IOT0 (WP GPIO33)
-    if [ ! -d ${GPIO_DIR}33 ] ; then
-        swi_log "Setting up CARD_DETECT_IOT0 (WP GPIO33)..."
-        echo 33 >${GPIO_EXPORT}
-        echo in >${GPIO_DIR}33/direction
-    fi
-
     # Need to wait for GPIOs to stabilize before returning.
     sleep 1
 
     return $ret
 }
 
-# Clear all GPIOs previously set (more like hide them).
-clear_gpios()
+# Set all GPIOs to support QCA IoT operation
+set_gpios()
 {
     local ret=$SWI_OK
+
+    # fx30 GPIO setup is quite different.
+    if [ "x${system_id_local}" = "xfx30" ] ; then
+        set_gpios_fx30 ; ret=$?
+        if [ $ret -ne 0 ] ; then
+            return $SWI_ERR
+        else
+            return $SWI_OK
+        fi
+    fi
+
+    set_gpios_MangOH_Red_WP76xx ; ret=$?
+    if [ $ret -ne 0 ] ; then
+        return $SWI_ERR
+    else
+        return $SWI_OK
+    fi
+}
+
+# Clear all FX30 GPIOs previously set (more like hide them).
+clear_gpios_fx30()
+{
+    local ret=$SWI_OK
+
+    # Clear IOT_DETECT (GPIO25)
+    if [ -d ${GPIO_DIR}25 ] ; then
+        swi_log "Clearing IOT_DETECT (GPIO25)..."
+        echo 25 >${GPIO_UNEXPORT}
+    fi
+
+    # Clear IOT_GPIO2 (GPIO33)
+    if [ -d ${GPIO_DIR}33 ] ; then
+        swi_log "Clearing IOT_GPIO2 (GPIO33)..."
+        echo 33 >${GPIO_UNEXPORT}
+    fi
+
+    # Clear IOT_GPIO3 (GPIO13)
+    if [ -d ${GPIO_DIR}13 ] ; then
+        swi_log "Clearing up IOT_GPIO3 (GPIO13)..."
+        echo 13 >${GPIO_UNEXPORT}
+    fi
+
+    # Clear RESET_OUT (GPIO6)
+    if [ -d ${GPIO_DIR}6 ] ; then
+        swi_log "Clearing RESET_OUT (GPIO6)..."
+        echo 6 >${GPIO_UNEXPORT}
+    fi
+
+    # Clear IOT_GPIO4 (GPIO8)
+    if [ -d ${GPIO_DIR}8 ] ; then
+        swi_log "Clearing IOT_GPIO4 (GPIO8)..."
+        echo 8 >${GPIO_UNEXPORT}
+    fi
+
+    return $ret
+}
+
+# Clear all MangOH Red+Wp76 GPIOs previously set (more like hide them).
+clear_gpios_MangOH_Red_WP76xx()
+{
+    local ret=$SWI_OK
+
+    # Clear CARD_DETECT_IOT0 (WP GPIO33)
+    if [ -d ${GPIO_DIR}33 ] ; then
+        swi_log "Clearing CARD_DETECT_IOT0 (WP GPIO33)..."
+        echo 33 >${GPIO_UNEXPORT}
+    fi
 
     # Clear IOT0_GPIO2 = 1 (WP GPIO13)
     if [ -d ${GPIO_DIR}13 ] ; then
@@ -419,11 +574,22 @@ clear_gpios()
         echo 8 >${GPIO_UNEXPORT}
     fi
 
-    # Clear CARD_DETECT_IOT0 (WP GPIO33)
-    if [ -d ${GPIO_DIR}33 ] ; then
-        swi_log "Clearing CARD_DETECT_IOT0 (WP GPIO33)..."
-        echo 33 >${GPIO_UNEXPORT}
+    return $ret
+}
+
+# Clear all GPIOs previously set (more like hide them).
+clear_gpios()
+{
+    local ret=$SWI_OK
+
+    # fx30 GPIO setup is quite different.
+    if [ "x${system_id_local}" = "xfx30" ] ; then
+        clear_gpios_fx30
+        return $SWI_OK
     fi
+
+    # Clear GPIOs on WP76 based MangOH Red
+    clear_gpios_MangOH_Red_WP76xx
 
     return $ret
 }
@@ -439,9 +605,16 @@ qca_bt_start()
     local bt_devs=""
     local bt_service=""
 
-    # set gpios
-    set_gpios
-    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+    # fx30 GPIO setup for BT is minimal
+    if [ "x${system_id_local}" = "xfx30" ] ; then
+        # If there is no card, we go out
+        is_iot_card_present
+        if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+    else
+        # set gpios for other platforms
+        set_gpios
+        if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
+    fi
 
     # Do we have to start hciattach? There could be multiple serial devices,
     # however, these could be attached to only one corresponding physical
