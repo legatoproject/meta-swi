@@ -142,7 +142,7 @@ prepare_ubi_ps() {
 
         # Now Dm-verity only work with squashfs
         if [ "${DM_VERITY_ENCRYPT}" = "on" -a "${rootfs_type}" = "squashfs" ]; then
-            dm_hash_path="${DEPLOY_DIR_IMAGE}/rootfs.hash"
+            dm_hash_path="${image_path}.hash"
             dm_hash_filename="${dm_hash_path}.txt"
             dm_root_hash_path="${DEPLOY_DIR_IMAGE}/rootfs.rhash"
 
@@ -150,6 +150,8 @@ prepare_ubi_ps() {
                 create_dm_verity_hash "${image_path}" "${dm_hash_path}" "${dm_hash_filename}"
                 get_dm_root_hash "${dm_root_hash_path}" "${dm_hash_filename}"
             fi
+            # make a rootfs hash tree copy to ease external signing
+            cp ${dm_hash_path} "${DEPLOY_DIR_IMAGE}/rootfs.hash"
             create_ubinize_config ${ubinize_cfg} ${image_type} ${dm_hash_path} ${dm_root_hash_path}
         else
             create_ubinize_config ${ubinize_cfg} ${image_type}
