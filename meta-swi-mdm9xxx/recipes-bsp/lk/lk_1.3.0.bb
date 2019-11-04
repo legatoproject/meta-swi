@@ -28,14 +28,14 @@ LK_TARGET ?= "mdm9615"
 # 2 - SPEW
 LK_DEBUG ?= "0"
 
-MANGOH_BOARD_PROBE ?= "0"
+WP_BOARD_PROBE ?= "0"
 
 EXTRA_OEMAKE = "-j 1 \
                 TOOLCHAIN_PREFIX='${TARGET_PREFIX}' \
                 TOOLCHAIN_OPTIONS='${TOOLCHAIN_OPTIONS}' \
                 ${LK_TARGET} \
                 DEBUG=${LK_DEBUG} \
-                MANGOH_BOARD_PROBE=${MANGOH_BOARD_PROBE} \
+                WP_BOARD_PROBE=${WP_BOARD_PROBE} \
                 BOOTLOADER_OUT='${B}' \
                 ARCH='${TARGET_ARCH}' \
                 CC='${CC}' \
