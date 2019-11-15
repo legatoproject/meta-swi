@@ -1,6 +1,7 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-SRC_URI += "\
+# Override busybox configuration for systemd operation
+SRC_URI += "${@bb.utils.contains('DISTRO_FEATURES', "systemd","\
             file://find-touchscreen.sh \
             file://automountsdcard.sh \
             file://usb.sh \
@@ -19,7 +20,8 @@ SRC_URI += "\
             file://0001-Support-MTP-function.patch \
             file://fix-mdev-crash.patch \
             file://sensors.sh \
-"
+",'', d)}"
+
 SRC_URI_append_apq8053 += "file://apq8053/mdev.conf"
 
 FILES_${PN}-syslog += "${@bb.utils.contains('DISTRO_FEATURES', "systemd","${systemd_unitdir}/system/busybox-klogd.service ${systemd_unitdir}/system/multi-user.target.wants/busybox-syslog.service",'', d)}"
@@ -43,22 +45,6 @@ do_install_append() {
         install -m 0755 ${WORKDIR}/syslog ${D}${sysconfdir}/initscripts/syslog
         sed -i 's/syslogd -- -n/syslogd -n/' ${D}${sysconfdir}/initscripts/syslog
         sed -i 's/init.d/initscripts/g'  ${D}${systemd_unitdir}/system/busybox-syslog.service
-    else
-        install -d ${D}${sysconfdir}/mdev
-        install -m 0755 ${WORKDIR}/automountsdcard.sh ${D}${sysconfdir}/mdev/
-        install -m 0755 ${WORKDIR}/find-touchscreen.sh ${D}${sysconfdir}/mdev/
-        install -m 0755 ${WORKDIR}/usb.sh ${D}${sysconfdir}/mdev/
-        install -m 0755 ${WORKDIR}/iio.sh ${D}${sysconfdir}/mdev/
-
-        if [ ${BASEMACHINE} == "mdm9607" ];then
-            install -m 0755 ${WORKDIR}/sensors.sh ${D}${sysconfdir}/mdev/
-        elif [ ${BASEMACHINE} == "apq8053" ];then
-            install -m 0644 ${WORKDIR}/apq8053/mdev.conf ${D}${sysconfdir}/
-        elif [ "${BASEMACHINE}" == "sdxpoorwills" ] && [ "${DISTRO}" == "auto" ]; then
-            install -m 0755 ${WORKDIR}/sensors.sh ${D}${sysconfdir}/mdev/
-        fi
-
-        chmod -R go-x ${D}${sysconfdir}/mdev/
     fi
 
     mkdir -p ${D}/usr/bin

@@ -48,7 +48,7 @@ run_configfs() {
 	rm -rf configs/c.2 configs/c.3 2> /dev/null
 	echo 0x05c6 > idVendor
 	echo 0x90DB > idProduct
-	echo "DIAG_SER_RMNET_DPL_QDSS_ADB" > configs/c.1/strings/0x409/configuration
+	echo "DIAG_SER_RMNET_DPL_QDSS_ADB_ECM" > configs/c.1/strings/0x409/configuration
 	ln -s functions/diag.diag configs/c.1/f1
 	if [ -f /etc/data/usb/softap_w_dun ]
 	then

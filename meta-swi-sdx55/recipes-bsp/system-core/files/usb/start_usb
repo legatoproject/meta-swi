@@ -282,11 +282,15 @@ case "$1" in
 	;;
 
   start)
-	udcname=`ls -1 /sys/class/udc | head -n 1`
 	if [ -d /sys/kernel/config/usb_gadget ]; then
+		# Gadget initialized; just bind
+		udcname=`ls -1 /sys/class/udc | head -n 1`
 		echo "Starting USB Android Gadget"
 		rm -f /data/usb_bind_in_progress
 		echo $udcname > /sys/kernel/config/usb_gadget/g1/UDC
+	else
+		# Gadget uninitialized; initialize it
+		$0 init
 	fi
 	;;
 

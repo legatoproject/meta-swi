@@ -10,12 +10,15 @@ inherit ubi-image
 inherit dm-verity-hash
 inherit set-files-attr
 
+# start-scripts-find-partitions is required for sysvinit
+IMAGE_INSTALL_append = "${@bb.utils.contains('DISTRO_FEATURES', 'systemd', \
+			'', ' start-scripts-find-partitions' ,d)}"
 IMAGE_INSTALL_append = " start-scripts-firmware-links"
 
 IMAGE_INSTALL_append = " kernel-modules"
 IMAGE_INSTALL_append = " bsinfo-stub"
 IMAGE_INSTALL += "${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'systemd', '' ,d)}"
-IMAGE_INSTALL += "systemd-machine-units"
+IMAGE_INSTALL += "${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'systemd-machine-units', '' ,d)}"
 IMAGE_INSTALL += "system-core-adbd"
 IMAGE_INSTALL += "system-core-usb"
 IMAGE_INSTALL += "volatile-binds"

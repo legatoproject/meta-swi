@@ -144,9 +144,11 @@ do_install () {
 
     install -m 0755 ${WORKDIR}/confighw.sh -D ${D}${sysconfdir}/init.d/confighw.sh
     install -m 0755 ${WORKDIR}/swiapplaunch.sh -D ${D}${sysconfdir}/init.d/swiapplaunch.sh
-    if [[ "${MACHINE}" == "swi-mdm"* ]]; then
-        install -m 0755 ${WORKDIR}/restart_swi_apps -D ${D}${sbindir}/restart_swi_apps
-    fi
+    case "${MACHINE}" in
+        "swi-mdm"*|"swi-sdx"*)
+            install -m 0755 ${WORKDIR}/restart_swi_apps -D ${D}${sbindir}/restart_swi_apps
+            ;;
+    esac
     install -m 0755 ${WORKDIR}/restartNMEA -D ${D}${sbindir}/restartNMEA
     install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
     install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
