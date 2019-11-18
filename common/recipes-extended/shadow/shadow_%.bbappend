@@ -14,8 +14,11 @@ python() {
              ' file://0002-get_map_ranges-initialize-argidx-to-0-at-top-of-loop.patch' \
              ' file://0003-get_map_ranges-check-for-overflow.patch' \
              ' file://0004-passwd-Add-prefix-parameter-for-shadow-file.patch' \
+             ' file://0005-Do-not-use-real-lckpwdf.patch' \
              ' file://CVE-2017-12424.patch' )
 }
+
+EXTRA_OEMAKE_append += "CPPFLAGS+=-DDISABLE_REAL_LCKPWDF"
 
 do_install_append() {
     sed -i 's/MOTD_FILE/#MOTD_FILE/g' ${D}${sysconfdir}/login.defs
