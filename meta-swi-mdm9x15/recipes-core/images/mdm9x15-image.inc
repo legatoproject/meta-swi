@@ -18,10 +18,10 @@ inherit ubi-image
 IMAGE_INSTALL_append = " wpa-supplicant"
 IMAGE_INSTALL_append = " hostapd"
 IMAGE_INSTALL_append = " iw"
-IMAGE_INSTALL_append = " ti-wifi-utils-wl18xx"
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' ti-wifi-utils-wl18xx', '', d)}"
 IMAGE_INSTALL_append = " crda"
 IMAGE_INSTALL_append = " i2cgpioctl"
-IMAGE_INSTALL_append = " sierra-init-tiwifi"
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' sierra-init-tiwifi', '', d)}"
 
 # Install kernel modules
 IMAGE_INSTALL_append = " kernel-modules"
