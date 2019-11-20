@@ -5,8 +5,7 @@ inherit kernel-src-install
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 PV = "3.14.79"
-LINUX_VERSION = "3.14.79"
-LINUX_VERSION_EXTENSION = "${PV}"
+LINUX_VERSION = "${PV}"
 
 PR := "${PR}.1"
 
@@ -180,11 +179,7 @@ do_tag_config() {
 }
 
 do_configure_prepend() {
-    cd ${KBUILD_OUTPUT}
-    cp ${S}/arch/arm/configs/${KBUILD_DEFCONFIG} .config
-}
-
-do_kernel_configme() {
+    cp ${S}/arch/arm/configs/${KBUILD_DEFCONFIG} ${WORKDIR}/defconfig
 }
 
 do_install_append() {
