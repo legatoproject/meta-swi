@@ -64,9 +64,9 @@ generate_cwe_pid() {
     fi
 
     if [ "$ROOTFS_IMAGE" = "true" ]; then
-        ROOTFS_IMG="${DEPLOY_DIR_IMAGE}/mdm9x15-image-${IMAGE_TYPE}-swi-mdm9x15.${PAGE_SIZE}.default"
+        ROOTFS_IMG="${DEPLOY_DIR_IMAGE}/mdm9x15-image-${IMAGE_TYPE}-${MACHINE}.${PAGE_SIZE}.default"
         if ! [ -e "$ROOTFS_IMG" ]; then
-            ROOTFS_IMG="${DEPLOY_DIR_IMAGE}/mdm9x15-image-${IMAGE_TYPE}-swi-mdm9x15.${PAGE_SIZE}.ubi"
+            ROOTFS_IMG="${DEPLOY_DIR_IMAGE}/mdm9x15-image-${IMAGE_TYPE}-${MACHINE}.${PAGE_SIZE}.ubi"
         fi
 
         echo "Rootfs: $ROOTFS_IMG"
@@ -102,7 +102,7 @@ generate_cwe_pid() {
     if [ "$USER1_IMAGE" = "true" ]; then
         # Set the location of USER1 partition image. Also indicate to CWE tool
         # that image "belongs" to USER1 partition.
-        USER1_IMG="${DEPLOY_DIR_IMAGE}/mdm9x15-image-${IMAGE_TYPE}-swi-mdm9x15-user1.${PAGE_SIZE}.ubi"
+        USER1_IMG="${DEPLOY_DIR_IMAGE}/mdm9x15-image-${IMAGE_TYPE}-${MACHINE}-user1.${PAGE_SIZE}.ubi"
         USER1_OPT="-uapp"
     fi
 

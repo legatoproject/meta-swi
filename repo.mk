@@ -53,6 +53,11 @@ else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x28-fx30-bin/files))
   ifeq ($(PROD),)
     PROD = fx30
   endif
+else ifneq (,$(wildcard $(PWD)/meta-swi-extras/meta-swi-mdm9x15-fx30-bin/files))
+  MACH ?= mdm9x15
+  ifeq ($(PROD),)
+    PROD = fx30
+  endif
 endif
 # If the build is for virt, override.
 ifneq (,$(findstring virt,$(MAKECMDGOALS)))

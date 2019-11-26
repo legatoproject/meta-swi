@@ -1,0 +1,36 @@
+From a471e93f32082dd045b1638bee5fc8784d3918c6 Mon Sep 17 00:00:00 2001
+From: Tom Foy <tfoy@sierrawireless.com>
+Date: Mon, 15 Aug 2016 11:30:14 -0700
+Subject: [PATCH] ALPC-111: Enable GPIO23 during bootloader initialization    -
+ Added recipes-bsp recipe for lk
+
+---
+ platform/mdm9x15/platform.c | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/platform/mdm9x15/platform.c b/platform/mdm9x15/platform.c
+index dcaafce..5828ff0 100644
+--- a/platform/mdm9x15/platform.c
++++ b/platform/mdm9x15/platform.c
+@@ -36,6 +36,7 @@
+ #include <kernel/thread.h>
+ #include <platform/debug.h>
+ #include <platform/iomap.h>
++#include <platform/gpio.h>
+ #include <smem.h>
+ #include <qgic.h>
+ /* SWISTART */
+@@ -81,6 +82,10 @@ void platform_early_init(void)
+ 	}
+ #endif /* !SIERRA */
+ /* SWISTOP */
++
++	/* GPIO23 - for Ultra Low Power Mode, MDM9x15 internal pin GPIO54 */
++	gpio_tlmm_config(54, 0, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_2MA, GPIO_ENABLE);
++
+ 	/* Timers - QGIC Config */
+ 	writel((cfg_bid << 7 | cfg_pid << 10), APCS_GLB_QGIC_CFG);
+ 	qgic_init();
+-- 
+2.7.4
+

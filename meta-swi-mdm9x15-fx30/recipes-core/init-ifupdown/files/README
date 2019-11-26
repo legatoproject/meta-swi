@@ -1,0 +1,5 @@
+# The rules present in this directory are meant for mangOH
+# and are unused for FX30.
+#
+# Please refer to /etc/iptables.rules and /etc/ip6tables.rules
+# for the rules that are being used for FX30.

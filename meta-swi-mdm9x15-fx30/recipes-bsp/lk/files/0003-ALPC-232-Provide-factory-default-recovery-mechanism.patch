@@ -1,0 +1,120 @@
+From 2f0908d223f4e340c1bc4e18224f00b6d2426774 Mon Sep 17 00:00:00 2001
+From: gterrissol <gterrissol@sierrawireless.com>
+Date: Tue, 29 Nov 2016 17:09:19 -0800
+Subject: [PATCH] ALPC-232 : Provide factory default recovery mechanism     -
+ Added new GPIO (7: push button),     - Added kernel command line parameter
+ (condition on GPIO7).
+
+---
+ app/aboot/aboot.c           | 16 ++++++++++++++++
+ platform/mdm9x15/gpio.c     | 10 ++++++++++
+ platform/mdm9x15/platform.c | 10 ++++++++++
+ 3 files changed, 36 insertions(+)
+
+diff --git a/app/aboot/aboot.c b/app/aboot/aboot.c
+index 654cc6c..e779272 100644
+--- a/app/aboot/aboot.c
++++ b/app/aboot/aboot.c
+@@ -140,6 +140,8 @@ char sn_buf[13];
+ 
+ extern int emmc_recovery_init(void);
+ 
++int reset_to_factory = 0;
++
+ #if NO_KEYPAD_DRIVER
+ extern int fastboot_trigger(void);
+ #endif
+@@ -194,6 +196,7 @@ void boot_linux(void *kernel, unsigned *tags,
+ 	int have_cmdline = 0;
+ 	int pause_at_bootup = 0;
+ 	unsigned char *cmdline_final = NULL;
++	const char* reset_cmd = " reset_to_default=true ";
+ 
+ 	/* CORE */
+ 	*ptr++ = 2;
+@@ -305,6 +308,11 @@ void boot_linux(void *kernel, unsigned *tags,
+ 			break;
+ 	}
+ 
++	if (reset_to_factory == 1)
++	{
++		cmdline_len += strlen(reset_cmd);
++	}
++
+ 	if (cmdline_len > 0) {
+ 		const char *src;
+ 		char *dst;
+@@ -411,6 +419,14 @@ void boot_linux(void *kernel, unsigned *tags,
+ 				while ((*dst++ = *src++));
+ 				break;
+ 		}
++
++		if (reset_to_factory == 1)
++		{
++			if (have_cmdline) --dst;
++			src = reset_cmd;
++			while ((*dst++ = *src++));
++		}
++
+ 		ptr += (n / 4);
+ 	}
+ 
+diff --git a/platform/mdm9x15/gpio.c b/platform/mdm9x15/gpio.c
+index 2bf08cc..c8cfe17 100644
+--- a/platform/mdm9x15/gpio.c
++++ b/platform/mdm9x15/gpio.c
+@@ -53,6 +53,16 @@ void gpio_set(uint32_t gpio, uint32_t dir)
+     return;
+ }
+ 
++uint32_t gpio_get(uint32_t gpio)
++{
++    unsigned int dir_out = (readl(GPIO_CONFIG_ADDR(gpio)) >> 9) & 0x1;
++
++    if (dir_out)
++        return (readl(GPIO_IN_OUT_ADDR(gpio)) >> 1) & 0x1;
++
++    return readl(GPIO_IN_OUT_ADDR(gpio)) & 0x1;
++}
++
+ /* Configure gpio for uart - based on gsbi id */
+ void gpio_config_uart_dm(uint8_t id)
+ {
+diff --git a/platform/mdm9x15/platform.c b/platform/mdm9x15/platform.c
+index 1e61c12..51bbf68 100644
+--- a/platform/mdm9x15/platform.c
++++ b/platform/mdm9x15/platform.c
+@@ -49,6 +49,7 @@ static int8_t uart_func[2];
+ /* SWISTOP */
+ static uint32_t ticks_per_sec = 0;
+ 
++extern int reset_to_factory;
+ extern void platform_uninit_timer(void);
+ 
+ void platform_init_timer();
+@@ -86,6 +87,9 @@ void platform_early_init(void)
+ 	/* GPIO23 - for Ultra Low Power Mode, MDM9x15 internal pin GPIO54 */
+ 	gpio_tlmm_config(54, 0, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_16MA, GPIO_ENABLE);
+ 
++	/* GPIO7 - for Push button, MDM9x15 internal pin GPIO79 */
++	gpio_tlmm_config(79, 0, GPIO_INPUT, GPIO_PULL_UP, 0, GPIO_ENABLE);
++
+ 	/* Timers - QGIC Config */
+ 	writel((cfg_bid << 7 | cfg_pid << 10), APCS_GLB_QGIC_CFG);
+ 	qgic_init();
+@@ -96,6 +100,12 @@ void platform_init(void)
+ {
+ 	dprintf(INFO, "platform_init()\n");
+ 	acpu_clock_init();
++
++	/* Reminder: Low=Button is pushed / High:Button is released */
++	if (gpio_get(79) == 0)
++	{
++		reset_to_factory = 1;
++	}
+ }
+ 
+ void platform_uninit(void)
+-- 
+1.9.1
+
