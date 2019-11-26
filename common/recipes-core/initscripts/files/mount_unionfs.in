@@ -11,7 +11,7 @@ this_e=$( basename $0 )
 flash_mntpt_g=${UFS_ROOT}
 root_etc_g=/etc
 root_data_g=/data
-@if !mdm9x15 && !virt
+@if !mdm9x15 && !mdm9x15_fx30 && !virt
 root_firmware_g=/lib/firmware
 @endif
 overlayfs_sig_g=${OVERLAYFS_SIGNATURE}
@@ -114,7 +114,7 @@ mount_unionfs_dir()
 
     mkdir -p ${flash_mntpt_g}${root_g}
 
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     # Kernel 3.14
     # Prior to overlayfs, we've had aufs. Even these are very similar,
     # operations like file/dir move/delete are handled differently.
@@ -198,7 +198,7 @@ mount_unionfs_start()
         return ${SWI_ERR}
     fi
 
-@if !mdm9x15 && !virt
+@if !mdm9x15 && !mdm9x15_fx30 && !virt
     # Overlay /lib/firmware
     mount_unionfs_dir ${root_firmware_g}
     if [ $? -ne ${SWI_OK} ] ; then
@@ -231,7 +231,7 @@ mount_unionfs_stop()
     fi
 
     # Unmount unionfs (don't care about the result).
-@if !mdm9x15 && !virt
+@if !mdm9x15 && !mdm9x15_fx30 && !virt
     umount -l ${root_firmware_g} &>/dev/null
 @endif
     umount -l ${root_etc_g} &>/dev/null

@@ -85,7 +85,7 @@ get_mtdpart_dev_num()
     fi
 
     mtd_dev_num=$( cat /proc/mtd | \
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
                    grep ${mtd_part_name} | \
 @else
                    grep ${mtd_part_name} -w | \
@@ -119,7 +119,7 @@ get_mtdpart_size_mib()
     fi
 
     # Get mtd partition size in bytes (will be in hex format).
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     mtd_part_size=$( cat /proc/mtd | grep ${mtd_part_name} | awk '{ print $2 }' )
 @else
     mtd_part_size=$( cat /proc/mtd | grep ${mtd_part_name} -w | awk '{ print $2 }' )
@@ -162,7 +162,7 @@ create_single_ubi_vol()
         return ${SWI_ERR}
     fi
 
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     # Prepare mtd device for UBI use.
 
     # Erase MTD device.
@@ -174,7 +174,7 @@ create_single_ubi_vol()
 
 @endif
     # Format MTD device for UBI use.
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     ubiformat /dev/mtd${mtd_dev_num}
 @else
     ubiformat /dev/mtd${mtd_dev_num} -y
@@ -340,7 +340,7 @@ quotacheck_ug()
     return ${ret}
 }
 
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
 # Generic function to active DM verity feature. Parameters:
 #   $1 - ubi logical device number
 #   $2 - ubi logical volume number for raw image
@@ -433,7 +433,7 @@ mount_as_dm_verity() {
 #   $4 - ubi logical device number
 #   $5 - ubi logical volume number
 #   $6 - ubifs mount options (default ones should be excluded)
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
 # Other parameters for DM verity and security
 #   $7 - DM verity device name for the partition
 #   $8 - Security check status
@@ -447,7 +447,7 @@ mount_ubifs()
     local ubi_vol_num=$5
     local ubifs_mnt_options=$6
 
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
     # Parameters for DM verity
     local dm_device_name=$7
     local ubi_hash_dev=/dev/ubi${ubi_dev_num}_${UBI_HASH_VOLNUM}
@@ -469,7 +469,7 @@ mount_ubifs()
         return ${SWI_ERR}
     fi
 
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
     is_partition_erased ${mtd_dev_num}
     if [ $? -eq ${SWI_TRUE} ] ; then
         swi_log "UBI: mtd ${mtd_dev_num} does not contain UBI container."
@@ -479,7 +479,7 @@ mount_ubifs()
 @endif
     # Make link between physical and logical UBI device. If device does not
     # show up, we need to exit.
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     ubiattach -m ${mtd_dev_num} -d ${ubi_dev_num}
     if [ $? -ne 0 ] ; then
         swi_log "Unable to attach mtd partition ${mtd_part_name} to UBI logical device ${ubi_dev_num}"
@@ -509,7 +509,7 @@ mount_ubifs()
     # Create corresponding block device. It is not needed for UBIFS volumes,
     # but it is needed for volumes containg file systems like squashfs.
     # If device does not show up for whatever reason, we need to exit.
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     ubiblock --create /dev/ubi${ubi_dev_vol_pair}
     if [ $? -ne 0 ] ; then
         swi_log "Unable to use ubi${ubi_dev_num} partition ${ubi_vol_num}"
@@ -570,7 +570,7 @@ mount_ubifs()
     fi
 @endif
 
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     mount -t ${fstype} /dev/${ubidev_name}${ubi_dev_vol_pair} ${mntpt} \
           -o${UBI_MNTOPT_DEFAULT},${ubifs_mnt_options}
     if [ $? -ne 0 ] ; then
@@ -674,7 +674,7 @@ mount_yaffs_fs()
     local mtd_dev_num=
     local mntpt=$2
 
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
     if ! ${YAFFS2_KERN_SUPPORT}; then
         swi_log "Trying to mount as yaffs2 while there is no support, aborting."
         return ${SWI_ERR}
@@ -703,7 +703,7 @@ mount_yaffs_fs()
 # forced by the user.
 mount_early_user_start()
 {
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     local ret=${SWI_OK}
 @endif
     local mtd_part_name=${USER_MTDEV_NAME}
@@ -716,7 +716,7 @@ mount_early_user_start()
         return ${SWI_OK}
     fi
 
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
     if [ -z "$mtd_part_name" ]; then
         return ${SWI_OK}
     fi
@@ -785,7 +785,7 @@ mount_early_user_start()
         return ${SWI_OK}
     fi
 
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     # Mount YAFFS2 partition. If empty, we may as well have it as UBIFS.
     mount_yaffs_fs ${mtd_part_name} ${FLASH_MOUNTPOINT}
     is_yaffs2_empty ${FLASH_MOUNTPOINT}
@@ -885,7 +885,7 @@ mount_early_user_stop()
     return ${SWI_OK}
 }
 
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
 # This function is used to check secure mode or do security authentication
 # according to the input parameters.
 #
@@ -1072,7 +1072,7 @@ handle_legato_fail_issue()
 mount_early_legato_start()
 {
     local ret=${SWI_OK}
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
     local secure=${SWI_AUTH_FAIL}
     local mtd_dev_num=0
 
@@ -1097,7 +1097,7 @@ mount_early_legato_start()
         fi
     fi
 
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
     # Get mtd device number
     get_mtdpart_dev_num ${LEGATO_MTDEV_NAME}
     mtd_dev_num=$?
@@ -1121,7 +1121,7 @@ mount_early_legato_start()
     # UBI volume, and we need to use ubifs related commands to try to
     # mount it.
     mount_ubifs ${LEGATO_MTDEV_NAME} ${FLASH_MOUNTPOINT_LEGATO} \
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
                 squashfs ${UBI_USER0_DEVNUM} ${UBI_USER0_LEGATO_VOLNUM} ro
 @else
                 squashfs ${UBI_USER0_DEVNUM} ${UBI_USER0_LEGATO_VOLNUM} ro \
@@ -1133,7 +1133,7 @@ mount_early_legato_start()
         swi_log "SQUASHFS successfully mounted on ${FLASH_MOUNTPOINT_LEGATO}"
         return ${ret}
     else
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
         # Mounting of squashfs failed. YAFFS2 "takes no prisoners" and it will mount
         # even if that means wiping out existing file system(s).
         mount_yaffs_fs ${LEGATO_MTDEV_NAME} ${FLASH_MOUNTPOINT_LEGATO}
@@ -1212,7 +1212,7 @@ mount_early_legato_stop()
     return ${ret}
 }
 
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
 # Mount userrw file system. This partition is currently YAFFS2 on all platforms.
 @else
 # Mount userrw file system using UBIFS.
@@ -1227,7 +1227,7 @@ mount_early_userrw_start()
         return ${SWI_OK}
     fi
 
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     # Get the device number
     get_mtdpart_dev_num ${mtd_part_name}
     mtd_dev_num=$?
@@ -1264,7 +1264,7 @@ mount_early_userrw_start()
     fi
 @endif
 
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     # Mount userrw YAFFS2 volume
     mount -t yaffs2 /dev/mtdblock${mtd_dev_num} ${mntpt} -o${YAFFS2_MNTOPT}
     if [ $? -ne 0 ] ; then
@@ -1284,7 +1284,7 @@ mount_early_userrw_start()
     fi
 @endif
 
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
     # user partition is ubifs now.
     swi_log "${mtd_part_name} mounted to ${mntpt}"
 @endif
@@ -1292,18 +1292,18 @@ mount_early_userrw_start()
     return ${SWI_OK}
 }
 
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
 # Unmount userrw file system. This file system is YAFFS2 on all platforms.
 @else
 # Unmount userrw file system.
 @endif
 mount_early_userrw_stop()
 {
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     local ret=${SWI_OK}
 @endif
     local mntpt=${USERRW_MTDEV_MOUNTPOINT}
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
     local is_ubifs=
     local mtd_dev_num=
 
@@ -1311,13 +1311,13 @@ mount_early_userrw_stop()
 @endif
 
     # There is nothing we can do if umount fails, so do not check
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     # the result of the operation.
 @else
     # the result of the operation. The same goes for ubidetach.
 @endif
     umount -l ${mntpt}
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
     if [ -n "${is_ubifs}" ] ; then
         get_mtdpart_dev_num ${USERRW_MTDEV_NAME}
         mtd_dev_num=$?
@@ -1328,7 +1328,7 @@ mount_early_userrw_stop()
     fi
 @endif
 
-@if mdm9x15
+@if mdm9x15 || mdm9x15_fx30
     return ${ret}
 @else
     return ${SWI_OK}
@@ -1533,7 +1533,7 @@ mount_early_start()
     fi
 
     local method_list="
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
                        yaffs2_kern_supported_init
 @endif
                        mount_early_user_start
