@@ -26,6 +26,93 @@ IMAGE_INSTALL += "strace"
 IMAGE_INSTALL += "reboot-daemon"
 IMAGE_INSTALL += "cryptsetup"
 
+
+def grep_and_awk(text, grepfor, awkfor):
+    for line in text.split("\n"):
+        if grepfor in line:
+            fields = line.strip().split()
+            return fields[awkfor]
+    raise Exception("Text '%s' not found in:\n%s\n" % (grepfor, string))
+
+
+def prepare_table(d, data_file, target_dev):
+    import math, subprocess
+    bsize = 4096
+    blocks = math.ceil(os.path.getsize(data_file) / bsize)
+    bstart = blocks + 1
+    hoffset = blocks * bsize
+    veritypath = d.getVar("STAGING_DIR_NATIVE") + "/usr/sbin/"
+
+    # Build verity hash tree
+    command = veritypath + "veritysetup --data-blocks=" + repr(blocks) + \
+                         " --hash-offset=" + repr(hoffset) + \
+                         " format " + data_file + " " + data_file
+
+    subproc = subprocess.run(command.split(), \
+                             stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+
+    if not 0 == subproc.returncode:
+        raise Exception("prepare_table command: \n%s\nerror %d: \n%s\n" % \
+                         (command, subproc.returncode, subproc.stderr))
+
+    cmd_stdout = subproc.stdout.decode()
+
+    # Extract root hash and salt from veritysetup output and populate dm table
+    rhash = grep_and_awk(cmd_stdout, "Root", 2)
+    salt = grep_and_awk(cmd_stdout, "Salt", 1)
+    table = "1 " + target_dev + " " + target_dev + " " + repr(bsize) + " " + \
+             repr(bsize) + " " + repr(blocks) + " " + repr(bstart) + \
+             " sha256 " + rhash + " " + salt
+
+    return table
+
+
+def append_android_metadata(data_file, metadata):
+    # Round-up file size to 32k boundary
+    bsize = 32 * 1024
+    dsize = os.path.getsize(data_file)
+
+    # Read in file data
+    df = open(data_file, "ab")
+
+    # Pad with zeros to nearest 32k
+    padding = "\0" * (bsize - (dsize % bsize))
+    df.write(str.encode(padding))
+
+    # Append metadata
+    df.write(metadata)
+    df.close()
+    return
+
+
+python android_verity_sign() {
+    deploydir = d.getVar("IMGDEPLOYDIR")
+    image_name = d.getVar("IMAGE_NAME")
+    image = deploydir + "/" + image_name + ".rootfs.squashfs"
+
+    if not os.path.isfile(image):
+        raise Exception("android_verity_sign: file '%s' does not exist" % image)
+
+    table = prepare_table(d, os.path.realpath(image), "/dev/ubiblock0_0")
+    privkey = "testkey"
+    metadata = generate_android_metadata(d, table, privkey)
+    append_android_metadata(os.path.realpath(image), metadata)
+    return
+}
+
+dm_verity_sign() {
+    image_path="${IMGDEPLOYDIR}/${IMAGE_NAME}${IMAGE_NAME_SUFFIX}.squashfs"
+    dm_hash_path="${image_path}.hash"
+    dm_hash_filename="${dm_hash_path}.txt"
+    dm_root_hash_path="${image_path}.rhash"
+
+    if [[ "${DM_VERITY_ENCRYPT}" = "on" ]] && [[ -e ${image_path} ]]; then
+        create_dm_verity_hash "${image_path}" "${dm_hash_path}" "${dm_hash_filename}"
+        get_dm_root_hash "${dm_root_hash_path}" "${dm_hash_filename}"
+    fi
+}
+
+
 create_ubinize_config() {
     local cfg_path=$1
     local rootfs_type=$2
@@ -112,11 +199,14 @@ prepare_ubi_ps() {
             dm_hash_filename="${dm_hash_path}.txt"
             dm_root_hash_path="${image_path}.rhash"
 
-            if [[ ! -e ${dm_hash_filename} ]]; then
-                create_dm_verity_hash "${image_path}" "${dm_hash_path}" "${dm_hash_filename}"
-                get_dm_root_hash "${dm_root_hash_path}" "${dm_hash_filename}"
+            # Check if necessary files were created
+            if [[ -s $dm_hash_path ]] && [[ -s "$dm_hash_filename" ]] && \
+               [[ -s "$dm_root_hash_path" ]]; then
+                create_ubinize_config ${ubinize_cfg} ${image_type} ${dm_hash_path} ${dm_root_hash_path}
+            else
+                # Android-verity allows everything packed in one volume
+                create_ubinize_config ${ubinize_cfg} ${image_type}
             fi
-            create_ubinize_config ${ubinize_cfg} ${image_type} ${dm_hash_path} ${dm_root_hash_path}
         else
             create_ubinize_config ${ubinize_cfg} ${image_type}
         fi
@@ -150,6 +240,11 @@ prepare_ubi() {
     ln -s $ubi_link_path_def $ubi_link_path
 }
 
+# Select verity data generation step if DM_VERITY_ENCRYPT is 'on'
+verity_signature = "${@bb.utils.contains('MACHINE_FEATURES', 'android-verity', \
+                      'android_verity_sign', 'dm_verity_sign' ,d)}"
+do_image_complete[postfuncs] += "${@oe.utils.conditional('DM_VERITY_ENCRYPT', \
+                                 'on', '${verity_signature}', '', d)}"
 do_image_complete[postfuncs] += "prepare_ubi"
 
 default_rootfs_ps() {

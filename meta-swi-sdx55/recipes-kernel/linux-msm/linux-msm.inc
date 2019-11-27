@@ -1,4 +1,4 @@
-inherit kernel kernel-yocto
+inherit kernel kernel-yocto android-signing
 #inherit qperf
  
 require recipes-kernel/linux-quic/linux-quic.inc
@@ -87,6 +87,15 @@ FILES_${KERNEL_PACKAGE_NAME}-dev += "/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${
 
 FILES_${KERNEL_PACKAGE_NAME}-dbg += "${KERNEL_SRC_PATH}/arch/*/boot/*/.debug/*"
 
+
+python get_verity_key_id() {
+    key_id = verity_key_id(d, "testkey")
+    d.setVar("KEY_ID", key_id)
+}
+
+do_bootimg[prefuncs] += "${@bb.utils.contains('MACHINE_FEATURES', \
+                          'android-verity', 'get_verity_key_id', '', d)}"
+
 gen_bootimg() {
     image_flags=$1
     image_name=$2
@@ -106,11 +115,16 @@ gen_bootimg() {
         echo "Kernel command line IMA options: [${IMA_KERNEL_CMDLINE_OPTIONS}]"
     fi
 
-    kernel_cmdline="${KERNEL_BOOT_OPTIONS}"
-    kernel_img=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${KERNEL_IMAGE_NAME}.bin
+    kernel_img=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${KERNEL_ARTIFACT_LINK_NAME}.bin
     if [ "x${INITRAMFS_IMAGE_BUNDLE}" = "x1" ] ; then
         kernel_cmdline="${KERNEL_BOOT_OPTIONS_RAMDISK}"
         kernel_img=${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}-${INITRAMFS_LINK_NAME}.bin
+    else
+        kernel_cmdline="${KERNEL_BOOT_OPTIONS}"
+        if ${@bb.utils.contains('MACHINE_FEATURES','android-verity','true','false',d)} && \
+            [ "x${KEY_ID}" != "x" ]; then
+            kernel_cmdline+=" veritykeyid=${KEY_ID} ${ANDROID_VERITY_BOOT_OPTIONS}"
+        fi
     fi
     kernel_img=`readlink -fn ${kernel_img}`
     ls -al $kernel_img

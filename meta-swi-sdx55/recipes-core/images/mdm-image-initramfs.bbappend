@@ -1,5 +1,8 @@
-#PACKAGE_INSTALL_append = " cryptsetup libgcrypt ossp-uuid"
-PACKAGE_INSTALL_append = " cryptsetup libgcrypt"
+# Include some extra packages if dm-verity is enabled
+verity_packages = "${@bb.utils.contains('MACHINE_FEATURES', 'android-verity', \
+                      ' libdevmapper', ' cryptsetup libgcrypt', d)}"
+PACKAGE_INSTALL_append = "${@oe.utils.conditional('DM_VERITY_ENCRYPT', \
+                                 'on', '${verity_packages}', '', d)}"
 
 fakeroot do_filter_rootfs () {
 

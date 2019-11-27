@@ -10,6 +10,7 @@ ROOTFS_MNTPT="/mnt/rootfs"
 DM_VERITY_ENCRYPT=off
 DM_ROOTFS_MOUNT_POINT="/dev/mapper/rt"
 DM_ROOTFS_DEV_NAME="rt"
+VERITY_KEY_ID=""
 
 # Default boot device
 BOOTDEV=""
@@ -355,6 +356,41 @@ mount_as_dm_verity() {
     return ${SWI_OK}
 }
 
+# Use android-verity. Parameters:
+#   $1 - ubi logical device number
+#   $2 - ubi logical volume number for raw image
+#   $3 - DM verity device name for the partition
+#   $4 - Certificate key ID to authenticate the volume
+mount_as_android_verity() {
+    local ubi_dev_num=$1
+    local ubi_vol_num_image=$2
+    local dm_device_name=$3
+    local keyid=$4
+
+    # UBI parameters for squashfs image
+    local ubi_img_dev=/dev/ubi${ubi_dev_num}_${ubi_vol_num_image}
+    local ubi_img_block_dev=/dev/ubiblock${ubi_dev_num}_${ubi_vol_num_image}
+    local dm_target="0 1 android-verity ${keyid} ${ubi_img_block_dev}"
+
+    if grep 'verity=on' /proc/cmdline > /dev/null; then
+        DM_VERITY_ENCRYPT="on"
+    fi
+
+    if [ "x$DM_VERITY_ENCRYPT" != "xon" ]; then
+        echo "DM verity is not enabled."
+        return ${SWI_ERR}
+    fi
+
+    dmsetup -r create ${dm_device_name} --table "${dm_target}"
+    if [ ! $? ]; then
+        echo "Android-verity target mount failed, dm-target:"
+        echo "   ${dm_target}"
+        return ${SWI_ERR}
+    fi
+    dmsetup mknodes ${dm_device_name}
+    return ${SWI_OK}
+}
+
 # Update rootfs image status to share memory for dual system.
 # Otherwise, it will do nothing.
 record_rootfs_image_status()
@@ -475,6 +511,12 @@ set_boot_dev()
                                        ${UBI_HASH_VOLNUM}    \
                                        ${UBI_RHASH_VOLNUM}   \
                                        ${DM_ROOTFS_DEV_NAME}
+                else
+                    # Android verity needs only its block device
+                    mount_as_android_verity ${UBI_ROOTFS_DEVNUM}  \
+                                            ${UBI_IMAGE_VOLNUM}   \
+                                            ${DM_ROOTFS_DEV_NAME} \
+                                            ${VERITY_KEY_ID}
                 fi
                 BOOTTYPE=squashfs
                 BOOTDEV="${ubi_img_blkdev}"
