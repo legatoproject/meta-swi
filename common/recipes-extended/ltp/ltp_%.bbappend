@@ -65,11 +65,11 @@ rm_tests() {
         sed -i "s/^\(${t} \)/#SWI ${CAUSE} #\1/g" "${S}/runtest/ltplite"
     done
 
-    CAUSE="SWI change ulimit -c 1024 to 2048"
+    CAUSE="SWI change ulimit -c to 2048"
     for t in abort01 kill11; do
-        sed -i "s/^${t} ulimit -c 1024;${t}/${t} ulimit -c 2048;${t} #SWI ${CAUSE}/" "${S}/runtest/ltplite"
+        sed -i "s/^${t} ${t}/${t} ulimit -c 2048;${t} #SWI ${CAUSE}/" "${S}/runtest/ltplite"
     done
-
+ 
     CAUSE="endless test"
     for t in readdir02; do
         sed -i "s/^\(${t} \)/#SWI ${CAUSE} #\1/g" "${S}/runtest/ltplite"
