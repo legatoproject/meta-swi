@@ -1,11 +1,15 @@
 #!/bin/sh
 
+source /etc/run.env
+
 DONT_NAG_FILE=/mnt/flash/config/system/etc/noLoginNag
 TOOLS_PATH=/legato/systems/current/bin
 CALLED_AS=$0
 
 PASSWORD_SET=false
 
+PASSWD_EXTRA_PARAMS=""
+REMOUNT_REQUIRED=${SWI_ERR}
 
 CheckRet()
 {
@@ -27,6 +31,18 @@ DontNag()
     fi
 }
 
+# Remount required nagger files.
+RemountNaggerFiles()
+{
+    local ret=${SWI_OK}
+
+    if [ ${REMOUNT_REQUIRED} -eq ${SWI_OK} ] ; then
+        umount /etc/shadow
+        mount --bind ${FLASH_MOUNTPOINT_RFS}/etc/shadow /etc/shadow
+    fi
+
+    return ${ret}
+}
 
 DisablePasswordLogin()
 {
@@ -40,8 +56,9 @@ DisablePasswordLogin()
         case $choice in
             [nN] | "" ) return 1;;
             [yY] )
-                passwd -l root
+                passwd ${PASSWD_EXTRA_PARAMS} -l root
                 CheckRet
+                RemountNaggerFiles;
                 echo "Password-based authentication for root account disabled."
                 break;;
 
@@ -108,8 +125,9 @@ DisableConsole()
 
 EnableConsolePassword()
 {
-    passwd
+    passwd ${PASSWD_EXTRA_PARAMS}
     CheckRet
+    RemountNaggerFiles;
 
     PASSWORD_SET=true
 }
@@ -222,8 +240,9 @@ ConfigureSshKey()
 
 SetupPassword()
 {
-    passwd
+    passwd ${PASSWD_EXTRA_PARAMS}
     CheckRet
+    RemountNaggerFiles;
 
     PASSWORD_SET=true
 
@@ -252,35 +271,78 @@ SelectCredMethod()
     done
 }
 
+# Could nagger be running at all?
+NaggerCouldRun()
+{
+    local ret=${SWI_ERR}
 
-# main execution starts here
-if [ ! -f $DONT_NAG_FILE ]; then
-    if [ ! -f ~/.ssh/authorized_keys ]; then
-        # SSH credentials have not been set, ask the user to setup credentials.
-        SelectCredMethod
-    else
-        nopass=`grep DROPBEAR_EXTRA_ARGS /etc/default/dropbear | grep "\-s" | grep "\-g"`
-        if [ -z $nopass ]; then
-            echo "Apparently ssh keys have been set but password-based authentication via ssh"
-            echo "is still enabled. It is recommended to disable password-based authentication"
-            echo "when using ssh keys."
-            while true; do
-                echo "Do you want to disable password-based authentication via ssh [Y/n]?"
-                read -r choice
-                case $choice in
-                    [Nn] ) break;;
-                    [Yy] | "" )
-                        DisableSshPasswords
-                        if [ $? -eq 0 ]; then
-                            break
-                        fi
-                        ;;
-                    * ) ;;
-                esac
-            done
+    if is_etc_writable; then
+        # Nagger could run.
+        return ${SWI_OK}
+    fi
+
+    if is_flash_mountpoint_writable; then
+        # Nagger could run.
+        REMOUNT_REQUIRED=${SWI_OK}
+        return ${SWI_OK}
+    fi
+
+    # Nagger could not run
+    swi_log "Warning: Login nagger could not run."
+    return ${ret}
+}
+
+# Set extra parameters for password utility.
+SetExtraPasswdParams()
+{
+    local ret=${SWI_OK}
+
+    # If /etc is not writable, we'll need some extra params for password utility.
+    if ! is_etc_writable; then
+        if is_flash_mountpoint_writable; then
+            PASSWD_EXTRA_PARAMS="-p ${FLASH_MOUNTPOINT_RFS}"
         fi
-        # SSH credentials already set, ask the user how to handle local access.
-        LocalAccess
+    fi
+
+    return ${ret}
+}
+
+#
+# main execution starts here
+#
+
+if NaggerCouldRun; then
+
+    SetExtraPasswdParams;
+
+    if [ ! -f $DONT_NAG_FILE ]; then
+        if [ ! -f ~/.ssh/authorized_keys ]; then
+            # SSH credentials have not been set, ask the user to setup credentials.
+            SelectCredMethod
+        else
+            nopass=`grep DROPBEAR_EXTRA_ARGS /etc/default/dropbear | grep "\-s" | grep "\-g"`
+            if [ -z $nopass ]; then
+                echo "Apparently ssh keys have been set but password-based authentication via ssh"
+                echo "is still enabled. It is recommended to disable password-based authentication"
+                echo "when using ssh keys."
+                while true; do
+                    echo "Do you want to disable password-based authentication via ssh [Y/n]?"
+                    read -r choice
+                    case $choice in
+                        [Nn] ) break;;
+                        [Yy] | "" )
+                            DisableSshPasswords
+                            if [ $? -eq 0 ]; then
+                                break
+                            fi
+                            ;;
+                        * ) ;;
+                    esac
+                done
+            fi
+            # SSH credentials already set, ask the user how to handle local access.
+            LocalAccess
+        fi
     fi
 fi
 
