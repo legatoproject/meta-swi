@@ -16,6 +16,8 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 SRC_URI = "git://github.com/SierraWireless/android-signing.git;protocol=https"
 SRC_URI += "file://swi-readme.txt \
             file://swi-key-cwe.sh \
+            file://package_signing.py \
+            file://py_signing.json \
            "
 
 S = "${WORKDIR}/git"
@@ -24,6 +26,8 @@ S = "${WORKDIR}/git"
 do_install() {
     install -d ${ANDROID_SIGNING_DIR}
     cp -r ${S}/* ${ANDROID_SIGNING_DIR}
+    cp ${WORKDIR}/package_signing.py ${ANDROID_SIGNING_DIR}
+    cp ${WORKDIR}/py_signing.json ${ANDROID_SIGNING_DIR}
     cp ${WORKDIR}/swi* ${ANDROID_SIGNING_DIR}
 }
 

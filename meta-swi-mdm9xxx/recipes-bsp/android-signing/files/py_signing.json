@@ -1,0 +1,23 @@
+{
+  "general": {
+    "version_code": "00000001",
+    "mode": "sign"
+  },
+  "folders": {
+    "images": "./",
+    "output": "./"
+  },
+  "key": {
+    "key_type": "RSA",
+    "include_public_key_in_output_dir": false,
+    "rename_public_to": "PUK1.bin"
+  },
+  "images": [
+    {
+      "comment": "What to do with the results",
+      "copy_to_output": true,
+      "padding": true,
+      "include_in_final_package": true
+    }
+  ]
+}
