@@ -1,4 +1,4 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS_prepend := "${THISDIR}/bluez5-common:"
 
 # Location of Tufello support patch. 0001-hciattach-add-QCA9377-Tuffello-support.patch
 # is coming from public repo, and it is misspelled (Tufello is area of Italian city of Rome).
