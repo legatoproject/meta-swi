@@ -25,6 +25,10 @@ if [ -x common/sierra/hdrcnv ]; then
   HDRCNV="common/sierra/hdrcnv"
 fi
 
+if [ -x ../mdm9x28/common/sierra/hdrcnv ]; then
+  HDRCNV="../mdm9x28/common/sierra/hdrcnv"
+fi
+
 CERTPEM="build_src/tmp/work-shared/android-signing/security/verity.x509.pem"
 PRODUCT="9X28"
 CWE_PREFIX="keys"
