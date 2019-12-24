@@ -2,7 +2,7 @@ require recipes-kernel/linux/linux-yocto.inc
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-LINUX_VERSION = "3.14.29"
+LINUX_VERSION = "3.14.79"
 
 PR := "${PR}.1"
 

@@ -4,8 +4,8 @@ inherit kernel-src-install
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
-PV = "3.14.29"
-LINUX_VERSION = "3.14.29"
+PV = "3.14.79"
+LINUX_VERSION = "3.14.79"
 LINUX_VERSION_EXTENSION = "${PV}"
 
 PR := "${PR}.1"

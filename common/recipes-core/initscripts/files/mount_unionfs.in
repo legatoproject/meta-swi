@@ -229,6 +229,21 @@ mount_unionfs_start()
 
     is_etc_overlay_disabled
     if [ $? -ne ${SWI_TRUE} ] ; then
+        # Fixup ECM entry in mdev.conf:
+        # If there is a RW version of mdev.conf, update it with ECM entries
+        rw_mdev_conf=${flash_mntpt_g}${root_etc_g}/mdev.conf
+        if [ -w ${rw_mdev_conf} ]; then
+            rw_mdev_conf_updated=`grep bringup_ecm ${rw_mdev_conf}`
+            if [ "x${rw_mdev_conf_updated}" = "x" ]; then
+                echo "\$DEVPATH=.*/net/e[ec]m[0-9] 0:0 0660 ! @/etc/mdev/bringup_ecm.sh" >> ${rw_mdev_conf}
+                echo "\$DEVPATH=.*/net/usb[0-9] 0:0 0660 ! @/etc/mdev/bringup_ecm.sh" >> ${rw_mdev_conf}
+            fi
+            # If RW and RO files are now identical, remove the RW one
+            mdev_conf_diff=`diff ${rw_mdev_conf} ${root_etc_g}/mdev.conf`
+            if [ "x${mdev_conf_diff}" = "x" ]; then
+                rm -f ${rw_mdev_conf}
+            fi
+        fi
         # Try to make /etc writable.
         mount_unionfs_dir ${root_etc_g}
         if [ $? -ne ${SWI_OK} ] ; then
