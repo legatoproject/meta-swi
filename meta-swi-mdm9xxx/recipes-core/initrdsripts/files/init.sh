@@ -11,9 +11,6 @@ DM_VERITY_ENCRYPT=off
 DM_ROOTFS_MOUNT_POINT="/dev/mapper/rt"
 DM_ROOTFS_DEV_NAME="rt"
 
-# This strings will be change by build.sh when Dm-verity is enabled
-ROOTHASH=
-
 # Default boot device
 BOOTDEV=""
 
@@ -332,12 +329,6 @@ mount_as_dm_verity() {
 
     # Get the root hash from rhash volume
     root_hash=$(dd if=${ubi_rhash_dev} count=1 bs=64 2>/dev/null)
-
-    # Specific feature on this target: rootfs rhash stored in ${ROOTHASH}
-    if [ ${ubi_dev_num} -eq ${UBI_ROOTFS_DEVNUM} ] ; then
-        echo "rootfs roothash: ${ROOTHASH}"
-        root_hash=${ROOTHASH}
-    fi
 
     # Create Dm-verity layer
     veritysetup create ${dm_device_name} ${ubi_img_block_dev} ${ubi_hash_block_dev} ${root_hash}
