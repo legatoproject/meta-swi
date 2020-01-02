@@ -91,5 +91,8 @@ do_install_append () {
     install -m 0444 ${WORKDIR}/rcS-default -D ${D}${sysconfdir}/default/rcS
     install -m 0755 ${WORKDIR}/rcS           ${D}${sysconfdir}/init.d
     install -m 0755 ${WORKDIR}/rcK           ${D}${sysconfdir}/init.d
+
+    # Provide an empty resolv.conf for DNS utility to manipulate later
+    touch ${D}${sysconfdir}/resolv.conf
 }
 

@@ -1414,9 +1414,13 @@ mount_early_create_dirs()
     mkdir -p /var/lock/subsys
     mkdir -p /var/log
     mkdir -p /var/lib/urandom
-@if mdm9x28_ar758x || mdm9x40_ar759x
-    touch /var/resolv.conf
-@endif
+    if [ -L /etc/resolv.conf ]; then
+        # if /etc/resolv.conf is a soft-link, that implies /etc/ is not
+        # writeable (and IMA-enabled build is one of the cases). we then need to
+        # create the destination file for the link.
+        touch `readlink /etc/resolv.conf`
+    fi
+
     return ${ret}
 }
 
