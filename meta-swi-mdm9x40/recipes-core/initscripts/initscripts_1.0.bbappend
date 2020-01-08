@@ -8,6 +8,7 @@ SRC_URI_append = "\
            file://etc/shadow \
            file://start_eth_modules_le \
            file://swi_mount_qct_cfg_file \
+           file://run.env \
            "
 
 do_install_append() {
@@ -20,6 +21,11 @@ do_install_append() {
         update-rc.d $OPT start_eth_modules_le start 26 S .
     fi
 
+    rm -f ${D}${sysconfdir}/run.env
+    # Common functions and environment
+    install -m 0444 ${WORKDIR}/functions.env -D ${D}${sysconfdir}/run.env
+    # Append custom environment from platform-specific layer
+    cat ${WORKDIR}/run.env >> ${D}${sysconfdir}/run.env
     install -D -m 0664 ${WORKDIR}/etc/group -D ${D}${sysconfdir}/group
     install -D -m 0400 ${WORKDIR}/etc/gshadow -D ${D}${sysconfdir}/gshadow
     install -D -m 0664 ${WORKDIR}/etc/passwd -D ${D}${sysconfdir}/passwd

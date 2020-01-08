@@ -24,7 +24,7 @@ SRC_URI = "file://functions \
            file://swiapplaunch.sh.in \
            file://restart_swi_apps.in \
            file://restartNMEA \
-           file://run.env.in \
+           file://functions.env \
            file://run_getty.sh.in \
            file://mount_early.in \
            file://loginNagger \
@@ -50,7 +50,7 @@ SRC_URI_swi-mdm9x28-ar758x-rcy = "file://functions \
            file://rcS \
            file://rcK \
            file://GPLv2.patch \
-           file://run.env.in \
+           file://functions.env \
            file://run_getty.sh.in \
            file://control_msm_watchdog.sh \
            "
@@ -71,7 +71,7 @@ SRC_URI_swi-mdm9x40-ar759x-rcy = "file://functions \
            file://rcS \
            file://rcK \
            file://GPLv2.patch \
-           file://run.env.in \
+           file://functions.env \
            file://run_getty.sh.in \
            file://control_msm_watchdog.sh \
            "
@@ -150,7 +150,6 @@ do_install () {
             ;;
     esac
     install -m 0755 ${WORKDIR}/restartNMEA -D ${D}${sbindir}/restartNMEA
-    install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
     install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
 
 
@@ -237,7 +236,6 @@ do_install_swi-mdm9x28-ar758x-rcy() {
         install -m 0755 ${WORKDIR}/alignment.sh ${D}${sysconfdir}/init.d
     fi
 
-    install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
     install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
     install -m 0755 ${WORKDIR}/control_msm_watchdog.sh -D ${D}${sysconfdir}/init.d/control_msm_watchdog.sh
 }
@@ -275,7 +273,6 @@ do_install_swi-mdm9x40-ar759x-rcy() {
         install -m 0755 ${WORKDIR}/alignment.sh ${D}${sysconfdir}/init.d
     fi
 
-    install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
     install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
     install -m 0755 ${WORKDIR}/control_msm_watchdog.sh -D ${D}${sysconfdir}/init.d/control_msm_watchdog.sh
 }

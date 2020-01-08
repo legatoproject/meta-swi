@@ -5,6 +5,10 @@ SRC_URI += " \
            "
 
 do_install_append() {
+    rm -f ${D}${sysconfdir}/run.env
+    install -m 0444 ${WORKDIR}/run.env -D ${D}${sysconfdir}/run.env
+    # Append common functions from meta-swi-mdm9xxx layer
+    cat ${WORKDIR}/functions.env >> ${D}${sysconfdir}/run.env
     sed -i 's#\(root:x:0:0:.*\):/bin/.*sh#\1:/usr/sbin/loginNagger#' ${D}${sysconfdir}/passwd
 
     # To solve the roll-back issue in LXSWIREF-1510, a symbolic link to the

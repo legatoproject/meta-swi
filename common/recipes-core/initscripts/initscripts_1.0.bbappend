@@ -2,7 +2,7 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI_append = " file://prepro.awk \
-                   file://run.env.in \
+                   file://run.env \
                    file://run_getty.sh.in \
                    file://mountall.sh \
                    file://mount_unionfs.in \
