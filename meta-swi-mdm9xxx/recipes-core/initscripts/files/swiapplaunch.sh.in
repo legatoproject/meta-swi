@@ -30,7 +30,7 @@ case "$1" in
         /usr/bin/swiapp > /dev/null 2>&1 &
         /usr/sbin/restart_swi_apps &
         /usr/sbin/restartNMEA > /dev/null 2>&1 &
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
         /usr/sbin/restart_at_uart > /dev/null 2>&1 &
         /usr/sbin/start_at_cmux_le start &
 @endif
@@ -40,7 +40,7 @@ case "$1" in
         killall -q -HUP swisync
         killall -q -KILL swiapp
         killall -q -HUP restartNMEA
-@if !mdm9x15
+@if !mdm9x15 && !mdm9x15_fx30
         killall -q -HUP restart_at_uart
         killall -q -HUP start_at_cmux_le
 @endif

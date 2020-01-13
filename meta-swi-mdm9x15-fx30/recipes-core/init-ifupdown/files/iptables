@@ -1,0 +1,4 @@
+#!/bin/sh
+/usr/sbin/iptables-restore < /etc/iptables.rules
+/usr/sbin/iptables-restore -n < /usr/local/iptables.ro.rules
+exit $?

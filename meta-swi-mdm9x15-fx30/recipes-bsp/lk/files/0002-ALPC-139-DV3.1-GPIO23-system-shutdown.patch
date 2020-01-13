@@ -1,0 +1,25 @@
+From 0bb7a02b571575a89f1d9854de4eaccfdc69e567 Mon Sep 17 00:00:00 2001
+From: Tom Foy <tfoy@sierrawireless.com>
+Date: Thu, 15 Sep 2016 17:53:12 -0700
+Subject: [PATCH] ALPC-139: DV3.1 GPIO23 system shutdown    - 2mA -> 16mA
+
+---
+ platform/mdm9x15/platform.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/platform/mdm9x15/platform.c b/platform/mdm9x15/platform.c
+index 5828ff0..1e61c12 100644
+--- a/platform/mdm9x15/platform.c
++++ b/platform/mdm9x15/platform.c
+@@ -84,7 +84,7 @@ void platform_early_init(void)
+ /* SWISTOP */
+ 
+ 	/* GPIO23 - for Ultra Low Power Mode, MDM9x15 internal pin GPIO54 */
+-	gpio_tlmm_config(54, 0, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_2MA, GPIO_ENABLE);
++	gpio_tlmm_config(54, 0, GPIO_OUTPUT, GPIO_PULL_UP, GPIO_16MA, GPIO_ENABLE);
+ 
+ 	/* Timers - QGIC Config */
+ 	writel((cfg_bid << 7 | cfg_pid << 10), APCS_GLB_QGIC_CFG);
+-- 
+2.7.4
+
