@@ -457,6 +457,8 @@ set_gpios_MangOH_Red_WP76xx()
         swi_log "Setting up IOT0_RESET = 1 (WP GPIO2)..."
         echo 2 >${GPIO_EXPORT}
         echo out >${GPIO_DIR}2/direction
+        echo 0 >${GPIO_DIR}2/value
+        sleep 1
         echo 1 >${GPIO_DIR}2/value
     fi
 
