@@ -1,0 +1,8 @@
+# Generated on Mon Jan 14 2019
+*filter
+-I INPUT -i rmnet0 -p udp -m udp --sport 5684 -m state --state ESTABLISHED -j ACCEPT
+-I INPUT -i rmnet0 -p udp -m udp --sport 5686 -m state --state ESTABLISHED -j ACCEPT
+-I INPUT -i rmnet0 -p udp -m udp --sport 443 -m state --state ESTABLISHED -j ACCEPT
+-I INPUT -i rmnet0 -p tcp -m tcp --sport 443 -m state --state ESTABLISHED -j ACCEPT
+COMMIT
+# Completed
