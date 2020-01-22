@@ -44,6 +44,8 @@ LEGATO_ROOT ?= "/mnt/legato"
 LDFLAGS = ""
 TARGET_LDFLAGS = ""
 
+PACKAGE_ARCH = "${MACHINE_ARCH}"
+
 do_configure[noexec] = "1"
 
 compile_target() {
