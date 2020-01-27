@@ -1,5 +1,7 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
+FILES_${PN} += " /usr/sbin"
+
 python() {
   import re
 

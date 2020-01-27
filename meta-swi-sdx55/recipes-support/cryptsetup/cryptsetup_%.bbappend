@@ -1,1 +1,1 @@
-PACKAGECONFIG = "gcrypt"
+PACKAGECONFIG_append = " gcrypt"

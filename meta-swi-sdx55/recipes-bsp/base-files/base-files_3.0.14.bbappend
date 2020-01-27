@@ -30,13 +30,6 @@ do_install_append(){
     install -m 755 -o diag -g diag -d ${D}/mnt/sdcard
 
     ln -s /mnt/sdcard ${D}/sdcard
-
-    if [ ${BASEMACHINE} == "mdm9650" ]; then
-      ln -s /etc/resolvconf/run/resolv.conf ${D}/etc/resolv.conf
-    else
-      ln -s /var/run/resolv.conf ${D}/etc/resolv.conf
-    fi
-
 }
 
 # Don't install fstab for systemd targets
