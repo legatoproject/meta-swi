@@ -15,7 +15,7 @@ def get_toolchain_version(d):
     return d.getVar('DISTRO_VERSION', True)
 
 TOOLCHAIN_VERSION = "${@get_toolchain_version(d)}"
-TOOLCHAIN_HOST_TASK += "nativesdk-packagegroup-swi-toolchain"
+TOOLCHAIN_HOST_TASK += " nativesdk-qemu nativesdk-packagegroup-swi-toolchain"
 TOOLCHAIN_TARGET_TASK += "packagegroup-swi-toolchain-target"
 TOOLCHAIN_OUTPUTNAME = "${SDK_NAME}-toolchain-swi-${TOOLCHAIN_VERSION}"
 
