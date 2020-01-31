@@ -49,7 +49,7 @@ SDK_POST_INSTALL_COMMAND = \
 
 # copy of Poky's definition, with fix_symlinks inserted
 SDK_POSTPROCESS_COMMAND = \
-" create_sdk_files; check_sdk_sysroots; fix_symlinks; tar_sdk; ${SDK_PACKAGING_COMMAND} "
+" create_sdk_files; check_sdk_sysroots; fix_symlinks; archive_sdk; ${SDK_PACKAGING_COMMAND} "
 
 fakeroot fix_symlinks() {
     # Fix bad symlinks
