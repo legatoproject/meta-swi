@@ -335,8 +335,10 @@ mount_as_dm_verity() {
 
     # Specific feature on this target: rootfs rhash stored in ${ROOTHASH}
     if [ ${ubi_dev_num} -eq ${UBI_ROOTFS_DEVNUM} ] ; then
-        echo "rootfs roothash: ${ROOTHASH}"
-        root_hash=${ROOTHASH}
+        if [ ! -z "${ROOTHASH}" ] ; then
+            echo "rootfs roothash set at compile time: ${ROOTHASH}"
+            root_hash=${ROOTHASH}
+        fi
     fi
 
     # Create Dm-verity layer
