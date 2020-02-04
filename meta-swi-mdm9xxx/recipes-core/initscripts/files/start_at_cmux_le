@@ -24,10 +24,16 @@ set -e
 
 case "$1" in
   start)
-        swi_log "Starting DS_MUX: "
-        # Both DAEMON_OPT1_UART and DAEMON_OPT2_UART are not really used in the start_at_cmux_le script
-        # Because the mux channel is determined by the at!muxmode command
-        start-stop-daemon -S -b -a DS_MUX -- $DAEMON_OPT1_UART $DAEMON_OPT2_UART $DAEMON_OPT3_UART
+        swi_log "UART1_SERVICE = ${UART1_SERVICE}"
+        if  [ x${UART1_SERVICE} = "xAT" ]; then
+          swi_log "UART1 is AT service, starting DS_MUX daemon ..."
+          # Both DAEMON_OPT1_UART and DAEMON_OPT2_UART are not really used in the start_at_cmux_le script
+          # Because the mux channel is determined by the at!muxmode command
+          start-stop-daemon -S -b -a DS_MUX -- $DAEMON_OPT1_UART $DAEMON_OPT2_UART $DAEMON_OPT3_UART
+        else
+          swi_log "UART1 is NON-AT service, assume DS_MUX daemon over USB"
+          start-stop-daemon -S -b -a DS_MUX -- $DAEMON_OPT1_USB
+        fi
         swi_log "Done start_at_cmux_le script."
         ;;
   stop)
