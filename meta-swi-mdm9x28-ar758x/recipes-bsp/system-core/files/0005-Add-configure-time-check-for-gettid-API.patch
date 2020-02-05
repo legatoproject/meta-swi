@@ -1,0 +1,91 @@
+From 626e4c8f26355df07748877117ae5a2c5c73affe Mon Sep 17 00:00:00 2001
+From: Anju Kunjumon <akunjumon@sierrawireless.com>
+Date: Wed, 5 Feb 2020 09:55:14 -0800
+Subject: [PATCH] Add configure time check for gettid API
+
+glibc 2.30 added gettid syscall wrapper.
+
+Fix adapted from that in meta-openembedded layer by
+Khem Raj <raj.khem@gmail.com>. Do not redefine gettid syscall wrapper
+if already defined by glibc.
+
+Change-Id: I12ec051cbc695a502f026c26266b78700716eac3
+Signed-off-by: Anju Kunjumon <akunjumon@sierrawireless.com>
+---
+ configure.ac             | 3 +++
+ include/cutils/threads.h | 3 ++-
+ libbacktrace/Makefile.am | 4 +---
+ libcutils/threads.c      | 2 ++
+ 4 files changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 8603bc676..dcea77c46 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -18,6 +18,9 @@ AC_PROG_LN_S
+ AC_PROG_MAKE_SET
+ PKG_PROG_PKG_CONFIG
+ 
++# Checks for functions.
++AC_CHECK_FUNCS([gettid])
++
+ # Checks for libraries.
+ PKG_CHECK_MODULES([LIBSELINUX], [libselinux])
+ AC_SUBST([LIBSELINUX_CFLAGS])
+diff --git a/include/cutils/threads.h b/include/cutils/threads.h
+index 572749407..45705abbf 100644
+--- a/include/cutils/threads.h
++++ b/include/cutils/threads.h
+@@ -36,8 +36,9 @@ extern "C" {
+ /*****                                                             *****/
+ /***********************************************************************/
+ /***********************************************************************/
+-
++#if !HAVE_GETTID
+ extern pid_t gettid();
++#endif
+ 
+ #if !defined(_WIN32)
+ 
+diff --git a/libbacktrace/Makefile.am b/libbacktrace/Makefile.am
+index b79d00bc9..160d8bc7e 100644
+--- a/libbacktrace/Makefile.am
++++ b/libbacktrace/Makefile.am
+@@ -16,7 +16,7 @@ backtrace_sources += UnwindMap.cpp
+ backtrace_sources += UnwindPtrace.cpp
+ backtrace_sources += thread_utils.c
+ lib_LTLIBRARIES = libbacktrace.la
+-libbacktrace_la_CPPFLAGS := -I$(top_srcdir)/include -I$(top_srcdir)/base/include/
++libbacktrace_la_CPPFLAGS := -I$(top_srcdir)/include -I$(top_srcdir)/base/include/ -include $(top_builddir)/config.h
+ libbacktrace_la_SOURCES = $(backtrace_sources)
+ libbacktrace_la_CPPFLAGS += $(AM_CFLAGS)
+ libbacktrace_la_CPPFLAGS += -std=c++14
+@@ -33,5 +33,3 @@ backtrace_include_HEADERS := $(top_srcdir)/include/backtrace/backtrace_constants
+ backtrace_include_HEADERS += $(top_srcdir)/include/backtrace/Backtrace.h
+ backtrace_include_HEADERS += $(top_srcdir)/include/backtrace/BacktraceMap.h
+ 
+-
+-
+diff --git a/libcutils/threads.c b/libcutils/threads.c
+index 036f8c5b7..857d4fa39 100644
+--- a/libcutils/threads.c
++++ b/libcutils/threads.c
+@@ -33,6 +33,7 @@
+ 
+ // No definition needed for Android because we'll just pick up bionic's copy.
+ #ifndef __ANDROID__
++#if !HAVE_GETTID
+ pid_t gettid() {
+ #if defined(__APPLE__)
+   return syscall(SYS_thread_selfid);
+@@ -42,6 +43,7 @@ pid_t gettid() {
+   return GetCurrentThreadId();
+ #endif
+ }
++#endif  // HAVE_GETTID
+ #endif  // __ANDROID__
+ 
+ #if !defined(_WIN32)
+-- 
+2.17.1
+

@@ -20,6 +20,7 @@ SRC_URI += "file://0002-Fix-usb-serial-conflict.patch"
 # Fix gcc 7 build
 SRC_URI += "file://0003-include-utils-Vector.h-remove-nonsensical-libresourc.patch"
 SRC_URI += "file://0004-libbacktrace-Use-ucontext_t-instead-of-struct-uconte.patch"
+SRC_URI += "file://0005-Add-configure-time-check-for-gettid-API.patch"
 
 inherit autotools pkgconfig
 
