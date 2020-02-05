@@ -105,3 +105,5 @@ python create_sdk_pkgs() {
     bb.build.exec_func("create_shar", d)
     bb.build.exec_func("move_repacked", d)
 }
+
+PACKAGE_EXCLUDE = "libxcrypt-compat-dev"
