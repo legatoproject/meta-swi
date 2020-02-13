@@ -651,6 +651,12 @@ qca_bt_start()
     /etc/init.d/bluetooth start
    if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
 
+   # The Bluetooth card is attached to UART1 on mangOH Red
+   if [ "x${bt_port}" = "x/dev/ttyHS0" ] ; then
+       swi_log "disable power saving for bluetooth communication on ${bt_port}"
+       echo on > /sys/devices/78b0000.uart/power/control
+   fi
+
     return $ret
 }
 
@@ -696,6 +702,12 @@ qca_bt_stop()
     # some of these pins to stay intact on IoT interface.
     if [ ! -f $run_wifi_lock ] ; then
         clear_gpios
+    fi
+
+    # The Bluetooth card is attached to UART1 on mangOH Red
+    if [ "x${bt_port}" = "x/dev/ttyHS0" ] ; then
+        swi_log "re-eanble power saving on ${bt_port}"
+        echo auto > /sys/devices/78b0000.uart/power/control
     fi
 
     return $ret
