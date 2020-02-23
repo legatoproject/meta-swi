@@ -139,6 +139,10 @@ do_deploy_append() {
     cp ${B}/vmlinux ${DEPLOYDIR}/vmlinux
 }
 
+# Make the bootimg image file using the information available in the sysroot...
+do_bootimg[depends] += "mkbootimg-native:do_populate_sysroot"
+do_bootimg[depends] += "mdm9x28-image-initramfs:do_image_complete"
+
 gen_bootimg() {
     image_flags=$1
     image_name=$2
