@@ -19,8 +19,8 @@ RDEPENDS_${PN} += "libgcc"
 RDEPENDS_${PN} += "libstdc++"
 
 # Optional framework support
-PACKAGECONFIG ??= "python"
-PACKAGECONFIG[python] = "python,nopython,python"
+PACKAGECONFIG ??= "nopython"
+PACKAGECONFIG[python3] = "python3,nopython,python3"
 
 # Target dependencies
 DEPENDS += "curl"
