@@ -37,6 +37,10 @@ do_compile[depends] += "gdb:do_populate_sysroot"
 # Add dependency to the kernel so that Legato can build kernel modules.
 do_compile[depends] += "dummy-kernel-mod:do_compile"
 
+# Always compile; there are generated files (version) that affect the output.
+# stamps cannot trace generated files.
+do_compile[nostamp] = "1"
+
 FILESEXTRAPATHS += "${THISDIR}/files"
 
 LEGATO_ROOT ?= "/mnt/legato"
