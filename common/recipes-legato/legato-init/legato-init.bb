@@ -1,11 +1,9 @@
 DESCRIPTION = "Legato Initialization"
-HOMEPAGE = "http://www.legato.io/"
+HOMEPAGE = "https://legato.io/"
 LICENSE = "MPL-2.0"
-LIC_FILES_CHKSUM = "file://../startlegato.sh;startline=2;endline=2;md5=3c2fa32f2c886dd9f19dad1b05ed1ced"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/MPL-2.0;md5=815ca599c9df247a0c7f619bab123dad"
 
-SRC_URI = " \
-          file://startlegato.sh \
-          "
+SRC_URI = "file://startlegato.sh"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
 
