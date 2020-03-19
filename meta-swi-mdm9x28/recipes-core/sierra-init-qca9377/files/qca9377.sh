@@ -436,6 +436,16 @@ set_gpios_MangOH_Red_WP76xx()
     is_iot_card_present
     if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
 
+    # Set IOT0_RESET = 1 (WP GPIO2)
+    if [ ! -d ${GPIO_DIR}2 ] ; then
+        swi_log "Setting up IOT0_RESET = 1 (WP GPIO2)..."
+        echo 2 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}2/direction
+        echo 0 >${GPIO_DIR}2/value
+        sleep 1
+        echo 1 >${GPIO_DIR}2/value
+    fi
+
     # Set IOT0_GPIO2 = 1 (WP GPIO13)
     if [ ! -d ${GPIO_DIR}13 ] ; then
         swi_log "Setting up IOT0_GPIO2 = 1 (WP GPIO13)..."
@@ -450,16 +460,6 @@ set_gpios_MangOH_Red_WP76xx()
         echo 7 >${GPIO_EXPORT}
         echo out >${GPIO_DIR}7/direction
         echo 1 >${GPIO_DIR}7/value
-    fi
-
-    # Set IOT0_RESET = 1 (WP GPIO2)
-    if [ ! -d ${GPIO_DIR}2 ] ; then
-        swi_log "Setting up IOT0_RESET = 1 (WP GPIO2)..."
-        echo 2 >${GPIO_EXPORT}
-        echo out >${GPIO_DIR}2/direction
-        echo 0 >${GPIO_DIR}2/value
-        sleep 1
-        echo 1 >${GPIO_DIR}2/value
     fi
 
     # Clear SDIO_SEL, GPIO#9/EXPANDER#1 - Select the SDIO
