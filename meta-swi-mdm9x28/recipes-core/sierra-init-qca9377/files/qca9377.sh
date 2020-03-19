@@ -362,6 +362,16 @@ set_gpios_fx30()
     is_iot_card_present
     if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
 
+    # Set RESET_OUT (GPIO6)
+    if [ ! -d ${GPIO_DIR}6 ] ; then
+        swi_log "Setting up RESET_OUT (GPIO6)..."
+        echo 6 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}6/direction
+        echo 0 >${GPIO_DIR}6/value
+        sleep 1
+        echo 1 >${GPIO_DIR}6/value
+    fi
+
     # Set IOT_GPIO2=1 (GPIO33)
     if [ ! -d ${GPIO_DIR}33 ] ; then
         swi_log "Setting up IOT_GPIO2 (GPIO33)..."
@@ -376,14 +386,6 @@ set_gpios_fx30()
         echo 13 >${GPIO_EXPORT}
         echo out >${GPIO_DIR}13/direction
         echo 1 >${GPIO_DIR}13/value
-    fi
-
-    # Set RESET_OUT (GPIO6)
-    if [ ! -d ${GPIO_DIR}6 ] ; then
-        swi_log "Setting up RESET_OUT (GPIO6)..."
-        echo 6 >${GPIO_EXPORT}
-        echo out >${GPIO_DIR}6/direction
-        echo 1 >${GPIO_DIR}6/value
     fi
 
     # Set IOT0_GPIO4=1 (GPIO8)
@@ -436,6 +438,16 @@ set_gpios_MangOH_Red_WP76xx()
     is_iot_card_present
     if [ $? -ne 0 ] ; then return $SWI_ERR ; fi
 
+    # Set IOT0_RESET = 1 (WP GPIO2)
+    if [ ! -d ${GPIO_DIR}2 ] ; then
+        swi_log "Setting up IOT0_RESET = 1 (WP GPIO2)..."
+        echo 2 >${GPIO_EXPORT}
+        echo out >${GPIO_DIR}2/direction
+        echo 0 >${GPIO_DIR}2/value
+        sleep 1
+        echo 1 >${GPIO_DIR}2/value
+    fi
+
     # Set IOT0_GPIO2 = 1 (WP GPIO13)
     if [ ! -d ${GPIO_DIR}13 ] ; then
         swi_log "Setting up IOT0_GPIO2 = 1 (WP GPIO13)..."
@@ -450,14 +462,6 @@ set_gpios_MangOH_Red_WP76xx()
         echo 7 >${GPIO_EXPORT}
         echo out >${GPIO_DIR}7/direction
         echo 1 >${GPIO_DIR}7/value
-    fi
-
-    # Set IOT0_RESET = 1 (WP GPIO2)
-    if [ ! -d ${GPIO_DIR}2 ] ; then
-        swi_log "Setting up IOT0_RESET = 1 (WP GPIO2)..."
-        echo 2 >${GPIO_EXPORT}
-        echo out >${GPIO_DIR}2/direction
-        echo 1 >${GPIO_DIR}2/value
     fi
 
     # Clear SDIO_SEL, GPIO#9/EXPANDER#1 - Select the SDIO
@@ -515,24 +519,28 @@ clear_gpios_fx30()
     # Clear IOT_GPIO2 (GPIO33)
     if [ -d ${GPIO_DIR}33 ] ; then
         swi_log "Clearing IOT_GPIO2 (GPIO33)..."
+        echo 0 >${GPIO_DIR}33/value
         echo 33 >${GPIO_UNEXPORT}
     fi
 
     # Clear IOT_GPIO3 (GPIO13)
     if [ -d ${GPIO_DIR}13 ] ; then
         swi_log "Clearing up IOT_GPIO3 (GPIO13)..."
+        echo 0 >${GPIO_DIR}13/value
         echo 13 >${GPIO_UNEXPORT}
     fi
 
     # Clear RESET_OUT (GPIO6)
     if [ -d ${GPIO_DIR}6 ] ; then
         swi_log "Clearing RESET_OUT (GPIO6)..."
+        echo 0 >${GPIO_DIR}6/value
         echo 6 >${GPIO_UNEXPORT}
     fi
 
     # Clear IOT_GPIO4 (GPIO8)
     if [ -d ${GPIO_DIR}8 ] ; then
         swi_log "Clearing IOT_GPIO4 (GPIO8)..."
+        echo 0 >${GPIO_DIR}8/value
         echo 8 >${GPIO_UNEXPORT}
     fi
 
@@ -544,33 +552,41 @@ clear_gpios_MangOH_Red_WP76xx()
 {
     local ret=$SWI_OK
 
+    # Set SDIO_SEL, GPIO#9/EXPANDER#1 - Deselect the SDIO
+    swi_log "Setting SDIO_SEL, GPIO#9/EXPANDER#1, deselecting the SDIO..."
+    gpioexp 1 9 output normal high >/dev/null || exit 127
+
     # Clear CARD_DETECT_IOT0 (WP GPIO33)
     if [ -d ${GPIO_DIR}33 ] ; then
         swi_log "Clearing CARD_DETECT_IOT0 (WP GPIO33)..."
         echo 33 >${GPIO_UNEXPORT}
     fi
 
-    # Clear IOT0_GPIO2 = 1 (WP GPIO13)
+    # Clear IOT0_GPIO2 (WP GPIO13)
     if [ -d ${GPIO_DIR}13 ] ; then
-        swi_log "Clearing IOT0_GPIO2 = 1 (WP GPIO13)..."
+        swi_log "Clearing IOT0_GPIO2 (WP GPIO13)..."
+        echo 0 >${GPIO_DIR}13/value
         echo 13 >${GPIO_UNEXPORT}
     fi
 
-    # Clear IOT0_GPIO3 = 1 (WP GPIO7)
+    # Clear IOT0_GPIO3 (WP GPIO7)
     if [ -d ${GPIO_DIR}7 ] ; then
-        swi_log "Clearing up IOT0_GPIO3 = 1 (WP GPIO7)..."
+        swi_log "Clearing up IOT0_GPIO3 (WP GPIO7)..."
+        echo 0 >${GPIO_DIR}7/value
         echo 7 >${GPIO_UNEXPORT}
     fi
 
-    # Clear IOT0_RESET = 1 (WP GPIO2)
+    # Clear IOT0_RESET (WP GPIO2)
     if [ -d ${GPIO_DIR}2 ] ; then
-        swi_log "Clearing IOT0_RESET = 1 (WP GPIO2)..."
-        echo 2 >${GPIO_UNEXPORT}
+        swi_log "Clearing IOT0_RESET (WP GPIO2)..."
+        echo 0 >${GPIO_DIR}2/value
+	echo 2 >${GPIO_UNEXPORT}
     fi
 
-    # Clear IOT0_GPIO4 = 1 (WP GPIO8)
+    # Clear IOT0_GPIO4 (WP GPIO8)
     if [ -d ${GPIO_DIR}8 ] ; then
-        swi_log "Clearing IOT0_GPIO4 = 1 (WP GPIO8)..."
+        swi_log "Clearing IOT0_GPIO4 (WP GPIO8)..."
+        echo 0 >${GPIO_DIR}8/value
         echo 8 >${GPIO_UNEXPORT}
     fi
 
