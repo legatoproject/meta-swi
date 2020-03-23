@@ -1,0 +1,29 @@
+From 465043f548ba4f8fd5bc035063da7b7c1a1c8a38 Mon Sep 17 00:00:00 2001
+From: infosys_ATMAINT <infosys_atmaint@sierrawireless.com>
+Date: Mon, 23 Mar 2020 23:06:33 +0800
+Subject: [PATCH] wp76xx: Wait for Audio stream to end
+
+Change-Id: I4c7643ebce65c9d256fd560d70a4ddfca2329af7
+---
+ libalsa-intf/aplay.c | 6 ++++++
+ 1 file changed, 6 insertions(+)
+
+diff --git a/libalsa-intf/aplay.c b/libalsa-intf/aplay.c
+index e4bbcce..98a201e 100644
+--- a/libalsa-intf/aplay.c
++++ b/libalsa-intf/aplay.c
+@@ -544,6 +544,12 @@ start_done:
+         }
+         free(data);
+     }
++/* SWISTART */
++#ifdef SIERRA
++    fprintf(stderr, "Aplay: Wait 200ms for stream to end\n");
++    usleep(200000);
++#endif /* SIERRA */
++/* SWISTOP */
+     fprintf(stderr, "Aplay: Done playing\n");
+     pcm_close(pcm);
+     return 0;
+---
+2.23.0

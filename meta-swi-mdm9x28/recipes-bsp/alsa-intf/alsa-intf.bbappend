@@ -8,4 +8,5 @@ SRC_URI += "file://Fix-codec-High-cpu-load.patch"
 SRC_URI += "file://0003-mm-audio-offer-aplay-arec-amix-dynamic-libraries.patch"
 SRC_URI += "file://0004-Add-backtrace-compiling-options.patch"
 SRC_URI += "file://0005-Yocto-2.2-fixes.patch"
+SRC_URI += "file://0006-Wait-for-Audio-stream-to-end.patch"
 
