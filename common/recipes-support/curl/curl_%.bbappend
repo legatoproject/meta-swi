@@ -1,4 +1,4 @@
-PACKAGECONFIG_remove = "gnutls"
+PACKAGECONFIG_remove = "gnutls libidn"
 PACKAGECONFIG_append = " ssl"
 
 FILESEXTRAPATHS_prepend := "${THISDIR}/curl:"
