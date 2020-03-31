@@ -495,8 +495,7 @@ mangoh_gpioExpander_GpioRef_t mangoh_gpioExpander_Request ( unsigned char module
 
 #if defined CONFIG_MDM9X15
     gpioRefPtr->i2cBus = 0;
-#elif defined CONFIG_MDM9X28 || \
-      defined CONFIG_MDM9X28_FX30
+#elif defined CONFIG_MDM9X28
     gpioRefPtr->i2cBus = 4;
 #else
     #error "Unknown platform"
@@ -671,8 +670,7 @@ int main( int argc, char **argv )
     int ret = 0;
 #if defined CONFIG_MDM9X15
     const int i2cbus = 0;
-#elif defined CONFIG_MDM9X28 || \
-      defined CONFIG_MDM9X28_FX30
+#elif defined CONFIG_MDM9X28
     const int i2cbus = 4;
 #else
     #error "Unknown platform"
