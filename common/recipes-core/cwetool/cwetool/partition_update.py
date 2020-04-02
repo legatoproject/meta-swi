@@ -55,33 +55,33 @@ ipart = 0
 
 # Script requires 3 arguments
 if len(sys.argv) < 3:
-	print "Usage: python partition_update.py sourcefile.xml binaryfile.bin"
+	print("Usage: python partition_update.py sourcefile.xml binaryfile.bin")
 	sys.exit( 1 )
 
 # Check for both input file (read) and output file (read+write) access
 if not os.access( sys.argv[1], os.R_OK ) or not os.access( sys.argv[2], os.W_OK ) :
-	print "Input file or output file missing"
+	print("Input file or output file missing")
 	sys.exit( 1 )
 
 # Open the input file as XML
 root = xml.etree.ElementTree.parse(sys.argv[1]).getroot()
 
 if root.tag != "partitions" :
-	print "Tag <partitions> expected"
+	print("Tag <partitions> expected")
 	sys.exit( 1 )
 
 for child in root:
 	if child.tag != "partition" :
-		print "Tag <partition> expected"
+		print("Tag <partition> expected")
 		sys.exit( 1 )
 	for part in child:
 		pname = ""
 		if part.tag == 'name' :
 			pname = "".join( part.text )
 			if pname != partname[ipart] :
-				print "Error in expected partition order %s" % partname[ipart]
+				print("Error in expected partition order %s" % partname[ipart])
 				sys.exit( 1 )
-			print "Parsing partition %s" % pname
+			print("Parsing partition %s" % pname)
 			ipart += 1
 		if part.tag == 'size_kb' :
 			sizekb.append(int(part.text))
@@ -90,7 +90,7 @@ for child in root:
 
 # Check if all 4 partitions have been filled properly
 if ipart != 5 and len(sizekb) != 5 and len(padkb) != 5 :
-	print "Missing partition..."
+	print("Missing partition...")
 	sys.exit( 1 )
 
 # Open the partition file to update
@@ -99,13 +99,13 @@ f = open( sys.argv[2], 'r+b' )
 # Should be exactly on APPS partition, else file is corrupted
 f.seek( 0x1d0 )
 if f.read(16) != partname[0].ljust(16, '\0' ) :
-	print "Output file corrupted"
+	print("Output file corrupted")
 	sys.exit( 2 )
 
 # Update the partitions
 f.seek( 0x1d0 )
 for i in range(5) :
-	print "Writing partition data for %s" % partname[i]
+	print("Writing partition data for %s" % partname[i])
 	f.write( partname[i].ljust(16, '\0' ) )
 	write_int( int(sizekb[i]) )
 	write_int( int(padkb[i]) )

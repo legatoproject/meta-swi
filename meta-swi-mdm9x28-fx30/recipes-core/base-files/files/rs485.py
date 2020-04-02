@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import sys
 
@@ -12,7 +12,7 @@ ttyFile=open('/dev/ttyHSL0')
 
 if value is None:
     sysfsFile = open(fn, 'r')
-    print sysfsFile.read().strip()
+    print(sysfsFile.read().strip())
 else:
     sysfsFile = open(fn, 'w')
     sysfsFile.write(value)

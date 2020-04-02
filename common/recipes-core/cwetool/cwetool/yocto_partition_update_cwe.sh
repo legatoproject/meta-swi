@@ -4,7 +4,7 @@ TARGET="$1"
 [ -z "$TARGET" ] && echo "Missing target" && exit 1
 
 rm -f full_update_yocto_$TARGET.* boot_update_yocto_$TARGET.*
-python `dirname $0`/partition_update.py custom_partition.xml partition.mbn
+python3 `dirname $0`/partition_update.py custom_partition.xml partition.mbn
 [ $? -ne 0 ] && exit 1
 
 FW=`cat firmware_version.txt`
