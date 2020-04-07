@@ -41,6 +41,15 @@ case "$1" in
         mount -o bind $LEGATO_MNT /legato
 
         test -x $LEGATO_START && $LEGATO_START
+
+        # If Legato fails to start on a SMACK enabled build, CIPSO will be used
+        # by default. It may however create errors in IP packets. Therefore,
+        # disabling its usage here.
+        if ([ $? -ne 0 ] && [ -f /sys/fs/smackfs/netlabel ]);
+        then
+            echo "Legato fails to start, disabling netlabel"
+            echo "0.0.0.0/0 @" > /sys/fs/smackfs/netlabel
+        fi
         ;;
 
     stop)
