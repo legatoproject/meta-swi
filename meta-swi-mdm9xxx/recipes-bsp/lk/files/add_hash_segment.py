@@ -105,9 +105,9 @@ def GetIE (IN,VarName ):
 def GetIE2 (IN, VarName1 , VarName2 ):
 	Temp, = struct.unpack('<I', IN.read(4))
 	Var1 = Temp & 0x000000000000FFFF
-	print "%s = %08x %d" % (VarName1,Var1,Var1)
+	print("%s = %08x %d" % (VarName1,Var1,Var1))
 	Var2 = (Temp & 0x00000000FFFF0000)>>16
-	print "%s = %08x %d" % (VarName2,Var2,Var2)
+	print("%s = %08x %d" % (VarName2,Var2,Var2))
 	return (Var1,Var2)
 
 def SET_IE(OUT,Var):
@@ -232,7 +232,7 @@ def ContainsHashSegment(file):
 
 def CalculateHashSegmentMDM9x40(file):
 	#Calculate 32 Bytes hash for segment0
-	print (" Calculate Hash Segment")
+	print(" Calculate Hash Segment")
 	hashfilename = "hash_seg0.bin"
 	os.system("openssl dgst -sha256 -binary %s > %s" % (file,hashfilename))
 	HashFile = open(hashfilename,"rb")
@@ -243,15 +243,15 @@ def CalculateHashSegmentMDM9x40(file):
 
 def DecodeELFHeader(ImageNameElf):
 	try:
-		IN =  open(ImageNameElf,"rwb+")
-	except Exception, e:
-		print  "\nError: Can't open %s for reading: %s\n" % (ImageNameToSign,e)
+		IN =  open(ImageNameElf,"rb+")
+	except Exception as e:
+		print("\nError: Can't open %s for reading: %s\n" % (ImageNameElf,e))
 		sys.exit(1)
 	# Need to decode information from elf header
 	elfheader = ReadELFheader(IN)
 	IN.seek(elfheader.ephoff)
 	# Array to store the location of split files
-	OffsetArray = range(elfheader.phnum)
+	OffsetArray = list(range(elfheader.phnum))
 	for i in range (0,elfheader.phnum):
 		Position = IN.tell()
 		ProgHeader = ReadElfProgramHeader(IN)
@@ -264,7 +264,7 @@ def AddHashSegmentToImage(file,ImageType,ScriptPath):
 	try:
 		shutil.rmtree("Temp",ignore_errors=0)
 		os.mkdir("Temp")
-	except Exception, error:
+	except Exception as error:
 		os.mkdir("Temp")
 
 	IN = open(file,'rb')
@@ -331,7 +331,7 @@ def AddHashSegmentToImage(file,ImageType,ScriptPath):
 
 	# 2nd HashSegment of cert chain contains \x00
 	for i in range (0,32):
-		destination.write ("\x00")
+		destination.write(b'\x00')
 
 	# 3rd HashSegment of .b02
 	Hash2  = CalculateHashSegmentMDM9x40("Temp/split.b02")
@@ -343,15 +343,15 @@ def AddHashSegmentToImage(file,ImageType,ScriptPath):
 
 	# Last HashSegment contains \x00
 	for i in range (0,32):
-		destination.write ("\x00")
+		destination.write(b'\x00')
 	destination.close()
 
 def CreateUnsignedImage(ImageFilename):
 	if not(os.path.exists(OutputFolder)):
 		try:
 			os.makedirs(OutputFolder)
-		except Exception, error:
-			print error
+		except Exception as error:
+			print(error)
 	if '/' in (ImageFilename):
 		ImageFilename = ImageFilename.rsplit('/', 1)[-1]
 	ImageFilename = ImageFilename[0:ImageFilename.rindex(".")]
@@ -394,25 +394,22 @@ def VerifyElfImage(file):
 		return False
 
 def getElfParameters(IN):
-	hex = "0[xX][\dA-Fa-f]+"
+	hexx = '0[xX][\dA-Fa-f]+'
 	IN.seek(4)
 	parameterList = {}
 	command = "readelf -l %s" %(IN.name)
 	process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	output,error = process.communicate()
-	if error != "":
-		print bcolors.FAIL + "Error: %s" %(error)+ bcolors.ENDC
-		sys.exit(1)
-	str = r'\s+\S+\s+(?P<offset>%s)\s+%s\s+(?P<phys>%s)\s+(?P<f_size>%s)\s+(?P<m_size>%s)' % (hex, hex, hex, hex, hex)
-	match_entry = re.search(r'Entry point (%s)' % hex, output)
-	match_offset = re.search(r'There are (\d+) program headers, starting at offset (\d+)', output)
+	strx = '\s+\S+\s+(?P<offset>%s)\s+%s\s+(?P<phys>%s)\s+(?P<f_size>%s)\s+(?P<m_size>%s)' % (hexx, hexx, hexx, hexx, hexx)
+	match_entry = re.search(r'Entry point (%s)' % hexx, output.decode())
+	match_offset = re.search(r'There are (\d+) program headers, starting at offset (\d+)', output.decode())
 	if not match_entry is None:
 		parameterList['entry_point'] = match_entry.group(1)
 	if not match_offset is None:
 		parameterList['number_seg'] = int(match_offset.group(1))
 		parameterList['pg_start'] = int(match_offset.group(2))
 		parameterList['segments'] = []
-	for match_offset in re.finditer(str, output):
+	for match_offset in re.finditer(strx, output.decode()):
 		parameterList['segments'].append(match_offset.groupdict())
 	for i, segment in enumerate(parameterList['segments']):
 		segment['hashValue'] = check_hash(parameterList['pg_start'] + (i * 32), IN)
@@ -465,10 +462,10 @@ def ParseCommandLine():
 			continue
 
 	if ImageFilename == "empty":
-		print bcolors.FAIL + "\n\nERROR: No image was specified" + bcolors.ENDC
+		print(bcolors.FAIL + "\n\nERROR: No image was specified" + bcolors.ENDC)
 		sys.exit(1)
 	if OutputFolder == "empty":
-		print bcolors.FAIL + "\n\nERROR: No output folder was specified"+ bcolors.ENDC
+		print(bcolors.FAIL + "\n\nERROR: No output folder was specified"+ bcolors.ENDC)
 		sys.exit(1)
 
 ######################################################
@@ -481,27 +478,23 @@ ImageFilename = "empty"
 OutputFolder = "empty"
 ImageType = "empty"
 ScriptPath = os.path.split(os.path.realpath(__file__))[0]
-print ScriptPath
+print(ScriptPath)
 ParseCommandLine()
 try:
-	print ImageFilename
+	print(ImageFilename)
 	IN = open(ImageFilename,"rb")
-except Exception, e:
-	print  bcolors.FAIL + "\nError: Can't open Image file for reading: %s\n" % e + bcolors.ENDC
-
-if not VerifyElfImage(IN):
-	print  bcolors.FAIL + "\nError: Not a valid elf image" % e + bcolors.ENDC
-	sys.exit(1)
+except Exception as e:
+	print(bcolors.FAIL + "\nError: Can't open Image file for reading: %s\n" % e + bcolors.ENDC)
 
 if (ContainsHashSegment(ImageFilename) == False):
 	AddHashSegmentToImage(ImageFilename,ImageType,ScriptPath)
 	CreateUnsignedImage(ImageFilename)
-	print bcolors.OKGREEN + "Unsigned image created"+ bcolors.ENDC
+	print(bcolors.OKGREEN + "Unsigned image created"+ bcolors.ENDC)
 else :
 	if not(os.path.exists(OutputFolder)):
 		try:
 			os.makedirs(OutputFolder)
-		except Exception, error:
-			print error
+		except Exception as error:
+			print(error)
 	shutil.copy2(ImageFilename,OutputFolder)
-	print bcolors.OKGREEN + "Image already contains hash segment and is copied to output folder"
+	print(bcolors.OKGREEN + "Image already contains hash segment and is copied to output folder")

@@ -115,13 +115,13 @@ FILES_${PN}-dbg = "/boot/.debug"
 
 LK_HASH_MODE = "no_hash"
 
-DEPENDS += "${@oe.utils.conditional('LK_HASH_MODE', 'dual_system', "openssl-native python-native", '', d)}"
+DEPENDS += "${@oe.utils.conditional('LK_HASH_MODE', 'dual_system', "openssl-native python3-native", '', d)}"
 
 add_hash_dual_system() {
     IMAGE_NAME=$1
     cd ${B}
     if [ -f "${B}/../../$IMAGE_NAME.mbn" ] ; then
-        python ${THISDIR}/files/add_hash_segment.py image=${B}/../../$IMAGE_NAME.mbn imageType=APBL of=${B}/build-${LK_TARGET}/unsigned
+        python3 ${THISDIR}/files/add_hash_segment.py image=${B}/../../$IMAGE_NAME.mbn imageType=APBL of=${B}/build-${LK_TARGET}/unsigned
         install ${B}/build-${LK_TARGET}/unsigned/$IMAGE_NAME.umbn ${B}/../../$IMAGE_NAME.mbn
     fi
 }
