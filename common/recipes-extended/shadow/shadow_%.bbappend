@@ -20,6 +20,8 @@ python() {
 
 EXTRA_OEMAKE_append += "CPPFLAGS+=-DDISABLE_REAL_LCKPWDF"
 
+RDEPENDS_${PN}_remove = "util-linux-sulogin"
+
 do_install_append() {
     sed -i 's/MOTD_FILE/#MOTD_FILE/g' ${D}${sysconfdir}/login.defs
 }
