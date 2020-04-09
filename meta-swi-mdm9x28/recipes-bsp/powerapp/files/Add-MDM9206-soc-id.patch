@@ -1,0 +1,11 @@
+--- a/start_power_config
++++ b/start_power_config
+@@ -36,7 +36,7 @@ case "$1" in
+         soc_id=`cat /sys/devices/soc0/soc_id`
+ 
+ 	case "$soc_id" in
+-	"290" | "296" | "297" | "298" | "299")
++	"290" | "296" | "297" | "298" | "299" | "322")
+ 		echo -n "Starting powerconfig for mdm9607: "
+ 
+ 		echo "interactive" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor

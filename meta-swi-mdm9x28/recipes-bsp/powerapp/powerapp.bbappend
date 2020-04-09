@@ -7,6 +7,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI = "${SYSTEMCORE_REPO}"
 SRC_URI += "file://start_power_config.patch"
+SRC_URI += "file://Add-MDM9206-soc-id.patch"
 
 SANITIZED_HEADERS = "${STAGING_KERNEL_DIR}/usr/include"
 
