@@ -1,0 +1,28 @@
+From 4c6fca49e3d466c6288c378e423a4aca2c6601ca Mon Sep 17 00:00:00 2001
+From: Srinivas Rao L <lsrao@codeaurora.org>
+Date: Thu, 9 Mar 2017 17:02:48 +0530
+Subject: platform: system: core: Add support for MDM9206
+
+Add MDM9206 soc-id to enable low power modes.
+
+Change-Id: I96e81842cf2de699ec24868518298f853979dbca
+---
+ powerapp/start_power_config | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/start_power_config b/start_power_config
+index 5f8894f..5547b5c 100755
+--- a/start_power_config
++++ b/start_power_config
+@@ -36,7 +36,7 @@ case "$1" in
+         soc_id=`cat /sys/devices/soc0/soc_id`
+ 
+ 	case "$soc_id" in
+-	"290" | "296" | "297" | "298" | "299")
++	"290" | "296" | "297" | "298" | "299" | "322")
+ 		echo -n "Starting powerconfig for mdm9607: "
+ 
+ 		echo "interactive" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor
+-- 
+cgit v1.1
+

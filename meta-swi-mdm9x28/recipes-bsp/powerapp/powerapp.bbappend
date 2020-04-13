@@ -6,7 +6,8 @@ SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=mdm"
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI = "${SYSTEMCORE_REPO}"
-SRC_URI += "file://start_power_config.patch"
+SRC_URI += "file://start_power_config.patch \
+            file://mdm9206_power_config.patch"
 
 SANITIZED_HEADERS = "${STAGING_KERNEL_DIR}/usr/include"
 
