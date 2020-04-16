@@ -38,15 +38,22 @@ KEY_ID=""
 if [ -n "$1" ]; then
   CERTPEM=$1
 fi
-if [ -n "$2" ]; then
+if [[ -n "$2" && "$2" == "9X28" ]]; then
   PRODUCT=$2
+else
+  echo "Only 9X28 product supported."
 fi
-if [ -n "$3" ]; then
+if [[ -n "$3" && "$3" =~ ^[A-Z]{3}[0-9]$ ]]
+then
   KEY_ID=$3
+else
+  echo "Wrong keyid format. Exiting."
+  exit
 fi
 if [ -n "$4" ]; then
   CWE_LABEL=$4
 fi
+
 
 
 if [ ! -f $CERTPEM ]; then
