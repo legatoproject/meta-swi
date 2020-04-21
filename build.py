@@ -215,7 +215,7 @@ def enable_swi_layers(conf, ns):
 
     if mach.startswith('swi-sdx55'):
       # Special meta-swi-em layers for sdx55:
-      ly_list += ['../meta-swi-em/common',
+      layer_list += ['../meta-swi-em/common',
                   '../meta-swi-em/meta-swi-em9xxx',
                   '../meta-swi-em/meta-swi-em9190']
 
@@ -314,7 +314,7 @@ def enable_swi_layers(conf, ns):
 
     if mach.startswith('swi-sdx55'):
       # Special meta-swi-em-extras layers for sdx55:
-      ly_list += ['../meta-swi-em-extras/common',
+      layer_list += ['../meta-swi-em-extras/common',
                   '../meta-swi-em-extras/meta-swi-em9xxx-bin',
                   '../meta-swi-em-extras/meta-swi-em9190-bin']
 

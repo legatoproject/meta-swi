@@ -230,7 +230,7 @@ ifdef BB_FLAGS
   BB_ARGS := --bitbake-flags="${BB_FLAGS}"
 endif
 
-BUILD_SCRIPT := "meta-swi/build.sh"
+BUILD_SCRIPT := "meta-swi/build.py"
 
 # Provide a docker abstraction for Yocto building, allowing the host seen
 # by the Yocto environment to be the ideal Linux distribution
