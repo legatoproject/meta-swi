@@ -572,6 +572,7 @@ def do_build(ns):
     msg('bitbaking %s' % (target))
     return inside_oe_env_do(ns, 'bitbake %s %s' % (bb_flags, target))
 
+  status = 0
   if ns.cmdline_mode:
     status = inside_oe_env_do(ns, '/bin/bash')
   elif ns.build_toolchain:
@@ -602,7 +603,8 @@ def inside_oe_env_do(ns, sh_command):
   build_dir = ns.build_dir
   poky_dir = ns.poky_dir
   silent = ' > /dev/null' if sh_command != '' else ''
-  return os.system('. %s/oe-init-build-env %s%s; %s' % (poky_dir, build_dir, silent, sh_command))
+  cmd = ". %s/oe-init-build-env %s%s; %s" % (poky_dir, build_dir, silent, sh_command)
+  return subprocess.call(cmd, shell=True)
 
 def flex_int(x):
   return int(x, 0)

@@ -242,7 +242,7 @@ ifeq ($(USE_DOCKER),1)
   DOCKER_IMG ?= "quay.io/swi-infra/yocto-dev:yocto-${YOCTO_MAJOR}.${YOCTO_MINOR}"
   INTERACTIVE := $(shell [ -t 0 ] && echo 1)
   ifdef INTERACTIVE
-    DOCKER_TTY ?= --tty --interactive
+    DOCKER_TTY ?= --tty
   else
     DOCKER_TTY =
   endif
@@ -250,6 +250,7 @@ ifeq ($(USE_DOCKER),1)
                     --rm \
                     --user=${UID}:${GID} \
                     ${DOCKER_TTY} \
+                    --interactive \
                     --init \
                     --hostname=${HOSTNAME} \
                     --volume ${PWD}:${PWD} \
