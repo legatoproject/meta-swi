@@ -452,6 +452,8 @@ def tune_local_conf_src_mirror(lconf, ns):
     set_option(lconf, "DISTRO", ns.distro, "=", after_line)
     set_option(lconf, "LINUX_REPO_DIR", ns.linux_repo_dir, "=", after_line)
     set_option(lconf, "WORKSPACE", ns.apps_proc_dir, "=", after_line)
+    if hasattr(ns, "firmware_version"):
+        set_option(lconf, "FW_VERSION", ns.firmware_version, "=", after_line)
     set_option(lconf, "BB_NO_NETWORK", "0", "=", after_line)
 
     if not get_option(lconf, "SOURCE_MIRROR_URL"):
