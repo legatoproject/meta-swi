@@ -114,6 +114,9 @@ IMA_BUILD ?= 0
 # easy for everyone.
 IMA_CONFIG ?= $(PWD)/meta-swi/common/recipes-security/ima-support-tools/files/ima.conf
 
+# CVE_CHEK mirror
+CVE_NVD_MIRROR_URL ?= 0
+
 # Default BB arguments
 BB_ARGS ?=
 
@@ -172,6 +175,10 @@ endif
 
 ifneq ($(SDK_PREFIX),0)
   SDK_PREFIX_ARGS := --recipe-args="SDKPATH_PREFIX=${SDK_PREFIX}"
+endif
+
+ifneq ($(CVE_NVD_MIRROR_URL),0)
+  CVE_CHECK_ARGS := --recipe-args="CVE_NVD_MIRROR_URL=${CVE_NVD_MIRROR_URL}"
 endif
 
 ifdef TARGET_HOSTNAME
@@ -267,6 +274,7 @@ ifeq ($(USE_DOCKER),1)
                     --env IMA_CONFIG \
                     --env SDK_PREFIX \
                     --env FIRMWARE_PATH \
+                    --env CVE_NVD_MIRROR_URL \
                     --env TARGET_HOSTNAME \
                     --env RECOVERY_BUILD
   BUILD_SCRIPT := ${DOCKER_RUN} ${DOCKER_IMG} ${BUILD_SCRIPT}
@@ -285,6 +293,7 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${SDK_PREFIX_ARGS} \
 				${HOSTNAME_ARGS} \
 				${IMA_ARGS} \
+				${CVE_CHECK_ARGS} \
 				${BB_ARGS} \
 				${EXT_SWI_IMG_ARGS} \
 				${SHARED_SSTATE_ARGS} \
