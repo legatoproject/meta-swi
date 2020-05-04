@@ -19,7 +19,7 @@ determine_rootfs_version() {
         export VERSION_rootfs="$VERSION_fw"
     else
         cd $meta_swi_dir
-        export VERSION_rootfs="$(git describe --tags)"
+        export VERSION_rootfs="$(git rev-parse --short HEAD)"
     fi
 }
 
@@ -131,20 +131,12 @@ do_generate_version_file() {
         meta_swi_dir=$(echo ${BBLAYERS} |tr ' ' '\n' |grep -E "meta-swi$")
     fi
     cd $meta_swi_dir
-    meta_swi_tag=$(git describe --tags --exact || true)
     VERSION_meta_swi=$(git rev-parse --short HEAD)
-    if [ -n "$meta_swi_tag" ]; then
-        VERSION_meta_swi="($meta_swi_tag) $VERSION_meta_swi"
-    fi
 
     # meta-swi-extras
     if [ -n "${META_SWI_EXTRAS_DIR}" ]; then
         cd ${META_SWI_EXTRAS_DIR}
-        meta_swi_extras_tag=$(git describe --tags --exact || true)
         VERSION_meta_swi_extras=$(git rev-parse --short HEAD)
-        if [ -n "$meta_swi_extras_tag" ]; then
-            VERSION_meta_swi_extras="($meta_swi_extras_tag) $VERSION_meta_swi_extras"
-        fi
     fi
 
     determine_kernel_versions
