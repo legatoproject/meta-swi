@@ -26,6 +26,101 @@
 
 # DESCRIPTION:  DIAG+ADB+ECM
 
+configure_android_gadget()
+{
+    local gadget_fs=/sys/class/android_usb/android${num}
+    #echo $mode > /sys/bus/platform/devices/usb_bam/enable
+    echo 0 > ${gadget_fs}/enable
+    echo $vid > ${gadget_fs}/idVendor
+    echo $pid > ${gadget_fs}/idProduct
+    echo $devclass > ${gadget_fs}/bDeviceClass
+    echo $devsubclass > ${gadget_fs}/bDeviceSubClass
+    echo $devprotocol > ${gadget_fs}/bDeviceProtocol
+    echo $diagstr > ${gadget_fs}/f_diag/clients
+    echo $serialstr > ${gadget_fs}/f_serial/transports
+    echo QTI,BAM_DMUX > ${gadget_fs}/f_rmnet/transports
+    echo $compstr > ${gadget_fs}/functions
+    echo $remotewakeup > ${gadget_fs}/remote_wakeup
+
+    echo $manufacturer > ${gadget_fs}/iManufacturer
+    echo $product > ${gadget_fs}/iProduct
+    echo $serial > ${gadget_fs}/iSerial
+
+    compstr=`grep -w ffs ${gadget_fs}/functions || true`
+    if [[ $mode = "hsusb" && ! -z "$compstr" && -d ${gadget_fs}/f_ffs ]] ; then
+        echo adb > ${gadget_fs}/f_ffs/aliases
+    fi
+
+    echo 1 > ${gadget_fs}/enable
+}
+
+configure_configfs_gadget()
+{
+    local configfs_home=/sys/kernel/config/usb_gadget
+    local gadget_home=${configfs_home}/g$((num+1))
+    local strings_home=${gadget_home}/strings/0x409
+    local config_home=${gadget_home}/configs/c.$((num+1))
+    local cstring_home=${config_home}/strings/0x409
+    local gdev=`ls -1 /sys/class/udc/`
+    local supported=" serial:gser.0"`
+                   `" modem:cser.dun.0"`
+                   `" ecm:ecm.usb0"`
+                   `" diag:diag.diag"`
+                   `" nmea:cser.nmea.1"`
+                   `" rmnet:rmnet_bam.rmnet"`
+                   `" storage:mass_storage.0"
+
+    # Disable gadget in case it was enabled
+    if [ -w ${gadget_home}/UDC ]; then
+        if [ ! -z `cat ${gadget_home}/UDC` ]; then
+            echo "" > ${gadget_home}/UDC
+        fi
+    fi
+
+    if [ ! -d ${configfs_home} ]; then
+        mount none /sys/kernel/config -t configfs
+        mkdir ${gadget_home}
+    fi
+    echo "0x$vid" > ${gadget_home}/idVendor
+    echo "0x$pid" > ${gadget_home}/idProduct
+    mkdir -p ${strings_home}
+    echo ${manufacturer} > ${strings_home}/manufacturer
+    echo ${product} > ${strings_home}/product
+    echo ${serial} > ${strings_home}/serialnumber
+
+    mkdir -p ${config_home}
+
+    # Filter supported configurations matching the composition string
+    match=`echo ${compstr} | sed -e 's/,/|/g'`
+    glist=`echo ${supported} | xargs -n1 | egrep -i "${match}" | xargs`
+
+    # Clear and symlink gadget configuration files, build configuration string
+    cd ${gadget_home}
+    idx=0
+    configuration=""
+    rm -f configs/c.$((num+1))/f*
+    for s in ${glist}; do
+        idx=$((idx+1))
+        func=`echo $s | cut -f 2 -d':'`
+        name=`echo $func | cut -f 1 -d'.'`
+        if [ ${idx} -eq 1 ]; then
+            configuration="${name}"
+        else
+            configuration="${configuration}_${name}"
+        fi
+        mkdir -p functions/$func
+        ln -s functions/$func configs/c.$((num+1))/f${idx}
+    done
+    cd
+
+    # Write configuration string
+    mkdir -p ${cstring_home}
+    echo "${configuration}" > ${cstring_home}/configuration
+
+    # Enable gadget
+    echo "${gdev}" > ${gadget_home}/UDC
+}
+
 echo "Switching to composition sierra_dev (1199:68C0)"
 
 if [ "x$1" = "xy" ]; then
@@ -131,28 +226,12 @@ if [ -w /sys/module/g_android/parameters/num_rmnet_swi ]; then
     fi
 fi
 
-#echo $mode > /sys/bus/platform/devices/usb_bam/enable
-echo 0 > /sys/class/android_usb/android$num/enable
-echo $vid > /sys/class/android_usb/android$num/idVendor
-echo $pid > /sys/class/android_usb/android$num/idProduct
-echo $devclass > /sys/class/android_usb/android$num/bDeviceClass
-echo $devsubclass > /sys/class/android_usb/android$num/bDeviceSubClass
-echo $devprotocol > /sys/class/android_usb/android$num/bDeviceProtocol
-echo $diagstr > /sys/class/android_usb/android$num/f_diag/clients
-echo $serialstr > /sys/class/android_usb/android$num/f_serial/transports
-echo QTI,BAM_DMUX > /sys/class/android_usb/android$num/f_rmnet/transports
-echo $compstr > /sys/class/android_usb/android$num/functions
-echo $remotewakeup > /sys/class/android_usb/android$num/remote_wakeup
-
-echo $manufacturer > /sys/class/android_usb/android$num/iManufacturer
-echo $product > /sys/class/android_usb/android$num/iProduct
-echo $serial > /sys/class/android_usb/android$num/iSerial
-
-compstr=`grep -w ffs /sys/class/android_usb/android0/functions || true`
-if [[ $mode = "hsusb" && ! -z "$compstr" && -d /sys/class/android_usb/android0/f_ffs ]] ; then
-    echo adb > /sys/class/android_usb/android0/f_ffs/aliases
+# Check if configfs gadget is supported and configure accordingly
+configfs_g_support=`zcat /proc/config.gz |grep CONFIG_USB_CONFIGFS=y`
+configfs_fs_support=`zcat /proc/config.gz |grep CONFIG_CONFIGFS_FS=y`
+if [[ "x${configfs_g_support}" = "x" || "x${configfs_fs_support}" = "x" ]]
+then
+    configure_android_gadget
+else
+    configure_configfs_gadget
 fi
-
-echo 1 > /sys/class/android_usb/android$num/enable
-
-

@@ -28,33 +28,33 @@
 
 export KERNEL=`uname -r`
 
+configfs_comp=/sys/kernel/config/usb_gadget/g1/configs/c.1/strings/0x409/configuration
+android_comp=/sys/class/android_usb/android0/functions
+
 case "$1" in
   start)
 
         case $KERNEL in
-          3.*)
-
+          [34].*)
             # boot hsusb composition:
-            if [ -d /sys/class/android_usb/android0 ]
-            then
-                /usr/bin/usb/boot_hsusb_composition n
-            fi
+            /usr/bin/usb/boot_hsusb_composition n
 
-            # boot hsic composition:
-            if [ -d /sys/class/android_usb/android1 ]
-            then
-                /usr/bin/usb/boot_hsic_composition y
+            # FFS/ADB: Try configfs gadget first, then android gadget
+            if [ -r $configfs_comp ]; then
+                compstr=`cat $configfs_comp || true`
+                if [ ! -z "$compstr" ] ; then
+                    # Replace configfs composition string delimiter '_' with ','
+                    compstr=`echo $compstr | sed -e 's/_/,/g' | grep -w ffs`
+                fi
+            else
+                compstr=`grep -w ffs $android_comp || true`
             fi
-
-            # FFS / ADB
-            compstr=`grep -w ffs /sys/class/android_usb/android0/functions || true`
             if [ ! -z "$compstr" ] ; then
                 mkdir -p /dev/usb-ffs/adb
                 mount -o uid=2000,gid=2000 -t functionfs adb /dev/usb-ffs/adb
                 mount -o remount,gid=5,mode=620 /dev/pts
                 mkdir -p /system/bin 2>/dev/null && ln -s /bin/sh /system/bin/sh
             fi
-
             ;;
           2.*)
                 # Nothing to do for 2.x kernels
@@ -67,14 +67,25 @@ case "$1" in
 
   stop)
         echo "Stopping USB Android Gadget"
-        if [ -d /sys/class/android_usb/android0 ]
+        adbd_running=`pgrep adbd || true`
+        if [ ! -z $adbd_running ]
+        then
+            start-stop-daemon -K -n adbd
+        fi
+
+        # If using configfs gadget
+        if [ -w /sys/kernel/config/usb_gadget/g1/UDC ]
+        then
+            echo "" > /sys/kernel/config/usb_gadget/g1/UDC
+        fi
+        # If using android gadget
+        if [ -w /sys/class/android_usb/android0/enable ]
         then
             echo 0 >/sys/class/android_usb/android0/enable
         fi
 
-        start-stop-daemon -K -n adbd
-
-        if [ -d /sys/class/android_usb/android0/f_ffs ]
+        functionfs_mounted=`mount | grep "\/dev\/usb\-ffs\/adb" || true`
+        if [ ! -z $functionfs_mounted ]
         then
             umount /dev/usb-ffs/adb
         fi
