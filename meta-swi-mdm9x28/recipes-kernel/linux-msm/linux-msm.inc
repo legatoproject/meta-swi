@@ -1,48 +1,46 @@
-inherit kernel
-inherit android-signing
+inherit kernel kernel-yocto kernel-src-install android-signing
 
-require recipes-kernel/linux-quic/linux-quic.inc
-
+DESCRIPTION = "CAF Linux Kernel"
+LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
-COMPATIBLE_MACHINE = "(swi-mdm9x28)"
-
-# Override KERNEL_CC for Linux kernel build
-KERNEL_CC_prepend = "${LINUX_REPO_DIR}/scripts/gcc-wrapper.py "
-
-# Provide a config baseline for things so the kernel will build...
-KBUILD_DEFCONFIG ?= "mdm9607_defconfig"
-
-# Append console parameters to command line. Use default if not already set.
-SYSLINUX_DEFAULT_CONSOLE ?= "console=ttyHSL0,115200 console=ttyHSL1,115200"
-KERNEL_BOOT_OPTIONS_RAMDISK =+ "${SYSLINUX_DEFAULT_CONSOLE}"
-KERNEL_BOOT_OPTIONS =+ "${SYSLINUX_DEFAULT_CONSOLE}"
-
-# Allow merging of multiple kernel configs. This must be space
-# separated list of files using absolute paths.
-KBUILD_DEFCONFIG_SNIPPETS ?= ""
-
-# Override for Qemu
-COMPATIBLE_MACHINE_swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
-KBUILD_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
-COMPATIBLE_MACHINE_swi-mdm9x28-fx30-qemu = "swi-mdm9x28-fx30-qemu"
-KBUILD_DEFCONFIG_swi-mdm9x28-fx30-qemu = "mdm9607-swi-qemu_defconfig"
-COMPATIBLE_MACHINE_swi-mdm9x28-qemu = "swi-mdm9x28-qemu"
-KBUILD_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
-
-B = "${WORKDIR}/build"
-KERNEL_EXTRA_ARGS        += "O=${B}"
-
-# We split the LINUX_REPO_DIR path into a dirname and basename, so that
-# that we can fetch it via SRC_URI. We need to fetch a specific name
-# that is found in some directory listed in the FILESPATH search path.
-LINUX_REPO_DIR_PARENT = "${@os.path.dirname(d.getVar('LINUX_REPO_DIR', False))}"
-LINUX_REPO_DIR_BASE = "${@os.path.basename(d.getVar('LINUX_REPO_DIR', False))}"
-FILESPATH_prepend = "${LINUX_REPO_DIR_PARENT}:"
-SRC_URI = "file://${LINUX_REPO_DIR_BASE}"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
 DEPENDS += "ima-support-tools-native gcc"
+DEPENDS += " mkbootimg-native dtbtool-native openssl-native kern-tools-native"
+RDEPENDS_${KERNEL_PACKAGE_NAME}-base = ""
+
+LDFLAGS_aarch64 = "-O1 --hash-style=gnu --as-needed"
+
+DEPENDS_append_aarch64 = " libgcc"
+KERNEL_CC_append_aarch64 = " ${TOOLCHAIN_OPTIONS}"
+KERNEL_LD_append_aarch64 = " ${TOOLCHAIN_OPTIONS}"
+
+KERNEL_PRIORITY           = "9001"
+# Add V=1 to KERNEL_EXTRA_ARGS for verbose
+KERNEL_EXTRA_ARGS        += "O=${B}"
+
+
+LINUX_REPO_DIR_PARENT = "${@os.path.dirname(d.getVar('LINUX_REPO_DIR', False))}"
+LINUX_REPO_DIR_BASE = "${@os.path.basename(d.getVar('LINUX_REPO_DIR', False))}"
+FILESPATH_prepend = "${LINUX_REPO_DIR_PARENT}:"
+SRC_URI = "file://${LINUX_REPO_DIR_BASE} \
+          "
+
+PACKAGE_ARCH = "${MACHINE_ARCH}"
+PACKAGES = "${KERNEL_PACKAGE_NAME} ${KERNEL_PACKAGE_NAME}-base ${KERNEL_PACKAGE_NAME}-vmlinux ${KERNEL_PACKAGE_NAME}-dev ${KERNEL_PACKAGE_NAME}-dbg ${KERNEL_PACKAGE_NAME}-modules"
+
+KBRANCH ?= ""
+KMETA = "kernel-meta"
+KMACHINE ?= "${MACHINE}"
+KCONFIG_MODE = "--alldefconfig"
+KBUILD_DEFCONFIG ?= "${KERNEL_CONFIG}"
+LINUX_VERSION_EXTENSION = "${@['-perf', ''][d.getVar('VARIANT', True) == ('' or 'debug')]}"
+
+do_kernel_checkout[noexec] = "1"
+
+# extra task for configuration checks
+addtask kernel_configcheck after do_configure before do_compile
 
 do_unpack_append() {
     wrkdir = d.getVar('WORKDIR', True)
@@ -73,15 +71,17 @@ do_configure_prepend() {
     done
 }
 
+
 do_compile_append() {
     oe_runmake dtbs ${KERNEL_EXTRA_ARGS}
 }
 
-# The following was removed from the kernel class between Yocto 1.7 and 2.2.
-# We need our non-sanitized kernel headers in the sysroot it because our apps
-# need them.
-python sysroot_stage_all () {
-    oe.path.copyhardlinktree(d.expand("${D}${KERNEL_SRC_PATH}"), d.expand("${SYSROOT_DESTDIR}${KERNEL_SRC_PATH}"))
+do_install_append() {
+    kernel_src_install
+}
+
+sysroot_stage_all_append () {
+        sysroot_stage_dir ${D}${KERNEL_SRC_PATH} ${SYSROOT_DESTDIR}${KERNEL_SRC_PATH}
 }
 
 # Note that @{DATETIME} isn't a BitBake variable expansion;
@@ -99,12 +99,17 @@ BOOTIMG_NAME_4k ?= "boot-yocto-mdm9x28-@{DATETIME}.4k"
 MACHINE_KERNEL_BASE = "0x80000000"
 MACHINE_KERNEL_TAGS_OFFSET = "0x81E00000"
 
+# Append console parameters to command line. Use default if not already set.
+SYSLINUX_DEFAULT_CONSOLE ?= "console=ttyMSM0,115200 console=ttyMSM1,115200"
+KERNEL_BOOT_OPTIONS_RAMDISK =+ "${SYSLINUX_DEFAULT_CONSOLE}"
+KERNEL_BOOT_OPTIONS =+ "${SYSLINUX_DEFAULT_CONSOLE}"
+
 gen_master_dtb() {
     master_dtb_name=$1
     page_size=$2
 
     ${STAGING_BINDIR_NATIVE}/dtbtool \
-        ${B}/arch/arm/boot/dts/qcom/ \
+        ${B}/arch/arm/boot/dts/ \
         -s $page_size \
         -o ${DEPLOYDIR}/$master_dtb_name \
         -p ${B}/scripts/dtc/ \
@@ -115,6 +120,14 @@ gen_master_dtb() {
         exit 1
     fi
 }
+
+do_deploy_prepend() {
+    # Remove kernel binary mysteriously installed by previous steps
+    if [ -f ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE} ] ; then
+        rm -f ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}
+    fi
+}
+
 
 do_deploy_append() {
     kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
@@ -127,7 +140,7 @@ do_deploy_append() {
     set -xe
 
     ver=$(sed -r 's/#define UTS_RELEASE "(.*)"/\1/' ${B}/include/generated/utsrelease.h)
-    dtb_files=$(find ${B}/arch/arm/boot/dts/qcom -iname "*${BASEMACHINE_QCOM}*.dtb" | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
+    dtb_files=$(find ${B}/arch/arm/boot/dts -iname "*${BASEMACHINE_QCOM}*.dtb" | awk -F/ '{print $NF}' | awk -F[.][d] '{print $1}')
 
     mkdir -p ${DEPLOYDIR}/dtb/qcom
 
@@ -135,18 +148,29 @@ do_deploy_append() {
     # Also ship each dtb file individually
     for d in ${dtb_files}; do
         targets=$(echo ${d#${BASEMACHINE_QCOM}-})
-        cat $kernel_img ${B}/arch/arm/boot/dts/qcom/${d}.dtb > ${B}/arch/arm/boot/dts/qcom/dtb-zImage-${ver}-${targets}.dtb
-        cp ${B}/arch/arm/boot/dts/qcom/${d}.dtb ${DEPLOYDIR}/dtb/qcom/
+	cat $kernel_img ${B}/arch/arm/boot/dts/${d}.dtb > ${B}/arch/arm/boot/dts/qcom/dtb-zImage-${ver}-${targets}.dtb
+	cp ${B}/arch/arm/boot/dts/${d}.dtb ${DEPLOYDIR}/dtb/qcom
     done
 
     gen_master_dtb masterDTB.2k 2048
     gen_master_dtb masterDTB.4k 4096
-    cp ${B}/vmlinux ${DEPLOYDIR}/vmlinux
+    install -m 0644 vmlinux ${DEPLOY_DIR_IMAGE}
 }
 
-# Make the bootimg image file using the information available in the sysroot...
-do_bootimg[depends] += "mkbootimg-native:do_populate_sysroot"
-do_bootimg[depends] += "mdm9x28-image-initramfs:do_image_complete"
+
+# Put the zImage in the kernel-dev pkg
+FILES_${KERNEL_PACKAGE_NAME}-dev += "/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${KERNEL_VERSION}"
+
+FILES_${KERNEL_PACKAGE_NAME}-dbg += "${KERNEL_SRC_PATH}/arch/*/boot/*/.debug/*"
+
+
+python get_verity_key_id() {
+    key_id = verity_key_id(d, "testkey")
+    d.setVar("KEY_ID", key_id)
+}
+
+do_bootimg[prefuncs] += "${@bb.utils.contains('MACHINE_FEATURES', \
+                          'android-verity', 'get_verity_key_id', '', d)}"
 
 gen_bootimg() {
     image_flags=$1
@@ -159,21 +183,24 @@ gen_bootimg() {
 
     set -xe
 
+
     # If IMA_BUILD is requested, IMA kernel command line options
     # must be available.
     if [ "x${IMA_BUILD}" == "xtrue" -a "x${IMA_KERNEL_CMDLINE_OPTIONS}" == "x" ] ; then
         echo "IMA build requested, but IMA_KERNEL_CMDLINE_OPTIONS variable is empty."
         return $ret_err
+    else
+        echo "Kernel command line IMA options: [${IMA_KERNEL_CMDLINE_OPTIONS}]"
     fi
-
-    echo "Kernel command line IMA options: [${IMA_KERNEL_CMDLINE_OPTIONS}]"
-    echo "Kernel command line: [${KERNEL_BOOT_OPTIONS_RAMDISK}]"
 
     kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
+    kernel_cmdline="${KERNEL_BOOT_OPTIONS}"
     if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
         kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
+        kernel_cmdline="${KERNEL_BOOT_OPTIONS_RAMDISK}"
     fi
-    kernel_img=$(readlink -f $kernel_img)
+
+    kernel_img=`readlink -fn ${kernel_img}`
     ls -al $kernel_img
 
     # Initramfs
@@ -181,9 +208,10 @@ gen_bootimg() {
         --dt ${DEPLOYDIR}/$master_dtb_name \
         --kernel $kernel_img \
         --ramdisk /dev/null \
-        --cmdline "${KERNEL_BOOT_OPTIONS_RAMDISK}" \
-        --pagesize $page_size \
+        --cmdline "${kernel_cmdline}" \
+        --board ${MACHINE} \
         --base ${MACHINE_KERNEL_BASE} \
+        --pagesize $page_size \
         --tags-addr ${MACHINE_KERNEL_TAGS_OFFSET} \
         --ramdisk_offset 0x0 \
         --output ${DEPLOY_DIR_IMAGE}/${image_name}.img
@@ -200,7 +228,10 @@ do_bootimg() {
     if [ $? -ne 0 ] ; then exit 1 ; fi
     gen_bootimg "${MKBOOTIMG_IMAGE_FLAGS_4K}" $image_name_4k boot-yocto-mdm9x28.4k masterDTB.4k 4096
     if [ $? -ne 0 ] ; then exit 1 ; fi
+
     ln -sf $image_name_4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img
+
+    echo "${PV} $date" >> ${DEPLOY_DIR_IMAGE}/kernel.version
 
     install ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img.unsigned
     install ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img.unsigned

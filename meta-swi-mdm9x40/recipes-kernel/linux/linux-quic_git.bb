@@ -7,6 +7,11 @@ COMPATIBLE_MACHINE = "(swi-mdm9x40)"
 # Override KERNEL_CC for Linux kernel build
 KERNEL_CC_prepend = "${LINUX_REPO_DIR}/scripts/gcc-wrapper.py "
 
+# Default console device(s) appended to command line
+SYSLINUX_DEFAULT_CONSOLE ?= "console=ttyHSL0,115200 console=ttyHSL1,115200"
+KERNEL_BOOT_OPTIONS_RAMDISK =+ "${SYSLINUX_DEFAULT_CONSOLE}"
+KERNEL_BOOT_OPTIONS =+ "${SYSLINUX_DEFAULT_CONSOLE}"
+
 # Provide a config baseline for things so the kernel will build...
 KBUILD_DEFCONFIG ?= "mdm9640_defconfig"
 B = "${WORKDIR}/build"

@@ -65,6 +65,7 @@ varspec = [
     ["make-threads", 4, "# of jobs used by make"],
     ["enable-preempt-rt", False, "Enable preemptible kernel"],
     ["enable-legato", False, "Enable Legato build"],
+    ["kernel-version", "", "Kernel version"],
     [
         "kernel-provider",
         "",
@@ -200,15 +201,32 @@ def check_tweak_product(ns):
         msg("WARNING: product family calculated as blank")
     ns.product_family = prod_fam
 
+def execute_kernelversion_make(ns):
+
+    #Intentionally set to 0.0 if fails
+    major = 0
+    minor = 0
+
+    if os.path.isfile("./kernel/Makefile"):
+        kernel_ver = subprocess.check_output(["make","--silent","-C","./kernel","kernelversion"]).decode("utf-8").split('.')
+        major = kernel_ver[0]
+        minor = kernel_ver[1]
+        ns.kernel_version = str(major)+"."+ str(minor)
+
+    return major, minor
 
 def check_tweak_kernel_provider(ns):
     kern_prov = ns.kernel_provider
 
+    major, minor = execute_kernelversion_make(ns)
     if kern_prov == "":
         kern_prov = "linux-yocto"
         mach = ns.machine_type
         if mach.startswith("swi-mdm9") and mach != "swi-mdm9x15":
-            kern_prov = "linux-quic"
+            if major == "4":
+                kern_prov = "linux-msm"
+            else:
+                kern_prov = "linux-quic"
         elif mach.startswith("swi-sdx55"):
             kern_prov = "linux-msm"
 
@@ -616,7 +634,13 @@ def tune_local_conf_extra_opts(lconf, ns):
 
 def tune_local_conf_kernel_provider(lconf, ns):
     set_option(lconf, "PREFERRED_PROVIDER_virtual/kernel", ns.kernel_provider)
-
+    mach = ns.machine_type
+    if mach.startswith("swi-mdm9") and mach != "swi-mdm9x15":
+        if ns.kernel_version!="":
+            preferred_version = ns.kernel_version+"%"
+            preferred_version_env = "PREFERRED_VERSION_" + ns.kernel_provider
+            set_option(lconf, preferred_version_env, preferred_version)
+            set_option(lconf, "LINUXLIBCVERSION", preferred_version)
 
 def tune_local_conf_icecc(lconf, ns):
     if ns.enable_icecc:
