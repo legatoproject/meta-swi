@@ -67,7 +67,7 @@ configure_configfs_gadget()
                    `" ecm:ecm.usb0"`
                    `" diag:diag.diag"`
                    `" nmea:cser.nmea.1"`
-                   `" rmnet:rmnet_bam.rmnet"`
+                   `" rmnet:rmnet_bam.rmnet_bam_dmux"`
                    `" storage:mass_storage.0"
 
     # Disable gadget in case it was enabled
