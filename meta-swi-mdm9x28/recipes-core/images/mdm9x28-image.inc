@@ -32,17 +32,9 @@ IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' si
 #================
 # QCA9377 support
 #================
-
-# AR758x products are using this file as well, and they do not need QCA9377 support.
-# AR758x machine is swi-mdm9x28-ar758x.
-# Kernel module
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28', ' qcacld-hl', '', d)}"
-# Init script
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28', ' sierra-init-qca9377', '', d)}"
-
-# Bluetooth Bluez support
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28', ' bluez5', '', d)}"
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE', 'swi-mdm9x28', ' qca9377-bt-firmware', '', d)}"
+# Install: kernel module, firmware, bluez (for Bluetooth), and init scripts
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcawifibt', \
+  ' qcacld-hl sierra-init-qca9377 bluez5 qca9377-bt-firmware', '', d)}"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
