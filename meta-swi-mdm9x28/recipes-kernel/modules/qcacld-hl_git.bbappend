@@ -1,8 +1,9 @@
 # Choose a git version aligned to the kernel version.
 def version_git(d):
-    kernel_version = d.getVar('KERNEL_VERSION')
-    if kernel_version.startswith("4.14."):
-        # Tag LE.UM.1.1-88300-9x07
+    kernel_provider = d.getVar("PREFERRED_PROVIDER_virtual/kernel", True)
+    kernel_version = d.getVar('PREFERRED_VERSION_%s' % kernel_provider, True)
+    if kernel_version == "4.14%":
+        # Tag LE.UM.3.4.2-01100-9x07
         return "d515a09b2a60e63571046c9475ffcb3095eb5b98"
     else:
         # Tag LE.UM.1.1-55100-9x07
@@ -28,7 +29,3 @@ do_configure_append() {
     install -m 0644 ${WORKDIR}/WCNSS_cfg.dat ${S}/firmware_bin/
     install -m 0644 ${WORKDIR}/WCNSS_qcom_cfg.ini ${S}/firmware_bin/
 }
-
-
-
-
