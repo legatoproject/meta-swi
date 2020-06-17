@@ -62,9 +62,20 @@ DEPENDS += "openssl-native"
 KERNEL_EXTRA_ARGS = " STAGING_LIBDIR_NATIVE=${STAGING_LIBDIR_NATIVE} STAGING_INCDIR_NATIVE=${STAGING_INCDIR_NATIVE} "
 
 do_patch_append() {
-    echo 'HOST_EXTRACFLAGS += -I$(STAGING_INCDIR_NATIVE)/'        >> "${S}/scripts/Makefile"
-    echo 'HOST_EXTRACFLAGS += -I$(STAGING_INCDIR_NATIVE)/openssl' >> "${S}/scripts/Makefile"
-    echo 'HOST_EXTRACFLAGS += -L$(STAGING_LIBDIR_NATIVE)/'        >> "${S}/scripts/Makefile"
+    if ! grep "/openssl" "${S}/scripts/Makefile"; then
+        echo 'HOST_EXTRACFLAGS += -I$(STAGING_INCDIR_NATIVE)/'        >> "${S}/scripts/Makefile"
+        echo 'HOST_EXTRACFLAGS += -I$(STAGING_INCDIR_NATIVE)/openssl' >> "${S}/scripts/Makefile"
+        echo 'HOST_EXTRACFLAGS += -L$(STAGING_LIBDIR_NATIVE)/'        >> "${S}/scripts/Makefile"
+    fi
+
+    # Patch kernel sources to add 'modpost' back to 'make scripts'
+    # This partially reverts https://patchwork.kernel.org/patch/10690901/
+    if ! grep "+= mod" "${S}/scripts/Makefile"; then
+        ## Re-insert asm-generic and $(autoksyms_h) (gcc-plugins doesn't exist as this anymore)
+        sed -i 's/scripts: scripts_basic scripts_dtc/scripts: scripts_basic scripts_dtc asm-generic $(autoksyms_h)/' "${S}/Makefile"
+        ## Re-insert dependency from scripts to scripts/mod
+        sed -i '/+= genksyms/a subdir-y                     += mod' "${S}/scripts/Makefile"
+    fi
 }
 
 # The LD_LIBRARY_PATH variable is not set when building kernel.
