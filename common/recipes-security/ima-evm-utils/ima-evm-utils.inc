@@ -11,7 +11,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 # Package revision number. Change "r" number if you change
 # anything in this package (e.g. add patch, remove patch,
 # change dependencies, etc.).
-PR = "r1"
+PR = "r2"
 
 HOMEPAGE = "https://sourceforge.net/projects/linux-ima"
 SECTION = "console"
@@ -28,6 +28,9 @@ SRC_URI = "https://downloads.sourceforge.net/project/linux-ima/ima-evm-utils/ima
 # problems.
 SRC_URI += "file://0001-no-manpages.patch"
 SRC_URI += "file://0002-cert-check.patch"
+
+# Fix xattr.h missing
+SRC_URI += "file://0001-attr-xattr.h-is-deprecated.-Use-sys-xattr.h-instead.patch"
 
 inherit autotools gettext pkgconfig
 
