@@ -1,0 +1,11 @@
+A few words on the wlconf binary.
+
+- The wlconf binary kept under this recipe is generated from the default.conf file, using wlconf tool.
+- Supress the .bbappend file to get the wlconf tool installed on the target.
+- To modify the configurations (due to updated struct or in order to modify the values)
+    - Make the modifications to wlconf/default.conf,
+    - Supress the bbappend and build to generate wlconf, and
+    - generate wlconf bin from the default.conf file, by running the following steps on target:
+      cd /usr/sbin/wlconf
+      ./wlconf -C default.conf -o <path_to_new_wl18xx-conf.bin>
+- Follow the README of the wlconf tool itself for further usage instructions.
