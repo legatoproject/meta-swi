@@ -597,6 +597,12 @@ if [ $ENABLE_PROPRIETARY ]; then
         enable_layer "meta-swi-extras/meta-$MACH-$PROD-bin" \
             "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD-bin"
     fi
+
+    # Add product-specific no-arch layer
+    if [ -n "$PROD" ] && [ -e "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD" ]; then
+        enable_layer "meta-swi-extras/meta-$MACH-$PROD" \
+            "$scriptdir/../meta-swi-extras/meta-$MACH-$PROD"
+    fi
 fi
 
 ## Conf: local.conf

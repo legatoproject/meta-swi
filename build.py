@@ -408,7 +408,13 @@ def enable_swi_layers(conf, ns):
             ]
 
         if prod != "":
-            layer_list += [["../meta-swi-extras/meta-%s-%s-bin" % (mach, prod)]]
+            layer_list += [
+                [
+                    "../meta-swi-extras/meta-%s-%s-bin" % (mach, prod),
+                    "../meta-swi-extras/meta-%s-%s" % (mach, prod),
+                ]
+            ]
+
 
     # enable all the layers
     enable_layer_group(conf, meta_swi_dir, layer_list)
