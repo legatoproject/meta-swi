@@ -7,7 +7,7 @@ CC_append += " -Wno-error=format-security"
 
 INSANE_SKIP_${PN} += "already-stripped"
 
-DEPENDS += "openssl-native python-native"
+DEPENDS += "openssl-native"
 
 LK_HASH_MODE = "dual_system"
 
