@@ -12,18 +12,11 @@ FILES_${PN} += "${libdir}/*.so"
 
 # Archives can be deleted from the latest mirror, so pick a snapshot
 # corresponding to this fakeroot version.
-DEBIAN_SNAPSHOT_VERSION = "20170817T093655Z"
+DEBIAN_SNAPSHOT_VERSION = "20190908T172415Z"
 
 SRC_URI = "\
-    https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT_VERSION}/pool/main/f/fakeroot/fakeroot_${PV}.orig.tar.bz2 \
+https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT_VERSION}/pool/main/f/fakeroot/fakeroot_${PV}.orig.tar.gz \
 "
-
-# From http://ftp.debian.org/debian/pool/main/f/fakeroot/fakeroot_1.22-2.debian.tar.xz
-SRC_URI += "file://eglibc-fts-without-LFS.patch \
-            file://fix-shell-in-fakeroot.patch \
-            file://hide-dlsym-error.patch \
-            file://glibc-xattr-types.patch \
-           "
 
 # Sierra Wireless home grown ...
 SRC_URI += "file://0001-cability-Fix-libfakeroot.c-related-compilation-error.patch"
@@ -50,8 +43,9 @@ do_install_append() {
 DEPENDS = "libcap"
 RDEPENDS_${PN} = "util-linux libcap"
 
-SRC_URI[md5sum] = "fae64c9aeb2c895ead8e1b99bf50c631"
-SRC_URI[sha256sum] = "bd806a4a1e641203eb3d4571a10089e8a038c10ec7e492fa1e061b03ae3ec6fe"
+# for snaphot debian - orig
+SRC_URI[md5sum] = "964e5f438f1951e5a515dd54edd50fa6"
+SRC_URI[sha256sum] = "2e045b3160370b8ab4d44d1f8d267e5d1d555f1bb522d650e7167b09477266ed"
 
 # http://errors.yoctoproject.org/Errors/Details/35143/
 PNBLACKLIST[fakeroot] ?= "BROKEN: QA Issue: -dev package contains non-symlink .so"
