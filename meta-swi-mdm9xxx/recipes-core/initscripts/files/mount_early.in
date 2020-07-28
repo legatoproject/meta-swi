@@ -1374,6 +1374,11 @@ mount_early_pseudo()
             # This thing is mounted, add the rules. If we cannot add the rules
             # there is really nothing we could do, so log the problem, and
             # continue booting up.
+            add_system_smack_exceptions
+            if [ $? -ne 0 ] ; then
+                echo "${this_e}: Failed to add system SMACK exceptions."
+                umount /sys/fs/smackfs >/dev/null 2>&1
+            fi
             add_system_smack_rules
             if [ $? -ne 0 ] ; then
                 echo "${this_e}: Failed to add system SMACK rules."
@@ -1476,6 +1481,41 @@ mount_early_unset_timezone()
     # Do not care about the result.
     umount -l ${real_localtime} &>/dev/null
     return ${SWI_OK}
+}
+
+# Add SMACK netlabel and ipv6host exceptions to grant applications
+# permission to communicate with the Internet via IPv4 and IPv6.
+# Reference: kernel.org smack admin-guide.
+add_system_smack_exceptions()
+{
+    local smack_net_label=/sys/fs/smackfs/netlabel
+    local smack_ipv6_host=/sys/fs/smackfs/ipv6host
+    # !TODO: Allow only a specific label. (Need change in Legato as well).
+    local single_label="@" # internet, access to all.
+    local host_ip="0.0.0.0/0" # all
+    local host_ip6="0:0:0:0:0:0:0:0/0" # all
+
+    # netlabel exceptions
+    local rule="127.0.0.1 -CIPSO"
+    echo "${rule}" > ${smack_net_label}
+    if [ $? -ne 0 ]; then
+        echo "${this_e}: Error loading system SMACK netlabel exception: ${rule}."
+        return ${SWI_ERR}
+    fi
+    rule="${host_ip} ${single_label}"
+    echo "${rule}" > ${smack_net_label}
+    if [ $? -ne 0 ]; then
+        echo "${this_e}: Error loading system SMACK netlabel exception: ${rule}."
+        return ${SWI_ERR}
+    fi
+
+    # IPv6 host exceptions
+    rule="${host_ip6} ${single_label}"
+    echo "${rule}" > ${smack_ipv6_host}
+    if [ $? -ne 0 ]; then
+        echo "${this_e}: Error loading system SMACK IPv6 host exception: ${rule}."
+        return ${SWI_ERR}
+    fi
 }
 
 # Add SMACK rules considered to be system related.
