@@ -31,7 +31,7 @@ config_dhcp()
 {
     local host_addr=$1
     local ecm_if=$2
-    echo "dhcp-range=interface:$ecm_if,$host_addr,$host_ip,12h" >>$ecm_dhcp_conf
+    echo "dhcp-range=interface:$ecm_if,$host_addr,$host_addr,12h" >>$ecm_dhcp_conf
     echo "dhcp-option=$ecm_if,3" >>$ecm_dhcp_conf
     echo "dhcp-option=$ecm_if,6" >>$ecm_dhcp_conf
 }
