@@ -14,8 +14,11 @@ SRC_URI += "file://0001-Fix-adbd-crash-issue.patch"
 SRC_URI += "file://fix-big-endian-build.patch"
 SRC_URI += "file://use-accessors-for-rsa.patch"
 SRC_URI += "file://include-sysmacros-for-major.patch"
+SRC_URI += "file://0001-logging-Add-Android-logging-macros.patch"
 
 do_install_append() {
+    install -m 0755 -d ${D}${includedir}/log
+    install -m 0644  ${S}/include/log/* ${D}${includedir}/log
     install -m 0755 ${WORKDIR}/composition-sierra_dev -D ${D}${bindir}/usb/compositions/sierra_dev
     ln -s ${bindir}/usb/compositions/sierra_dev ${D}${bindir}/usb/boot_hsusb_composition
     ln -s ${bindir}/usb/compositions/empty      ${D}${bindir}/usb/boot_hsic_composition

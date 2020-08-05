@@ -47,6 +47,7 @@ do_install_append() {
    install -m 0755 -d ${D}${includedir}/cutils
    install -m 0644  ${S}/include/cutils/* ${D}${includedir}/cutils
    install -m 0644 -D ${S}/include/android/log.h ${D}${includedir}/android/log.h
+   install -m 0644 -D ${S}/include/private/android_filesystem_config.h ${D}${includedir}/private/android_filesystem_config.h
    install -m 0644 -D ${S}/include/pixelflinger/format.h ${D}${includedir}/pixelflinger/format.h
    install -m 0644 -D ${S}/include/pixelflinger/pixelflinger.h ${D}${includedir}/pixelflinger/pixelflinger.h
 
