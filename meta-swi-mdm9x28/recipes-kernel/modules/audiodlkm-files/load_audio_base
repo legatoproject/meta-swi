@@ -1,0 +1,36 @@
+#! /bin/sh
+# Author: Dragan Marinkovic (dmarinkovi@sierrawireless.com)
+# Copyright (c) 2020, Sierra Wireless Inc. All rights reserved.
+#
+export MODULE_BASE=/lib/modules/`uname -r`/
+set -e
+
+case "$1" in
+  start)
+        echo "Loading kernel base audio modules... "
+        modprobe snd-soc-core
+        modprobe snd_hwdep
+        echo "Done loading kernel base audio modules. "
+        ;;
+  stop)
+        echo "Unloading kernel base audio modules... "
+        rmmod snd_hwdep
+        rmmod snd-soc-core
+	rmmod snd_compress
+	rmmod snd_pcm
+	rmmod snd_timer
+	rmmod snd
+	rmmod soundcore
+        echo "Done unloading kernel base audio modules. "
+        ;;
+  restart)
+        $0 stop
+        $0 start
+        ;;
+  *)
+        echo "Usage { start | stop | restart}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

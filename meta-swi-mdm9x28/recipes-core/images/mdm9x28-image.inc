@@ -36,6 +36,9 @@ IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' si
 IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcawifibt', \
   ' qcacld-hl sierra-init-qca9377 bluez5 qca9377-bt-firmware', '', d)}"
 
+# Add kernel audio
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'msmaudio', ' audiodlkm', '', d)}"
+
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 

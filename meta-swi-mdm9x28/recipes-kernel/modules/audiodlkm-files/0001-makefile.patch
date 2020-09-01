@@ -1,0 +1,13 @@
+--- a/Makefile.am	2020-09-01 11:18:12.403645070 -0700
++++ b/Makefile.am	2020-09-01 11:20:02.178782937 -0700
+@@ -27,6 +27,10 @@
+ KBUILD_OPTIONS += CONFIG_ARCH_SM6150=y
+ endif
+ 
++ifeq ($(TARGET_SUPPORT), mdm9607)
++KBUILD_OPTIONS += CONFIG_ARCH_MDM9607=y
++endif
++
+ obj-m := ipc/
+ obj-m += dsp/
+ obj-m += dsp/codecs/
