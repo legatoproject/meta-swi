@@ -51,6 +51,10 @@ fakeroot do_label_files() {
         setfattr -n security.SMACK64EXEC -v admin \
             "${IMAGE_ROOTFS}/usr/sbin/restart_swi_apps"
     fi
+    if [ -f "${IMAGE_ROOTFS}/usr/bin/qrtr-ns" ] ; then
+        setfattr -n security.SMACK64EXEC -v qmuxd \
+            "${IMAGE_ROOTFS}/usr/bin/qrtr-ns"
+    fi
 }
 
 IMAGE_PREPROCESS_COMMAND_append = " do_rm_unused_files; "
