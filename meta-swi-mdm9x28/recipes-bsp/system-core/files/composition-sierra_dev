@@ -90,6 +90,24 @@ configure_configfs_gadget()
 
     mkdir -p ${config_home}
 
+    # Replace "serial" in compstr with the interface list (nmea, modem);
+    # Translate interface list into function names.
+    # smd::modem, smdnmea::nmea
+    local serialif=
+    if echo "${serialstr}"| grep -wq "smdnmea"; then
+        serialif="nmea"
+    fi
+    if echo "${serialstr}"| grep -wq "smd"; then
+        if [ -z "${serialif}" ]; then
+            serialif="modem"
+        else
+            serialif="${serialif},modem"
+        fi
+    fi
+    # update compstr to replace "serial" with the interface list.
+    compstr="${compstr/serial/${serialif}}"
+
+
     # Filter supported configurations matching the composition string
     match=`echo ${compstr} | sed -e 's/,/|/g'`
     glist=`echo ${supported} | xargs -n1 | egrep -i "${match}" | xargs`
@@ -119,6 +137,25 @@ configure_configfs_gadget()
 
     # Enable gadget
     echo "${gdev}" > ${gadget_home}/UDC
+}
+
+set_frmnet_module_param()
+{
+    local frmnet_module_param1=/sys/module/g_android/parameters/num_rmnet_swi
+    local frmnet_module_param2=/sys/module/usb_f_rmnet_bam/parameters/num_rmnet_swi
+
+    if [ -w "${frmnet_module_param1}" ]; then
+        frmnet_module_param=${frmnet_module_param1}
+    elif [ -w "${frmnet_module_param2}" ]; then
+        frmnet_module_param=${frmnet_module_param2}
+    else
+        return
+    fi
+
+    numnet=$(/usr/bin/ud_getusbinfo NUMNET)
+    if [ $? -eq 0 ]; then
+        echo $numnet > ${frmnet_module_param}
+    fi
 }
 
 echo "Switching to composition sierra_dev (1199:68C0)"
@@ -219,12 +256,8 @@ then
   serial='0123456789ABCDEF'
 fi
 
-if [ -w /sys/module/g_android/parameters/num_rmnet_swi ]; then
-    numnet=$(/usr/bin/ud_getusbinfo NUMNET)
-    if [ $? -eq 0 ]; then
-        echo $numnet > /sys/module/g_android/parameters/num_rmnet_swi
-    fi
-fi
+# Pass number of rmnets, to driver
+set_frmnet_module_param
 
 # Check if configfs gadget is supported and configure accordingly
 configfs_g_support=`zcat /proc/config.gz |grep CONFIG_USB_CONFIGFS=y`
