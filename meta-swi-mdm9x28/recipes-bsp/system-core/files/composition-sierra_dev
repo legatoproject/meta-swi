@@ -39,6 +39,7 @@ configure_android_gadget()
     echo $diagstr > ${gadget_fs}/f_diag/clients
     echo $serialstr > ${gadget_fs}/f_serial/transports
     echo QTI,BAM_DMUX > ${gadget_fs}/f_rmnet/transports
+    echo BAM_DMUX > ${gadget_fs}/f_usb_mbim/mbim_transports
     echo $compstr > ${gadget_fs}/functions
     echo $remotewakeup > ${gadget_fs}/remote_wakeup
 
@@ -68,6 +69,7 @@ configure_configfs_gadget()
                    `" diag:diag.diag"`
                    `" nmea:cser.nmea.1"`
                    `" rmnet:rmnet_bam.rmnet_bam_dmux"`
+                   `" usb_mbim:mbim.mbim"`
                    `" storage:mass_storage.0"
 
     # Disable gadget in case it was enabled
