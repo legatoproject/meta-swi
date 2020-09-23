@@ -1,0 +1,42 @@
+diff --git a/config/mdm9607auto.conf b/config/mdm9607auto.conf
+index 08f644b9..6d33ed53 100644
+--- a/config/mdm9607auto.conf
++++ b/config/mdm9607auto.conf
+@@ -18,3 +18,4 @@ CONFIG_SND_HWDEP=m
+ CONFIG_MSM_CDC_PINCTRL=m
+ CONFIG_SND_HWDEP_ROUTING=m
+ CONFIG_WCD9XXX_CODEC_CORE=m
++CONFIG_SND_SOC_WM8944=m
+diff --git a/config/mdm9607autoconf.h b/config/mdm9607autoconf.h
+index 5e7d7b2e..35a81472 100644
+--- a/config/mdm9607autoconf.h
++++ b/config/mdm9607autoconf.h
+@@ -31,3 +31,4 @@
+ #define CONFIG_SND_SOC_WCD_CPE 1
+ #define CONFIG_WCD9XXX_CODEC_CORE 1
+ #define CONFIG_SND_HWDEP_ROUTING 1
++#define CONFIG_SND_SOC_WM8944 1
+diff --git a/asoc/codecs/Kbuild b/asoc/codecs/Kbuild
+index 27f52f31..6530a68e 100644
+--- a/asoc/codecs/Kbuild
++++ b/asoc/codecs/Kbuild
+@@ -177,6 +177,10 @@ ifdef CONFIG_SND_SOC_WCD_IRQ
+ 	CORE_OBJS += wcd-irq.o
+ endif
+ 
++ifdef CONFIG_SND_SOC_WM8944
++	WM8944_OBJS += wm8944.o
++endif
++
+ LINUX_INC +=	-Iinclude/linux
+ 
+ INCS +=		$(COMMON_INC) \
+@@ -263,5 +267,8 @@ mbhc_dlkm-y := $(MBHC_OBJS)
+ obj-$(CONFIG_SND_SOC_MSM_HDMI_CODEC_RX) += hdmi_dlkm.o
+ hdmi_dlkm-y := $(HDMICODEC_OBJS)
+ 
++obj-$(CONFIG_SND_SOC_WM8944) += wm8944_dlkm.o
++wm8944_dlkm-y := $(WM8944_OBJS)
++
+ # inject some build related information
+ DEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"

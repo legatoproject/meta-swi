@@ -1,5 +1,6 @@
 #! /bin/sh
 # Copyright (c) 2019-2020, The Linux Foundation. All rights reserved.
+# Modified by Dragan Marinkovic <dmarinkovi@sierrawireless.com>
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -26,17 +27,14 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
-export MODULE_BASE=/usr/lib/modules/`uname -r`/
+export MODULE_BASE=/lib/modules/`uname -r`/
 set -e
 
 case "$1" in
   start)
         echo -n "Starting/Loading audio module: "
-	sleep 6
 
         echo "audio:start/load" > /dev/kmsg
-        start-stop-daemon -S -b -a start_audio_le
         insmod $MODULE_BASE/extra/apr_dlkm.ko
         insmod $MODULE_BASE/extra/adsp_loader_dlkm.ko
         echo 1 > /sys/kernel/boot_adsp/boot
@@ -46,14 +44,15 @@ case "$1" in
         insmod $MODULE_BASE/extra/wcd_core_dlkm.ko
         insmod $MODULE_BASE/extra/wcd_cpe_dlkm.ko
         insmod $MODULE_BASE/extra/wcd9330_dlkm.ko
+        insmod $MODULE_BASE/extra/wm8944_dlkm.ko
         insmod $MODULE_BASE/extra/machine_dlkm.ko
 
         echo "done loading audio_kernel module"
         ;;
   stop)
-        start-stop-daemon -S -b -a start_audio_le
         echo "Unloading audio_kernel modules " > /dev/kmsg
         rmmod machine_dlkm
+        rmmod wm8944_dlkm
         rmmod wcd9330_dlkm
         rmmod wcd_cpe_dlkm
         rmmod wcd_core_dlkm

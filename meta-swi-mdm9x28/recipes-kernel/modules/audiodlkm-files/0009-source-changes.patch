@@ -1,0 +1,148 @@
+# commit b9504c74598d916d3d0a05b35dffd642cb58c78c
+# Author: Mitchell Nichols <MNichols@sierrawireless.com>
+# Date:   Mon Aug 14 11:23:39 2017 -0700
+#
+# asoc: mdm9607: enable external clock on primary PCM interface
+#
+# Modified-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+diff --git a/asoc/mdm9607.c b/asoc/mdm9607.c
+index 9894671f..60135be0 100644
+--- a/asoc/mdm9607.c
++++ b/asoc/mdm9607.c
+@@ -953,6 +953,7 @@ static int mdm_auxpcm_startup(struct snd_pcm_substream *substream)
+ 	struct snd_soc_card *card = rtd->card;
+ 	struct mdm_machine_data *pdata = snd_soc_card_get_drvdata(card);
+ 	int ret = 0;
++	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+ 
+ 	if (atomic_inc_return(&aux_ref_count) == 1) {
+ 		if (pdata->lpaif_pri_muxsel_virt_addr != NULL) {
+@@ -966,10 +967,10 @@ static int mdm_auxpcm_startup(struct snd_pcm_substream *substream)
+ 				  pdata->lpaif_pri_muxsel_virt_addr);
+ 
+ 			if (pdata->lpass_mux_spkr_ctl_virt_addr != NULL) {
+-				if (pdata->prim_auxpcm_mode == 1) {
++				if (mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_INTERNAL) {
+ 					iowrite32(PRI_TLMM_CLKS_EN_MASTER,
+ 					pdata->lpass_mux_spkr_ctl_virt_addr);
+-				} else if (pdata->prim_auxpcm_mode == 0) {
++				} else if (mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_EXTERNAL) {
+ 					iowrite32(PRI_TLMM_CLKS_EN_SLAVE,
+ 					pdata->lpass_mux_spkr_ctl_virt_addr);
+ 				} else {
+@@ -979,6 +980,7 @@ static int mdm_auxpcm_startup(struct snd_pcm_substream *substream)
+ 					ret = -EINVAL;
+ 					goto err;
+ 				}
++				mdm_gpio_set_mux_ctl(pdata);
+ 			} else {
+ 				pr_err("%s lpass_mux_spkr_ctl_virt_addr is NULL\n",
+ 					__func__);
+@@ -991,6 +993,34 @@ static int mdm_auxpcm_startup(struct snd_pcm_substream *substream)
+ 			ret = -EINVAL;
+ 			goto done;
+ 		}
++
++		/*
++		* This sets the CONFIG PARAMETER WS_SRC.
++		* 1 means  master mode.
++		* 0 means  slave mode.
++		*/
++		pr_debug("startup primary auxpcm,prim_auxpcm_mode=%d\n",pdata->prim_auxpcm_mode);
++		if (mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_INTERNAL) {
++			ret = mdm_mi2s_clk_ctl(rtd, true, mdm_auxpcm_rate);
++			if (ret < 0) {
++				pr_err("%s clock enable failed\n", __func__);
++				goto err;
++			}
++		} else if (mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_EXTERNAL) {
++			/*
++			* Enable mclk here, if needed for external codecs.
++			* Optional. Refer primary mi2s slave interface.
++			*/
++			ret = snd_soc_dai_set_fmt(cpu_dai,
++					SND_SOC_DAIFMT_CBM_CFM);
++			if (ret < 0)
++				pr_err("%s Set fmt for cpu dai failed\n",
++					__func__);
++		} else {
++			pr_err("%s Invalid primary mi2s mode\n", __func__);
++			atomic_dec(&mi2s_ref_count);
++			ret = -EINVAL;
++		}
+ 	}
+ err:
+ 	afe_enable_lpass_core_shared_clock(MI2S_RX, CLOCK_OFF);
+@@ -1019,10 +1049,10 @@ static int mdm_sec_auxpcm_startup(struct snd_pcm_substream *substream)
+ 				pdata->lpaif_sec_muxsel_virt_addr);
+ 
+ 			if (pdata->lpass_mux_mic_ctl_virt_addr != NULL) {
+-				if (pdata->sec_auxpcm_mode == 1) {
++				if (mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_INTERNAL) {
+ 					iowrite32(SEC_TLMM_CLKS_EN_MASTER,
+ 					pdata->lpass_mux_mic_ctl_virt_addr);
+-				} else if (pdata->sec_auxpcm_mode == 0) {
++				} else if (mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_EXTERNAL) {
+ 					iowrite32(SEC_TLMM_CLKS_EN_SLAVE,
+ 					pdata->lpass_mux_mic_ctl_virt_addr);
+ 				} else {
+@@ -1054,14 +1084,14 @@ static int mdm_sec_auxpcm_startup(struct snd_pcm_substream *substream)
+ 		* 0 means  slave mode.
+ 		*/
+ 		pr_debug("startup second auxpcm,sec_auxpcm_mode=%d\n",pdata->sec_auxpcm_mode);
+-		if (pdata->sec_auxpcm_mode == 1) {
++		if (mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_INTERNAL) {
+ 			ret = mdm_sec_mi2s_clk_ctl(rtd, true,
+ 							mdm_sec_mi2s_rate);
+ 			if (ret < 0) {
+ 				pr_err("%s clock enable failed\n", __func__);
+ 				goto err;
+ 			}
+-		} else if (pdata->sec_auxpcm_mode == 0) {
++		} else if (mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_EXTERNAL) {
+ 			/*
+ 			* Enable mclk here, if needed for external codecs.
+ 			* Optional. Refer primary mi2s slave interface.
+@@ -1088,17 +1118,36 @@ void mdm_sec_auxpcm_shutdown(struct snd_pcm_substream *substream)
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+ 	int ret;
+ 
+-	pr_debug("mdm_sec_auxpcm_shutdown, sec_aux_ref_count=%d\n", atomic_read(&sec_aux_ref_count));
+-	if (atomic_dec_return(&sec_aux_ref_count) == 0) {
+-		pr_err("shutdown second auxpcm\n");
+-		ret = mdm_sec_mi2s_clk_ctl(rtd, false, 0);
+-		if (ret < 0)
+-			pr_err("%s Clock disable failed\n", __func__);
++	if(mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_INTERNAL) {
++		pr_debug("mdm_sec_auxpcm_shutdown, sec_aux_ref_count=%d\n", atomic_read(&sec_aux_ref_count));
++		if (atomic_dec_return(&sec_aux_ref_count) == 0) {
++			pr_info("shutdown second auxpcm\n");
++			ret = mdm_sec_mi2s_clk_ctl(rtd, false, 0);
++			if (ret < 0)
++				pr_err("%s Clock disable failed\n", __func__);
++		}
++	}
++}
++
++void mdm_auxpcm_shutdown(struct snd_pcm_substream *substream)
++{
++	struct snd_soc_pcm_runtime *rtd = substream->private_data;
++	int ret;
++
++	if(mdm_auxpcm_sync == AFE_PORT_PCM_SYNC_SRC_INTERNAL) {
++		pr_debug("mdm_auxpcm_shutdown, aux_ref_count=%d\n", atomic_read(&aux_ref_count));
++		if (atomic_dec_return(&aux_ref_count) == 0) {
++			pr_info("shutdown primary auxpcm\n");
++			ret = mdm_mi2s_clk_ctl(rtd, false, 0);
++			if (ret < 0)
++				pr_err("%s Clock disable failed\n", __func__);
++		}
+ 	}
+ }
+ 
+ static struct snd_soc_ops mdm_auxpcm_be_ops = {
+ 	.startup = mdm_auxpcm_startup,
++	.shutdown = mdm_auxpcm_shutdown,
+ };
+ 
+ static struct snd_soc_ops mdm_sec_auxpcm_be_ops = {

@@ -1,0 +1,356 @@
+# commit f56acb6a1525c92c6e2002d175f833a3eb442163
+# Author: Mitchell Nichols <MNichols@sierrawireless.com>
+# Date:   Fri Apr 7 09:56:14 2017 -0700
+#
+# mdm9607: add support for WM8944 codec
+#
+# Modified-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+diff --git a/asoc/mdm9607.c b/asoc/mdm9607.c
+index 86318301..ec1d5007 100644
+--- a/asoc/mdm9607.c
++++ b/asoc/mdm9607.c
+@@ -29,6 +29,11 @@
+ #include <device_event.h>
+ #include <dsp/audio_notifier.h>
+ #include <dsp/q6afe-v2.h>
++#include "codecs/wm8944.h"
++#include <linux/mfd/wm8944/registers.h>
++#include <linux/mfd/wm8944/core.h>
++#include <linux/clk.h>
++#include <linux/sierra_bsudefs.h>
+ #include <dsp/q6core.h>
+ #include "msm-pcm-routing-v2.h"
+ #include "codecs/msm-cdc-pinctrl.h"
+@@ -108,6 +113,7 @@ struct mdm9607_codec {
+ 
+ struct mdm_machine_data {
+ 	u32 mclk_freq;
++	struct clk* sysclk;
+ 	atomic_t prim_clk_usrs;
+ 	u16 prim_mi2s_mode;
+ 	u16 prim_auxpcm_mode;
+@@ -240,20 +246,25 @@ static int mdm_mi2s_clk_ctl(struct snd_soc_pcm_runtime *rtd, bool enable,
+ 	memcpy(lpass_clk, &lpass_default, sizeof(struct afe_clk_cfg));
+ 	pr_debug("%s enable = %x\n", __func__, enable);
+ 
++	lpass_clk->enable = enable;
++
+ 	if (enable) {
+-		if (atomic_read(&pdata->prim_clk_usrs) == 0) {
+-			lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_MCLK_3;
+-			lpass_clk->clk_freq_in_hz = pdata->mclk_freq;
+-			lpass_clk->enable = 1;
+-			ret = afe_set_lpass_clock_v2(
+-				AFE_PORT_ID_PRIMARY_MI2S_RX, lpass_clk);
+-			if (ret < 0)
+-				pr_err("%s:afe set mclk failed\n", __func__);
+-			else
+-				atomic_inc(&pdata->prim_clk_usrs);
++		if(!strcmp(card->name, "mdm9607-wm8944-i2s-snd-card")) {
++			/* WM8944 on mangOH uses RF_CLK2 from PMIC for MCLK */
++			clk_prepare_enable(pdata->sysclk);
+ 		} else {
+-			lpass_clk->enable = 1;
++			if (atomic_read(&pdata->prim_clk_usrs) == 0) {
++				lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_MCLK_3;
++				lpass_clk->clk_freq_in_hz = pdata->mclk_freq;
++				ret = afe_set_lpass_clock_v2(
++				AFE_PORT_ID_PRIMARY_MI2S_RX, lpass_clk);
++				if (ret < 0)
++					pr_err("%s:afe set mclk failed\n", __func__);
++				else
++					atomic_inc(&pdata->prim_clk_usrs);
++			}
+ 		}
++
+ 		lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_PRI_MI2S_IBIT;
+ 		lpass_clk->clk_freq_in_hz = bit_clk_freq;
+ 		ret = afe_set_lpass_clock_v2(AFE_PORT_ID_PRIMARY_MI2S_RX,
+@@ -261,16 +272,18 @@ static int mdm_mi2s_clk_ctl(struct snd_soc_pcm_runtime *rtd, bool enable,
+ 		if (ret < 0)
+ 			pr_err("%s:afe_set_lpass_clock_v2 failed\n", __func__);
+ 	} else {
+-		if (atomic_read(&pdata->prim_clk_usrs) > 0)
+-			atomic_dec(&pdata->prim_clk_usrs);
+-
+-		if (atomic_read(&pdata->prim_clk_usrs) == 0) {
+-			lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_MCLK_3;
+-			lpass_clk->enable = 0;
+-			ret = afe_set_lpass_clock_v2(
+-				AFE_PORT_ID_PRIMARY_MI2S_RX, lpass_clk);
++		if(!strcmp(card->name, "mdm9607-wm8944-i2s-snd-card")) {
++			/* WM8944 on mangOH uses RF_CLK2 from PMIC for MCLK */
++			clk_disable_unprepare(pdata->sysclk);
+ 		} else {
+-			lpass_clk->enable = 0;
++			if (atomic_read(&pdata->prim_clk_usrs) > 0)
++				atomic_dec(&pdata->prim_clk_usrs);
++
++			if (atomic_read(&pdata->prim_clk_usrs) == 0) {
++				lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_MCLK_3;
++				ret = afe_set_lpass_clock_v2(
++					AFE_PORT_ID_PRIMARY_MI2S_RX, lpass_clk);
++			}
+ 		}
+ 		lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_PRI_MI2S_IBIT;
+ 		ret = afe_set_lpass_clock_v2(AFE_PORT_ID_PRIMARY_MI2S_RX,
+@@ -374,14 +387,18 @@ static int mdm_mi2s_startup(struct snd_pcm_substream *substream)
+ 				goto err;
+ 			}
+ 			ret = snd_soc_dai_set_fmt(cpu_dai,
+-					SND_SOC_DAIFMT_CBS_CFS);
++					SND_SOC_DAIFMT_CBS_CFS |
++					SND_SOC_DAIFMT_I2S);
++
+ 			if (ret < 0) {
+ 				pr_err("%s Set fmt for cpu dai failed\n",
+ 					__func__);
+ 				goto err;
+ 			}
+ 			ret = snd_soc_dai_set_fmt(codec_dai,
+-					SND_SOC_DAIFMT_CBS_CFS);
++					SND_SOC_DAIFMT_CBS_CFS |
++					SND_SOC_DAIFMT_I2S);
++
+ 			if (ret < 0)
+ 				pr_err("%s Set fmt for codec dai failed\n",
+ 					__func__);
+@@ -859,37 +876,45 @@ static int mdm_enable_codec_ext_clk(struct snd_soc_codec *codec,
+ 	mutex_lock(&cdc_mclk_mutex);
+ 	memcpy(lpass_clk, &lpass_default, sizeof(struct afe_clk_cfg));
+ 	if (enable) {
+-		if (atomic_read(&pdata->prim_clk_usrs) == 0) {
+-			lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_MCLK_3;
+-			lpass_clk->clk_freq_in_hz = pdata->mclk_freq;
+-			lpass_clk->enable = enable;
+-			ret = afe_set_lpass_clock_v2(
+-				AFE_PORT_ID_PRIMARY_MI2S_RX, lpass_clk);
+-			if (ret < 0) {
+-				pr_err("%s afe_set_lpass_clock_v2 failed\n",
+-				       __func__);
+-
+-				goto err;
++		if(!strcmp(card->name, "mdm9607-wm8944-i2s-snd-card")) {
++			/* WM8944 on mangOH uses RF_CLK2 from PMIC for MCLK */
++			clk_prepare_enable(pdata->sysclk);
++		} else {
++			if (atomic_read(&pdata->prim_clk_usrs) == 0) {
++				lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_MCLK_3;
++				lpass_clk->clk_freq_in_hz = pdata->mclk_freq;
++				lpass_clk->enable = enable;
++				ret = afe_set_lpass_clock_v2(
++					AFE_PORT_ID_PRIMARY_MI2S_RX, lpass_clk);
++				if (ret < 0) {
++					pr_err("%s afe_set_lpass_clock_v2 failed\n",
++						__func__);
++					goto err;
++				}
+ 			}
++			atomic_inc(&pdata->prim_clk_usrs);
++			pdata->mdm9607_codec_fn.mclk_enable_fn(codec, 1, dapm);
+ 		}
+-		atomic_inc(&pdata->prim_clk_usrs);
+-		pdata->mdm9607_codec_fn.mclk_enable_fn(codec, 1, dapm);
+ 	} else {
+-		if (atomic_read(&pdata->prim_clk_usrs) > 0)
+-			atomic_dec(&pdata->prim_clk_usrs);
+-		if (atomic_read(&pdata->prim_clk_usrs) == 0) {
+-			lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_MCLK_3;
+-			lpass_clk->enable = enable;
+-			ret = afe_set_lpass_clock_v2(
+-				AFE_PORT_ID_PRIMARY_MI2S_RX, lpass_clk);
+-			if (ret < 0) {
+-				pr_err("%s afe_set_lpass_clock_v2 failed\n",
+-				       __func__);
+-
+-				goto err;
++		if(!strcmp(card->name, "mdm9607-wm8944-i2s-snd-card")) {
++			/* WM8944 on mangOH uses RF_CLK2 from PMIC for MCLK */
++			clk_disable_unprepare(pdata->sysclk);
++		} else {
++			if (atomic_read(&pdata->prim_clk_usrs) > 0)
++				atomic_dec(&pdata->prim_clk_usrs);
++			if (atomic_read(&pdata->prim_clk_usrs) == 0) {
++				lpass_clk->clk_id = Q6AFE_LPASS_CLK_ID_MCLK_3;
++				lpass_clk->enable = enable;
++				ret = afe_set_lpass_clock_v2(
++					AFE_PORT_ID_PRIMARY_MI2S_RX, lpass_clk);
++				if (ret < 0) {
++					pr_err("%s afe_set_lpass_clock_v2 failed\n",
++						__func__);
++					goto err;
++				}
+ 			}
++			pdata->mdm9607_codec_fn.mclk_enable_fn(codec, 0, dapm);
+ 		}
+-		pdata->mdm9607_codec_fn.mclk_enable_fn(codec, 0, dapm);
+ 	}
+ 	pr_debug("%s clk %x\n",  __func__, pdata->mclk_freq);
+ err:
+@@ -1133,6 +1158,43 @@ static const struct snd_kcontrol_new mdm_snd_controls[] = {
+ 				 mdm_sec_mi2s_rate_put),
+ };
+ 
++static int mdm_wm8944_mi2s_audrx_init(struct snd_soc_pcm_runtime *rtd)
++{
++	int ret = 0;
++	struct snd_soc_codec *codec = rtd->codec;
++	struct snd_soc_dapm_context *dapm = &codec->component.dapm;
++	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
++	struct snd_soc_card *card = rtd->card;
++	struct mdm_machine_data *pdata = snd_soc_card_get_drvdata(card);
++	struct snd_soc_dai *codec_dai = rtd->codec_dai;
++
++	pr_debug("%s dev_name %s\n", __func__, dev_name(cpu_dai->dev));
++
++	rtd->pmdown_time = 0;
++	ret = snd_soc_add_codec_controls(codec, mdm_snd_controls,
++					 ARRAY_SIZE(mdm_snd_controls));
++	if (ret < 0)
++		return ret;
++
++	snd_soc_dapm_new_controls(dapm, mdm9607_dapm_widgets,
++				  ARRAY_SIZE(mdm9607_dapm_widgets));
++
++	snd_soc_dai_set_clkdiv(codec_dai, WM8944_BCLKDIV, 0);
++	snd_soc_dai_set_sysclk(codec_dai, WM8944_SYSCLK_MCLK,
++				pdata->mclk_freq, 0);
++
++	/*
++	 * After DAPM Enable pins always
++	 * DAPM SYNC needs to be called.
++	 */
++	snd_soc_dapm_enable_pin(dapm, "Lineout_1 amp");
++	snd_soc_dapm_enable_pin(dapm, "Lineout_3 amp");
++	snd_soc_dapm_ignore_suspend(dapm, "Headset Mic");
++	snd_soc_dapm_sync(dapm);
++
++	return ret;
++}
++
+ static int msm_snd_get_ext_clk_cnt(void)
+ {
+ 	return clk_users;
+@@ -1956,6 +2018,38 @@ static struct snd_soc_dai_link mdm_9306_dai[] = {
+ 	},
+ };
+ 
++static struct snd_soc_dai_link mdm_wm8944_dai[] = {
++	{
++		.name = LPASS_BE_PRI_MI2S_RX,
++		.stream_name = "Primary MI2S Playback",
++		.cpu_dai_name = "msm-dai-q6-mi2s.0",
++		.platform_name = "msm-pcm-routing",
++		.codec_name     = "wm8944-codec",
++		.codec_dai_name = "wm8944-hifi",
++		.dpcm_capture = 1,
++		.dpcm_playback = 1,
++		.no_pcm = 1,
++		.id = MSM_BACKEND_DAI_PRI_MI2S_RX,
++		.init = &mdm_wm8944_mi2s_audrx_init,
++		.be_hw_params_fixup = &mdm_mi2s_rx_be_hw_params_fixup,
++		.ops = &mdm_mi2s_be_ops,
++	},
++	{
++		.name = LPASS_BE_PRI_MI2S_TX,
++		.stream_name = "Primary MI2S Capture",
++		.cpu_dai_name = "msm-dai-q6-mi2s.0",
++		.platform_name = "msm-pcm-routing",
++		.codec_name     = "wm8944-codec",
++		.codec_dai_name = "wm8944-hifi",
++		.dpcm_capture = 1,
++		.dpcm_playback = 1,
++		.no_pcm = 1,
++		.id = MSM_BACKEND_DAI_PRI_MI2S_TX,
++		.be_hw_params_fixup = &mdm_mi2s_tx_be_hw_params_fixup,
++		.ops = &mdm_mi2s_be_ops,
++	},
++};
++
+ static struct snd_soc_dai_link mdm_tomtom_dai_links[
+ 				ARRAY_SIZE(mdm_dai) +
+ 				ARRAY_SIZE(mdm_9330_dai)];
+@@ -1964,6 +2058,16 @@ static struct snd_soc_dai_link mdm_tapan_dai_links[
+ 				ARRAY_SIZE(mdm_dai) +
+ 				ARRAY_SIZE(mdm_9306_dai)];
+ 
++static struct snd_soc_dai_link mdm_wm8944_dai_links[
++				ARRAY_SIZE(mdm_dai) +
++				ARRAY_SIZE(mdm_wm8944_dai)];
++
++static struct snd_soc_card snd_soc_card_mdm_wm8944 = {
++	.name = "mdm9607-wm8944-i2s-snd-card",
++	.dai_link = mdm_wm8944_dai_links,
++	.num_links = ARRAY_SIZE(mdm_wm8944_dai_links),
++};
++
+ static struct snd_soc_card snd_soc_card_mdm_9330 = {
+ 	.name = "mdm9607-tomtom-i2s-snd-card",
+ 	.dai_link = mdm_tomtom_dai_links,
+@@ -1979,6 +2083,8 @@ static struct snd_soc_card snd_soc_card_mdm_9306 = {
+ static const struct of_device_id mdm_asoc_machine_of_match[]  = {
+ 	{ .compatible = "qcom,mdm9607-audio-tomtom",
+ 	  .data = "tomtom_codec"},
++	{ .compatible = "qcom,mdm9607-audio-wm8944",
++	  .data = "wm8944-codec"},
+ 	{},
+ };
+ 
+@@ -2191,6 +2297,20 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
+ 			   sizeof(mdm_9306_dai));
+ 		dailink = mdm_tapan_dai_links;
+ 	}
++	else if (!strcmp(match->data, "wm8944-codec")) {
++		card = &snd_soc_card_mdm_wm8944;
++		len_1 = ARRAY_SIZE(mdm_dai);
++		len_2 = len_1 + ARRAY_SIZE(mdm_wm8944_dai);
++
++		memcpy(mdm_wm8944_dai_links, mdm_dai,
++			   sizeof(mdm_dai));
++		memcpy(mdm_wm8944_dai_links + len_1, mdm_wm8944_dai,
++			   sizeof(mdm_wm8944_dai));
++		dailink = mdm_wm8944_dai_links;
++	}
++	else {
++		; /* Nothing to do */
++	}
+ 
+ 	if (card) {
+ 		card->dai_link = dailink;
+@@ -2243,7 +2363,8 @@ static int mdm_asoc_machine_probe(struct platform_device *pdev)
+ 	}
+ 
+ 	/* At present only 12.288MHz is supported on MDM. */
+-	if (q6afe_check_osr_clk_freq(pdata->mclk_freq)) {
++	if (!bs_support_get(BSFEATURE_WM8944) &&
++	    q6afe_check_osr_clk_freq(pdata->mclk_freq)) {
+ 		dev_err(&pdev->dev, "%s Unsupported tomtom mclk freq %u\n",
+ 			__func__, pdata->mclk_freq);
+ 
+@@ -2263,6 +2384,7 @@ static int mdm_asoc_machine_probe(struct platform_device *pdev)
+ 	atomic_set(&pdata->sec_clk_usrs, 0);
+ 
+ 	card = populate_snd_card_dailinks(&pdev->dev);
++
+ 	if (!card) {
+ 		dev_err(&pdev->dev, "%s: Card uninitialized\n", __func__);
+ 		ret = -EINVAL;
+@@ -2272,6 +2394,18 @@ static int mdm_asoc_machine_probe(struct platform_device *pdev)
+ 		pdata->mdm9607_codec_fn.mclk_enable_fn = tomtom_mclk_enable;
+ 		pdata->mdm9607_codec_fn.mbhc_hs_detect = tomtom_hs_detect;
+ 	}
++	else if (!strcmp(card->name, "mdm9607-wm8944-i2s-snd-card")) {
++		pdata->sysclk = devm_clk_get(&pdev->dev, "wm8944_sysclk");
++		if(!pdata->sysclk) {
++			dev_err(&pdev->dev, "%s: failed to get MCLK for wm8944\n", __func__);
++			ret = -EINVAL;
++			goto err;
++		}
++	}
++	else {
++		; /* do nothing */
++	}
++
+ 	card->dev = &pdev->dev;
+ 	platform_set_drvdata(pdev, card);
+ 	snd_soc_card_set_drvdata(card, pdata);

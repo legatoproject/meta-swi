@@ -1,0 +1,13 @@
+--- a/asoc/mdm9607.c	2020-10-20 19:01:50.643392170 -0700
++++ b/asoc/mdm9607.c	2020-10-20 19:02:23.791152753 -0700
+@@ -2453,8 +2453,10 @@
+ };
+ 
+ static const struct of_device_id mdm_asoc_machine_of_match[]  = {
++#ifdef MDM9607_AUDIO_TOMTOM
+ 	{ .compatible = "qcom,mdm9607-audio-tomtom",
+ 	  .data = "tomtom_codec"},
++#endif
+ 	{ .compatible = "qcom,mdm9607-audio-wm8944",
+ 	  .data = "wm8944-codec"},
+ 	{},

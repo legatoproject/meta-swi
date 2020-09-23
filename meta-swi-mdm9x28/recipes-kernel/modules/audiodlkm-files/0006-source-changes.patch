@@ -1,0 +1,101 @@
+# commit efb827b9981295067de4175d554f43291a05fea5
+# Author: Kinbo Huang <KHuang@sierrawireless.com>
+# Date:   Fri Oct 14 10:56:21 2016 +0800
+#
+# [9x28] Support PCM for external codec
+#
+# Modified-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+diff --git a/asoc/mdm9607.c b/asoc/mdm9607.c
+index 2b565b01..56d8656c 100644
+--- a/asoc/mdm9607.c
++++ b/asoc/mdm9607.c
+@@ -156,6 +156,8 @@ static atomic_t sec_mi2s_ref_count;
+ 
+ static int clk_users;
+ 
++static void mdm_sec_auxpcm_shutdown(struct snd_pcm_substream *substream);
++
+ static inline int param_is_mask(int p)
+ {
+ 	return (p >= SNDRV_PCM_HW_PARAM_FIRST_MASK) &&
+@@ -993,6 +995,7 @@ done:
+ static int mdm_sec_auxpcm_startup(struct snd_pcm_substream *substream)
+ {
+ 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
++	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
+ 	struct snd_soc_card *card = rtd->card;
+ 	struct mdm_machine_data *pdata = snd_soc_card_get_drvdata(card);
+ 	int ret = 0;
+@@ -1029,12 +1032,44 @@ static int mdm_sec_auxpcm_startup(struct snd_pcm_substream *substream)
+ 				ret = -EINVAL;
+ 				goto err;
+ 			}
++
++			mdm_gpio_set_mux_ctl(pdata);
++
+ 		} else {
+ 			pr_err("%s lpaif_sec_muxsel_virt_addr is NULL\n",
+ 			       __func__);
+ 			ret = -EINVAL;
+ 			goto done;
+ 		}
++
++		/*
++		* This sets the CONFIG PARAMETER WS_SRC.
++		* 1 means  master mode.
++		* 0 means  slave mode.
++		*/
++		pr_debug("startup second auxpcm,sec_auxpcm_mode=%d\n",pdata->sec_auxpcm_mode);
++		if (pdata->sec_auxpcm_mode == 1) {
++			ret = mdm_sec_mi2s_clk_ctl(rtd, true,
++							mdm_sec_mi2s_rate);
++			if (ret < 0) {
++				pr_err("%s clock enable failed\n", __func__);
++				goto err;
++			}
++		} else if (pdata->sec_auxpcm_mode == 0) {
++			/*
++			* Enable mclk here, if needed for external codecs.
++			* Optional. Refer primary mi2s slave interface.
++			*/
++			ret = snd_soc_dai_set_fmt(cpu_dai,
++					SND_SOC_DAIFMT_CBM_CFM);
++			if (ret < 0)
++				pr_err("%s Set fmt for cpu dai failed\n",
++					__func__);
++		} else {
++			pr_err("%s Invalid secondary mi2s mode\n", __func__);
++			atomic_dec(&sec_mi2s_ref_count);
++			ret = -EINVAL;
++		}
+ 	}
+ err:
+ 	afe_enable_lpass_core_shared_clock(SECONDARY_I2S_RX, CLOCK_OFF);
+@@ -1042,12 +1077,27 @@ done:
+ 	return ret;
+ }
+ 
++void mdm_sec_auxpcm_shutdown(struct snd_pcm_substream *substream)
++{
++	struct snd_soc_pcm_runtime *rtd = substream->private_data;
++	int ret;
++
++	pr_debug("mdm_sec_auxpcm_shutdown, sec_aux_ref_count=%d\n", atomic_read(&sec_aux_ref_count));
++	if (atomic_dec_return(&sec_aux_ref_count) == 0) {
++		pr_err("shutdown second auxpcm\n");
++		ret = mdm_sec_mi2s_clk_ctl(rtd, false, 0);
++		if (ret < 0)
++			pr_err("%s Clock disable failed\n", __func__);
++	}
++}
++
+ static struct snd_soc_ops mdm_auxpcm_be_ops = {
+ 	.startup = mdm_auxpcm_startup,
+ };
+ 
+ static struct snd_soc_ops mdm_sec_auxpcm_be_ops = {
+ 	.startup = mdm_sec_auxpcm_startup,
++	.shutdown = mdm_sec_auxpcm_shutdown,
+ };
+ 
+ static int mdm_auxpcm_rate_get(struct snd_kcontrol *kcontrol,

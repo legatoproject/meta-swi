@@ -25,11 +25,23 @@ KERN_VERS_ACCEPTABLE = "4.14%"
 SRC_URI_FILES += " \
                    file://start_audio_le \
                    file://load_audio_base \
+                   file://wm8944.c \
+                   file://wm8944.h \
                  "
 # Patches
 SRC_URI_PATCHES += " \
                     file://0001-makefile.patch \
                     file://0002-compile-errors.patch \
+                    file://0003-config.patch \
+                    file://0004-source-changes.patch \
+                    file://0005-source-changes.patch \
+                    file://0006-source-changes.patch \
+                    file://0007-source-changes.patch \
+                    file://0008-source-changes.patch \
+                    file://0009-source-changes.patch \
+                    file://0010-source-changes.patch \
+                    file://0011-source-changes.patch \
+                    file://0012-source-changes.patch \
                    "
 
 # Add it all together
@@ -38,6 +50,11 @@ SRC_URI += "${SRC_URI_FILES} ${SRC_URI_PATCHES}"
 # Clear it
 INITSCRIPT_NAME = ""
 INITSCRIPT_PARAMS = ""
+
+# Enable mdm9607-audio-tomtom. If you do, it will
+# take over the resources, and mdm9607-audio-wm8944
+# would not work.
+# KERNEL_CC += "-DMDM9607_AUDIO_TOMTOM"
 
 # Use update-rc.d directly here.
 DEPENDS_append = " update-rc.d-native"
@@ -62,9 +79,10 @@ do_fetch_prepend() {
         exit(1)
 }
 
-# Make sure Makefile exists.
+# Make sure Makefile and all other files exist.
 do_configure() {
 	cp -f ${WORKDIR}/git/Makefile.am ${WORKDIR}/git/Makefile
+	cp -f ${WORKDIR}/wm8944.{c,h} ${WORKDIR}/git/asoc/codecs/.
 }
 
 # This is here in order to add to whatever is in audiodlkm_git.bb:do_install_append()
@@ -73,11 +91,6 @@ do_configure() {
 do_install_append() {
 
 	install -d ${D}${sysconfdir}/init.d
-
-	# Change and install audio startup script(s)
-	sed -i 's/MODULE_BASE=\/usr\/lib\/modules\/`uname -r`\//MODULE_BASE=\/lib\/modules\/`uname -r`\//' ${WORKDIR}/start_audio_le
-	sed -i 's/sleep 6//' ${WORKDIR}/start_audio_le
-	sed -i 's/start-stop-daemon -S -b -a start_audio_le//g' ${WORKDIR}/start_audio_le
 
 	install -m 0755 ${WORKDIR}/start_audio_le ${D}${sysconfdir}/init.d/start_audio_le
 	install -m 0755 ${WORKDIR}/load_audio_base ${D}${sysconfdir}/init.d/load_audio_base
@@ -119,4 +132,5 @@ RPROVIDES_${PN} += "\
 	kernel-module-wcd-cpe-dlkm-${KERNEL_VERSION} \
 	kernel-module-wcd9330-dlkm-${KERNEL_VERSION} \
 	kernel-module-machine-dlkm-${KERNEL_VERSION} \
+	kernel-module-wm8944-dlkm-${KERNEL_VERSION} \
 	"

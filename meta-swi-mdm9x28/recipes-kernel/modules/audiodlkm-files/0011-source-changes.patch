@@ -1,0 +1,125 @@
+# commit eea061921f543250d58dfd7e55728a8309bd858e
+# Author: Ken Lam <kwlam@sierrawireless.com>
+# Date:   Thu Sep 13 17:37:24 2018 +0800
+#
+# alsa codec dai driver: fix the voice call crash issue
+#
+# Modified-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+diff --git a/asoc/mdm9607.c b/asoc/mdm9607.c
+index 417fc15a..415cf845 100644
+--- a/asoc/mdm9607.c
++++ b/asoc/mdm9607.c
+@@ -2381,6 +2381,37 @@ static struct snd_soc_dai_link mdm_wm8944_dai[] = {
+ 	},
+ };
+ 
++static struct snd_soc_dai_link mdm_nocodec_dai[] = {
++	{
++		.name = LPASS_BE_PRI_MI2S_RX,
++		.stream_name = "Primary MI2S Playback",
++		.cpu_dai_name = "msm-dai-q6-mi2s.0",
++		.platform_name = "msm-pcm-routing",
++		.codec_name = "msm-stub-codec.1",
++		.codec_dai_name = "msm-stub-rx",
++		.dpcm_capture = 1,
++		.dpcm_playback = 1,
++		.no_pcm = 1,
++		.id = MSM_BACKEND_DAI_PRI_MI2S_RX,
++		.be_hw_params_fixup = &mdm_mi2s_rx_be_hw_params_fixup,
++		.ops = &mdm_mi2s_be_ops,
++	},
++	{
++		.name = LPASS_BE_PRI_MI2S_TX,
++		.stream_name = "Primary MI2S Capture",
++		.cpu_dai_name = "msm-dai-q6-mi2s.0",
++		.platform_name = "msm-pcm-routing",
++		.codec_name = "msm-stub-codec.1",
++		.codec_dai_name = "msm-stub-tx",
++		.dpcm_capture = 1,
++		.dpcm_playback = 1,
++		.no_pcm = 1,
++		.id = MSM_BACKEND_DAI_PRI_MI2S_TX,
++		.be_hw_params_fixup = &mdm_mi2s_tx_be_hw_params_fixup,
++		.ops = &mdm_mi2s_be_ops,
++	},
++};
++
+ static struct snd_soc_dai_link mdm_tomtom_dai_links[
+ 				ARRAY_SIZE(mdm_dai) +
+ 				ARRAY_SIZE(mdm_9330_dai)];
+@@ -2393,6 +2424,10 @@ static struct snd_soc_dai_link mdm_wm8944_dai_links[
+ 				ARRAY_SIZE(mdm_dai) +
+ 				ARRAY_SIZE(mdm_wm8944_dai)];
+ 
++static struct snd_soc_dai_link mdm_nocodec_dai_links[
++				ARRAY_SIZE(mdm_dai) +
++				ARRAY_SIZE(mdm_nocodec_dai)];
++
+ static struct snd_soc_card snd_soc_card_mdm_wm8944 = {
+ 	.name = "mdm9607-wm8944-i2s-snd-card",
+ 	.dai_link = mdm_wm8944_dai_links,
+@@ -2401,8 +2436,8 @@ static struct snd_soc_card snd_soc_card_mdm_wm8944 = {
+ 
+ static struct snd_soc_card snd_soc_card_mdm_nocodec = {
+ 	.name = "mdm9607-nocodec-snd-card",
+-	.dai_link = mdm_dai,
+-	.num_links = ARRAY_SIZE(mdm_dai),
++	.dai_link = mdm_nocodec_dai_links,
++	.num_links = ARRAY_SIZE(mdm_nocodec_dai_links),
+ };
+ 
+ static struct snd_soc_card snd_soc_card_mdm_9330 = {
+@@ -2648,8 +2683,14 @@ static struct snd_soc_card *populate_snd_card_dailinks(struct device *dev)
+ 	}
+ 	else {
+ 		card = &snd_soc_card_mdm_nocodec;
+-		len_2 = ARRAY_SIZE(mdm_dai);
+-		dailink = mdm_dai;
++		len_1 = ARRAY_SIZE(mdm_dai);
++		len_2 = len_1 + ARRAY_SIZE(mdm_nocodec_dai);
++
++		memcpy(mdm_nocodec_dai_links, mdm_dai,
++			   sizeof(mdm_dai));
++		memcpy(mdm_nocodec_dai_links + len_1, mdm_nocodec_dai,
++			   sizeof(mdm_nocodec_dai));
++		dailink = mdm_nocodec_dai_links;
+ 	}
+ 
+ 	if (card) {
+diff --git a/asoc/codecs/msm_stub.c b/asoc/codecs/msm_stub.c
+index 68e55ae1..4a17b9ed 100644
+--- a/asoc/codecs/msm_stub.c
++++ b/asoc/codecs/msm_stub.c
+@@ -17,6 +17,16 @@
+ #include <sound/pcm.h>
+ #include <sound/soc.h>
+ 
++static int msm_stub_set_dai_fmt(struct snd_soc_dai *codec_dai, unsigned int fmt)
++{
++	/* Do nothing */
++	return 0;
++}
++
++static struct snd_soc_dai_ops msm_stub_dai_ops = {
++	.set_fmt = msm_stub_set_dai_fmt,
++};
++
+ /* A dummy driver useful only to advertise hardware parameters */
+ static struct snd_soc_dai_driver msm_stub_dais[] = {
+ 	{
+@@ -28,6 +38,7 @@ static struct snd_soc_dai_driver msm_stub_dais[] = {
+ 			.rates = SNDRV_PCM_RATE_8000_48000,
+ 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+ 		},
++		.ops = &msm_stub_dai_ops,
+ 	},
+ 	{
+ 		.name = "msm-stub-tx",
+@@ -39,6 +50,7 @@ static struct snd_soc_dai_driver msm_stub_dais[] = {
+ 			.formats = (SNDRV_PCM_FMTBIT_S16_LE |
+ 				    SNDRV_PCM_FMTBIT_S24_LE),
+ 		},
++		.ops = &msm_stub_dai_ops,
+ 	},
+ };
+ 
