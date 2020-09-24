@@ -8,7 +8,7 @@ PR = "r0"
 
 DEPENDS = "virtual/kernel"
 
-FILESPATH =+ "${WORKSPACE}:"
+FILESPATH += "${WORKSPACE}:"
 SRC_URI = "file://vendor/qcom/opensource/audio-kernel/"
 SRC_URI += "file://${BASEMACHINE}/"
 
