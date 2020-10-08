@@ -209,7 +209,6 @@ gen_bootimg() {
         --kernel $kernel_img \
         --ramdisk /dev/null \
         --cmdline "${kernel_cmdline}" \
-        --board ${MACHINE} \
         --base ${MACHINE_KERNEL_BASE} \
         --pagesize $page_size \
         --tags-addr ${MACHINE_KERNEL_TAGS_OFFSET} \
