@@ -70,6 +70,7 @@ configure_configfs_gadget()
                    `" nmea:cser.nmea.1"`
                    `" rmnet:rmnet_bam.rmnet_bam_dmux"`
                    `" usb_mbim:mbim.mbim"`
+                   `" rawdat:cser.raw.2"`
                    `" storage:mass_storage.0"
 
     # Disable gadget in case it was enabled
@@ -102,18 +103,12 @@ configure_configfs_gadget()
 
     # Replace "serial" in compstr with the interface list (nmea, modem);
     # Translate interface list into function names.
-    # smd::modem, smdnmea::nmea
-    local serialif=
-    if echo "${serialstr}"| grep -wq "smdnmea"; then
-        serialif="nmea"
-    fi
-    if echo "${serialstr}"| grep -wq "smd"; then
-        if [ -z "${serialif}" ]; then
-            serialif="modem"
-        else
-            serialif="${serialif},modem"
-        fi
-    fi
+    # smdnmea --> nmea
+    # smd     --> modem (if CMUX over USB disabled)
+    # tty     --> modem (if CMUX over USB enabled)
+    # rawdat  --> rawdat
+    local serialif=`echo "${serialstr}"| sed -r -e 's/smdnmea/nmea/g' -e 's/(smd|tty)/modem/g'`
+
     # update compstr to replace "serial" with the interface list.
     compstr="${compstr/serial/${serialif}}"
 
