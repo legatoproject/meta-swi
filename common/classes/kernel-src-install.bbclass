@@ -35,6 +35,7 @@ kernel_src_install() {
              -name 'Makefile*' -o \
              -name 'Kconfig*' -o \
              -name 'Kbuild*' -o \
+             -name '*.lds' -o \
              -name '*.include' \)
         find scripts \
           -type f ) | \
