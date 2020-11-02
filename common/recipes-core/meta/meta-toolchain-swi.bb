@@ -91,7 +91,7 @@ repack_tarball() {
     mv sysroots $ROOT_DIR
 
     echo "Recreate tarball '$TARBALL_XZ'"
-    tar ${SDKTAROPTS} -cf - $ROOT_DIR | xz -T 0 > $TARBALL_XZ
+    tar ${SDKTAROPTS} -cf - $ROOT_DIR | xz ${SDK_XZ_OPTIONS} > $TARBALL_XZ
 
     echo "Moving '$TARBALL_XZ' to '$TARBALL_XZ.repkg'"
     mv $TARBALL_XZ "$TARBALL_XZ.repkg"
@@ -109,4 +109,13 @@ python create_sdk_pkgs() {
     bb.build.exec_func("repack_tarball", d)
     bb.build.exec_func("create_shar", d)
     bb.build.exec_func("move_repacked", d)
+}
+
+# Reduce the compression level to improve memory usage and speed, during
+# development builds; Keep the default high compression levels for release builds
+# FW_VERSION is set only for release builds.
+python () {
+    if not d.getVar('FW_VERSION'):
+        # FW_VERSION is not set; dev build; Use reduced compression level.
+        d.setVar('SDK_XZ_OPTIONS', '-T 0')
 }
