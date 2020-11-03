@@ -1,0 +1,1 @@
+RPROVIDES_${PN} += "libcrypto"
