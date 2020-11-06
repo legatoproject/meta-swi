@@ -1,0 +1,51 @@
+# commit db48f2ef541f3798bd3a3abde0b60f9fd5ea06c9
+# Author: Honan Li <hli@sierrawireless.com>
+# Date:   Thu Nov 3 17:11:38 2016 +0800
+# [9x28] Complement I2S and PCM amix controller for external codec
+# commit ID: db48f2ef541f3798bd3a3abde0b60f9fd5ea06c9
+diff --git a/asoc/msm-pcm-routing-v2.c b/asoc/msm-pcm-routing-v2.c
+index 47fdd011..b3dee557 100644
+--- a/asoc/msm-pcm-routing-v2.c
++++ b/asoc/msm-pcm-routing-v2.c
+@@ -9526,6 +9526,10 @@ static const struct snd_kcontrol_new mmul1_mixer_controls[] = {
+ 		MSM_BACKEND_DAI_QUAT_TDM_TX_3,
+ 		MSM_FRONTEND_DAI_MULTIMEDIA1, 1, 0, msm_routing_get_audio_mixer,
+ 		msm_routing_put_audio_mixer),
++	SOC_DOUBLE_EXT("SEC_AUX_PCM_TX", SND_SOC_NOPM,
++		MSM_BACKEND_DAI_SEC_AUXPCM_TX,
++		MSM_FRONTEND_DAI_MULTIMEDIA1, 1, 0, msm_routing_get_audio_mixer,
++		msm_routing_put_audio_mixer),
+ 	SOC_DOUBLE_EXT("QUIN_TDM_TX_0", SND_SOC_NOPM,
+ 		MSM_BACKEND_DAI_QUIN_TDM_TX_0,
+ 		MSM_FRONTEND_DAI_MULTIMEDIA1, 1, 0, msm_routing_get_audio_mixer,
+@@ -9725,6 +9729,14 @@ static const struct snd_kcontrol_new mmul2_mixer_controls[] = {
+ 	MSM_BACKEND_DAI_QUAT_TDM_TX_3,
+ 	MSM_FRONTEND_DAI_MULTIMEDIA2, 1, 0, msm_routing_get_audio_mixer,
+ 	msm_routing_put_audio_mixer),
++	SOC_DOUBLE_EXT("AFE_PCM_TX", SND_SOC_NOPM,
++	MSM_BACKEND_DAI_AFE_PCM_TX,
++	MSM_FRONTEND_DAI_MULTIMEDIA2, 1, 0, msm_routing_get_audio_mixer,
++	msm_routing_put_audio_mixer),
++	SOC_DOUBLE_EXT("VOC_REC_DL", SND_SOC_NOPM,
++	MSM_BACKEND_DAI_INCALL_RECORD_RX,
++	MSM_FRONTEND_DAI_MULTIMEDIA2, 1, 0, msm_routing_get_audio_mixer,
++	msm_routing_put_audio_mixer),
+ 	SOC_DOUBLE_EXT("QUIN_TDM_TX_0", SND_SOC_NOPM,
+ 	MSM_BACKEND_DAI_QUIN_TDM_TX_0,
+ 	MSM_FRONTEND_DAI_MULTIMEDIA2, 1, 0, msm_routing_get_audio_mixer,
+@@ -20411,6 +20431,7 @@ static const struct snd_soc_dapm_route intercon[] = {
+ 	{"MultiMedia4 Mixer", "VOC_REC_UL", "INCALL_RECORD_TX"},
+ 	{"MultiMedia8 Mixer", "VOC_REC_UL", "INCALL_RECORD_TX"},
+ 	{"MultiMedia1 Mixer", "VOC_REC_DL", "INCALL_RECORD_RX"},
++	{"MultiMedia2 Mixer", "VOC_REC_DL", "INCALL_RECORD_RX"},
+ 	{"MultiMedia4 Mixer", "VOC_REC_DL", "INCALL_RECORD_RX"},
+ 	{"MultiMedia8 Mixer", "VOC_REC_DL", "INCALL_RECORD_RX"},
+ 	{"MultiMedia1 Mixer", "SLIM_4_TX", "SLIMBUS_4_TX"},
+@@ -21742,6 +21763,7 @@ static const struct snd_soc_dapm_route intercon[] = {
+ 	{"MultiMedia8 Mixer", "INTERNAL_FM_TX", "INT_FM_TX"},
+ 
+ 	{"MultiMedia1 Mixer", "AFE_PCM_TX", "PCM_TX"},
++	{"MultiMedia2 Mixer", "AFE_PCM_TX", "PCM_TX"},
+ 	{"MultiMedia3 Mixer", "AFE_PCM_TX", "PCM_TX"},
+ 	{"MultiMedia4 Mixer", "AFE_PCM_TX", "PCM_TX"},
+ 	{"MultiMedia10 Mixer", "AFE_PCM_TX", "PCM_TX"},

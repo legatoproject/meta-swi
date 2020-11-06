@@ -1,0 +1,27 @@
+# commit 397b292c65d7de8c070d4a7bc34490281e16c7c2
+# Author: Honan Li <hli@sierrawireless.com>
+# Date:   Mon Sep 26 10:50:35 2016 +0800
+# [9x28] Support amix cmd of secondary I2S for VOLTE call
+# commit ID: 397b292c65d7de8c070d4a7bc34490281e16c7c2
+diff --git a/asoc/msm-pcm-routing-v2.c b/asoc/msm-pcm-routing-v2.c
+index 47fdd011..bd14e8f5 100644
+--- a/asoc/msm-pcm-routing-v2.c
++++ b/asoc/msm-pcm-routing-v2.c
+@@ -13639,6 +13639,9 @@ static const struct snd_kcontrol_new tx_volte_mixer_controls[] = {
+ 	SOC_DOUBLE_EXT("PRI_MI2S_TX_VoLTE", SND_SOC_NOPM,
+ 	MSM_BACKEND_DAI_PRI_MI2S_TX, MSM_FRONTEND_DAI_VOLTE,
+ 	1, 0, msm_routing_get_voice_mixer, msm_routing_put_voice_mixer),
++	SOC_DOUBLE_EXT("SEC_MI2S_TX_VoLTE", SND_SOC_NOPM,
++	MSM_BACKEND_DAI_SECONDARY_MI2S_TX, MSM_FRONTEND_DAI_VOLTE,
++	1, 0, msm_routing_get_voice_mixer, msm_routing_put_voice_mixer),
+ 	SOC_DOUBLE_EXT("TERT_MI2S_TX_VoLTE", SND_SOC_NOPM,
+ 	MSM_BACKEND_DAI_TERTIARY_MI2S_TX, MSM_FRONTEND_DAI_VOLTE,
+ 	1, 0, msm_routing_get_voice_mixer, msm_routing_put_voice_mixer),
+@@ -22227,6 +22230,7 @@ static const struct snd_soc_dapm_route intercon[] = {
+ 	{"VoLTE_Tx Mixer", "SEC_AUX_PCM_TX_VoLTE", "SEC_AUX_PCM_TX"},
+ 	{"VoLTE_Tx Mixer", "MI2S_TX_VoLTE", "MI2S_TX"},
+ 	{"VoLTE_Tx Mixer", "PRI_MI2S_TX_VoLTE", "PRI_MI2S_TX"},
++	{"VoLTE_Tx Mixer", "SEC_MI2S_TX_VoLTE", "SEC_MI2S_TX"},
+ 	{"VoLTE_Tx Mixer", "TERT_MI2S_TX_VoLTE", "TERT_MI2S_TX"},
+ 	{"VoLTE_UL", NULL, "VoLTE_Tx Mixer"},
+ 
