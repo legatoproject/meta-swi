@@ -12,7 +12,7 @@ pj = os.path.join
 
 self = sys.argv[0]
 self_dir = os.path.dirname(self)
-top_dir = pj("..", self_dir)
+top_dir = pj(self_dir, "..")
 
 
 #
@@ -124,6 +124,13 @@ varspec = [
         "Also, multiple variables can be specified in one option, separated by :: "
         "(double colon) as in --recipe-args=foo=bar::x=y.",
     ],
+    [
+        "extra-layers",
+        "",
+        "Colon-separated list of directories containing extra bitbake layers "
+        "to include in the build. Each directory must have a conf/layer.conf "
+        "file."
+    ],
 ]
 
 
@@ -161,6 +168,12 @@ def main():
     enable_oe_layers(conf, ns)
     enable_swi_layers(conf, ns)
     enable_layer(conf, pj(top_dir, "meta-mangoh"))
+    if not ns.extra_layers == "":
+        for layer in ns.extra_layers.split(":"):
+            if not os.path.isabs(layer):
+                layer = pj(top_dir, layer)
+            enable_layer(conf, layer)
+
     write_conf(bblayers_conf, conf)
 
     local_conf = pj(build_dir, "conf/local.conf")
@@ -923,8 +936,8 @@ def enable_layer(conf, layer_path, previous_layer=None):
         return
 
     # if layer doesn't exist, bail
-    if not os.path.exists(layer_path):
-        msg("layer %s is a nonexistent path; skipping" % (layer_path))
+    if not os.path.exists(pj(layer_path, "conf/layer.conf")):
+        msg("missing path or layer.conf for layer %s; skipping" % (layer_path))
         return
 
     # insert before previous layer, or else last

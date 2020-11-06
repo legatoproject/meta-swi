@@ -299,6 +299,16 @@ COMMON_ARGS := ${BUILD_SCRIPT} \
 				${SHARED_SSTATE_ARGS} \
 				${DEBUG_IMG_ARGS}
 
+# Use EXTRA_LAYERS environment variable to add custom Yocto layers to build.
+# Provide a colon (:) separated list of layer directories to make command, e.g.:
+# EXTRA_LAYERS=meta-extra1:meta-extra2:... make <target>
+#
+# Alternatively, uncomment the following line and rename layers as necessary:
+#  EXTRA_LAYERS := meta-extra1:meta-extra2:...
+ifdef EXTRA_LAYERS
+  COMMON_ARGS += --extra-layers="$(EXTRA_LAYERS)"
+endif
+
   MACH_ARGS += --recipe-args=KBRANCH_DEFAULT_MDM9X15=${KBRANCH_mdm9x15} \
                --recipe-args=KMETA_DEFAULT_MDM9X15=${KMETA_mdm9x15}
 
