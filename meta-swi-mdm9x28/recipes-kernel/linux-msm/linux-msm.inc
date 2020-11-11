@@ -51,6 +51,12 @@ do_unpack_append() {
 
 # Use this to include the IMA kernel key into the trusted keyring
 IMA_INCLUDE_KERNEL_KEY ?= "true"
+# As per note in kernel CONFIG_SYSTEM_TRUSTED_KEYS option:
+# NOTE: If you previously provided keys for the system keyring in the
+# form of DER-encoded *.x509 files in the top-level build directory,
+# those are no longer used. You will need to set this option instead.
+IMA_LOCAL_CA_PEM = "${@os.path.basename(d.getVar('IMA_LOCAL_CA_X509', False))}"
+KERNEL_EXTRA_ARGS += "${@oe.utils.conditional('IMA_BUILD', 'true', 'CONFIG_SYSTEM_TRUSTED_KEYS=\"${IMA_LOCAL_CA_PEM}\"', '', d)}"
 
 do_configure_prepend() {
     cp ${S}/arch/arm/configs/${KBUILD_DEFCONFIG} ${WORKDIR}/defconfig
@@ -58,8 +64,9 @@ do_configure_prepend() {
     # Add ".system" public cert into kernel build area. Kernel build
     # will suck this cert in automatically.
     if [ "x${IMA_BUILD}" == "xtrue" ] && [ "x${IMA_INCLUDE_KERNEL_KEY}" == "xtrue" ] ; then
-        echo "IMA: Copying ${IMA_LOCAL_CA_X509} to ${B} ..."
-        cp -f ${IMA_LOCAL_CA_X509} ${B}/.
+        echo "IMA: Installing ${IMA_LOCAL_CA_X509} in ${B} ..."
+        # Convert key from DER to PEM format
+        openssl x509 -inform der -in ${IMA_LOCAL_CA_X509} -out ${B}/${IMA_LOCAL_CA_PEM}
     fi
 
     oe_runmake_call -C ${S} ${KERNEL_EXTRA_ARGS} mrproper
