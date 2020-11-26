@@ -45,6 +45,7 @@ SRC_URI_PATCHES += " \
                     file://0013-source-changes.patch \
                     file://0014-source-changes.patch \
                     file://0015-source-changes.patch \
+                    file://0016-source-changes.patch \
                    "
 
 # Add it all together
