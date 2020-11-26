@@ -23,7 +23,6 @@ SRC_URI = "file://functions \
            file://confighw.sh \
            file://swiapplaunch.sh.in \
            file://restart_swi_apps.in \
-           file://restartNMEA \
            file://functions.env \
            file://run_getty.sh.in \
            file://mount_early.in \
@@ -149,7 +148,6 @@ do_install () {
             install -m 0755 ${WORKDIR}/restart_swi_apps -D ${D}${sbindir}/restart_swi_apps
             ;;
     esac
-    install -m 0755 ${WORKDIR}/restartNMEA -D ${D}${sbindir}/restartNMEA
     install -m 0755 ${WORKDIR}/run_getty.sh -D ${D}${sbindir}/run_getty.sh
 
 

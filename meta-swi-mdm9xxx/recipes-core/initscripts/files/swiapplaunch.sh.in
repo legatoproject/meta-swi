@@ -29,8 +29,9 @@ case "$1" in
         /usr/bin/swisync > /dev/null 2>&1 &
         /usr/bin/swiapp > /dev/null 2>&1 &
         /usr/sbin/restart_swi_apps &
+@if mdm9x15 || mdm9x15_fx30
         /usr/sbin/restartNMEA > /dev/null 2>&1 &
-@if !mdm9x15 && !mdm9x15_fx30
+@else
         /usr/sbin/restart_at_uart > /dev/null 2>&1 &
 @endif
         ;;
@@ -38,8 +39,9 @@ case "$1" in
         killall -q -HUP restart_swi_apps
         killall -q -HUP swisync
         killall -q -KILL swiapp
+@if mdm9x15 || mdm9x15_fx30
         killall -q -HUP restartNMEA
-@if !mdm9x15 && !mdm9x15_fx30
+@else
         killall -q -HUP restart_at_uart
 @endif
         if [ -e ${STARTUP_TIMER} ]; then
