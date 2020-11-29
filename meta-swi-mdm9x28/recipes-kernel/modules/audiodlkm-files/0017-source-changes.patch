@@ -1,0 +1,246 @@
+From af2c472a702d21bea11481c246567655c011c676 Mon Sep 17 00:00:00 2001
+From: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+Date: Sat, 28 Nov 2020 12:49:32 -0800
+Subject: [PATCH] audio: Fix MSM_CDC_PINCTRL configuration option
+
+Qualcomm audio drivers are using MSM_CDC_PINCTRL subsystem
+to control its internal codec functionality, which it is not
+required for Sierra Wireless system and the moment.
+
+This patch is fixing compilation/runtime errors caused
+by improper use of CONFIG_MSM_CDC_PINCTRL configuration
+option.
+
+Signed-off-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+---
+ asoc/codecs/msm-cdc-pinctrl.c | 47 +++++++++++++++++++++++++++++++++++
+ asoc/codecs/msm-cdc-pinctrl.h | 27 --------------------
+ config/mdm9607auto.conf       |  2 +-
+ config/mdm9607autoconf.h      |  2 +-
+ 4 files changed, 49 insertions(+), 29 deletions(-)
+
+diff --git a/asoc/codecs/msm-cdc-pinctrl.c b/asoc/codecs/msm-cdc-pinctrl.c
+index 79e322f1..4390b39a 100644
+--- a/asoc/codecs/msm-cdc-pinctrl.c
++++ b/asoc/codecs/msm-cdc-pinctrl.c
+@@ -29,6 +29,7 @@ struct msm_cdc_pinctrl_info {
+ 	bool state;
+ };
+ 
++#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ static struct msm_cdc_pinctrl_info *msm_cdc_pinctrl_get_gpiodata(
+ 						struct device_node *np)
+ {
+@@ -53,6 +54,7 @@ static struct msm_cdc_pinctrl_info *msm_cdc_pinctrl_get_gpiodata(
+ 
+ 	return gpio_data;
+ }
++#endif
+ 
+ /*
+  * msm_cdc_get_gpio_state: select pinctrl sleep state
+@@ -60,6 +62,7 @@ static struct msm_cdc_pinctrl_info *msm_cdc_pinctrl_get_gpiodata(
+  *
+  * Returns error code for failure and GPIO value on success
+  */
++#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ int msm_cdc_get_gpio_state(struct device_node *np)
+ {
+ 	struct msm_cdc_pinctrl_info *gpio_data;
+@@ -74,6 +77,12 @@ int msm_cdc_get_gpio_state(struct device_node *np)
+ 
+ 	return value;
+ }
++#else
++int msm_cdc_get_gpio_state(struct device_node *np)
++{
++	return 0;
++}
++#endif
+ EXPORT_SYMBOL(msm_cdc_get_gpio_state);
+ 
+ /*
+@@ -82,6 +91,7 @@ EXPORT_SYMBOL(msm_cdc_get_gpio_state);
+  *
+  * Returns error code for failure
+  */
++#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ int msm_cdc_pinctrl_select_sleep_state(struct device_node *np)
+ {
+ 	struct msm_cdc_pinctrl_info *gpio_data;
+@@ -99,7 +109,13 @@ int msm_cdc_pinctrl_select_sleep_state(struct device_node *np)
+ 	return pinctrl_select_state(gpio_data->pinctrl,
+ 				    gpio_data->pinctrl_sleep);
+ }
++#else
++int msm_cdc_pinctrl_select_sleep_state(struct device_node *np)
++{
++	return 0;
++}
+ EXPORT_SYMBOL(msm_cdc_pinctrl_select_sleep_state);
++#endif
+ 
+ /*
+  * msm_cdc_pinctrl_select_active_state: select pinctrl active state
+@@ -107,6 +123,7 @@ EXPORT_SYMBOL(msm_cdc_pinctrl_select_sleep_state);
+  *
+  * Returns error code for failure
+  */
++#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ int msm_cdc_pinctrl_select_active_state(struct device_node *np)
+ {
+ 	struct msm_cdc_pinctrl_info *gpio_data;
+@@ -124,6 +141,12 @@ int msm_cdc_pinctrl_select_active_state(struct device_node *np)
+ 	return pinctrl_select_state(gpio_data->pinctrl,
+ 				    gpio_data->pinctrl_active);
+ }
++#else
++int msm_cdc_pinctrl_select_active_state(struct device_node *np)
++{
++	return 0;
++}
++#endif
+ EXPORT_SYMBOL(msm_cdc_pinctrl_select_active_state);
+ 
+ /*
+@@ -132,6 +155,7 @@ EXPORT_SYMBOL(msm_cdc_pinctrl_select_active_state);
+  *
+  * Returns 0 for sleep state, 1 for active state
+  */
++#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ bool msm_cdc_pinctrl_get_state(struct device_node *np)
+ {
+ 	struct msm_cdc_pinctrl_info *gpio_data;
+@@ -142,8 +166,15 @@ bool msm_cdc_pinctrl_get_state(struct device_node *np)
+ 
+ 	return gpio_data->state;
+ }
++#else
++bool msm_cdc_pinctrl_get_state(struct device_node *np)
++{
++	return true;
++}
++#endif
+ EXPORT_SYMBOL(msm_cdc_pinctrl_get_state);
+ 
++#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ static int msm_cdc_pinctrl_probe(struct platform_device *pdev)
+ {
+ 	int ret = 0;
+@@ -230,12 +261,14 @@ static int msm_cdc_pinctrl_remove(struct platform_device *pdev)
+ 
+ 	return 0;
+ }
++#endif
+ 
+ static const struct of_device_id msm_cdc_pinctrl_match[] = {
+ 	{.compatible = "qcom,msm-cdc-pinctrl"},
+ 	{}
+ };
+ 
++#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ static struct platform_driver msm_cdc_pinctrl_driver = {
+ 	.driver = {
+ 		.name = "msm-cdc-pinctrl",
+@@ -245,15 +278,29 @@ static struct platform_driver msm_cdc_pinctrl_driver = {
+ 	.probe = msm_cdc_pinctrl_probe,
+ 	.remove = msm_cdc_pinctrl_remove,
+ };
++#endif
+ 
++#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ int msm_cdc_pinctrl_drv_init(void)
+ {
+ 	return platform_driver_register(&msm_cdc_pinctrl_driver);
+ }
++#else
++int msm_cdc_pinctrl_drv_init(void)
++{
++	return 0;
++}
++#endif
+ 
++#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ void msm_cdc_pinctrl_drv_exit(void)
+ {
+ 	platform_driver_unregister(&msm_cdc_pinctrl_driver);
+ }
++#else
++void msm_cdc_pinctrl_drv_exit(void)
++{
++}
++#endif
+ MODULE_DESCRIPTION("MSM CODEC pin control platform driver");
+ MODULE_LICENSE("GPL v2");
+diff --git a/asoc/codecs/msm-cdc-pinctrl.h b/asoc/codecs/msm-cdc-pinctrl.h
+index 4286fffa..b8b84d2b 100644
+--- a/asoc/codecs/msm-cdc-pinctrl.h
++++ b/asoc/codecs/msm-cdc-pinctrl.h
+@@ -16,7 +16,6 @@
+ #include <linux/types.h>
+ #include <linux/of.h>
+ 
+-#if IS_ENABLED(CONFIG_MSM_CDC_PINCTRL)
+ extern int msm_cdc_pinctrl_select_sleep_state(struct device_node *np);
+ extern int msm_cdc_pinctrl_select_active_state(struct device_node *np);
+ extern bool msm_cdc_pinctrl_get_state(struct device_node *np);
+@@ -24,30 +23,4 @@ extern int msm_cdc_get_gpio_state(struct device_node *np);
+ int msm_cdc_pinctrl_drv_init(void);
+ void msm_cdc_pinctrl_drv_exit(void);
+ 
+-#else
+-int msm_cdc_pinctrl_select_sleep_state(struct device_node *np)
+-{
+-	return 0;
+-}
+-int msm_cdc_pinctrl_select_active_state(struct device_node *np)
+-{
+-	return 0;
+-}
+-int msm_cdc_get_gpio_state(struct device_node *np)
+-{
+-	return 0;
+-}
+-int msm_cdc_pinctrl_drv_init(void)
+-{
+-	return 0;
+-}
+-void msm_cdc_pinctrl_drv_exit(void)
+-{
+-}
+-bool msm_cdc_pinctrl_get_state(struct device_node *np)
+-{
+-	return true;
+-}
+-#endif
+-
+ #endif
+diff --git a/config/mdm9607auto.conf b/config/mdm9607auto.conf
+index 6d33ed53..c2d64114 100644
+--- a/config/mdm9607auto.conf
++++ b/config/mdm9607auto.conf
+@@ -15,7 +15,7 @@ CONFIG_ION_MSM=m
+ CONFIG_QTI_PP=m
+ CONFIG_SND_SOC_WCD9XXX=m
+ CONFIG_SND_HWDEP=m
+-CONFIG_MSM_CDC_PINCTRL=m
++# CONFIG_MSM_CDC_PINCTRL is not set
+ CONFIG_SND_HWDEP_ROUTING=m
+ CONFIG_WCD9XXX_CODEC_CORE=m
+ CONFIG_SND_SOC_WM8944=m
+diff --git a/config/mdm9607autoconf.h b/config/mdm9607autoconf.h
+index 35a81472..e96a54ae 100644
+--- a/config/mdm9607autoconf.h
++++ b/config/mdm9607autoconf.h
+@@ -27,7 +27,7 @@
+ #define CONFIG_SND_SOC_WCD9XXX 1
+ #define CONFIG_SND_HWDEP 1
+ #define CONFIG_QTI_PP 1
+-#define CONFIG_MSM_CDC_PINCTRL 1
++#define CONFIG_MSM_CDC_PINCTRL 0
+ #define CONFIG_SND_SOC_WCD_CPE 1
+ #define CONFIG_WCD9XXX_CODEC_CORE 1
+ #define CONFIG_SND_HWDEP_ROUTING 1
+-- 
+2.27.0
+
