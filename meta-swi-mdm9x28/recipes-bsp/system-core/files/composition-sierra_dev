@@ -92,6 +92,14 @@ configure_configfs_gadget()
 
     mkdir -p ${config_home}
 
+    # Update bmAttributes if remotewakup enabled.
+    # Referring include\uapi\linux\usb\ch9.h,
+    # D7:     Reserved (set to one)
+    # D6:     Self-powered
+    # D5:     Remote Wakeup
+    # D4...0: Reserved (reset to zero)
+    [ $remotewakeup == "1" ] && echo 0xA0 > ${config_home}/bmAttributes
+
     # Replace "serial" in compstr with the interface list (nmea, modem);
     # Translate interface list into function names.
     # smd::modem, smdnmea::nmea
