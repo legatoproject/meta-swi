@@ -96,7 +96,12 @@ do_prepare_qemu_pkg() {
     MEM="192"
 
     # Console
-    CONSOLE_TTY="ttyHSL1"
+    if [ "${PREFERRED_PROVIDER_virtual/kernel}" != "linux-msm" ]; then
+        # Older 3.x Kernel.
+        CONSOLE_TTY="ttyHSL1"
+    else
+        CONSOLE_TTY="ttyMSM1"
+    fi
     CONSOLE_BAUDRATE="115200"
 
     # Network

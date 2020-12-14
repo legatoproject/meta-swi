@@ -6,6 +6,9 @@
 #include <sys/ioctl.h>
 #include <getopt.h>
 
+#define TTY_HSL_DEVICE "/dev/ttyHSL1"
+#define TTY_MSM_DEVICE "/dev/ttyMSM1"
+
 int
 main(int argc, char *argv[])
 {
@@ -14,9 +17,11 @@ main(int argc, char *argv[])
   serial = 0; 
   status = 0;
   lstatus = 0;
-  static const char *device = "/dev/ttyHSL1";
+  static const char *device = NULL;
 
- fd = open(device, O_RDWR);
+  device = (access(TTY_HSL_DEVICE, F_OK) == -1) ? TTY_MSM_DEVICE : TTY_HSL_DEVICE;
+
+  fd = open(device, O_RDWR);
   //All in
   status |= TIOCM_LE|TIOCM_DTR|TIOCM_RTS|TIOCM_ST|TIOCM_SR|TIOCM_CTS|TIOCM_CAR|TIOCM_RNG|TIOCM_DSR;
   ioctl(fd, TCSETSF, &status);

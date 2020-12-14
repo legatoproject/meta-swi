@@ -2,7 +2,7 @@ require ../../../meta-swi-mdm9xxx/recipes-core/images/mdm9xxx-image-initramfs.in
 
 PACKAGE_INSTALL = "busybox mtd-utils-ubifs initscripts base-files"
 PACKAGE_INSTALL += "cryptsetup libgcrypt"
-DEPENDS = "linux-quic"
+DEPENDS = "${PREFERRED_PROVIDER_virtual/kernel}"
 
 fakeroot do_filter_rootfs () {
 
@@ -29,8 +29,13 @@ fakeroot do_filter_rootfs () {
     # Populate rootfs with some devices
     mknod dev/console c 5 1
     mknod dev/null c 1 3
-    mknod dev/ttyHSL0 c 249 0
-    mknod dev/ttyHSL1 c 249 1
+    if [ "${PREFERRED_PROVIDER_virtual/kernel}" != "linux-msm" ]; then
+        mknod dev/ttyHSL0 c 249 0
+        mknod dev/ttyHSL1 c 249 1
+    else
+        mknod dev/ttyMSM0 c 249 0
+        mknod dev/ttyMSM1 c 249 1
+    fi
     mknod dev/urandom c 1 9
     mknod dev/zero c 1 5
     if ! [[ -e dev/tty2 ]]; then

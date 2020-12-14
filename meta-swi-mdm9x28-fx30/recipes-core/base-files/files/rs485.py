@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
+import os.path
 
 fn = sys.argv[1]
 if len(sys.argv) > 2:
@@ -8,7 +9,10 @@ if len(sys.argv) > 2:
 else:
     value = None
 
-ttyFile=open('/dev/ttyHSL0')
+if os.path.exists('/dev/ttyHSL0'):
+    ttyFile = open('/dev/ttyHSL0')
+else:
+    ttyFile = open('/dev/ttyMSM0')
 
 if value is None:
     sysfsFile = open(fn, 'r')
