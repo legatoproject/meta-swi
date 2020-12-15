@@ -31,7 +31,9 @@ case "$1" in
         /usr/sbin/restart_swi_apps &
 @if mdm9x15 || mdm9x15_fx30
         /usr/sbin/restartNMEA > /dev/null 2>&1 &
-@else
+@endif
+
+@if swi-mdm9x28-ar758x || swi-mdm9x28-ar758x-qemu || swi-mdm9x40-ar759x
         /usr/sbin/restart_at_uart > /dev/null 2>&1 &
 @endif
         ;;
@@ -41,7 +43,9 @@ case "$1" in
         killall -q -KILL swiapp
 @if mdm9x15 || mdm9x15_fx30
         killall -q -HUP restartNMEA
-@else
+@endif
+
+@if swi-mdm9x28-ar758x || swi-mdm9x28-ar758x-qemu || swi-mdm9x40-ar759x
         killall -q -HUP restart_at_uart
 @endif
         if [ -e ${STARTUP_TIMER} ]; then

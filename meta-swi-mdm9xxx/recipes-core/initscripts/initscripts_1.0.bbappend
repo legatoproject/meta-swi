@@ -75,10 +75,6 @@ SRC_URI_swi-mdm9x40-ar759x-rcy = "file://functions \
            file://control_msm_watchdog.sh \
            "
 
-SRC_URI_append_swi-mdm9x28 = "\
-           file://restart_at_uart \
-           "
-
 SRC_URI_append_swi-mdm9x28-ar758x = "\
            file://restart_at_uart \
            file://control_msm_watchdog.sh \
@@ -163,9 +159,6 @@ do_install () {
     ln -s ${sbindir}/loginNagger ${D}${sysconfdir}/profile.d/loginNagger
 
     case "${MACHINE}" in
-    swi-mdm9x28 | swi-mdm9x28-qemu | swi-mdm9x28-fx30*)
-        install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
-        ;;
     swi-mdm9x28-ar758x | swi-mdm9x28-ar758x-qemu | swi-mdm9x40-ar759x)
         install -m 0755 ${WORKDIR}/control_msm_watchdog.sh -D ${D}${sysconfdir}/init.d/control_msm_watchdog.sh
         install -m 0755 ${WORKDIR}/restart_at_uart -D ${D}${sbindir}/restart_at_uart
