@@ -111,6 +111,9 @@ mount_unionfs_dir()
 {
     local root_g=$1
     local mount_opts=""
+    local ret=1
+    local extra_mnt_opts=""
+    local kvers_chk="4.14"
 
     mkdir -p ${flash_mntpt_g}${root_g}
 
@@ -138,10 +141,18 @@ mount_unionfs_dir()
        mount_opts="lowerdir=${root_g},upperdir=${flash_mntpt_g}${root_g}"
        touch ${flash_mntpt_g}/${overlayfs_sig_g}
     elif [[ "${ufs_type}" == "overlay" ]]; then
+        # Overlay behavior in kernel 4.14 has changed, and we need to adapt
+        uname -r | grep "^${kvers_chk}" >/dev/null
+        ret=$?
+        if [ ${ret} = 0 ] ; then
+            # Kernel is 4.14, add extra overlay file system options
+            extra_mnt_opts=",override_creds=off"
+        fi
+
         # Make sure working directory is empty
         rm -rf ${flash_mntpt_g}${root_g}_wk
         mkdir -p ${flash_mntpt_g}${root_g}_wk
-        mount_opts="lowerdir=${root_g},workdir=${flash_mntpt_g}${root_g}_wk,upperdir=${flash_mntpt_g}${root_g}"
+        mount_opts="lowerdir=${root_g},workdir=${flash_mntpt_g}${root_g}_wk,upperdir=${flash_mntpt_g}${root_g}${extra_mnt_opts}"
     else
         return ${SWI_ERR}
     fi
