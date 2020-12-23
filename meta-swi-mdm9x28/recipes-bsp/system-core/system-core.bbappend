@@ -19,6 +19,9 @@ SRC_URI += "file://0001-logging-Add-Android-logging-macros.patch"
 do_install_append() {
     install -m 0755 -d ${D}${includedir}/log
     install -m 0644  ${S}/include/log/* ${D}${includedir}/log
+    rm ${D}${bindir}/usb_composition
+    rm ${D}${bindir}/usb/compositions/*
+    install -m 0755 ${S}/usb/compositions/empty -D ${D}${bindir}/usb/compositions/empty
     install -m 0755 ${WORKDIR}/composition-sierra_dev -D ${D}${bindir}/usb/compositions/sierra_dev
     ln -s ${bindir}/usb/compositions/sierra_dev ${D}${bindir}/usb/boot_hsusb_composition
     ln -s ${bindir}/usb/compositions/empty      ${D}${bindir}/usb/boot_hsic_composition

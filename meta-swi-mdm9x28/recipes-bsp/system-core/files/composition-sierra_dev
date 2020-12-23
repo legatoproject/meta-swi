@@ -117,27 +117,28 @@ configure_configfs_gadget()
     # update compstr to replace "serial" with the interface list.
     compstr="${compstr/serial/${serialif}}"
 
-
-    # Filter supported configurations matching the composition string
-    match=`echo ${compstr} | sed -e 's/,/|/g'`
-    glist=`echo ${supported} | xargs -n1 | egrep -i "${match}" | xargs`
+    # Space separated list
+    complist=`echo ${compstr} | sed -e 's/,/ /g'`
 
     # Clear and symlink gadget configuration files, build configuration string
     cd ${gadget_home}
     idx=0
     configuration=""
     rm -f configs/c.$((num+1))/f*
-    for s in ${glist}; do
-        idx=$((idx+1))
-        func=`echo $s | cut -f 2 -d':'`
-        name=`echo $func | cut -f 1 -d'.'`
-        if [ ${idx} -eq 1 ]; then
-            configuration="${name}"
-        else
-            configuration="${configuration}_${name}"
+    for comp in ${complist}; do
+        match=`echo ${supported} | xargs -n1 | grep -i "${comp}"`
+        if [ -n "${match}" ]; then
+            idx=$((idx+1))
+            func=`echo ${match} | cut -f 2 -d':'`
+            name=`echo ${func} | cut -f 1 -d'.'`
+            if [ ${idx} -eq 1 ]; then
+                configuration="${name}"
+            else
+                configuration="${configuration}_${name}"
+            fi
+            mkdir -p functions/${func}
+            ln -s functions/${func} configs/c.$((num+1))/f${idx}
         fi
-        mkdir -p functions/$func
-        ln -s functions/$func configs/c.$((num+1))/f${idx}
     done
     cd
 
