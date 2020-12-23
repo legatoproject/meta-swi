@@ -15,6 +15,36 @@ LDFLAGS_aarch64 = "-O1 --hash-style=gnu --as-needed"
 TARGET_CXXFLAGS += "-Wno-format"
 EXTRA_OEMAKE_append += "INSTALL_MOD_STRIP=1"
 
+# Determine linux version from sources
+def determine_linux_version(d):
+    repo_dir = d.getVar('LINUX_REPO_DIR', True)
+    makefile_path = os.path.join(repo_dir, "Makefile")
+    if not os.path.exists(makefile_path):
+        raise Exception("Kernel Makefile doesn't exist at %s" % makefile_path)
+
+    import re
+    v = []
+    with open(makefile_path) as f:
+        r = re.compile("(VERSION|PATCHLEVEL|SUBLEVEL) = (\d+)")
+        for line in f:
+            m = r.match(line)
+            if not m:
+                continue
+
+            v.append(m.group(2))
+            if m.group(1) == "SUBLEVEL":
+                break
+
+    if len(v) != 3:
+        raise Exception("Error while parsing Kernel Makefile %s: "
+                        "%d sub-version(s) found instead of 3" % (makefile_path, len(v)))
+
+    return ".".join(v)
+
+LINUX_VERSION ?= "${@determine_linux_version(d)}"
+PV = "${LINUX_VERSION}"
+PR = "r1"
+
 do_compile () {
     oe_runmake CC="${KERNEL_CC}" LD="${KERNEL_LD}" ${KERNEL_EXTRA_ARGS} $use_alternate_initrd
 }
