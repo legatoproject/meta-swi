@@ -29,7 +29,7 @@ do_generate_flashimage() {
         fi
 
         echo "Installing Legato into flash image"
-        SEEK=$(echo "print(${FLASH_LEGATO_START}/(256*1024))" | python)
+        SEEK=$(echo "print(int(${FLASH_LEGATO_START}/(256*1024)))" | python3)
         QEMU_LEGATO_NAME="${DEPLOY_DIR_IMAGE}/legato-image.$LEGATO_TARGET.qemu.ubi"
         dd if=${QEMU_LEGATO_NAME} of=${IMGDEPLOYDIR}/rawflash bs=256K seek=$SEEK conv=notrunc
         cp -f ${IMGDEPLOYDIR}/rawflash ${DEPLOY_DIR_IMAGE}/rawflash-yocto-legato
