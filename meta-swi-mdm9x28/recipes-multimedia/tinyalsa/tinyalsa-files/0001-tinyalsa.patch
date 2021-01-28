@@ -1,0 +1,11 @@
+--- a/tinycap.c
++++ b/tinycap.c
+@@ -64,7 +64,7 @@ unsigned int capture_sample(FILE *file, unsigned int card, unsigned int device,
+                             enum pcm_format format, unsigned int period_size,
+                             unsigned int period_count, unsigned int cap_time);
+
+-void sigint_handler(int sig __unused)
++void sigint_handler(int sig)
+ {
+     capturing = 0;
+ }

@@ -56,6 +56,10 @@ IMAGE_INSTALL_append = " tzone-utils"
 # extended file attributes.
 IMAGE_INSTALL_append = " libarchive"
 
+# Add tinyalsa utils. We are primarily adding it because of kernel 4.14 audio modules. It does not
+# hurt to have it on all mdm9x28 based platforms.
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'alsa', ' tinyalsa', '', d)}"
+
 create_ubinize_config() {
     local cfg_path=$1
     local rootfs_type=$2
