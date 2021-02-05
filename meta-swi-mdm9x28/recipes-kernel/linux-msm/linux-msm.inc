@@ -240,8 +240,6 @@ do_bootimg() {
 
     ln -sf $image_name_4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img
 
-    echo "${PV} $date" >> ${DEPLOY_DIR_IMAGE}/kernel.version
-
     install ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.2k.img.unsigned
     install ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img.unsigned
 
@@ -250,6 +248,7 @@ do_bootimg() {
     android_signature_add /boot ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img.unsigned ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.4k.img.signed verity
 
     ln -sf boot-yocto-mdm9x28.4k.img ${DEPLOY_DIR_IMAGE}/boot-yocto-mdm9x28.img.unsigned
+
     echo "${PV} $date" >> ${DEPLOY_DIR_IMAGE}/kernel.version
 }
 
