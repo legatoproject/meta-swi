@@ -71,9 +71,7 @@ do_install() {
         install -d ${D}/opt/legato/startupDefaults
         for target in ${LEGATO_ROOTFS_TARGETS}; do
             select_legato_target $target
-            for script in $(find ${B}/build/$LEGATO_TARGET/staging/mnt/flash/startupDefaults -type f); do
-                install $script ${D}/opt/legato/startupDefaults/
-            done
+            find ${B}/build/$LEGATO_TARGET/staging/mnt/flash/startupDefaults -type f -exec install "{}" "${D}/opt/legato/startupDefaults/" \;
         done
     fi
 
@@ -83,10 +81,7 @@ do_install() {
     if [ ! -e "${liblegato_inc}" ]; then
         liblegato_inc="${S}/framework/c/inc"
     fi
-    for file in $(find "${liblegato_inc}" -type f); do
-        echo "Installing header: $file"
-        install $file ${D}${includedir}
-    done
+    (cd ${liblegato_inc} && find . -type f -exec echo "Installing header: {}" \; -exec install "{}" -D "${D}${includedir}/{}" \;)
 
     # private headers required by _main.c
     install -d ${D}/usr/share/legato/src
@@ -112,7 +107,7 @@ do_install() {
         fi
     fi
 
-    # Populate liblegato.so in sysroots/
+    # Populate liblegato.so and config in sysroots/
     for target in $(echo ${LEGATO_ROOTFS_TARGETS}); do
         select_legato_target $target
 
@@ -124,19 +119,20 @@ do_install() {
             install ${B}/build/$LEGATO_TARGET/framework/lib/liblegato.so \
                     ${D}/usr/share/legato/build/$LEGATO_TARGET/framework/lib/liblegato.so
         fi
+
+        if [ -e "${B}/build/$LEGATO_TARGET/config.sh" ]; then
+            install ${B}/build/$LEGATO_TARGET/config.sh \
+                    ${D}/usr/share/legato/build/$LEGATO_TARGET/config.sh
+        fi
+        install -d ${D}/usr/share/legato/build/$LEGATO_TARGET/framework/include
+        if [ -e "${B}/build/$LEGATO_TARGET/framework/include/le_config.h" ]; then
+            install ${B}/build/$LEGATO_TARGET/framework/include/le_config.h \
+                    ${D}/usr/share/legato/build/$LEGATO_TARGET/framework/include/le_config.h
+        fi
     done
 
     # API files
-    install -d ${D}/usr/share/legato/interfaces
-    cd ${S}
-    for file in $(find ./interfaces -name "*.api"); do
-        dir=$(dirname $file)
-        echo "Installing API: $file"
-        if [ "$dir" != "." ]; then
-            install -d ${D}/usr/share/legato/$dir
-        fi
-        install $file ${D}/usr/share/legato/$file
-    done
+    (cd ${S} && find ./interfaces -name "*.api" -exec echo "Installing API: {}" \; -exec install "{}" -D "${D}/usr/share/legato/{}" \;)
 }
 
 do_install_image() {
