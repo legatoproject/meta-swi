@@ -1,9 +1,4 @@
-SUMMARY = "Meta package for building a installable toolchain"
-LICENSE = "MIT"
-
-PR = "r7"
-
-inherit populate_sdk_swi
+require recipes-core/meta/meta-toolchain.bb
 
 # Only add Legato if this is a LEGATO_BUILD
 def get_toolchain_version(d):
