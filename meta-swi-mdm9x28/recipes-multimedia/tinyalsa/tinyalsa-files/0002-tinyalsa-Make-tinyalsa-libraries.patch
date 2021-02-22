@@ -1,0 +1,66 @@
+From 93038e45868e4197861a9421a4deceb4e96ae057 Mon Sep 17 00:00:00 2001
+From: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+Date: Sun, 21 Feb 2021 21:25:45 -0800
+Subject: [PATCH] tinyalsa: Make tinyalsa libraries
+
+Tinyalsa normally contains binaries only. It is additional requirement
+to link swiapp against the code on tinyalsa.
+
+Signed-off-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+---
+ tinycap.c  |  4 ++++
+ tinymix.c  | 54 ++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ tinyplay.c |  4 ++++
+ 3 files changed, 62 insertions(+)
+
+diff --git a/tinycap.c b/tinycap.c
+index 81411e7..9ff20cc 100644
+--- a/tinycap.c
++++ b/tinycap.c
+@@ -69,7 +69,11 @@ void sigint_handler(int sig)
+     capturing = 0;
+ }
+ 
++#ifdef TINYALSA_AS_LIB
++int tinycap(int argc, char **argv)
++#else
+ int main(int argc, char **argv)
++#endif
+ {
+     FILE *file;
+     struct wav_header header;
+diff --git a/tinymix.c b/tinymix.c
+index 789c4af..2c87b8a 100644
+--- a/tinymix.c
++++ b/tinymix.c
+@@ -68,7 +68,11 @@ static void usage (void) {
+             );
+ }
+ 
++#ifdef TINYALSA_AS_LIB
++int tinymix(int argc, char **argv)
++#else
+ int main(int argc, char **argv)
++#endif
+ {
+     struct mixer *mixer;
+     int card = 0;
+diff --git a/tinyplay.c b/tinyplay.c
+index 0354df6..a9030ff 100644
+--- a/tinyplay.c
++++ b/tinyplay.c
+@@ -72,7 +72,11 @@ void stream_close(int sig)
+     close = 1;
+ }
+ 
++#ifdef TINYALSA_AS_LIB
++int tinyplay(int argc, char **argv)
++#else
+ int main(int argc, char **argv)
++#endif
+ {
+     FILE *file;
+     struct riff_wave_header riff_wave_header;
+-- 
+2.27.0
+
