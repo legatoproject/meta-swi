@@ -16,12 +16,6 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-files:"
 SRC_URI = "${SRC_REPO}"
 S = "${WORKDIR}/git"
 
-# Patches
-SRC_URI += "file://bdwlan.bin \
-	    file://qwlan.bin \
-	    file://otp.bin \
-           "
-
 # Targets - mdm9650 and sdxhedgehog: modulename = wlan_sdio.ko, chip name - qca9377
 # Other targets : modulename = wlan.ko, chip name -
 
@@ -38,7 +32,6 @@ python __anonymous () {
 }
 
 FILES_${PN}     += "lib/firmware/wlan/*"
-FILES_${PN}     += "lib/firmware/*"
 
 do_unpack[deptask] = "do_populate_sysroot"
 PR = "r0"
@@ -68,12 +61,6 @@ do_install () {
 
     install -d ${D}${includedir}/qcacld/
     install -m 0644 ${S}/CORE/SVC/external/wlan_nlink_common.h ${D}${includedir}/qcacld/
-
-    install -d ${D}/lib/firmware/
-
-    install -m 0644 ${WORKDIR}/bdwlan.bin ${D}/lib/firmware/
-    install -m 0644 ${WORKDIR}/otp.bin ${D}/lib/firmware/
-    install -m 0644 ${WORKDIR}/qwlan.bin ${D}/lib/firmware/
 
     #copying wlan.ko to STAGING_DIR_TARGET
     WLAN_KO=${@oe.utils.conditional('PERF_BUILD', '1', '${STAGING_DIR_TARGET}-perf', '${STAGING_DIR_TARGET}', d)}

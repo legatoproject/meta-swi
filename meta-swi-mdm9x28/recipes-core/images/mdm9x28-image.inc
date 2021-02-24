@@ -34,7 +34,7 @@ IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' si
 #================
 # Install: kernel module, firmware, bluez (for Bluetooth), and init scripts
 IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcawifibt', \
-  ' qcacld-hl sierra-init-qca9377 bluez5 qca9377-bt-firmware', '', d)}"
+  ' qcacld-hl sierra-init-qca9377 bluez5', '', d)}"
 
 # Add kernel audio
 IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'msmaudio', ' audiodlkm', '', d)}"
