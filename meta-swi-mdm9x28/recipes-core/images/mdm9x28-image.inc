@@ -32,9 +32,9 @@ IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' si
 #================
 # QCA9377 support
 #================
-# Install: kernel module, firmware, bluez (for Bluetooth), and init scripts
+# Install: kernel module, bluez (for Bluetooth), and init scripts
 IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcawifibt', \
-  ' qcacld-hl sierra-init-qca9377 bluez5 qca9377-bt-firmware', '', d)}"
+  ' qcacld-hl sierra-init-qca9377 bluez5', '', d)}"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
