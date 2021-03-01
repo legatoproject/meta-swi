@@ -1,0 +1,31 @@
+From 916ead483b02d9837a95e67562c8626abbc5d985 Mon Sep 17 00:00:00 2001
+From: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+Date: Mon, 1 Mar 2021 14:43:11 -0800
+Subject: [PATCH] tinyalsa: Build tinyhostless as a library
+
+Build tinyhostless as a library as well.
+
+Signed-off-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
+---
+ tinyhostless.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/tinyhostless.c b/tinyhostless.c
+index 2f5e5f9..b3b0b1e 100644
+--- a/tinyhostless.c
++++ b/tinyhostless.c
+@@ -57,7 +57,11 @@ static void stream_close(int sig)
+     close_h = 1;
+ }
+ 
++#ifdef TINYALSA_AS_LIB
++int tinyhostless(int argc, char **argv)
++#else
+ int main(int argc, char **argv)
++#endif
+ {
+     unsigned int card = 0;
+     unsigned int p_device = TINYHOSTLESS_DEVICE_UNDEFINED;
+-- 
+2.27.0
+

@@ -30,6 +30,7 @@ SRC_URI_FILES += " \
 SRC_URI_PATCHES += " \
                     file://0001-tinyalsa.patch \
                     file://0002-tinyalsa-Make-tinyalsa-libraries.patch \
+                    file://0003-tinyalsa-Build-tinyhostless-as-a-library.patch \
                    "
 
 # Add it all together
@@ -69,6 +70,10 @@ do_compile () {
 
     # tinymix
     ${CC} ${CPPFLAGS} ${LDFLAGS} ${CPPFLAGS_TINYALSA_AS_LIB} -Wl,-soname,libtinycap.so.1 -o libtinymix.so.1.0.0 tinymix.c mixer.c
+
+    # tinyhostless
+    ${CC} ${CPPFLAGS} ${LDFLAGS} ${CPPFLAGS_TINYALSA_AS_LIB} -Wl,-soname,libtinyhostless.so.1 -o libtinyhostless.so.1.0.0 tinyhostless.c pcm.c
+
 }
 
 do_install () {
@@ -82,6 +87,7 @@ do_install () {
     install -m 0644 ${B}/libtinycap.so.1.0.0 ${D}${libdir}/libtinycap.so.1.0.0
     install -m 0644 ${B}/libtinyplay.so.1.0.0 ${D}${libdir}/libtinyplay.so.1.0.0
     install -m 0644 ${B}/libtinymix.so.1.0.0 ${D}${libdir}/libtinymix.so.1.0.0
+    install -m 0644 ${B}/libtinyhostless.so.1.0.0 ${D}${libdir}/libtinyhostless.so.1.0.0
 
     cd ${D}${libdir}
     ln -s libtinycap.so.1.0.0 libtinycap.so.1
@@ -92,6 +98,9 @@ do_install () {
 
     ln -s libtinymix.so.1.0.0 libtinymix.so.1
     ln -s libtinymix.so.1.0.0 libtinymix.so
+
+    ln -s libtinyhostless.so.1.0.0 libtinyhostless.so.1
+    ln -s libtinyhostless.so.1.0.0 libtinyhostless.so
 
     mkdir -p ${D}${includedir}/tinyalsa
     install -m 0644 ${WORKDIR}/tinyalsa_lib.h ${D}${includedir}/tinyalsa/tinyalsa_lib.h
