@@ -1,3 +1,4 @@
 #!/bin/sh
 /usr/sbin/ip6tables-restore < /etc/ip6tables.rules
+/usr/sbin/ip6tables-restore -n < /usr/local/ip6tables.ro.rules
 exit $?
