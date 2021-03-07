@@ -66,10 +66,10 @@ do_compile () {
     ${CC} ${CPPFLAGS} ${LDFLAGS} ${CPPFLAGS_TINYALSA_AS_LIB} -Wl,-soname,libtinycap.so.1 -o libtinycap.so.1.0.0 tinycap.c pcm.c
 
     # tinyplay
-    ${CC} ${CPPFLAGS} ${LDFLAGS} ${CPPFLAGS_TINYALSA_AS_LIB} -Wl,-soname,libtinycap.so.1 -o libtinyplay.so.1.0.0 tinyplay.c pcm.c
+    ${CC} ${CPPFLAGS} ${LDFLAGS} ${CPPFLAGS_TINYALSA_AS_LIB} -Wl,-soname,libtinyplay.so.1 -o libtinyplay.so.1.0.0 tinyplay.c pcm.c
 
     # tinymix
-    ${CC} ${CPPFLAGS} ${LDFLAGS} ${CPPFLAGS_TINYALSA_AS_LIB} -Wl,-soname,libtinycap.so.1 -o libtinymix.so.1.0.0 tinymix.c mixer.c
+    ${CC} ${CPPFLAGS} ${LDFLAGS} ${CPPFLAGS_TINYALSA_AS_LIB} -Wl,-soname,libtinymix.so.1 -o libtinymix.so.1.0.0 tinymix.c mixer.c
 
     # tinyhostless
     ${CC} ${CPPFLAGS} ${LDFLAGS} ${CPPFLAGS_TINYALSA_AS_LIB} -Wl,-soname,libtinyhostless.so.1 -o libtinyhostless.so.1.0.0 tinyhostless.c pcm.c
