@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Sets /bin/sh as the default login shell.
+chsh -s /bin/sh
+
+/bin/sh --login "$@"
