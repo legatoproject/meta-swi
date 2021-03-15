@@ -149,7 +149,6 @@ LocalAccess()
                     if [ $? -eq 0 ]; then
                         DontNag; break
                     fi
-                    break
                     ;;
                 [nN] ) DontNag; break;;
 
@@ -307,6 +306,19 @@ SetExtraPasswdParams()
     return ${ret}
 }
 
+# Check if a password has already been set. If so, don't nag.
+CheckIfPasswordSet()
+{
+    PASSWORD_STATUS="$(passwd --status root)"
+
+    # The second argument of the password status says if
+    # a password has been set
+    PASSWORD_SET="$(echo "$PASSWORD_STATUS" | cut -d' ' -f2)"
+    if [[ "$PASSWORD_SET" == "P" ]]; then
+        DontNag;
+    fi
+}
+
 #
 # main execution starts here
 #
@@ -314,6 +326,8 @@ SetExtraPasswdParams()
 if NaggerCouldRun; then
 
     SetExtraPasswdParams;
+
+    CheckIfPasswordSet;
 
     if [ ! -f $DONT_NAG_FILE ]; then
         if [ ! -f ~/.ssh/authorized_keys ]; then
