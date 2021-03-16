@@ -38,3 +38,14 @@ do_compile_prepend() {
         echo "LEGATO_VERSION already defined: ${LEGATO_VERSION}"
     fi
 }
+
+# Copies "columbia_short_hash" to DEPLOY_DIR_IMAGE
+do_deploy() {
+    mkdir -p ${DEPLOY_DIR_IMAGE}
+
+    cp ${WORKDIR}/columbia_short_hash ${DEPLOY_DIR_IMAGE}
+}
+addtask deploy after do_install
+
+# Prevent the setscene task from copying the cached legato version into the sysroots folder
+deltask do_populate_sysroot_setscene
