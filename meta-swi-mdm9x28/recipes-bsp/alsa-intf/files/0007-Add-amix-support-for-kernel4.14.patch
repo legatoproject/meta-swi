@@ -1,0 +1,87 @@
+diff --git a/libalsa-intf/alsa_mixer.c b/libalsa-intf/alsa_mixer.c
+index 8f74c1c..5dc06d1 100644
+--- a/libalsa-intf/alsa_mixer.c
++++ b/libalsa-intf/alsa_mixer.c
+@@ -590,6 +590,60 @@ int mixer_ctl_mulvalues(struct mixer_ctl *ctl, int count, char ** argv)
+     return ioctl(ctl->mixer->fd, SNDRV_CTL_IOCTL_ELEM_WRITE, &ev);
+ }
+ 
++int mixer_crl_sigvalue(struct mixer_ctl *ctl, unsigned int arg_value)
++{
++    struct snd_ctl_elem_value ev;
++    unsigned int n;
++    unsigned int ret=0;
++
++    if (!ctl) {
++        ALOGV("can't find control\n");
++        return -1;
++    }
++
++    memset(&ev, 0, sizeof(ev));
++    ev.id.numid = ctl->info->id.numid;
++
++    ret = ioctl(ctl->mixer->fd, SNDRV_CTL_IOCTL_ELEM_READ, &ev);
++    if(ret < 0){
++        fprintf(stderr,"ERROR mixer_ctl_mulvalues SNDRV_CTL_IOCTL_ELEM_READ\n");
++        return ret;
++    }
++
++    switch (ctl->info->type) {
++	    case SNDRV_CTL_ELEM_TYPE_BOOLEAN:
++	        for (n = 0; n < ctl->info->count; n++)
++	            ev.value.integer.value[n] = !!arg_value;
++	        break;
++	    case SNDRV_CTL_ELEM_TYPE_INTEGER:
++	        for (n = 0; n < ctl->info->count; n++) {
++	             fprintf( stderr, "Value: %d idx:%d\n", arg_value, n);
++	             ev.value.integer.value[n] = arg_value;
++	        }
++	        break;
++	    case SNDRV_CTL_ELEM_TYPE_INTEGER64:
++	        for (n = 0; n < ctl->info->count; n++) {
++	             long long value_ll = scale_int64(ctl->info, arg_value);
++	             fprintf( stderr, "ll_value = %lld\n", value_ll);
++	             ev.value.integer64.value[n] = value_ll;
++	        }
++	        break;
++	    case SNDRV_CTL_ELEM_TYPE_ENUMERATED:
++	        for (n = 0; n < ctl->info->count; n++) {
++	            fprintf( stderr, "Value: %d idx:%d\n", arg_value, n);
++	            ev.value.enumerated.item[n] = arg_value;
++	        }
++	        break;
++	    default:
++	        errno = EINVAL;
++	        return errno;
++    }
++
++    ret = ioctl(ctl->mixer->fd, SNDRV_CTL_IOCTL_ELEM_WRITE, &ev);
++    //fprintf(stderr, "mixer_crl_sigvalue ret=%d \n", ret);
++    return ret;
++}
++
+ int mixer_ctl_set(struct mixer_ctl *ctl, unsigned percent)
+ {
+     struct snd_ctl_elem_value ev;
+@@ -768,6 +822,7 @@ int mixer_ctl_set_value(struct mixer_ctl *ctl, int count, char ** argv)
+     long min, max;
+     enum ctl_type type;
+     unsigned int tlv_type;
++    unsigned int value;
+ 
+     if (is_volume(ctl->info->id.name, &type)) {
+         ALOGV("capability: volume\n");
+@@ -782,7 +837,12 @@ int mixer_ctl_set_value(struct mixer_ctl *ctl, int count, char ** argv)
+             ALOGV("mixer_ctl_read_tlv failed\n");
+         free(tlv);
+     } else {
+-        mixer_ctl_mulvalues(ctl, count, argv);
++        if(count > 1)
++            mixer_ctl_mulvalues(ctl, count, argv);
++        else {
++            value = (unsigned int)atoi(argv[0]);
++            mixer_crl_sigvalue(ctl,value);
++        }
+     }
+     return 0;
+ }
