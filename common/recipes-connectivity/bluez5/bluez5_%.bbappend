@@ -6,6 +6,7 @@ SRC_URI += "file://0001-hciattach-add-QCA9377-Tuffello-support.patch"
 SRC_URI += "file://0001-tufello-support-fixups.patch"
 SRC_URI += "file://0001-bluetooth-Vote-UART-CLK-ON-prior-to-firmware-downloa.patch"
 SRC_URI += "file://0001-Adding-MDM-specific-code-under-_PLATFORM_MDM_.patch"
+SRC_URI += "${@oe.utils.conditional('PREFERRED_VERSION_linux-msm', '4.14%', 'file://0002-hciattach-Tufello-support-fixup-for-kernel-4.14.patch', '', d)}"
 
 # If MODULE_HAS_MAC_ADDR is defined, MAC address stored in NV parameters will be ignored.
 # For now, leave it as defined, and we will decide later on, how we are going to configure

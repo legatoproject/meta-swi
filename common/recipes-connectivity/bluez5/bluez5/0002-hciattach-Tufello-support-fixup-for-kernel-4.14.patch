@@ -1,0 +1,32 @@
+From 34e0b056d5dcdda9abcce9cf7c9c06938385bc54 Mon Sep 17 00:00:00 2001
+From: Anju Kunjumon <akunjumon@sierrawireless.com>
+Date: Wed, 7 Apr 2021 11:36:14 -0700
+Subject: [PATCH] hciattach: Tufello support fixup for kernel 4.14
+
+TIOCPMGET and TIOCPMPUT values have changed in kernel 4.14. The defines
+of USERIAL_OP_CLK_ON and USERIAL_OP_CLK_OFF need to be aligned to the
+new values.
+
+Signed-off-by: Anju Kunjumon <akunjumon@sierrawireless.com>
+---
+ tools/hciattach_rome.h | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/hciattach_rome.h b/tools/hciattach_rome.h
+index 31de8ad..9418409 100644
+--- a/tools/hciattach_rome.h
++++ b/tools/hciattach_rome.h
+@@ -44,8 +44,8 @@
+ #define MSM_ENABLE_FLOW_CTRL   1
+ 
+ #ifdef _PLATFORM_MDM_
+-#define USERIAL_OP_CLK_ON      0x5441
+-#define USERIAL_OP_CLK_OFF     0x5442
++#define USERIAL_OP_CLK_ON      0x544D
++#define USERIAL_OP_CLK_OFF     0x544E
+ #endif
+ 
+ #define PR_INFO(fmt, arg...) printf(fmt, ## arg)
+-- 
+2.17.1
+
