@@ -7,11 +7,6 @@ set -e
 
 case "$1" in
   start)
-        # DM, FIXME: This is here only because we cannot verify
-        # that modem is loaded and ready. Once we can verify that,
-        # this sleep can be removed.
-        sleep 2
-
         echo "Loading kernel base audio modules... "
         modprobe snd-soc-core
         modprobe snd_hwdep
