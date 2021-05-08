@@ -7,6 +7,7 @@ import shutil
 import re
 import subprocess
 from distutils import dir_util, errors
+import fnmatch
 
 pj = os.path.join
 
@@ -163,16 +164,19 @@ def main():
 
     prepare_oe_build_env(ns)
 
+    # Populate the paths to all layers.
+    layer_paths = detect_layer_paths(top_dir)
+
     bblayers_conf = pj(build_dir, "conf/bblayers.conf")
     conf = read_conf(bblayers_conf)
-    enable_oe_layers(conf, ns)
-    enable_swi_layers(conf, ns)
-    enable_layer(conf, pj(top_dir, "meta-mangoh"))
+    enable_oe_layers(conf, layer_paths, ns)
+    enable_swi_layers(conf, layer_paths, ns)
+    enable_layer(conf, layer_paths, pj(top_dir, "meta-mangoh"))
     if not ns.extra_layers == "":
         for layer in ns.extra_layers.split(":"):
             if not os.path.isabs(layer):
                 layer = pj(top_dir, layer)
-            enable_layer(conf, layer)
+            enable_layer(conf, layer_paths, layer)
 
     write_conf(bblayers_conf, conf)
 
@@ -245,19 +249,35 @@ def check_tweak_kernel_provider(ns):
 
         ns.kernel_provider = kern_prov
 
+def detect_layer_paths(start_dir):
+    layer_paths = {}
+    for root, dirs, files in os.walk(start_dir):
+        dirs[:] = fnmatch.filter(dirs, "meta-*")
+        conf_file = pj(root, "conf/layer.conf")
+        if os.path.isfile(conf_file):
+            with open(conf_file) as conf_fd:
+                layer_conf = list(conf_fd)
+                name = get_layer_name_from_conf(layer_conf, root)
+                layer_paths[name] = root
+    return layer_paths
+
+def get_layer_name_from_conf(conf, layer_path):
+    name = get_option(conf, "BBFILE_COLLECTIONS")
+    if not name:
+        name = os.path.basename(layer_path)
+    return name
 
 #
 # Enable OpenEmbedded layers
 #
-def enable_oe_layers(conf, ns):
+def enable_oe_layers(conf, layer_paths, ns):
     enable_layer_group(
-        conf,
+        conf, layer_paths,
         ns.meta_oe_dir,
         ["meta-oe", "meta-networking", "meta-python", pj("..", "meta-gplv2")],
     )
 
-
-def enable_swi_layers(conf, ns):
+def enable_swi_layers(conf, layer_paths, ns):
     mach = ns.machine_type
     meta_swi_dir = ns.meta_swi_dir
     prod = ns.product
@@ -430,7 +450,7 @@ def enable_swi_layers(conf, ns):
 
 
     # enable all the layers
-    enable_layer_group(conf, meta_swi_dir, layer_list)
+    enable_layer_group(conf, layer_paths, meta_swi_dir, layer_list)
 
     # determine Yocto machine (placed into ns, to be later installed layer.conf)
 
@@ -918,7 +938,7 @@ def rindexof(iterable, predicate, start=0, end=None):
     return ri
 
 
-def enable_layer(conf, layer_path, previous_layer=None):
+def enable_layer(conf, layer_paths, layer_path, previous_layer=None):
     def contains_previous(ln):
         return previous_layer in os.path.split(ln.strip())
 
@@ -955,6 +975,26 @@ def enable_layer(conf, layer_path, previous_layer=None):
     conf.insert(ins, "  %s \\\n" % (layer_path))
     msg("new layer: %s" % (layer_path))
 
+    # Enable dependency_layers, if any.
+    enable_dependency_layers(conf, layer_paths, layer_path)
+
+def enable_dependency_layers(conf, layer_paths, layer_path):
+    layer_conf_path = pj(layer_path, "conf/layer.conf")
+
+    depends = []
+    if os.path.exists(layer_conf_path):
+        with open(layer_conf_path) as layer_conf_fd:
+            layer_conf = list(layer_conf_fd)
+            name = get_layer_name_from_conf(layer_conf, layer_path)
+            # Consider both hard and soft dependencies. The error handling based on dependency type
+            # is done by bitbake scripts. We do not need to differentiate them here.
+            depends = (get_option(layer_conf, "LAYERDEPENDS_%s" % name) or '').split()
+            depends += (get_option(layer_conf, "LAYERRECOMMENDS_%s" % name) or '').split()
+
+    for depend in depends:
+        depend_path = layer_paths.get(depend, None)
+        if depend_path:
+            enable_layer(conf, layer_paths, depend_path)
 
 #
 # Hacky routines for getting and setting variables in a BitBake .conf
@@ -1060,9 +1100,9 @@ def find_variable(conf, var, after=None):
     return idx, end
 
 
-def enable_layer_if_exists(conf, layer_path, previous_layer=None):
+def enable_layer_if_exists(conf, layer_paths, layer_path, previous_layer=None):
     if os.path.exists(layer_path):
-        enable_layer(conf, layer_path, previous_layer)
+        enable_layer(conf, layer_paths, layer_path, previous_layer)
 
 
 #
@@ -1080,13 +1120,13 @@ def enable_layer_if_exists(conf, layer_path, previous_layer=None):
 #   [ 'path/to/optional_layer_1', 'another_optional' ],
 #   'required_layer_3' ... ]
 #
-def enable_layer_group(conf, prefix, layer_list):
+def enable_layer_group(conf, layer_paths, prefix, layer_list):
     for layer in layer_list:
         if isinstance(layer, list):
             for opt_layer in layer:
-                enable_layer_if_exists(conf, pj(prefix, opt_layer))
+                enable_layer_if_exists(conf, layer_paths, pj(prefix, opt_layer))
         else:
-            enable_layer(conf, pj(prefix, layer))
+            enable_layer(conf, layer_paths, pj(prefix, layer))
 
 
 #
