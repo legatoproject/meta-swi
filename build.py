@@ -271,17 +271,19 @@ def get_layer_name_from_conf(conf, layer_path):
 # Enable OpenEmbedded layers
 #
 def enable_oe_layers(conf, layer_paths, ns):
+    #gplv2 layer has priority 1, the lowest. Add it at the bottom of bblayers, below meta-yocto-bsp.
+    enable_layer(conf, layer_paths, pj(ns.meta_oe_dir, "../meta-gplv2"), "meta-yocto-bsp")
+
     enable_layer_group(
         conf, layer_paths,
         ns.meta_oe_dir,
-        ["meta-oe", "meta-networking", "meta-python", pj("..", "meta-gplv2")],
+        ["meta-networking", "meta-oe", "meta-python"],
     )
 
 def enable_swi_layers(conf, layer_paths, ns):
     mach = ns.machine_type
     meta_swi_dir = ns.meta_swi_dir
     prod = ns.product
-    prod_fam = ns.product_family
     enable_prop_src = ns.enable_prop_src
     enable_prop_bin = ns.enable_prop_bin
     enable_prop = enable_prop_src or enable_prop_bin
@@ -307,7 +309,14 @@ def enable_swi_layers(conf, layer_paths, ns):
             ]
 
         if prod != "":
-            layer_list += [["meta-%s-%s" % (mach, prod)]]
+            layer_list += [
+                [
+                    # Reference team's layer for product
+                    "meta-%s-%s" % (mach, prod),
+                    # Product team's layer
+                    "../meta-swi-%s/meta-swi-%s" % (prod, prod),
+                ]
+            ]
 
         # If doing proprietary, change distro in order to alter SDKPATH
         if enable_prop:
@@ -317,34 +326,7 @@ def enable_swi_layers(conf, layer_paths, ns):
     if enable_prop:
         layer_list += [
             "../meta-swi-extras/common",
-            "../meta-swi-extras/meta-%s" % (mach),
         ]
-
-    # Proprietary SWI product layers
-    if prod_fam != "":
-        layer_list += [
-            [
-                "../meta-swi-%s/common" % (prod_fam),
-                "../meta-swi-%s/meta-swi-%s" % (prod_fam, prod),
-            ]
-        ]
-
-        if enable_prop:
-            layer_list += [
-                [
-                    "../meta-swi-%s-extras/common" % (prod_fam),
-                    "../meta-swi-%s-extras/meta-swi-%s-extras" % (prod_fam, prod),
-                ]
-            ]
-
-            if enable_prop_src:
-                layer_list += [
-                    ["../meta-swi-%s-extras/meta-swi-%s-src" % (prod_fam, prod)]
-                ]
-            else:
-                layer_list += [
-                    ["../meta-swi-%s-extras/meta-swi-%s-bin" % (prod_fam, prod)]
-                ]
 
     # Proprietary source layers
     if enable_prop_src:
@@ -364,6 +346,7 @@ def enable_swi_layers(conf, layer_paths, ns):
 
         layer_list += [
             "../meta-swi-extras/meta-swi-mdm9xxx-src",
+            "../meta-swi-extras/meta-%s" % (mach),
             "../meta-swi-extras/meta-%s-src" % (mach),
         ]
 
@@ -371,8 +354,12 @@ def enable_swi_layers(conf, layer_paths, ns):
         if prod != "":
             layer_list += [
                 [
-                    "../meta-swi-extras/meta-%s-%s-src" % (mach, prod),
+                    # Reference team's layers for product
                     "../meta-swi-extras/meta-%s-%s" % (mach, prod),
+                    "../meta-swi-extras/meta-%s-%s-src" % (mach, prod),
+                    # Product team's layers
+                    "../meta-swi-%s-extras/meta-swi-%s" % (prod, prod),
+                    "../meta-swi-%s-extras/meta-swi-%s-src" % (prod, prod),
                 ]
             ]
 
@@ -428,6 +415,7 @@ def enable_swi_layers(conf, layer_paths, ns):
         layer_list += [
             [
                 "../meta-swi-extras/meta-swi-mdm9xxx-bin",
+                "../meta-swi-extras/meta-%s" % (mach),
                 "../meta-swi-extras/meta-%s-bin" % (mach),
             ]
         ]
@@ -443,11 +431,14 @@ def enable_swi_layers(conf, layer_paths, ns):
         if prod != "":
             layer_list += [
                 [
-                    "../meta-swi-extras/meta-%s-%s-bin" % (mach, prod),
+                    # Reference team's layers for the product
                     "../meta-swi-extras/meta-%s-%s" % (mach, prod),
+                    "../meta-swi-extras/meta-%s-%s-bin" % (mach, prod),
+                    # Product team's layers
+                    "../meta-swi-%s-extras/meta-swi-%s" % (prod, prod),
+                    "../meta-swi-%s-extras/meta-swi-%s-bin" % (prod, prod),
                 ]
             ]
-
 
     # enable all the layers
     enable_layer_group(conf, layer_paths, meta_swi_dir, layer_list)
@@ -456,9 +447,7 @@ def enable_swi_layers(conf, layer_paths, ns):
 
     def determine_yocto_mach(try_mach):
         # find machine configuration file among layers
-        mach_conf = find_file_in_layer_group(
-            "%s.conf" % (try_mach), meta_swi_dir, layer_list
-        )
+        mach_conf = find_file_in_layers("%s.conf" % (try_mach), conf)
         if mach_conf:
             msg("machine config file found at: %s" % (mach_conf))
             if ns.enable_qemu:
@@ -940,7 +929,7 @@ def rindexof(iterable, predicate, start=0, end=None):
 
 def enable_layer(conf, layer_paths, layer_path, previous_layer=None):
     def contains_previous(ln):
-        return previous_layer in os.path.split(ln.strip())
+        return previous_layer in os.path.split(ln.strip('\n \\'))
 
     # index of BBLAYERS ?= ... line
     bbs = indexof(conf, lambda ln: ln.startswith("BBLAYERS "))
@@ -960,8 +949,11 @@ def enable_layer(conf, layer_paths, layer_path, previous_layer=None):
         msg("missing path or layer.conf for layer %s; skipping" % (layer_path))
         return
 
-    # insert before previous layer, or else last
-    ins = bbe
+    # Enable dependency_layers, if any.
+    enable_dependency_layers(conf, layer_paths, layer_path)
+
+    # insert below previous layer, or else at top.
+    ins = bbs + 1
 
     if previous_layer:
         pins = rindexof(conf, contains_previous, bbs + 1, bbe)
@@ -969,14 +961,12 @@ def enable_layer(conf, layer_paths, layer_path, previous_layer=None):
             ins = pins + 1
         else:
             msg("previous layer %s not found;" % (previous_layer))
-            msg("... inserting %s at the end" % (layer_path))
+            msg("... inserting %s at top" % (layer_path))
 
-    # insert it before the closing line
+    # insert it at top.
     conf.insert(ins, "  %s \\\n" % (layer_path))
     msg("new layer: %s" % (layer_path))
 
-    # Enable dependency_layers, if any.
-    enable_dependency_layers(conf, layer_paths, layer_path)
 
 def enable_dependency_layers(conf, layer_paths, layer_path):
     layer_conf_path = pj(layer_path, "conf/layer.conf")
@@ -1127,6 +1117,31 @@ def enable_layer_group(conf, layer_paths, prefix, layer_list):
                 enable_layer_if_exists(conf, layer_paths, pj(prefix, opt_layer))
         else:
             enable_layer(conf, layer_paths, pj(prefix, layer))
+
+
+#
+# Find a file given by filename among the entries in BBLAYERS.
+# Each layer directory is recursively scanned in search
+# of the file.
+#
+def find_file_in_layers(filename, conf):
+    def find_file(path):
+        if os.path.isdir(path):
+            for entry in scantree(path):
+                if entry.is_file() and entry.name == filename:
+                    return entry.path
+
+    # index of BBLAYERS ?= ... line
+    bbs = indexof(conf, lambda ln: ln.startswith("BBLAYERS "))
+    # index of closing '  "' line.
+    bbe = indexof(conf, lambda ln: ln.startswith('  "'), bbs)
+
+    for i in range(bbs + 1, bbe):
+        ln = conf[i]
+        path = ln.strip('\n \\')
+        file_path = find_file(path)
+        if file_path:
+            return file_path
 
 
 #
