@@ -55,6 +55,10 @@ fakeroot do_label_files() {
         setfattr -n security.SMACK64EXEC -v qmuxd \
             "${IMAGE_ROOTFS}/usr/bin/qrtr-ns"
     fi
+    if [ -f "${IMAGE_ROOTFS}/usr/bin/qseecomd" ] ; then
+        setfattr -n security.SMACK64EXEC -v app.secStore \
+            "${IMAGE_ROOTFS}/usr/bin/qseecomd"
+    fi
 }
 
 IMAGE_PREPROCESS_COMMAND_append = " do_rm_unused_files; "
