@@ -56,7 +56,7 @@ fakeroot do_label_files() {
             "${IMAGE_ROOTFS}/usr/bin/qrtr-ns"
     fi
     if [ -f "${IMAGE_ROOTFS}/usr/bin/qseecomd" ] ; then
-        setfattr -n security.SMACK64EXEC -v app.secStore \
+        setfattr -n security.SMACK64EXEC -v qteelistener \
             "${IMAGE_ROOTFS}/usr/bin/qseecomd"
     fi
 }
