@@ -30,8 +30,8 @@
 export MODULE_BASE=/lib/modules/`uname -r`/
 set -e
 
-case "$1" in
-  start)
+load_audio_modules()
+{
         echo -n "Starting/Loading audio module: "
 
         echo "audio:start/load" > /dev/kmsg
@@ -48,6 +48,29 @@ case "$1" in
         insmod $MODULE_BASE/extra/machine_dlkm.ko
 
         echo "done loading audio_kernel module"
+}
+
+
+case "$1" in
+  start)
+        counter=0
+        while [ ${counter} -le 50 ]
+        do
+                pstate=`cat /sys/bus/msm_subsys/devices/subsys0/state`
+                if [ "$pstate" == "ONLINE" ] ; then
+                        #modem is ready, lets intall drivers
+                        load_audio_modules
+                        break
+                else
+                        #echo "Modem not ready, add delay 100ms"
+                        counter=$(( $counter + 1 ))
+                        usleep 100000
+                fi
+        done
+
+        if [ ${counter} -eq 50 ] ; then
+                echo "Error, audio modules not loaded!"
+        fi
         ;;
   stop)
         echo "Unloading audio_kernel modules " > /dev/kmsg

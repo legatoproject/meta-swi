@@ -1558,12 +1558,16 @@ static int wm8944_codec_probe(struct snd_soc_codec *codec)
 #ifdef CONFIG_DEBUG_FS
 	debug_wm8944_priv = wm8944;
 #endif
+
+	pm_runtime_get_sync(wm8944->wm8944->dev);
+
 	return ret;
 }
 
 static int wm8944_codec_remove(struct snd_soc_codec *codec)
 {
 	int ret = 0;
+	struct wm8944_priv *wm8944 = snd_soc_codec_get_drvdata(codec);
 
 	wm8944_set_bias_level(codec, SND_SOC_BIAS_OFF);
 	if (ret < 0) {
@@ -1571,6 +1575,7 @@ static int wm8944_codec_remove(struct snd_soc_codec *codec)
 			__func__, ret);
 		return ret;
 	}
+	pm_runtime_put_sync(wm8944->wm8944->dev);
 
 	return ret;
 }

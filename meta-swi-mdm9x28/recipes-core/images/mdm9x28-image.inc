@@ -33,9 +33,12 @@ IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' si
 # QCA9377 support
 #================
 # Install: kernel module, firmware, bluez (for Bluetooth), and init scripts
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcawifibt', \
-  ' qcacld-hl sierra-init-qca9377 bluez5 qca9377-bt-firmware', '', d)}"
-
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcawifi', \
+  ' qcacld-hl', '', d)}"
+IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcabt', \
+  ' bluez5', '', d)}"
+IMAGE_INSTALL_append = " ${@bb.utils.contains_any('MACHINE_FEATURES', 'qcawifi qcabt', \
+  ' sierra-init-qca9377', '', d)}"
 # Add kernel audio
 IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'msmaudio', ' audiodlkm', '', d)}"
 

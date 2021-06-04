@@ -107,17 +107,17 @@ pkg_postinst_${PN}() {
 	[ -n "$D" ] && OPT="-r $D" || OPT="-s"
 
 	update-rc.d $OPT -f start_audio_le remove
-	update-rc.d $OPT start_audio_le start 97 S . stop 15 S .
+	update-rc.d $OPT start_audio_le start 30 S . stop 69 S .
 
 	update-rc.d $OPT -f load_audio_base remove
-	update-rc.d $OPT load_audio_base start 96 S . stop 16 S .
+	update-rc.d $OPT load_audio_base start 29 S . stop 70 S .
 
 }
 
 # DM, FIXME: Remove this override once audio is fully working.
-pkg_postinst_${PN}() {
-	:
-}
+# pkg_postinst_${PN}() {
+#	:
+# }
 
 # The inherit of module.bbclass will automatically name module packages with
 # kernel-module-" prefix as required by the oe-core build environment. Also it

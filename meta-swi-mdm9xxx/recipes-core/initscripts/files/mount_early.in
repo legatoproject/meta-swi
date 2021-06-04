@@ -1340,6 +1340,7 @@ mount_early_userrw_stop()
 mount_early_pseudo()
 {
     local ret=0
+    local kvers=`uname -r | cut -f 1 -d .`
 
     # mount mdev.
     mount -t tmpfs mdev /dev -o rw,relatime,size=${DEVDIR_SIZE},mode=0755,smackfsdef=*
@@ -1387,9 +1388,15 @@ mount_early_pseudo()
         fi
     fi
 
-    # Kick hotplugging and start mdev.
-    echo "/sbin/mdev" > /proc/sys/kernel/hotplug
-    mdev -s
+    if [ $kvers -lt 4 ] ; then
+        # Kick hotplugging and start mdev.
+        echo "/sbin/mdev" > /proc/sys/kernel/hotplug
+        /sbin/mdev -s
+    else
+        # Launch mdev as daemon to speed up device detection
+        echo "" > /proc/sys/kernel/hotplug
+        /sbin/mdev -sd
+    fi
 }
 
 mount_early_other()

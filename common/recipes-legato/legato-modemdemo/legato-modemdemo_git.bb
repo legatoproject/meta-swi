@@ -5,7 +5,7 @@ PR = "r0"
 HOMEPAGE = "http://www.legato.io/"
 LICENSE = "MPL2.0"
 
-LIC_FILES_CHKSUM = "file://CMakeLists.txt;startline=2;endline=2;md5=a4e10fb5509b38e2c8b19b82d1d832f6"
+LIC_FILES_CHKSUM = "file://CMakeLists.txt;startline=2;endline=2;md5=a5f78b207bfcf6efa788c52964a5624b"
 
 # Default is to pull from github, Can be overridden in the build script
 LEGATO_REPO ?= "git://github.com/legatoproject/legato-af.git;protocol=https;rev=master"
