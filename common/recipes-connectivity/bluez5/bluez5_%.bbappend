@@ -40,3 +40,10 @@ PACKAGECONFIG[udev] = "--enable-udev,--disable-udev,udev"
 # instead.
 DEPENDS_remove = "udev"
 PACKAGECONFIG_remove = "udev"
+
+# Install a default /etc/bluetooth/main.conf file.
+do_install_append() {
+    if [ -f ${S}/src/main.conf ]; then
+        install -m 0644 ${S}/src/main.conf ${D}/${sysconfdir}/bluetooth/
+    fi
+}
