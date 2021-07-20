@@ -2,6 +2,7 @@
 FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI_append = " file://50default \
+                   ${@bb.utils.contains('DISTRO_FEATURES', 'lxc', 'file://lxc.cfg', '', d)} \
                  "
 
 python() {

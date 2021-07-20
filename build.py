@@ -279,6 +279,7 @@ def enable_oe_layers(conf, layer_paths, ns):
         ns.meta_oe_dir,
         ["meta-networking", "meta-oe", "meta-python"],
     )
+    enable_layer(conf, layer_paths, pj(ns.meta_oe_dir, "../meta-virtualization"))
 
 def enable_swi_layers(conf, layer_paths, ns):
     mach = ns.machine_type

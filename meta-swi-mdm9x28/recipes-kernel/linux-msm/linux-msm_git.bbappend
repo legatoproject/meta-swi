@@ -3,6 +3,7 @@ KBUILD_DEFCONFIG_SNIPPETS_append := " ${@bb.utils.contains('MACHINE_FEATURES', '
 KBUILD_DEFCONFIG_SNIPPETS_append := " ${@bb.utils.contains('MACHINE_FEATURES', 'qcawifi', '${THISDIR}/files/qcawifi.cfg', '', d)} \"
 KBUILD_DEFCONFIG_SNIPPETS_append := " ${@bb.utils.contains('MACHINE_FEATURES', 'qcabt', '${THISDIR}/files/qcabt.cfg', '', d)} \"
 KBUILD_DEFCONFIG_SNIPPETS_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'msmaudio', '${THISDIR}/files/msm-audio.cfg', '', d)} \"
+KBUILD_DEFCONFIG_SNIPPETS_append = " ${@bb.utils.contains('DISTRO_FEATURES', 'lxc', '${THISDIR}/files/lxc.cfg', '', d)} \"
 
 # These 3 methods are forcing initramfs bundling process to use
 # cpio.gz file as kernel initramfs instead of standard cpio. This
