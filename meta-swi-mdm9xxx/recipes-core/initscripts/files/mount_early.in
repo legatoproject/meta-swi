@@ -1360,7 +1360,7 @@ mount_early_pseudo()
     # DM, FIXME: Restrict the size of this volume.
     # Mount shared memory.
     mkdir -p /dev/shm
-    mount -t tmpfs tmpfs /dev/shm -o mode=0777,smackfsdef=*
+    mount -t tmpfs tmpfs /dev/shm -o mode=0777,nodev,nosuid,noexec,smackfsdef=*
 
     # Mount smackfs on standard location. If standard mount point is not there,
     # most likely, SMACK security is not enabled, and we'll skip it.
@@ -1405,14 +1405,14 @@ mount_early_other()
 
     # DM, FIXME: Restrict the size of this volume.
     # Need /run to be volatile.
-    mount -t tmpfs tmpfs /run -o mode=0755,nodev,nosuid,strictatime,smackfsdef=_
+    mount -t tmpfs tmpfs /run -o mode=0755,nodev,nosuid,noexec,strictatime,smackfsdef=_
 
     # DM, FIXME: Restrict the size of this volume.
     # Need /var to be volatile.
-    mount -t tmpfs tmpfs /var -o mode=0755,nodev,nosuid,strictatime,smackfsdef=_
+    mount -t tmpfs tmpfs /var -o mode=0755,nodev,nosuid,noexec,strictatime,smackfsdef=_
 
     # Do not restrict the size this file system.
-    mount -t tmpfs tmpfs /tmp -o mode=0755,nodev,nosuid,strictatime,smackfsdef=_
+    mount -t tmpfs tmpfs /tmp -o mode=0755,nodev,nosuid,noexec,strictatime,smackfsdef=_
 
     return ${ret}
 }

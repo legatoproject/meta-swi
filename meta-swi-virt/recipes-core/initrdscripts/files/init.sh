@@ -198,7 +198,7 @@ create_devices()
 
     # Mount shared memory.
     mkdir -p /dev/shm
-    mount -t tmpfs tmpfs /dev/shm -o mode=0777,smackfsdef='*'
+    mount -t tmpfs tmpfs /dev/shm -o mode=0777,nosuid,nodev,noexec,smackfsdef='*'
 
     return ${ret}
 }
@@ -208,13 +208,13 @@ mount_tmpfs()
     local ret=0
 
     # Need /run to be volatile.
-    mount -t tmpfs tmpfs ${ROOTFS_MNTPT}/run -o mode=0755,nodev,nosuid,strictatime,smackfsdef='_'
+    mount -t tmpfs tmpfs ${ROOTFS_MNTPT}/run -o mode=0755,nodev,nosuid,noexec,strictatime,smackfsdef='_'
 
     # Need /var to be volatile.
-    mount -t tmpfs tmpfs ${ROOTFS_MNTPT}/var -o mode=0755,nodev,nosuid,strictatime,smackfsdef='_'
+    mount -t tmpfs tmpfs ${ROOTFS_MNTPT}/var -o mode=0755,nodev,nosuid,noexec,strictatime,smackfsdef='_'
 
     # Do not restrict the size this file system.
-    mount -t tmpfs tmpfs ${ROOTFS_MNTPT}/tmp -o mode=0755,nodev,nosuid,strictatime,smackfsdef='_'
+    mount -t tmpfs tmpfs ${ROOTFS_MNTPT}/tmp -o mode=0755,nodev,nosuid,noexec,strictatime,smackfsdef='_'
 
     return ${ret}
 }
