@@ -504,7 +504,7 @@ def tune_local_conf_src_mirror(lconf, ns):
 
     if not get_option(lconf, "SOURCE_MIRROR_URL"):
         sstate_mirror_url = None
-        local_dl = pj(top_dir, "downloads")
+        local_dl = os.path.abspath(pj(top_dir, "downloads"))
         if os.path.exists(local_dl):
             # local downloads directory
             src_mirror_url = "file://%s" % (local_dl)
