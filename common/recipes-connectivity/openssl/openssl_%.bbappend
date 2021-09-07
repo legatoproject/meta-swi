@@ -29,8 +29,10 @@ DEPRECATED_CRYPTO_FLAGS = "no-ssl no-idea no-rc5 no-md2 no-camellia no-mdc2 no-s
 
 EXTRA_OECONF += "${DEPRECATED_CRYPTO_FLAGS}"
 
-# Disable algorithms not in Sierra Wireless approved list:
+# Disable algorithms and protocols not in Sierra Wireless approved list:
 # TLS1.0, TLS1.1 and DTSL1.
 PACKAGECONFIG += "no-tls1 no-tls1_1"
 SWI_DISALLOWED_CRYPTO_FLAGS = "no-dtls1 no-dtls1-method"
 EXTRA_OECONF += "${SWI_DISALLOWED_CRYPTO_FLAGS}"
+
+SRC_URI += "file://0001-conf-Allow-only-approved-Cipher-suites.patch"
