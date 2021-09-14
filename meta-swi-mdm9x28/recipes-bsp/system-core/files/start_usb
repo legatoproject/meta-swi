@@ -41,14 +41,11 @@ case "$1" in
 
             # FFS/ADB: Try configfs gadget first, then android gadget
             if [ -r $configfs_comp ]; then
-                compstr=`cat $configfs_comp || true`
-                if [ ! -z "$compstr" ] ; then
-                    # Replace configfs composition string delimiter '_' with ','
-                    compstr=`echo $compstr | sed -e 's/_/,/g' | grep -w ffs`
-                fi
+                compstr=$configfs_comp
             else
-                compstr=`grep -w ffs $android_comp || true`
+                compstr=$android_comp
             fi
+            compstr=`grep -w ffs $compstr || true`
             if [ ! -z "$compstr" ] ; then
                 mkdir -p /dev/usb-ffs/adb
                 mount -o uid=2000,gid=2000 -t functionfs adb /dev/usb-ffs/adb

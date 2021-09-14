@@ -121,7 +121,7 @@ configure_configfs_gadget()
     configuration=""
     rm -f configs/c.$((num+1))/f*
     for comp in ${complist}; do
-        match=`echo ${supported} | xargs -n1 | grep -i "${comp}"`
+        match=`echo ${supported} | xargs -n1 | grep -iw "${comp}"`
         if [ -n "${match}" ]; then
             idx=$((idx+1))
             func=`echo ${match} | cut -f 2 -d':'`
@@ -129,7 +129,7 @@ configure_configfs_gadget()
             if [ ${idx} -eq 1 ]; then
                 configuration="${name}"
             else
-                configuration="${configuration}_${name}"
+                configuration="${configuration},${name}"
             fi
             mkdir -p functions/${func}
             ln -s functions/${func} configs/c.$((num+1))/f${idx}
