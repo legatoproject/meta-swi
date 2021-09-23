@@ -41,7 +41,7 @@ index fa090057e..2281af863 100644
  
  	// fetch options
 -	opts = getopt32(argv, "^" "Xs:+d:+t:+" "\0" "=1",
-+	opts = getopt32(argv, "^" "Xs:+d:+t:E:+" "\0" "=1",
++	opts = getopt32(argv, "^" "Xs:+d:+t:+E" "\0" "=1",
  				&speed, &delay, &timeout
  	);
  //	argc -= optind;

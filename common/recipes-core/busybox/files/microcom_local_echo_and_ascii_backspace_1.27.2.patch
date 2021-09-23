@@ -41,7 +41,7 @@ index 5a4bbef..ee2f429 100644
  
  	// fetch options
 -	opts = getopt32(argv, "Xs:+d:+t:+", &speed, &delay, &timeout);
-+	opts = getopt32(argv, "Xs:+d:+t:+E:+", &speed, &delay, &timeout);
++	opts = getopt32(argv, "Xs:+d:+t:+E", &speed, &delay, &timeout);
  //	argc -= optind;
  	argv += optind;
  
