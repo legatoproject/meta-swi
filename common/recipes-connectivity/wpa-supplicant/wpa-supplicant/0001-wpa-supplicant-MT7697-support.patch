@@ -1,0 +1,67 @@
+diff -Narup a/src/ap/ap_drv_ops.c b/src/ap/ap_drv_ops.c
+--- a/src/ap/ap_drv_ops.c	2019-08-07 06:25:25.000000000 -0700
++++ b/src/ap/ap_drv_ops.c	2021-10-21 11:06:49.567313995 -0700
+@@ -548,6 +548,9 @@ int hostapd_set_freq(struct hostapd_data
+ 	struct hostapd_freq_params data;
+ 	struct hostapd_hw_modes *cmode = hapd->iface->current_mode;
+ 
++	if (cmode == NULL)
++                return 0;
++
+ 	if (hostapd_set_freq_params(&data, mode, freq, channel, ht_enabled,
+ 				    vht_enabled, he_enabled, sec_channel_offset,
+ 				    oper_chwidth,
+diff -Narup a/src/drivers/driver_wext.c b/src/drivers/driver_wext.c
+--- a/src/drivers/driver_wext.c	2019-08-07 06:25:25.000000000 -0700
++++ b/src/drivers/driver_wext.c	2021-10-21 12:18:05.601260442 -0700
+@@ -1649,6 +1649,9 @@ static int wpa_driver_wext_get_range(voi
+ 		if (range->enc_capa & IW_ENC_CAPA_4WAY_HANDSHAKE)
+ 			drv->capa.flags |= WPA_DRIVER_FLAGS_4WAY_HANDSHAKE_PSK |
+ 				WPA_DRIVER_FLAGS_4WAY_HANDSHAKE_8021X;
++
++		drv->capa.flags |= WPA_DRIVER_FLAGS_AP;
++
+ 		drv->capa.auth = WPA_DRIVER_AUTH_OPEN |
+ 			WPA_DRIVER_AUTH_SHARED |
+ 			WPA_DRIVER_AUTH_LEAP;
+@@ -2267,7 +2270,21 @@ int wpa_driver_wext_set_mode(void *priv,
+ 	struct wpa_driver_wext_data *drv = priv;
+ 	struct iwreq iwr;
+ 	int ret = -1;
+-	unsigned int new_mode = mode ? IW_MODE_ADHOC : IW_MODE_INFRA;
++	unsigned int new_mode;
++
++	switch (mode) {
++	case 2://WPAS_MODE_AP:
++		new_mode = IW_MODE_MASTER;
++		break;
++
++	case 0://WPAS_MODE_INFRA:
++		new_mode = IW_MODE_INFRA;
++		break;
++
++	default:
++		new_mode = IW_MODE_ADHOC;
++		break;
++	}
+ 
+ 	os_memset(&iwr, 0, sizeof(iwr));
+ 	os_strlcpy(iwr.ifr_name, drv->ifname, IFNAMSIZ);
+diff -Narup a/wpa_supplicant/ap.c b/wpa_supplicant/ap.c
+--- a/wpa_supplicant/ap.c	2019-08-07 06:25:25.000000000 -0700
++++ b/wpa_supplicant/ap.c	2021-10-21 12:22:50.942671302 -0700
+@@ -786,6 +786,14 @@ int wpa_supplicant_create_ap(struct wpa_
+ 	else
+ 		wpa_drv_get_ext_capa(wpa_s, WPA_IF_AP_BSS);
+ 
++	if ((wpa_s->drv_flags & WPA_DRIVER_FLAGS_4WAY_HANDSHAKE_PSK) &&
++	    (params.key_mgmt_suite == WPA_KEY_MGMT_PSK ||
++	     params.key_mgmt_suite == WPA_KEY_MGMT_FT_PSK)) {
++		params.passphrase = ssid->passphrase;
++		if (ssid->psk_set)
++			params.psk = ssid->psk;
++	}
++
+ 	if (wpa_drv_associate(wpa_s, &params) < 0) {
+ 		wpa_msg(wpa_s, MSG_INFO, "Failed to start AP functionality");
+ 		return -1;
