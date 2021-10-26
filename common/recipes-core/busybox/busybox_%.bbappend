@@ -3,6 +3,7 @@ FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
 
 SRC_URI_append = " file://50default \
                    ${@bb.utils.contains('DISTRO_FEATURES', 'lxc', 'file://lxc.cfg', '', d)} \
+                   ${@bb.utils.contains('DISTRO_FEATURES', 'pam', 'file://pam.cfg', '', d)} \
                  "
 
 python() {
@@ -24,6 +25,9 @@ python() {
 }
 
 INITSCRIPT_PARAMS_${PN}-syslog = "start 20 S . stop 80 S ."
+
+PACKAGECONFIG += "${@bb.utils.filter('DISTRO_FEATURES', 'pam', d)}"
+PACKAGECONFIG[pam] = ",,libpam,libpam"
 
 do_install_append() {
   # These conflict with initscripts
