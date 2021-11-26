@@ -71,6 +71,7 @@ configure_configfs_gadget()
                    `" rmnet:rmnet_bam.rmnet_bam_dmux"`
                    `" usb_mbim:mbim.mbim"`
                    `" rawdat:cser.raw.2"`
+                   `" audio:uac1_legacy.uac1_legacy0"`
                    `" storage:mass_storage.0"
 
     # Disable gadget in case it was enabled
