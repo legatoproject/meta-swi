@@ -4,16 +4,16 @@ DESCRIPTION = "This is Debian version of bsdiff and bspatch originally written b
 	       patches to make tools more secure and hardened."
 HOMEPAGE = "http://www.daemonology.net/bsdiff/"
 LICENSE = "BSD"
-LIC_FILES_CHKSUM = "file://debian/copyright;md5=64e8a8b4894377726b48c8a346210d25"
+LIC_FILES_CHKSUM = "file://debian/copyright;md5=c372de180ddb86b67ed1494b0fcf459c"
 SRC_REPO = "git://salsa.debian.org/debian/bsdiff.git;protocol=https"
-SRCREV = "b01df825a4998c00bcf1bb0d622e297ec66cd17c"
+SRCREV = "b800a816106270f2c4e7619bf384005c8f85daec"
 
 # We do not need to create separate nativesdk-* and *-native recipes
 # if we make this declaration.
 BBCLASSEXTEND = "native nativesdk"
 
 # Package version
-VERSNUM = "4.3-21"
+VERSNUM = "4.3-22"
 
 # Recipe version
 RR = "1"
