@@ -1,0 +1,31 @@
+From 4b948ab8a70d86070bb109ffd67d853bf0f938cb Mon Sep 17 00:00:00 2001
+From: Anju Kunjumon <akunjumon@sierrawireless.com>
+Date: Tue, 14 Dec 2021 17:45:58 -0800
+Subject: [PATCH] crond: Reduce log level of start_jobs debug
+
+Reduce the log level of the start_jobs debug from 8, which is the
+default log level, to 7 so that user can enable it only if they want to.
+That print can pollute syslog if there are cron jobs scheduled too
+often. For example, the flash log rotate is scheduled every two minutes.
+
+Signed-off-by: Anju Kunjumon <akunjumon@sierrawireless.com>
+---
+ miscutils/crond.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/miscutils/crond.c b/miscutils/crond.c
+index b533a39..3e48cce 100644
+--- a/miscutils/crond.c
++++ b/miscutils/crond.c
+@@ -948,7 +948,7 @@ static void start_jobs(int wants_start)
+ 				continue;
+ 
+ 			pid = start_one_job(file->cf_username, line);
+-			log8("USER %s pid %3d cmd %s",
++			log7("USER %s pid %3d cmd %s",
+ 				file->cf_username, (int)pid, line->cl_cmd);
+ 			if (pid < 0) {
+ 				file->cf_wants_starting = 1;
+-- 
+2.17.1
+

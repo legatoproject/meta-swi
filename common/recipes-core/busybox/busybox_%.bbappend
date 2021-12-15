@@ -24,7 +24,8 @@ python() {
     else:
         d.setVar('SRC_URI', srcuri + \
                  ' file://microcom_local_echo_and_ascii_backspace_1.29.2.patch' \
-                 ' file://0001-Copy-extended-attributes-if-p-flag-is-provided-to-cp_1.29.2.patch')
+                 ' file://0001-Copy-extended-attributes-if-p-flag-is-provided-to-cp_1.29.2.patch' \
+                 ' file://crond-Reduce-log-level-of-start_jobs-debug.patch')
 }
 
 # Split busybox-cron into a separate package so as to get the start-up scripts through INITSCRIPTS* configuration.
