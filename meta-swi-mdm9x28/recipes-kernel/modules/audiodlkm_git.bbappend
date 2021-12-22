@@ -107,10 +107,10 @@ pkg_postinst_${PN}() {
 	[ -n "$D" ] && OPT="-r $D" || OPT="-s"
 
 	update-rc.d $OPT -f start_audio_le remove
-	update-rc.d $OPT start_audio_le start 30 S . stop 69 S .
+	update-rc.d $OPT start_audio_le start 30 S . stop 70 S .
 
 	update-rc.d $OPT -f load_audio_base remove
-	update-rc.d $OPT load_audio_base start 29 S . stop 70 S .
+	update-rc.d $OPT load_audio_base start 29 S . stop 71 S .
 
 }
 
