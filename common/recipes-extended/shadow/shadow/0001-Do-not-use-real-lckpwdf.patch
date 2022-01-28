@@ -1,4 +1,4 @@
-From 256678d445bc9aa86bbbc38f2a3537bc725c4a55 Mon Sep 17 00:00:00 2001
+From 75a828dbb8a001b34fa74ae9f481c5acd15e9c91 Mon Sep 17 00:00:00 2001
 From: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
 Date: Mon, 18 Nov 2019 15:22:55 -0800
 Subject: [PATCH] Do not use real lckpwdf()
@@ -17,24 +17,24 @@ Resolves: LXSWIREF-1617
 Related: LXSWIREF-1579
 Signed-off-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
 ---
- commonio.c | 4 ++--
+ lib/commonio.c | 4 ++--
  1 file changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/lib/commonio.c b/lib/commonio.c
-index 82cccb9..50f31c4 100644
+index 16fa7e7..9dfb3f8 100644
 --- a/lib/commonio.c
 +++ b/lib/commonio.c
-@@ -399,7 +399,7 @@ int commonio_lock_nowait (struct commonio_db *db, bool log)
- 
- int commonio_lock (struct commonio_db *db)
+@@ -417,7 +417,7 @@ int commonio_lock (struct commonio_db *db)
  {
+ 	int i;
+ 
 -#ifdef HAVE_LCKPWDF
 +#if defined(HAVE_LCKPWDF) && !defined(DISABLE_REAL_LCKPWDF)
  	/*
- 	 * only if the system libc has a real lckpwdf() - the one from
+ 	 * Only if the system libc has a real lckpwdf() - the one from
  	 * lockpw.c calls us and would cause infinite recursion!
-@@ -470,7 +470,7 @@ static void dec_lock_count (void)
- 				nscd_flush_cache ("group");
+@@ -489,7 +489,7 @@ static void dec_lock_count (void)
+ 				sssd_flush_cache (SSSD_DB_PASSWD | SSSD_DB_GROUP);
  				nscd_need_reload = false;
  			}
 -#ifdef HAVE_LCKPWDF
@@ -43,5 +43,5 @@ index 82cccb9..50f31c4 100644
  #endif				/* HAVE_LCKPWDF */
  		}
 -- 
-2.20.1
+2.17.1
 

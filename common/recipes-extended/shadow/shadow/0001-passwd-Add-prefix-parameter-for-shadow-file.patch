@@ -1,4 +1,4 @@
-From 86435279aa6460d30d7504ab9527c9e295064d71 Mon Sep 17 00:00:00 2001
+From 1792f84f2ce20eb2d201ec21397f78b01f9218e3 Mon Sep 17 00:00:00 2001
 From: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
 Date: Thu, 24 Oct 2019 19:08:17 -0700
 Subject: [PATCH] passwd: Add prefix parameter for shadow file
@@ -22,8 +22,8 @@ without any warning.
 Signed-off-by: Dragan Marinkovic <dmarinkovi@sierrawireless.com>
 ---
  lib/shadow.c |  2 +-
- src/passwd.c | 89 +++++++++++++++++++++++++++++++++++++++++-----------
- 2 files changed, 72 insertions(+), 19 deletions(-)
+ src/passwd.c | 85 ++++++++++++++++++++++++++++++++++++++++++----------
+ 2 files changed, 70 insertions(+), 17 deletions(-)
 
 diff --git a/lib/shadow.c b/lib/shadow.c
 index 05cb0e4..8c78176 100644
@@ -39,10 +39,10 @@ index 05cb0e4..8c78176 100644
  
  #ifdef	USE_NIS
 diff --git a/src/passwd.c b/src/passwd.c
-index 3424f3b..2100675 100644
+index 13619b1..3cea527 100644
 --- a/src/passwd.c
 +++ b/src/passwd.c
-@@ -67,6 +67,12 @@
+@@ -62,6 +62,12 @@
  #define E_MISSING	4	/* unexpected failure, passwd file missing */
  #define E_PWDBUSY	5	/* passwd file busy, try again later */
  #define E_BAD_ARG	6	/* invalid argument to option */
@@ -55,7 +55,7 @@ index 3424f3b..2100675 100644
  /*
   * Global variables
   */
-@@ -132,6 +138,7 @@ static bool do_update_pwd = false;
+@@ -127,6 +133,7 @@ static bool do_update_pwd = false;
  
  /* local function prototypes */
  static /*@noreturn@*/void usage (int);
@@ -63,7 +63,7 @@ index 3424f3b..2100675 100644
  
  #ifndef USE_PAM
  static bool reuse (const char *, const struct passwd *);
-@@ -183,6 +190,7 @@ static /*@noreturn@*/void usage (int status)
+@@ -173,6 +180,7 @@ static /*@noreturn@*/void usage (int status)
  	(void) fputs (_("  -w, --warndays WARN_DAYS      set expiration warning days to WARN_DAYS\n"), usageout);
  	(void) fputs (_("  -x, --maxdays MAX_DAYS        set maximum number of days before password\n"
  	                "                                change to MAX_DAYS\n"), usageout);
@@ -71,18 +71,9 @@ index 3424f3b..2100675 100644
  	(void) fputs ("\n", usageout);
  	exit (status);
  }
-@@ -330,7 +338,7 @@ static int new_password (const struct passwd *pw)
- 
- 		/*
- 		 * If enabled, warn about weak passwords even if you are
--		 * root (enter this password again to use it anyway). 
-+		 * root (enter this password again to use it anyway).
- 		 * --marekm
- 		 */
- 		if (amroot && !warned && getdef_bool ("PASS_ALWAYS_WARN")
-@@ -758,6 +766,42 @@ static int check_selinux_access (const char *changed_user,
- 
- #endif				/* WITH_SELINUX */
+@@ -703,6 +711,42 @@ static void update_shadow (void)
+ 	spw_locked = false;
+ }
  
 +/*
 + * Set alternate shadow file full path. If everything is OK, it will return 0.
@@ -123,7 +114,7 @@ index 3424f3b..2100675 100644
  /*
   * passwd - change a user's password file information
   *
-@@ -780,6 +824,8 @@ static int check_selinux_access (const char *changed_user,
+@@ -725,6 +769,8 @@ static void update_shadow (void)
   *	-u	unlock the password of the named account (*)
   *	-w #	set sp_warn to # days (*)
   *	-x #	set sp_max to # days (*)
@@ -132,7 +123,7 @@ index 3424f3b..2100675 100644
   *
   *	(*) requires root permission to execute.
   *
-@@ -825,25 +871,26 @@ int main (int argc, char **argv)
+@@ -770,25 +816,26 @@ int main (int argc, char **argv)
  		 */
  		int c;
  		static struct option long_options[] = {
@@ -175,7 +166,7 @@ index 3424f3b..2100675 100644
  		                         long_options, NULL)) != -1) {
  			switch (c) {
  			case 'a':
-@@ -934,6 +981,12 @@ int main (int argc, char **argv)
+@@ -879,6 +926,12 @@ int main (int argc, char **argv)
  				xflg = true;
  				anyflag = true;
  				break;
@@ -188,15 +179,6 @@ index 3424f3b..2100675 100644
  			default:
  				usage (E_BAD_ARG);
  			}
-@@ -1096,7 +1149,7 @@ int main (int argc, char **argv)
- 		STRFCPY (crypt_passwd, cp);
- 
- 		/*
--		 * See if the user is permitted to change the password. 
-+		 * See if the user is permitted to change the password.
- 		 * Otherwise, go ahead and set a new password.
- 		 */
- 		check_password (pw, sp);
 -- 
-2.20.1
+2.17.1
 
