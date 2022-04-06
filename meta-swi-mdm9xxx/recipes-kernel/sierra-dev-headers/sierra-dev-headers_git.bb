@@ -15,7 +15,7 @@ SRC_URI = " \
 S = "${WORKDIR}/sierra-dev-headers"
 
 # Install all additional files/dirs
-do_install_append() {
+do_install:append() {
     # create include dirs
     install -m 0755 -d ${D}/usr/include/linux/spi/
     install -m 0755 -d ${D}/usr/include/linux/i2c/
@@ -26,9 +26,9 @@ do_install_append() {
 }
 
 # Add files/dirs that need to be put into this package
-FILES_${PN} += " \
+FILES:${PN} += " \
                /usr/include/linux/i2c/sierra_i2cdev.h \
                /usr/include/linux/spi/sierra_spidev.h \
                "
 
-ALLOW_EMPTY_${PN} = "1"
+ALLOW_EMPTY:${PN} = "1"

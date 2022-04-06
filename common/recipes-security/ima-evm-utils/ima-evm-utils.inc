@@ -6,7 +6,7 @@ into the kernel keyring. More about this utility could be found \
 at http://linux-ima.sourceforge.net/evmctl.1.html . "
 
 # Where to Find additional files (patches, etc.).
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 # Package revision number. Change "r" number if you change
 # anything in this package (e.g. add patch, remove patch,
@@ -35,6 +35,6 @@ SRC_URI += "file://0001-attr-xattr.h-is-deprecated.-Use-sys-xattr.h-instead.patc
 inherit autotools gettext pkgconfig
 
 # Fix "QA Issue: No GNU_HASH in the elf binary" problem
-INSANE_SKIP_${PN} = "ldflags"
+INSANE_SKIP:${PN} = "ldflags"
 
 BBCLASSEXTEND = "native nativesdk"

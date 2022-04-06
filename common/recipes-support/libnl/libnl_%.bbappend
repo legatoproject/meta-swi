@@ -1,4 +1,4 @@
-do_install_append() {
+do_install:append() {
     install -m 0755 -d ${D}/sbin
     ln -s ${sbindir}/genl-ctrl-list ${D}/sbin
     ln -s ${sbindir}/nl-class-add ${D}/sbin
@@ -15,4 +15,4 @@ do_install_append() {
     ln -s ${sbindir}/nl-qdisc-list ${D}/sbin
 }
 
-FILES_${PN} += " /sbin"
+FILES:${PN} += " /sbin"

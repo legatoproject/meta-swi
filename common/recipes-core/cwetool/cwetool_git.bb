@@ -7,7 +7,7 @@ PR = "r0"
 
 BBCLASSEXTEND = "native nativesdk"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI = "file://cwezip.cpp"
 SRC_URI += "file://fotapkghdrcat.cpp"

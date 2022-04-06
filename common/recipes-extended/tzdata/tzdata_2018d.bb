@@ -14,7 +14,7 @@ SRC_URI[tzdata.sha256sum] = "5106eddceb5f1ae3a91dbd3960e1b8b11ba0dc08579a31cf072
 
 inherit allarch
 
-RCONFLICTS_${PN} = "timezones timezone-africa timezone-america timezone-antarctica \
+RCONFLICTS:${PN} = "timezones timezone-africa timezone-america timezone-antarctica \
              timezone-arctic timezone-asia timezone-atlantic \
              timezone-australia timezone-europe timezone-indian \
              timezone-iso3166.tab timezone-pacific timezone-zone.tab"
@@ -63,7 +63,7 @@ do_install () {
         chown -R root:root ${D}
 }
 
-pkg_postinst_${PN} () {
+pkg_postinst:${PN} () {
 	etc_lt="$D${sysconfdir}/localtime"
 	src="$D${sysconfdir}/timezone"
 
@@ -94,48 +94,48 @@ PACKAGES = "tzdata tzdata-misc tzdata-posix tzdata-right tzdata-africa \
     tzdata-americas tzdata-antarctica tzdata-arctic tzdata-asia \
     tzdata-atlantic tzdata-australia tzdata-europe tzdata-pacific"
 
-FILES_tzdata-africa += "${datadir}/zoneinfo/Africa/*"
-RPROVIDES_tzdata-africa = "tzdata-africa"
+FILES:tzdata-africa += "${datadir}/zoneinfo/Africa/*"
+RPROVIDES:tzdata-africa = "tzdata-africa"
 
-FILES_tzdata-americas += "${datadir}/zoneinfo/America/*  \
+FILES:tzdata-americas += "${datadir}/zoneinfo/America/*  \
                 ${datadir}/zoneinfo/US/*                \
                 ${datadir}/zoneinfo/Brazil/*            \
                 ${datadir}/zoneinfo/Canada/*            \
                 ${datadir}/zoneinfo/Mexico/*            \
                 ${datadir}/zoneinfo/Chile/*"
-RPROVIDES_tzdata-americas = "tzdata-americas"
+RPROVIDES:tzdata-americas = "tzdata-americas"
 
-FILES_tzdata-antarctica += "${datadir}/zoneinfo/Antarctica/*"
-RPROVIDES_tzdata-antarctica = "tzdata-antarctica"
+FILES:tzdata-antarctica += "${datadir}/zoneinfo/Antarctica/*"
+RPROVIDES:tzdata-antarctica = "tzdata-antarctica"
 
-FILES_tzdata-arctic += "${datadir}/zoneinfo/Arctic/*"
-RPROVIDES_tzdata-arctic = "tzdata-arctic"
+FILES:tzdata-arctic += "${datadir}/zoneinfo/Arctic/*"
+RPROVIDES:tzdata-arctic = "tzdata-arctic"
 
-FILES_tzdata-asia += "${datadir}/zoneinfo/Asia/*        \
+FILES:tzdata-asia += "${datadir}/zoneinfo/Asia/*        \
                 ${datadir}/zoneinfo/Indian/*            \
                 ${datadir}/zoneinfo/Mideast/*"
-RPROVIDES_tzdata-asia = "tzdata-asia"
+RPROVIDES:tzdata-asia = "tzdata-asia"
 
-FILES_tzdata-atlantic += "${datadir}/zoneinfo/Atlantic/*"
-RPROVIDES_tzdata-atlantic = "tzdata-atlantic"
+FILES:tzdata-atlantic += "${datadir}/zoneinfo/Atlantic/*"
+RPROVIDES:tzdata-atlantic = "tzdata-atlantic"
 
-FILES_tzdata-australia += "${datadir}/zoneinfo/Australia/*"
-RPROVIDES_tzdata-australia = "tzdata-australia"
+FILES:tzdata-australia += "${datadir}/zoneinfo/Australia/*"
+RPROVIDES:tzdata-australia = "tzdata-australia"
 
-FILES_tzdata-europe += "${datadir}/zoneinfo/Europe/*"
-RPROVIDES_tzdata-europe = "tzdata-europe"
+FILES:tzdata-europe += "${datadir}/zoneinfo/Europe/*"
+RPROVIDES:tzdata-europe = "tzdata-europe"
 
-FILES_tzdata-pacific += "${datadir}/zoneinfo/Pacific/*"
-RPROVIDES_tzdata-pacific = "tzdata-pacific"
+FILES:tzdata-pacific += "${datadir}/zoneinfo/Pacific/*"
+RPROVIDES:tzdata-pacific = "tzdata-pacific"
 
-FILES_tzdata-posix += "${datadir}/zoneinfo/posix/*"
-RPROVIDES_tzdata-posix = "tzdata-posix"
+FILES:tzdata-posix += "${datadir}/zoneinfo/posix/*"
+RPROVIDES:tzdata-posix = "tzdata-posix"
 
-FILES_tzdata-right += "${datadir}/zoneinfo/right/*"
-RPROVIDES_tzdata-right = "tzdata-right"
+FILES:tzdata-right += "${datadir}/zoneinfo/right/*"
+RPROVIDES:tzdata-right = "tzdata-right"
 
 
-FILES_tzdata-misc += "${datadir}/zoneinfo/Cuba           \
+FILES:tzdata-misc += "${datadir}/zoneinfo/Cuba           \
                 ${datadir}/zoneinfo/Egypt                \
                 ${datadir}/zoneinfo/Eire                 \
                 ${datadir}/zoneinfo/Factory              \
@@ -153,10 +153,10 @@ FILES_tzdata-misc += "${datadir}/zoneinfo/Cuba           \
                 ${datadir}/zoneinfo/Portugal             \
                 ${datadir}/zoneinfo/Singapore            \
                 ${datadir}/zoneinfo/Turkey"
-RPROVIDES_tzdata-misc = "tzdata-misc"
+RPROVIDES:tzdata-misc = "tzdata-misc"
 
 
-FILES_${PN} += "${datadir}/zoneinfo/Pacific/Honolulu     \
+FILES:${PN} += "${datadir}/zoneinfo/Pacific/Honolulu     \
                 ${datadir}/zoneinfo/America/Anchorage    \
                 ${datadir}/zoneinfo/America/Los_Angeles  \
                 ${datadir}/zoneinfo/America/Denver       \
@@ -212,5 +212,5 @@ FILES_${PN} += "${datadir}/zoneinfo/Pacific/Honolulu     \
                 ${datadir}/zoneinfo/Etc/*"
 
 # DM, FIXME: Take a look at the bbappend file for reasons why this is disabled.
-# CONFFILES_${PN} += "${@ "${sysconfdir}/timezone" if bb.utils.to_boolean(d.getVar('INSTALL_TIMEZONE_FILE')) else "" }"
-CONFFILES_${PN} += "${sysconfdir}/localtime"
+# CONFFILES:${PN} += "${@ "${sysconfdir}/timezone" if bb.utils.to_boolean(d.getVar('INSTALL_TIMEZONE_FILE')) else "" }"
+CONFFILES:${PN} += "${sysconfdir}/localtime"

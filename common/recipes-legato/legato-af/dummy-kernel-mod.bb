@@ -20,7 +20,7 @@ SRC_URI = "file://Makefile"
 
 S = "${WORKDIR}"
 
-do_make_scripts_prepend() {
+do_make_scripts:prepend() {
     export STAGING_LIBDIR_NATIVE="${STAGING_LIBDIR_NATIVE}" STAGING_INCDIR_NATIVE="${STAGING_INCDIR_NATIVE}"
 }
 

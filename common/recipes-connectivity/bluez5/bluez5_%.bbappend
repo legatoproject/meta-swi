@@ -1,4 +1,4 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 # Location of Tufello support patch. 0001-hciattach-add-QCA9377-Tuffello-support.patch
 # is coming from public repo, and it is misspelled (Tufello is area of Italian city of Rome).
@@ -24,25 +24,25 @@ EXTRA_OEMAKE += "\
 #  CPPFLAGS='-DMODULE_HAS_MAC_ADDR -DFW_CONFIG_FILE_PATH=\"/etc/bluetooth/firmware.conf\"' \
 # "
 
-PACKAGECONFIG_append = " mesh"
-PACKAGECONFIG_append = " nfc"
+PACKAGECONFIG:append = " mesh"
+PACKAGECONFIG:append = " nfc"
 
 #
 # Extra cleanup
 #
 PACKAGECONFIG[udev] = "--enable-udev,--disable-udev,udev"
 
-# Remove udev dependency. Note that DEPENDS_remove does not work with:
-#     PACKAGECONFIG_CONFARGS_append = " --disable-udev"
+# Remove udev dependency. Note that DEPENDS:remove does not work with:
+#     PACKAGECONFIG_CONFARGS:append = " --disable-udev"
 # even though it should (yet another "learning" experience with Yocto),
 # and 'configure' stage will fail.
-# So, in order to remove udev deps, we need to use PACKAGECONFIG_remove
+# So, in order to remove udev deps, we need to use PACKAGECONFIG:remove
 # instead.
-DEPENDS_remove = "udev"
-PACKAGECONFIG_remove = "udev"
+DEPENDS:remove = "udev"
+PACKAGECONFIG:remove = "udev"
 
 # Install a default /etc/bluetooth/main.conf file.
-do_install_append() {
+do_install:append() {
     if [ -f ${S}/src/main.conf ]; then
         install -m 0644 ${S}/src/main.conf ${D}/${sysconfdir}/bluetooth/
     fi

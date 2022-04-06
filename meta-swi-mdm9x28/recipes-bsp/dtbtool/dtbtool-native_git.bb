@@ -12,7 +12,7 @@ PROVIDES = "dtbtool-native"
 SRCREV = "870cf8f91bc89785ea47c79ae152eb1d858d6e01"
 DTBTOOL_NATIVE_REPO = "git://codeaurora.org/device/qcom/common;branch=jb_rb5.1"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 SRC_URI = "${DTBTOOL_NATIVE_REPO}"
 SRC_URI += "file://makefile"

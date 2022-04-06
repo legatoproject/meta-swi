@@ -4,8 +4,8 @@ key generation, etc. These should be required on host machine \
 only."
 
 # Where to find additional files (patches, etc.).
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
-FILESEXTRAPATHS_prepend := "${IMA_SUPPORT_TOOLS_DIR}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${IMA_SUPPORT_TOOLS_DIR}:"
 
 PR = "r2"
 
@@ -37,4 +37,4 @@ do_install() {
     fi
 }
 
-RDEPENDS_${PN} = "bsdtar attr ima-evm-utils openssl bash"
+RDEPENDS:${PN} = "bsdtar attr ima-evm-utils openssl bash"

@@ -1,2 +1,2 @@
-RDEPENDS_${PN} += "libopencore-amr-dev"
-RDEPENDS_${PN} += "libvo-amrwbenc-dev"
+RDEPENDS:${PN} += "libopencore-amr-dev"
+RDEPENDS:${PN} += "libvo-amrwbenc-dev"

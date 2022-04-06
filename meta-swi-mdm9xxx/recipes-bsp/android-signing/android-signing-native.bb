@@ -12,7 +12,7 @@ PR = "r1"
 SHARED_DIR = "${D}/${base_prefix}/usr/share"
 ANDROID_SIGNING_DIR = "${SHARED_DIR}/android-signing"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 SRC_URI = "git://github.com/SierraWireless/android-signing.git;protocol=https"
 SRC_URI += "file://swi-readme.txt \
             file://swi-key-cwe.sh \

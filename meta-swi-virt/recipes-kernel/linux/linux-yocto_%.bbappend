@@ -1,6 +1,6 @@
 inherit kernel-src-install
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 SRC_URI += "file://squashfs.cfg"
 SRC_URI += "file://smack.cfg"
 SRC_URI += "file://pm.cfg"
@@ -8,35 +8,35 @@ SRC_URI += "file://overlayfs.cfg"
 SRC_URI += "file://ima.cfg"
 SRC_URI += "file://audit.cfg"
 
-RDEPENDS_${PN} += "kern-tools-native"
+RDEPENDS:${PN} += "kern-tools-native"
 
-PACKAGES_prepend = "kernel-tools "
-FILES_kernel-tools = "${KERNEL_SRC_PATH}/arch/*/tools/* \
+PACKAGES:prepend = "kernel-tools "
+FILES:kernel-tools = "${KERNEL_SRC_PATH}/arch/*/tools/* \
                       ${KERNEL_SRC_PATH}/arch/*/tools/.debug/*"
-INSANE_SKIP_kernel-tools = "arch debug-files rpaths"
+INSANE_SKIP:kernel-tools = "arch debug-files rpaths"
 
 # x86
 COMPATIBLE_MACHINE_swi-virt-x86 = "swi-virt-x86"
 
 KMACHINE_swi-virt-x86 = "qemux86"
-KBRANCH_swi-virt-x86 = "${KBRANCH_qemux86}"
+KBRANCH_swi-virt-x86 = "${KBRANCH:qemux86}"
 
-KERNEL_FEATURES_append_swi-virt-x86 = "${KERNEL_FEATURES_append_qemux86}"
+KERNEL_FEATURES:append:swi-virt-x86 = "${KERNEL_FEATURES:append:qemux86}"
 
-SRCREV_machine_swi-virt-x86 = "${SRCREV_machine_qemux86}"
+SRCREV_machine_swi-virt-x86 = "${SRCREV_machine:qemux86}"
 
 # arm
 COMPATIBLE_MACHINE_swi-virt-arm = "swi-virt-arm"
 
 KMACHINE_swi-virt-arm = "qemuarm"
-KBRANCH_swi-virt-arm = "${KBRANCH_qemuarm}"
+KBRANCH_swi-virt-arm = "${KBRANCH:qemuarm}"
 
-SRCREV_machine_swi-virt-arm = "${SRCREV_machine_qemuarm}"
+SRCREV_machine_swi-virt-arm = "${SRCREV_machine:qemuarm}"
 
 # IMA
 DEPENDS += "ima-support-tools-native"
 
-do_configure_append() {
+do_configure:append() {
     # Add ".system" public cert into kernel build area.
     if [ "x${IMA_BUILD}" == "xtrue" ]; then
 
@@ -61,7 +61,7 @@ do_configure_append() {
 DEPENDS += "openssl-native"
 KERNEL_EXTRA_ARGS = " STAGING_LIBDIR_NATIVE=${STAGING_LIBDIR_NATIVE} STAGING_INCDIR_NATIVE=${STAGING_INCDIR_NATIVE} "
 
-do_patch_append() {
+do_patch:append() {
     if ! grep "/openssl" "${S}/scripts/Makefile"; then
         echo 'HOST_EXTRACFLAGS += -I$(STAGING_INCDIR_NATIVE)/'        >> "${S}/scripts/Makefile"
         echo 'HOST_EXTRACFLAGS += -I$(STAGING_INCDIR_NATIVE)/openssl' >> "${S}/scripts/Makefile"
@@ -80,14 +80,14 @@ do_patch_append() {
 
 # The LD_LIBRARY_PATH variable is not set when building kernel.
 # Work around this by adding the build's sysroot libraries to LD_LIBRARY_PATH.
-kernel_do_compile_prepend(){
+kernel_do_compile:prepend(){
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${STAGING_LIBDIR_NATIVE}:${STAGING_LIBDIR_NATIVE}/../../lib
 }
 
-do_install_prepend(){
+do_install:prepend(){
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${STAGING_LIBDIR_NATIVE}:${STAGING_LIBDIR_NATIVE}/../../lib
 }
 
-do_install_append() {
+do_install:append() {
     kernel_src_install
 }

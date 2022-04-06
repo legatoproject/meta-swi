@@ -1,7 +1,7 @@
 # look for files in the layer first
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
-SRC_URI_append = " file://50default \
+SRC_URI:append = " file://50default \
                    ${@bb.utils.contains('DISTRO_FEATURES', 'lxc', 'file://lxc.cfg', '', d)} \
                    ${@bb.utils.contains('DISTRO_FEATURES', 'pam', 'file://pam.cfg', '', d)} \
                    file://crond.cfg \
@@ -31,23 +31,23 @@ python() {
 # Split busybox-cron into a separate package so as to get the start-up scripts through INITSCRIPTS* configuration.
 PACKAGES =+ "${PN}-cron"
 
-FILES_${PN}-cron = "${sysconfdir}/init.d/busybox-cron ${sysconfdir}/cron/crontabs/*"
+FILES:${PN}-cron = "${sysconfdir}/init.d/busybox-cron ${sysconfdir}/cron/crontabs/*"
 
 INITSCRIPT_PACKAGES += "${PN}-cron"
-INITSCRIPT_NAME_${PN}-cron = "busybox-cron"
-INITSCRIPT_PARAMS_${PN}-cron = "start 20 S . stop 80 S ."
+INITSCRIPT_NAME:${PN}-cron = "busybox-cron"
+INITSCRIPT_PARAMS:${PN}-cron = "start 20 S . stop 80 S ."
 
-INITSCRIPT_PARAMS_${PN}-syslog = "start 20 S . stop 80 S ."
+INITSCRIPT_PARAMS:${PN}-syslog = "start 20 S . stop 80 S ."
 
-RDEPENDS_${PN}-cron = "busybox"
+RDEPENDS:${PN}-cron = "busybox"
 
 # Bring in the busybox-cron and logrotate package to rootfs.
-RDEPENDS_${PN}-syslog += "busybox-cron logrotate"
+RDEPENDS:${PN}-syslog += "busybox-cron logrotate"
 
 PACKAGECONFIG += "${@bb.utils.filter('DISTRO_FEATURES', 'pam', d)}"
 PACKAGECONFIG[pam] = ",,libpam,libpam"
 
-do_install_append() {
+do_install:append() {
     # These conflict with initscripts
     rm -rf ${D}${sysconfdir}/init.d/rcS
     rm -rf ${D}${sysconfdir}/init.d/rcK

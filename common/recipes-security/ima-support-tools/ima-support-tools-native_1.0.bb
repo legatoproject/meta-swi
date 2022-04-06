@@ -6,7 +6,7 @@ PROVIDES += "ima-support-tools-native"
 
 inherit native
 
-do_install_append() {
+do_install:append() {
     # Install IMA certificates into temporary build directory. They are currently installed
     # for reference only.
     if [ "x${IMA_BUILD}" == "xtrue" ] ; then

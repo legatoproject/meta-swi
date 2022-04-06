@@ -3,7 +3,7 @@ LICENSE = "GPLv2"
 LIC_FILES_CHKSUM = "file://../COPYING;md5=751419260aa954499f7abaabaa882bbe"
 PR = "r0"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 SRC_URI  = "file://COPYING"
 SRC_URI += "file://i2cgpioctl.c"
@@ -16,8 +16,8 @@ SRC_URI += "file://tools/i2cbusses.h"
 SRC_URI += "file://tools/util.c"
 SRC_URI += "file://tools/util.h"
 
-TARGET_CFLAGS_append_swi-mdm9x15 = " -DCONFIG_MDM9X15"
-TARGET_CFLAGS_append_swi-mdm9x28 = " -DCONFIG_MDM9X28"
+TARGET_CFLAGS:append:swi-mdm9x15 = " -DCONFIG_MDM9X15"
+TARGET_CFLAGS:append:swi-mdm9x28 = " -DCONFIG_MDM9X28"
 
 S="${WORKDIR}/sources"
 

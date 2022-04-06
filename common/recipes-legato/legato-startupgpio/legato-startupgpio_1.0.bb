@@ -31,7 +31,7 @@ compile_target() {
       --append-to-version=${LEGATO_APP_VER}
 }
 
-do_install_prepend() {
+do_install:prepend() {
     # Copy the legato files in the good folder for do_install
     cp -pv ${WORKDIR}/${LEGATO_APP_NAME}/${LEGATO_APP_NAME}.* ${S}
 }

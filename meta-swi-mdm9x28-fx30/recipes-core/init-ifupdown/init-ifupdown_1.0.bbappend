@@ -1,4 +1,4 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 
 SRC_URI += "file://iptables \
@@ -10,7 +10,7 @@ SRC_URI += "file://iptables \
             file://ip6tables.ro.rules \
            "
 
-do_install_append () {
+do_install:append () {
         install -d ${D}${prefix}/local
         install -m 0644 ${WORKDIR}/iptables.rules ${D}${sysconfdir}/
         install -m 0644 ${WORKDIR}/iptables.ro.rules ${D}${prefix}/local/
@@ -23,4 +23,4 @@ do_install_append () {
         install -m 0755 ${WORKDIR}/ip6tables ${D}${sysconfdir}/network/if-pre-up.d
 }
 
-FILES_${PN} += "${prefix}/*"
+FILES:${PN} += "${prefix}/*"

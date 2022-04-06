@@ -1,1 +1,1 @@
-ALTERNATIVE_${PN} =+ " bzip2"
+ALTERNATIVE:${PN} =+ " bzip2"

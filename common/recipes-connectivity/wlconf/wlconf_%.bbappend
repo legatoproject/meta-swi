@@ -23,4 +23,4 @@ do_install() {
     install -m 0644 ${WORKDIR}/${WLCONF_BIN} ${D}/lib/firmware/ti-connectivity/wl18xx-conf.bin
 }
 
-FILES_${PN} = "/lib/firmware/ti-connectivity/wl18xx-conf.bin"
+FILES:${PN} = "/lib/firmware/ti-connectivity/wl18xx-conf.bin"

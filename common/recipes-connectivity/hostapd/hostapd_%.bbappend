@@ -1,10 +1,10 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += " \
             file://hostapd-part-qca.conf \
            "
 
-do_install_append() {
+do_install:append() {
     install -m 0755 -d ${D}/bin
     ln -s ${sbindir}/hostapd ${D}/bin/
     ln -s ${sbindir}/hostapd_cli ${D}/bin/

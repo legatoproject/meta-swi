@@ -1,5 +1,5 @@
 # look for files in the layer first
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 PR="r158"
 
@@ -33,7 +33,7 @@ SRC_URI = "file://functions \
            file://dnsmasq.ecm.conf.in \
            "
 
-SRC_URI_swi-mdm9x28-ar758x-rcy = "file://functions \
+SRC_URI:swi-mdm9x28-ar758x-rcy = "file://functions \
            file://devpts \
            file://mountall.sh \
            file://bootmisc.sh \
@@ -75,22 +75,22 @@ SRC_URI_swi-mdm9x40-ar759x-rcy = "file://functions \
            file://control_msm_watchdog.sh \
            "
 
-SRC_URI_append_swi-mdm9x28-ar758x = "\
+SRC_URI:append:swi-mdm9x28-ar758x = "\
            file://restart_at_uart \
            file://control_msm_watchdog.sh \
            "
 
-SRC_URI_append_swi-mdm9x40-ar759x = "\
+SRC_URI:append:swi-mdm9x40-ar759x = "\
            file://restart_at_uart \
            file://control_msm_watchdog.sh \
            "
 
-SRC_URI_append_arm = " file://alignment.sh"
+SRC_URI:append:arm = " file://alignment.sh"
 
 KERNEL_VERSION = ""
 
 inherit update-alternatives
-DEPENDS_append = " update-rc.d-native"
+DEPENDS:append = " update-rc.d-native"
 
 HALTARGS ?= "-d -f"
 
@@ -194,7 +194,7 @@ do_install () {
     update-rc.d $OPT load_modem.sh start 09 S . stop 90 S .
 }
 
-do_install_swi-mdm9x28-ar758x-rcy() {
+do_install:swi-mdm9x28-ar758x-rcy() {
 
     process_templates
 

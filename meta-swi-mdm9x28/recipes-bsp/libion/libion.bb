@@ -23,5 +23,5 @@ EXTRA_OECONF += "--with-sanitized-headers=${STAGING_KERNEL_BUILDDIR}/usr/include
 
 PACKAGES +="${PN}-test-bin"
 
-FILES_${PN}     = "${libdir}/pkgconfig/* ${libdir}/* ${sysconfdir}/*"
-FILES_${PN}-test-bin = "${base_bindir}/*"
+FILES:${PN}     = "${libdir}/pkgconfig/* ${libdir}/* ${sysconfdir}/*"
+FILES:${PN}-test-bin = "${base_bindir}/*"

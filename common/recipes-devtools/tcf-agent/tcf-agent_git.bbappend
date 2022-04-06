@@ -7,25 +7,25 @@
 
 
 # We have to neuter this function in update-rc.d.bbclass because the absence of init.d scripts (from
-# do_install_append) will cause the generation of some "postinsts" scripts which we don't want.
+# do_install:append) will cause the generation of some "postinsts" scripts which we don't want.
 populate_packages_updatercd() {
 }
 
 # Look for files in the layer first
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}:"
 
 SRC_URI += "file://legato_identify.patch \
            "
 # Prevent dependency on bash
-RDEPENDS_${PN} = ""
+RDEPENDS:${PN} = ""
 CFLAGS += " -DTERMINALS_NO_LOGIN=0"
 
 # Undo what do_install did
-do_install_append() {
+do_install:append() {
     rm -rf ${D}${sysconfdir}/init.d/
     rm -rf ${D}${systemd_unitdir}/system
 }
 
-SYSTEMD_SERVICE_${PN} = ""
+SYSTEMD_SERVICE:${PN} = ""
 
-FILES_${PN} += "/lib"
+FILES:${PN} += "/lib"

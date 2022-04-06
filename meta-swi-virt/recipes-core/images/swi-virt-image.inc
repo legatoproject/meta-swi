@@ -5,17 +5,17 @@ INC_PR = "r0"
 FSTYPE_VIRT ?= "squashfs-lzo"
 
 # Tool to recognize the platform
-IMAGE_INSTALL_append = " bsinfo-stub"
+IMAGE_INSTALL:append = " bsinfo-stub"
 
 # Kernel modules
-IMAGE_INSTALL_append = " kernel-module-softdog"
+IMAGE_INSTALL:append = " kernel-module-softdog"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 
 # Add timezone related packages
-IMAGE_INSTALL_append = " tzdata"
-IMAGE_INSTALL_append = " tzone-utils"
+IMAGE_INSTALL:append = " tzdata"
+IMAGE_INSTALL:append = " tzone-utils"
 
 append_cfg_json() {
     echo "$1" >> $CFG_JSON
@@ -207,5 +207,5 @@ fakeroot ima_evm_sign_rootfs() {
     done 10< "${B}/rootfs.hashed"
 }
 
-IMAGE_PREPROCESS_COMMAND_append = " ima_evm_sign_rootfs; "
+IMAGE_PREPROCESS_COMMAND:append = " ima_evm_sign_rootfs; "
 

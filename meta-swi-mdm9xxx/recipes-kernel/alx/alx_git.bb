@@ -18,7 +18,7 @@ SRC_URI += "file://0001-Module-cannot-deep-sleep.patch;striplevel=6"
 S = "${WORKDIR}/git/drivers/net/ethernet/atheros/alx"
 B = "${S}"
 
-FILES_${PN} = "${sysconfdir}/"
+FILES:${PN} = "${sysconfdir}/"
 
 inherit update-rc.d
 

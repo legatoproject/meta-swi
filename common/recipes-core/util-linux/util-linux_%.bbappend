@@ -1,5 +1,5 @@
 # To get the following done during build time:
-#   RRECOMMENDS_util-linux_remove = " util-linux-scriptlive".
+#   RRECOMMENDS:util-linux:remove = " util-linux-scriptlive".
 # We cannot use BAD_RECOMMENDATIONS, since that variable is used only during do_install, which is
 # before the PACKAGE_PREPROCESS_FUNCS where the RRECOMMENDS are being updated by util-linux
 # recipe.
@@ -10,9 +10,9 @@ python remove_util_linux_binpackages() {
     bad_recommends = [
                       pn + '-scriptlive',
                      ]
-    rrecommends = bb.utils.explode_dep_versions2(d.getVar('RRECOMMENDS_' + pn) or "")
+    rrecommends = bb.utils.explode_dep_versions2(d.getVar('RRECOMMENDS:' + pn) or "")
     for pkg in bad_recommends:
         if pkg in rrecommends:
             del rrecommends[pkg]
-    d.setVar('RRECOMMENDS_' + pn, bb.utils.join_deps(rrecommends, commasep=False))
+    d.setVar('RRECOMMENDS:' + pn, bb.utils.join_deps(rrecommends, commasep=False))
 }

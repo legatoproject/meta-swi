@@ -19,17 +19,17 @@ DEPENDS += "glib-2.0"
 
 S = "${WORKDIR}/git"
 
-ALLOW_EMPTY_${PN} = "1"
+ALLOW_EMPTY:${PN} = "1"
 
 INITSCRIPT_PACKAGES = "${PN}-adbd ${PN}-usb"
 
-INITSCRIPT_NAME_${PN}-adbd = "adbd"
-INITSCRIPT_PARAMS_${PN}-adbd = "start 96 S ."
+INITSCRIPT_NAME:${PN}-adbd = "adbd"
+INITSCRIPT_PARAMS:${PN}-adbd = "start 96 S ."
 
 # Start USB after networking, so hotplug-driven ECM bringup can rely on network
 # config (like iptables) being in place.
-INITSCRIPT_NAME_${PN}-usb = "usb"
-INITSCRIPT_PARAMS_${PN}-usb = "start 21 S ."
+INITSCRIPT_NAME:${PN}-usb = "usb"
+INITSCRIPT_PARAMS:${PN}-usb = "start 21 S ."
 
 inherit update-rc.d
 
@@ -43,7 +43,7 @@ patch_adb_shell() {
 }
 do_patch[postfuncs] += "patch_adb_shell"
 
-do_install_append() {
+do_install:append() {
    install -m 0755 -d ${D}${includedir}/cutils
    install -m 0644  ${S}/include/cutils/* ${D}${includedir}/cutils
    install -m 0644 -D ${S}/include/android/log.h ${D}${includedir}/android/log.h
@@ -70,25 +70,25 @@ do_install_append() {
 }
 
 PACKAGES =+ "${PN}-libmincrypt-dev ${PN}-libmincrypt-staticdev"
-FILES_${PN}-libmincrypt-dev        = "${libdir}/libmincrypt.la ${libdir}/pkgconfig/libmincrypt.pc"
-FILES_${PN}-libmincrypt-staticdev  = "${libdir}/libmincrypt.a"
+FILES:${PN}-libmincrypt-dev        = "${libdir}/libmincrypt.la ${libdir}/pkgconfig/libmincrypt.pc"
+FILES:${PN}-libmincrypt-staticdev  = "${libdir}/libmincrypt.a"
 
 PACKAGES =+ "${PN}-libcutils-dbg ${PN}-libcutils ${PN}-libcutils-dev ${PN}-libcutils-staticdev"
-FILES_${PN}-libcutils-dbg    = "${libdir}/.debug/libcutils.*"
-FILES_${PN}-libcutils        = "${libdir}/libcutils.so.*"
-FILES_${PN}-libcutils-dev    = "${libdir}/libcutils.so ${libdir}/libcutils.la ${libdir}/pkgconfig/libcutils.pc ${includedir}"
-FILES_${PN}-libcutils-staticdev = "${libdir}/libcutils.a"
+FILES:${PN}-libcutils-dbg    = "${libdir}/.debug/libcutils.*"
+FILES:${PN}-libcutils        = "${libdir}/libcutils.so.*"
+FILES:${PN}-libcutils-dev    = "${libdir}/libcutils.so ${libdir}/libcutils.la ${libdir}/pkgconfig/libcutils.pc ${includedir}"
+FILES:${PN}-libcutils-staticdev = "${libdir}/libcutils.a"
 
 PACKAGES =+ "${PN}-adbd-dbg ${PN}-adbd"
-FILES_${PN}-adbd-dbg = "/sbin/.debug/adbd"
-FILES_${PN}-adbd     = "/sbin/adbd ${sysconfdir}/init.d/adbd"
+FILES:${PN}-adbd-dbg = "/sbin/.debug/adbd"
+FILES:${PN}-adbd     = "/sbin/adbd ${sysconfdir}/init.d/adbd"
 
 PACKAGES =+ "${PN}-usb"
-FILES_${PN}-usb     = "${sysconfdir}/init.d/usb ${bindir}/usb_composition ${bindir}/usb/compositions/* ${bindir}/usb/*"
+FILES:${PN}-usb     = "${sysconfdir}/init.d/usb ${bindir}/usb_composition ${bindir}/usb/compositions/* ${bindir}/usb/*"
 
 PACKAGES =+ "${PN}-liblog-dbg ${PN}-liblog ${PN}-liblog-dev ${PN}-liblog-staticdev"
-FILES_${PN}-liblog-dbg    = "${libdir}/.debug/liblog.* ${bindir}/.debug/logcat"
-FILES_${PN}-liblog        = "${libdir}/liblog.so.* ${bindir}/logcat ${sysconfdir}/udev/rules.d/50-log.rules"
-FILES_${PN}-liblog-dev    = "${libdir}/liblog.so ${libdir}/liblog.la"
-FILES_${PN}-liblog-staticdev = "${libdir}/liblog.a"
+FILES:${PN}-liblog-dbg    = "${libdir}/.debug/liblog.* ${bindir}/.debug/logcat"
+FILES:${PN}-liblog        = "${libdir}/liblog.so.* ${bindir}/logcat ${sysconfdir}/udev/rules.d/50-log.rules"
+FILES:${PN}-liblog-dev    = "${libdir}/liblog.so ${libdir}/liblog.la"
+FILES:${PN}-liblog-staticdev = "${libdir}/liblog.a"
 

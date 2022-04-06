@@ -2,7 +2,7 @@ SUMMARY = "update system ld cache"
 DESCRIPTION = "Updates /etc/ld.so.cache file."
 
 # Where to find additional files (patches, etc.).
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 # Package revision number. Change "r" number if you change
 # anything in this package (e.g. add patch, remove patch,

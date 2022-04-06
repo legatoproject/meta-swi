@@ -1,4 +1,4 @@
-do_compile_prepend() {
+do_compile:prepend() {
     export VIRT_TARGET_ARCH=${VIRT_ARCH}
 }
 

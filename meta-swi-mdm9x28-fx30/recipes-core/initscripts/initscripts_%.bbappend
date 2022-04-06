@@ -1,10 +1,10 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 SRC_URI += " \
             file://0001-ALPC-232-Provide-factory-default-recovery-mechanism.patch \
            "
 
-do_install_append() {
+do_install:append() {
     rm -f ${D}${sysconfdir}/run.env
     # Common functions and environment
     install -m 0444 ${WORKDIR}/functions.env -D ${D}${sysconfdir}/run.env

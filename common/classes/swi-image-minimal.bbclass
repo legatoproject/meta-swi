@@ -7,7 +7,7 @@ ROOTFS_PKGMANAGE_BOOTSTRAP ??= ""
 IMAGE_INSTALL = "packagegroup-core-boot ${ROOTFS_PKGMANAGE_BOOTSTRAP} ${CORE_IMAGE_EXTRA_INSTALL} ${CORE_SWI_IMAGE}"
 
 # Enable debug packages
-IMAGE_INSTALL_append = " ${@bb.utils.contains('EXT_SWI_IMG', 'true', '${EXTENDED_SWI_IMAGE}', '', d)}"
+IMAGE_INSTALL:append = " ${@bb.utils.contains('EXT_SWI_IMG', 'true', '${EXTENDED_SWI_IMAGE}', '', d)}"
 
 inherit swi-image
 inherit swi-version
@@ -61,5 +61,5 @@ fakeroot do_label_files() {
     fi
 }
 
-IMAGE_PREPROCESS_COMMAND_append = " do_rm_unused_files; "
-IMAGE_PREPROCESS_COMMAND_append += " ${@ "do_label_files" if bb.utils.to_boolean(d.getVar('LEGATO_BUILD', True)) else "" }"
+IMAGE_PREPROCESS_COMMAND:append = " do_rm_unused_files; "
+IMAGE_PREPROCESS_COMMAND:append += " ${@ "do_label_files" if bb.utils.to_boolean(d.getVar('LEGATO_BUILD', True)) else "" }"

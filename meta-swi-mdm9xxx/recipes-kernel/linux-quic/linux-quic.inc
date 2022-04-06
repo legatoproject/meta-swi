@@ -33,6 +33,6 @@ LINUX_VERSION ?= "${@determine_linux_version(d)}"
 PV = "${LINUX_VERSION}"
 PR = "r1"
 
-do_install_append() {
+do_install:append() {
     kernel_src_install
 }

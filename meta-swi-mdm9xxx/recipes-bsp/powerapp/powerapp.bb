@@ -19,9 +19,9 @@ SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=penguin"
 SRC_URI = "${SYSTEMCORE_REPO}"
 
 PACKAGES =+ "${PN}-reboot ${PN}-shutdown ${PN}-powerconfig"
-FILES_${PN}-reboot = "${sysconfdir}/init.d/reboot"
-FILES_${PN}-shutdown = "${sysconfdir}/init.d/shutdown"
-FILES_${PN}-powerconfig = "${sysconfdir}/init.d/power_config"
+FILES:${PN}-reboot = "${sysconfdir}/init.d/reboot"
+FILES:${PN}-shutdown = "${sysconfdir}/init.d/shutdown"
+FILES:${PN}-powerconfig = "${sysconfdir}/init.d/power_config"
 
 PROVIDES =+ "${PN}-reboot ${PN}-shutdown ${PN}-powerconfig"
 
@@ -44,27 +44,27 @@ do_install() {
         cd -
 }
 
-pkg_postinst_${PN}-reboot () {
+pkg_postinst:${PN}-reboot () {
         [ -n "$D" ] && OPT="-r $D" || OPT="-s"
         update-rc.d $OPT -f reboot remove
         # Take a look at the FIXME comment.
         # update-rc.d $OPT reboot stop 98 K .
 }
 
-pkg_postinst_${PN}-shutdown () {
+pkg_postinst:${PN}-shutdown () {
         [ -n "$D" ] && OPT="-r $D" || OPT="-s"
         update-rc.d $OPT -f shutdown remove
         # Take a look at the FIXME comment above.
         # update-rc.d $OPT shutdown stop 99 K .
 }
 
-pkg_postinst_${PN}-powerconfig () {
+pkg_postinst:${PN}-powerconfig () {
         [ -n "$D" ] && OPT="-r $D" || OPT="-s"
         update-rc.d $OPT -f power_config remove
         update-rc.d $OPT power_config start 50 S . stop 50 S .
 }
 
-pkg_postinst_${PN} () {
+pkg_postinst:${PN} () {
     [ -n "$D" ] && OPT="-r $D" || OPT="-s"
     update-rc.d $OPT -f reset_reboot_cookie remove
     update-rc.d $OPT reset_reboot_cookie start 55 S .

@@ -1,7 +1,7 @@
 # Used by legato/targetFiles/virt/build.sh to build a Docker image
 DEPENDS += "qemu-system-native"
 
-do_compile_prepend() {
+do_compile:prepend() {
     export VIRT_TARGET_ARCH=${VIRT_ARCH}
 }
 

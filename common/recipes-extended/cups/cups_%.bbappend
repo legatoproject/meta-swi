@@ -1,2 +1,2 @@
-DEPENDS_remove = "gnutls"
-PACKAGECONFIG_append = "ssl"
+DEPENDS:remove = "gnutls"
+PACKAGECONFIG:append = "ssl"

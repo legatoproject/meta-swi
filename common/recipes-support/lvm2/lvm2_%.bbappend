@@ -1,1 +1,1 @@
-PACKAGECONFIG_remove = "thin-provisioning-tools"
+PACKAGECONFIG:remove = "thin-provisioning-tools"

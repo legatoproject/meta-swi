@@ -1,2 +1,2 @@
 # Add mkfs.ext*
-RDEPENDS_${PN} += "e2fsprogs"
+RDEPENDS:${PN} += "e2fsprogs"

@@ -1,11 +1,11 @@
 # look for files in the layer first
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
-SRC_URI_append = "\
+SRC_URI:append = "\
            file://run.env \
            "
 
-do_install_append() {
+do_install:append() {
     rm -f ${D}${sysconfdir}/run.env
     # Common functions and environment
     install -m 0444 ${WORKDIR}/functions.env -D ${D}${sysconfdir}/run.env

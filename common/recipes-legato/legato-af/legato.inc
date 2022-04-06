@@ -89,7 +89,7 @@ do_unpack() {
 
 PRIVATE_LIBS = "libjansson.so.4"
 
-do_compile_prepend() {
+do_compile:prepend() {
     export LEGATO_ROOT="${S}"
     export PATH="${S}/bin:$PATH"
     export KCONFIG="${RECIPE_SYSROOT_NATIVE}/usr/bin/kconfig"

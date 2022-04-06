@@ -31,9 +31,9 @@ do_install() {
 			${D}${sbindir}/wlconf/official_inis/
 }
 
-FILES_${PN} += " \
+FILES:${PN} += " \
 	${sbindir}/wlconf \
 	${sbindir}/wlconf/official_inis \
 "
 
-FILES_${PN}-dbg += "${sbindir}/wlconf/.debug"
+FILES:${PN}-dbg += "${sbindir}/wlconf/.debug"

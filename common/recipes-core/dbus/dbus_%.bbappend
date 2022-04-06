@@ -1,1 +1,1 @@
-EXTRA_OECONF_remove = " --with-system-socket=/run/dbus/system_bus_socket"
+EXTRA_OECONF:remove = " --with-system-socket=/run/dbus/system_bus_socket"

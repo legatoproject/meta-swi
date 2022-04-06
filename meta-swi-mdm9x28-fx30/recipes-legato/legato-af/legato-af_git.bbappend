@@ -1,5 +1,5 @@
 
-do_compile_prepend() {
+do_compile:prepend() {
     # Check to see if $LEGATO_VERSION has already been defined
     if [ -z "${LEGATO_VERSION}"]; then
         # If it has not, build a unique string for the version

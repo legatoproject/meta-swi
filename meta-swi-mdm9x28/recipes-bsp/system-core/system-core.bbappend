@@ -5,8 +5,8 @@ SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=mdm"
 
 DEPENDS += "zlib openssl libcap"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
-SRC_URI_append_swi-mdm9x28 += "file://0001-Fix-build-without-liblog.patch"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
+SRC_URI:append:swi-mdm9x28 += "file://0001-Fix-build-without-liblog.patch"
 SRC_URI += "file://composition-sierra_dev"
 SRC_URI += "file://start_usb"
 SRC_URI += "file://0002-QTI9X07-125-Do-not-start-adb-if-not-enabled.patch"
@@ -16,7 +16,7 @@ SRC_URI += "file://use-accessors-for-rsa.patch"
 SRC_URI += "file://include-sysmacros-for-major.patch"
 SRC_URI += "file://0001-logging-Add-Android-logging-macros.patch"
 
-do_install_append() {
+do_install:append() {
     install -m 0755 -d ${D}${includedir}/log
     install -m 0644  ${S}/include/log/* ${D}${includedir}/log
     rm ${D}${bindir}/usb_composition

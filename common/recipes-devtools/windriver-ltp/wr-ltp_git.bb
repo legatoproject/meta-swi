@@ -19,11 +19,11 @@ PR = "r8"
 # we have a few python scripts and need a little more
 # than just python-core
 #
-RDEPENDS_${PN} = "ltp-testsuite open-posix-testsuite python python-textutils binutils-symlinks"
+RDEPENDS:${PN} = "ltp-testsuite open-posix-testsuite python python-textutils binutils-symlinks"
 
 DEPENDS = "libaio"
-DEPENDS_append_x86-64 += "numactl"
-DEPENDS_append_x86 += "numactl"
+DEPENDS:append:x86-64 += "numactl"
+DEPENDS:append:x86 += "numactl"
 
 SRC_URI = "git://github.com/linux-test-project/ltp.git;protocol=git \
            file://README \
@@ -67,8 +67,8 @@ inherit autotools-brokensep
 
 PACKAGES += "open-posix-testsuite"
 PACKAGES += "ltp-testsuite"
-FILES_open-posix-testsuite += "/opt/open_posix_testsuite/"
-FILES_ltp-testsuite += "/opt/ltp/"
+FILES:open-posix-testsuite += "/opt/open_posix_testsuite/"
+FILES:ltp-testsuite += "/opt/ltp/"
 
 TARGET_CC_ARCH += "${LDFLAGS}"
 

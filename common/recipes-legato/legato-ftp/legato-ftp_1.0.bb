@@ -12,11 +12,11 @@ LEGATO_APP_VER = "1.0"
 
 DEPENDS = "legato-af"
 DEPENDS +=  "curl"
-RDEPENDS_${PN} =  "curl"
-RDEPENDS_${PN} += "gnutls"
-RDEPENDS_${PN} += "libtasn1"
-RDEPENDS_${PN} += "zlib"
-RDEPENDS_${PN} += "libgcrypt"
+RDEPENDS:${PN} =  "curl"
+RDEPENDS:${PN} += "gnutls"
+RDEPENDS:${PN} += "libtasn1"
+RDEPENDS:${PN} += "zlib"
+RDEPENDS:${PN} += "libgcrypt"
 
 SRC_URI  = "file://ftp/ftp.adef"
 
@@ -41,7 +41,7 @@ compile_target() {
         --ldflags=-pthread
 }
 
-do_install_prepend() {
+do_install:prepend() {
     # Copy the legato files in the good folder for do_install
     cp -pv ${WORKDIR}/${LEGATO_APP_NAME}/${LEGATO_APP_NAME}.* ${S}
 }

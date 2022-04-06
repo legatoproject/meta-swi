@@ -540,7 +540,7 @@ def tune_local_conf_src_mirror(lconf, ns):
                 # Use external SWI download mirror
                 set_option(
                     lconf,
-                    "PREMIRRORS_prepend",
+                    "PREMIRRORS:prepend",
                     [
                         "https?$://.*/.* https://get.legato.io/yocto/mirror/ \\n",
                         "git://.*/.*     https://get.legato.io/yocto/mirror/ \\n",
@@ -721,7 +721,7 @@ def tune_local_conf_misc(lconf, ns):
     set_option(lconf, "FIRMWARE_PATH", ns.ar_yocto_path)
 
     # Remove GNUTLS
-    set_option(lconf, "PACKAGECONFIG_remove", "gnutls")
+    set_option(lconf, "PACKAGECONFIG:remove", "gnutls")
 
     # Set PACKAGE_CLASSES
     set_option(lconf, "PACKAGE_CLASSES", "package_ipk")

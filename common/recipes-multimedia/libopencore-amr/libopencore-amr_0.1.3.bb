@@ -14,7 +14,7 @@ S = "${WORKDIR}/opencore-amr-${PV}"
 
 inherit autotools pkgconfig
 
-EXTRA_OECONF_append_arm = " \
+EXTRA_OECONF:append:arm = " \
     --enable-gcc-armv5 \
 "
 

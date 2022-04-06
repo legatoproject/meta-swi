@@ -1,7 +1,7 @@
-do_install_append() {
+do_install:append() {
     install -m 0755 -d ${D}/sbin
     ln -s ${sbindir}/crda ${D}/sbin
 }
 
-RDEPENDS_${PN} = ""
-FILES_${PN} += " /sbin"
+RDEPENDS:${PN} = ""
+FILES:${PN} += " /sbin"

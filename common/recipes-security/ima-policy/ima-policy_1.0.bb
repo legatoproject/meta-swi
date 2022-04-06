@@ -19,7 +19,7 @@ IMA_POLICY_IMMUTABLE_FILES ?= "ima-immutable-files.policy"
 IMA_SMACK_IMMUTABLE_FILES_LABEL ?= "${IMA_SMACK}"
 
 # Where to find additional files (patches, etc.).
-FILESEXTRAPATHS_prepend := "${IMA_POLICY_DIR}:${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${IMA_POLICY_DIR}:${THISDIR}/files:"
 
 # Package revision number. Change "r" number if you change
 # anything in this package (e.g. add patch, remove patch,

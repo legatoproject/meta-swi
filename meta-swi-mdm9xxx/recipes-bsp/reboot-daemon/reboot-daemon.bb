@@ -15,7 +15,7 @@ inherit autotools
 
 S = "${WORKDIR}/git"
 
-EXTRA_OEMAKE_append = " CROSS=${HOST_PREFIX}"
+EXTRA_OEMAKE:append = " CROSS=${HOST_PREFIX}"
 
 do_install() {
     install -m 0755 ${S}/../build/reboot-daemon -D ${D}/sbin/reboot-daemon

@@ -13,7 +13,7 @@ SRC_URI = "file://embms_kernel \
 
 S = "${WORKDIR}/embms_kernel"
 
-FILES_${PN} = "${sysconfdir}/"
+FILES:${PN} = "${sysconfdir}/"
 
 INITSCRIPT_NAME = "start_embms_le"
 INITSCRIPT_PARAMS = "start 35 5 . stop 15 0 1 6 ."

@@ -15,8 +15,8 @@ DEPENDS += "libarchive-native"
 DEPENDS += "bsdiff-native"
 
 # Framework dependencies
-RDEPENDS_${PN} += "libgcc"
-RDEPENDS_${PN} += "libstdc++"
+RDEPENDS:${PN} += "libgcc"
+RDEPENDS:${PN} += "libstdc++"
 
 # Optional framework support
 PACKAGECONFIG ??= "nopython"
@@ -157,19 +157,19 @@ do_install_image() {
     done
 }
 
-FILES_${PN}-dbg += "usr/local/*/.debug/*"
-FILES_${PN}-dbg += "*/.debug/*"
+FILES:${PN}-dbg += "usr/local/*/.debug/*"
+FILES:${PN}-dbg += "*/.debug/*"
 
-FILES_${PN}-dev += "usr/local/lib/libjansson.so"
-FILES_${PN}-dev += "usr/local/lib/libjansson.so.4"
+FILES:${PN}-dev += "usr/local/lib/libjansson.so"
+FILES:${PN}-dev += "usr/local/lib/libjansson.so.4"
 
-FILES_${PN}-dev += "lib/libjansson.so"
-FILES_${PN}-dev += "lib/libjansson.so.4"
+FILES:${PN}-dev += "lib/libjansson.so"
+FILES:${PN}-dev += "lib/libjansson.so.4"
 
-FILES_${PN} += "opt/legato/*"
-FILES_${PN} += "usr/local/*"
-FILES_${PN} += "mnt/legato/*"
+FILES:${PN} += "opt/legato/*"
+FILES:${PN} += "usr/local/*"
+FILES:${PN} += "mnt/legato/*"
 
-INSANE_SKIP_${PN} = "installed-vs-shipped dev-deps dev-so already-stripped"
-INSANE_SKIP_${PN}-dev = "dev-elf"
+INSANE_SKIP:${PN} = "installed-vs-shipped dev-deps dev-so already-stripped"
+INSANE_SKIP:${PN}-dev = "dev-elf"
 

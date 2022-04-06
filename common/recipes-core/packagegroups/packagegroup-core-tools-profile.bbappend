@@ -1,2 +1,2 @@
-RRECOMMENDS_${PN}_remove = "perf"
-RDEPENDS_${PN}_remove = "lttng-modules"
+RRECOMMENDS:${PN}:remove = "perf"
+RDEPENDS:${PN}:remove = "lttng-modules"

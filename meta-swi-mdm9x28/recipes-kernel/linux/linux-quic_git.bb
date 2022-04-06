@@ -7,7 +7,7 @@ LIC_FILES_CHKSUM = "file://COPYING;md5=d7810fab7487fb0aad327b76f1be7cd7"
 COMPATIBLE_MACHINE = "(swi-mdm9x28)"
 
 # Override KERNEL_CC for Linux kernel build
-KERNEL_CC_prepend = "${LINUX_REPO_DIR}/scripts/gcc-wrapper.py "
+KERNEL_CC:prepend = "${LINUX_REPO_DIR}/scripts/gcc-wrapper.py "
 
 # Provide a config baseline for things so the kernel will build...
 KBUILD_DEFCONFIG ?= "mdm9607_defconfig"
@@ -22,12 +22,12 @@ KERNEL_BOOT_OPTIONS =+ "${SYSLINUX_DEFAULT_CONSOLE}"
 KBUILD_DEFCONFIG_SNIPPETS ?= ""
 
 # Override for Qemu
-COMPATIBLE_MACHINE_swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
-KBUILD_DEFCONFIG_swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
-COMPATIBLE_MACHINE_swi-mdm9x28-fx30-qemu = "swi-mdm9x28-fx30-qemu"
-KBUILD_DEFCONFIG_swi-mdm9x28-fx30-qemu = "mdm9607-swi-qemu_defconfig"
-COMPATIBLE_MACHINE_swi-mdm9x28-qemu = "swi-mdm9x28-qemu"
-KBUILD_DEFCONFIG_swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
+COMPATIBLE_MACHINE:swi-mdm9x28-ar758x-qemu = "swi-mdm9x28-ar758x-qemu"
+KBUILD_DEFCONFIG:swi-mdm9x28-ar758x-qemu = "mdm9607-swi-qemu_defconfig"
+COMPATIBLE_MACHINE:swi-mdm9x28-fx30-qemu = "swi-mdm9x28-fx30-qemu"
+KBUILD_DEFCONFIG:swi-mdm9x28-fx30-qemu = "mdm9607-swi-qemu_defconfig"
+COMPATIBLE_MACHINE:swi-mdm9x28-qemu = "swi-mdm9x28-qemu"
+KBUILD_DEFCONFIG:swi-mdm9x28-qemu = "mdm9607-swi-qemu_defconfig"
 
 B = "${WORKDIR}/build"
 KERNEL_EXTRA_ARGS        += "O=${B}"
@@ -37,14 +37,14 @@ KERNEL_EXTRA_ARGS        += "O=${B}"
 # that is found in some directory listed in the FILESPATH search path.
 LINUX_REPO_DIR_PARENT = "${@os.path.dirname(d.getVar('LINUX_REPO_DIR', False))}"
 LINUX_REPO_DIR_BASE = "${@os.path.basename(d.getVar('LINUX_REPO_DIR', False))}"
-FILESPATH_prepend = "${LINUX_REPO_DIR_PARENT}:"
+FILESPATH:prepend = "${LINUX_REPO_DIR_PARENT}:"
 SRC_URI = "file://${LINUX_REPO_DIR_BASE}"
 
 do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_populate_sysroot"
 
 DEPENDS += "ima-support-tools-native gcc"
 
-do_unpack_append() {
+do_unpack:append() {
     wrkdir = d.getVar('WORKDIR', True)
     srcdir = d.getVar('S', True)
     os.system("mkdir -p %s" % (srcdir))
@@ -54,7 +54,7 @@ do_unpack_append() {
 # Use this to include the IMA kernel key into the trusted keyring
 IMA_INCLUDE_KERNEL_KEY ?= "true"
 
-do_configure_prepend() {
+do_configure:prepend() {
     cp ${S}/arch/arm/configs/${KBUILD_DEFCONFIG} ${WORKDIR}/defconfig
 
     # Add ".system" public cert into kernel build area. Kernel build
@@ -73,7 +73,7 @@ do_configure_prepend() {
     done
 }
 
-do_compile_append() {
+do_compile:append() {
     oe_runmake dtbs ${KERNEL_EXTRA_ARGS}
 }
 
@@ -116,7 +116,7 @@ gen_master_dtb() {
     fi
 }
 
-do_deploy_append() {
+do_deploy:append() {
     kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
     if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
         kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin

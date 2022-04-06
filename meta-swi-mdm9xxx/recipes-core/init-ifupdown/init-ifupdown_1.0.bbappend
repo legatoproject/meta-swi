@@ -1,5 +1,5 @@
 # Look at this directlry first.
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 SRC_URI += "file://rules.v4 \
             file://rules.v6 \
@@ -7,7 +7,7 @@ SRC_URI += "file://rules.v4 \
             file://rules-qemu.v6 \
            "
 
-do_install_append() {
+do_install:append() {
     [[ "${MACHINE}" == "*qemu*" ]] && qemu="-qemu" || qemu=
 
     install -d ${D}${sysconfdir}/iptables

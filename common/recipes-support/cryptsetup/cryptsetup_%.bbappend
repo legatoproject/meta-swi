@@ -1,6 +1,6 @@
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
-FILES_${PN} += " /usr/sbin"
+FILES:${PN} += " /usr/sbin"
 
 python() {
   import re
@@ -12,11 +12,11 @@ python() {
   if re.match('1.7', pv):
     d.setVar('SRC_URI', srcuri + \
              ' file://file_read_only_open_1.7.4.patch' )
-    d.setVar('SRC_URI_append_class-native', ' file://Retry-device_open-without-direct-io_1.7.4.patch' )
+    d.setVar('SRC_URI:append:class-native', ' file://Retry-device_open-without-direct-io_1.7.4.patch' )
   else:
     d.setVar('SRC_URI', srcuri + \
              ' file://file_read_only_open.patch' )
-    d.setVar('SRC_URI_append_class-native', ' file://Retry-device_open-without-direct-io.patch' )
+    d.setVar('SRC_URI:append:class-native', ' file://Retry-device_open-without-direct-io.patch' )
 }
 
-PACKAGECONFIG_remove_class-target = "udev"
+PACKAGECONFIG:remove:class-target = "udev"

@@ -19,7 +19,7 @@ O = "${WORKDIR}/${PN}-obj"
 # other stages for things like the autotools stuff works like it's supposed
 # to without too many extra special interventions...
 
-python do_fetch_prepend() {
+python do_fetch:prepend() {
     import shutil
 
     target = d.getVar("SRC_DIR", expand=True)

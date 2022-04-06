@@ -19,7 +19,7 @@ EXTRA_OEMAKE = "INCLUDES='-I${S}/include'"
 
 DEPENDS = "system-core"
 
-do_install_append () {
+do_install:append () {
     install -d ${D}${includedir}
     install -m 0644 ${S}/include/hardware/gps.h -D ${D}${includedir}/hardware/gps.h
     install -m 0644 ${S}/include/hardware/hardware.h -D ${D}${includedir}/hardware/hardware.h

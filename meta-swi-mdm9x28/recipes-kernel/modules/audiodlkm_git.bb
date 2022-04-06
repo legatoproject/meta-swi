@@ -14,9 +14,9 @@ SRC_URI += "file://${BASEMACHINE}/"
 
 S = "${WORKDIR}/vendor/qcom/opensource/audio-kernel"
 
-FILES_${PN} += "${nonarch_base_libdir}/modules/${KERNEL_VERSION}/extra/*"
-FILES_${PN} += "${sysconfdir}/*"
-FILES_${PN}+="/etc/initscripts/start_audio_le"
+FILES:${PN} += "${nonarch_base_libdir}/modules/${KERNEL_VERSION}/extra/*"
+FILES:${PN} += "${sysconfdir}/*"
+FILES:${PN}+="/etc/initscripts/start_audio_le"
 
 EXTRA_OEMAKE += "TARGET_SUPPORT=${BASEMACHINE}"
 
@@ -33,7 +33,7 @@ do_configure() {
 INITSCRIPT_NAME = "start_audio_le"
 INITSCRIPT_PARAMS = "start 97 5 . stop 15 0 1 6 ."
 
-do_install_append() {
+do_install:append() {
   install -d ${STAGING_KERNEL_BUILDDIR}/audio-kernel/
   install -d ${STAGING_KERNEL_BUILDDIR}/audio-kernel/linux
   install -d ${STAGING_KERNEL_BUILDDIR}/audio-kernel/linux/mfd
@@ -62,14 +62,14 @@ fi
    rm -fr ${D}/${nonarch_base_libdir}/modules/${KERNEL_VERSION}/extra/soc
 }
 
-do_install_append_mdm() {
+do_install:append:mdm() {
   install -m 0755 ${WORKDIR}/${BASEMACHINE}/audio_load.conf -D ${D}${sysconfdir}/modprobe.d/audio_load.conf
   install -d ${D}${sysconfdir}/init.d
   install -m 0755 ${WORKDIR}/${BASEMACHINE}/start_audio_le ${D}${sysconfdir}/init.d/start_audio_le
   install -d ${D}${systemd_unitdir}/system/multi-user.target.wants/
 }
 
-pkg_postinst_${PN} () {
+pkg_postinst:${PN} () {
     [ -n "$D" ] && OPT="-r $D" || OPT="-s"
     # remove all rc.d-links potentially created from alternatives
     update-rc.d $OPT -f ${INITSCRIPT_NAME} remove
@@ -95,7 +95,7 @@ addtask do_module_signing after do_package before do_package_write_ipk
 # The inherit of module.bbclass will automatically name module packages with
 # kernel-module-" prefix as required by the oe-core build environment. Also it
 # replaces '_' with '-' in the module name.
-RPROVIDES_${PN} += "\
+RPROVIDES:${PN} += "\
 	kernel-module-apr-dlkm \
 	kernel-module-adsp-loader-dlkm \
 	kernel-module-q6-dlkm \

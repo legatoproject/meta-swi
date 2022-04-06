@@ -1,7 +1,7 @@
 # look for files in the layer first
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
-SRC_URI_append = " file://prepro.awk \
+SRC_URI:append = " file://prepro.awk \
                    file://run.env \
                    file://run_getty.sh.in \
                    file://mountall.sh \
@@ -27,12 +27,12 @@ ECM_MASK ?= "255.255.255.0"
 
 # Required by mount_unionfs
 DATA_DIR = "/data"
-FILES_${PN} += " ${DATA_DIR}"
+FILES:${PN} += " ${DATA_DIR}"
 
 # Create a package that contains only run.env
-PACKAGES_prepend += "${PN}-runenv "
-FILES_${PN}-runenv = "${sysconfdir}/run.env"
-RDEPENDS_${PN} += "${PN}-runenv"
+PACKAGES:prepend += "${PN}-runenv "
+FILES:${PN}-runenv = "${sysconfdir}/run.env"
+RDEPENDS:${PN} += "${PN}-runenv"
 
 #
 # Preprocess *.in files with @if directives.
@@ -61,7 +61,7 @@ process_templates() {
 
 }
 
-do_install_append () {
+do_install:append () {
 
     process_templates
 

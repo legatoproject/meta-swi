@@ -1,11 +1,11 @@
 # DM, FIXME: tzdata recipe was "borrowed" from poky 2.5. However, d.getVar methods in Y2.2 and Y2.5
 # are different. This change is here to allow proper compilation of tzdata in Y2.2 environment.
-CONFFILES_${PN} += "${@ "${sysconfdir}/timezone" if bb.utils.to_boolean(d.getVar('INSTALL_TIMEZONE_FILE', True)) else "" }"
+CONFFILES:${PN} += "${@ "${sysconfdir}/timezone" if bb.utils.to_boolean(d.getVar('INSTALL_TIMEZONE_FILE', True)) else "" }"
 
 # We need to add/change a few things.
-FILES_${PN} += "/usr/share/zoneinfo/localtime"
+FILES:${PN} += "/usr/share/zoneinfo/localtime"
 
-FILES_${PN} += "${datadir}/zoneinfo/Pacific/Marquesas   \
+FILES:${PN} += "${datadir}/zoneinfo/Pacific/Marquesas   \
                 ${datadir}/zoneinfo/America/St_Johns    \
                 ${datadir}/zoneinfo/Asia/Tehran         \
                 ${datadir}/zoneinfo/Asia/Kabul          \
@@ -17,7 +17,7 @@ FILES_${PN} += "${datadir}/zoneinfo/Pacific/Marquesas   \
                 ${datadir}/zoneinfo/Pacific/Norfolk     \
                 ${datadir}/zoneinfo/Pacific/Chatham"
 
-do_install_append () {
+do_install:append () {
 
     # We do have RO file systems, and on these, we cannot change
     # timezone links. So, make sure that default timezone file name

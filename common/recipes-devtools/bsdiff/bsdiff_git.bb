@@ -32,17 +32,17 @@ SRC_URI += "file://0001-makefile-fix.patch"
 SRC_URI += "file://0002-package-as-library.patch"
 
 # Where to find additional files
-FILESEXTRAPATHS_prepend := "${THISDIR}/files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
 # This package depends on bzip2 even at runtime.
 DEPENDS_BZIP2 = "bzip2-replacement-native"
-DEPENDS_BZIP2_class-target = "bzip2"
-DEPENDS_BZIP2_class-nativesdk = "nativesdk-bzip2"
+DEPENDS_BZIP2:class-target = "bzip2"
+DEPENDS_BZIP2:class-nativesdk = "nativesdk-bzip2"
 DEPENDS = "${DEPENDS_BZIP2}"
-RDEPENDS_${PN} += "bzip2"
+RDEPENDS:${PN} += "bzip2"
 
 # Avoid installed-vs-shipped errors.
-FILES_${PN} += "${bindir}/bsdiff ${bindir}/bspatch"
+FILES:${PN} += "${bindir}/bsdiff ${bindir}/bspatch"
 
 # EXTRA_CFLAGS and EXTRA_LDFLAGS are expected by package Makefile,
 # BUILD_CFLAGS and BUILD_LDFLAGS are Yocto exported build variables.

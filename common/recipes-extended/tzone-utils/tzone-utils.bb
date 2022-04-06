@@ -2,7 +2,7 @@ SUMMARY = "timezone utilities"
 DESCRIPTION = "Manipulates timezone on system level."
 
 # Where to find additional files (patches, etc.).
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}_files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}_files:"
 
 # Package revision number. Change "r" number if you change
 # anything in this package (e.g. add patch, remove patch,

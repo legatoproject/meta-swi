@@ -1,1 +1,1 @@
-RPROVIDES_${PN} += "libcrypto"
+RPROVIDES:${PN} += "libcrypto"

@@ -11,9 +11,9 @@ KERNEL_IMAGEDEST = "boot"
 DEPENDS += "dtc-native"
 #DEPENDS += " llvm-arm-toolchain-native"
 
-LDFLAGS_aarch64 = "-O1 --hash-style=gnu --as-needed"
+LDFLAGS:aarch64 = "-O1 --hash-style=gnu --as-needed"
 TARGET_CXXFLAGS += "-Wno-format"
-EXTRA_OEMAKE_append += "INSTALL_MOD_STRIP=1"
+EXTRA_OEMAKE:append += "INSTALL_MOD_STRIP=1"
 
 # Determine linux version from sources
 def determine_linux_version(d):
@@ -49,7 +49,7 @@ do_compile () {
     oe_runmake CC="${KERNEL_CC}" LD="${KERNEL_LD}" ${KERNEL_EXTRA_ARGS} $use_alternate_initrd
 }
 
-do_shared_workdir_append () {
+do_shared_workdir:append () {
         cp Makefile $kerneldir/
         cp -fR usr $kerneldir/
 

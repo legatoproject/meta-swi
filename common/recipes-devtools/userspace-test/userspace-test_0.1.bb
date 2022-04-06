@@ -35,8 +35,8 @@ do_install () {
         find ${S}/ -executable -type f -exec cp {} ${D}/opt/${BPN}/ \;
 }
 
-FILES_${PN} += "/opt/userspace-test/*" 
-FILES_${PN}_dbg += "/opt/userspace-test/.debug" 
+FILES:${PN} += "/opt/userspace-test/*" 
+FILES:${PN}_dbg += "/opt/userspace-test/.debug" 
 
 INHIBIT_PACKAGE_DEBUG_SPLIT = "1"
 INHIBIT_PACKAGE_STRIP = "1"

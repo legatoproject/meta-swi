@@ -2,9 +2,9 @@ inherit swi-image-initramfs
 
 IMAGE_FSTYPES += "cpio.gz"
 
-PACKAGE_INSTALL_append = " initramfs-mdminit"
+PACKAGE_INSTALL:append = " initramfs-mdminit"
 
-fakeroot do_filter_rootfs_append () {
+fakeroot do_filter_rootfs:append () {
 
     cd ${IMAGE_ROOTFS}
 

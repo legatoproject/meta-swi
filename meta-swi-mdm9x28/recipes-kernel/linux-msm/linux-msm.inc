@@ -8,16 +8,16 @@ do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_po
 
 DEPENDS += "ima-support-tools-native gcc"
 DEPENDS += " mkbootimg-native dtbtool-native openssl-native kern-tools-native"
-RDEPENDS_${KERNEL_PACKAGE_NAME}-base = ""
+RDEPENDS:${KERNEL_PACKAGE_NAME}-base = ""
 
-LDFLAGS_aarch64 = "-O1 --hash-style=gnu --as-needed"
+LDFLAGS:aarch64 = "-O1 --hash-style=gnu --as-needed"
 
-DEPENDS_append_aarch64 = " libgcc"
-KERNEL_CC_append_aarch64 = " ${TOOLCHAIN_OPTIONS}"
-KERNEL_LD_append_aarch64 = " ${TOOLCHAIN_OPTIONS}"
+DEPENDS:append:aarch64 = " libgcc"
+KERNEL_CC:append:aarch64 = " ${TOOLCHAIN_OPTIONS}"
+KERNEL_LD:append:aarch64 = " ${TOOLCHAIN_OPTIONS}"
 
 # Update KERNEL_CC for Linux kernel build to run wrapper script.
-KERNEL_CC_prepend = "${LINUX_REPO_DIR}/scripts/gcc-wrapper.py "
+KERNEL_CC:prepend = "${LINUX_REPO_DIR}/scripts/gcc-wrapper.py "
 
 KERNEL_PRIORITY           = "9001"
 # Add V=1 to KERNEL_EXTRA_ARGS for verbose
@@ -26,7 +26,7 @@ KERNEL_EXTRA_ARGS        += "O=${B}"
 
 LINUX_REPO_DIR_PARENT = "${@os.path.dirname(d.getVar('LINUX_REPO_DIR', False))}"
 LINUX_REPO_DIR_BASE = "${@os.path.basename(d.getVar('LINUX_REPO_DIR', False))}"
-FILESPATH_prepend = "${LINUX_REPO_DIR_PARENT}:"
+FILESPATH:prepend = "${LINUX_REPO_DIR_PARENT}:"
 SRC_URI = "file://${LINUX_REPO_DIR_BASE} \
           "
 
@@ -45,7 +45,7 @@ do_kernel_checkout[noexec] = "1"
 # extra task for configuration checks
 addtask kernel_configcheck after do_configure before do_compile
 
-do_unpack_append() {
+do_unpack:append() {
     wrkdir = d.getVar('WORKDIR', True)
     srcdir = d.getVar('S', True)
     os.system("mkdir -p %s" % (srcdir))
@@ -61,7 +61,7 @@ IMA_INCLUDE_KERNEL_KEY ?= "true"
 IMA_LOCAL_CA_PEM = "${@os.path.basename(d.getVar('IMA_LOCAL_CA_X509', False))}"
 KERNEL_EXTRA_ARGS += "${@oe.utils.conditional('IMA_BUILD', 'true', 'CONFIG_SYSTEM_TRUSTED_KEYS=\"${IMA_LOCAL_CA_PEM}\"', '', d)}"
 
-do_configure_prepend() {
+do_configure:prepend() {
     cp ${S}/arch/arm/configs/${KBUILD_DEFCONFIG} ${WORKDIR}/defconfig
 
     # Add ".system" public cert into kernel build area. Kernel build
@@ -82,15 +82,15 @@ do_configure_prepend() {
 }
 
 
-do_compile_append() {
+do_compile:append() {
     oe_runmake dtbs ${KERNEL_EXTRA_ARGS}
 }
 
-do_install_append() {
+do_install:append() {
     kernel_src_install
 }
 
-sysroot_stage_all_append () {
+sysroot_stage_all:append () {
         sysroot_stage_dir ${D}${KERNEL_SRC_PATH} ${SYSROOT_DESTDIR}${KERNEL_SRC_PATH}
 }
 
@@ -131,7 +131,7 @@ gen_master_dtb() {
     fi
 }
 
-do_deploy_prepend() {
+do_deploy:prepend() {
     # Remove kernel binary mysteriously installed by previous steps
     if [ -f ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE} ] ; then
         rm -f ${DEPLOY_DIR_IMAGE}/${KERNEL_IMAGETYPE}
@@ -139,7 +139,7 @@ do_deploy_prepend() {
 }
 
 
-do_deploy_append() {
+do_deploy:append() {
     kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}
     if [ "${INITRAMFS_IMAGE_BUNDLE}" -eq 1 ]; then
         kernel_img=${DEPLOYDIR}/${KERNEL_IMAGETYPE}-initramfs-${MACHINE}.bin
@@ -169,9 +169,9 @@ do_deploy_append() {
 
 
 # Put the zImage in the kernel-dev pkg
-FILES_${KERNEL_PACKAGE_NAME}-dev += "/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${KERNEL_VERSION}"
+FILES:${KERNEL_PACKAGE_NAME}-dev += "/${KERNEL_IMAGEDEST}/${KERNEL_IMAGETYPE}-${KERNEL_VERSION}"
 
-FILES_${KERNEL_PACKAGE_NAME}-dbg += "${KERNEL_SRC_PATH}/arch/*/boot/*/.debug/*"
+FILES:${KERNEL_PACKAGE_NAME}-dbg += "${KERNEL_SRC_PATH}/arch/*/boot/*/.debug/*"
 
 
 python get_verity_key_id() {

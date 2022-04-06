@@ -23,4 +23,4 @@ EXTRA_OECONF += "--prefix=/etc \
                  --with-sanitized-headers=${SANITIZED_HEADERS} \
                  --with-glib"
 
-FILES_${PN} += "${prefix}/snd_soc_msm/*"
+FILES:${PN} += "${prefix}/snd_soc_msm/*"

@@ -1,4 +1,4 @@
-do_install_append() {
+do_install:append() {
     # Some additional sysctl customization for security
     echo "" >> ${D}${sysconfdir}/sysctl.conf
     echo "# Customize security" >> ${D}${sysconfdir}/sysctl.conf

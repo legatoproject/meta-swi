@@ -1,1 +1,1 @@
-RDEPENDS_${PN} += "system-core-adbd"
+RDEPENDS:${PN} += "system-core-adbd"

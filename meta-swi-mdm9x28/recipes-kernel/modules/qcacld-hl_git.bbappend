@@ -25,7 +25,7 @@ SRC_URI += "file://WCNSS_cfg.dat \
            "
 
 # Add our own QCA9377 config.
-do_configure_append() {
+do_configure:append() {
     install -m 0644 ${WORKDIR}/WCNSS_cfg.dat ${S}/firmware_bin/
     install -m 0644 ${WORKDIR}/WCNSS_qcom_cfg.ini ${S}/firmware_bin/
 }

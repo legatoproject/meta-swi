@@ -11,7 +11,7 @@ SRC_REPO = "git://codeaurora.org/platform/vendor/qcom-opensource/wlan/qcacld-2.0
 
 PR = "r0"
 
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}-files:"
 
 SRC_URI = "${SRC_REPO}"
 S = "${WORKDIR}/git"
@@ -31,7 +31,7 @@ python __anonymous () {
          d.setVar('CHIP_NAME', '')
 }
 
-FILES_${PN}     += "lib/firmware/wlan/*"
+FILES:${PN}     += "lib/firmware/wlan/*"
 
 do_unpack[deptask] = "do_populate_sysroot"
 PR = "r0"

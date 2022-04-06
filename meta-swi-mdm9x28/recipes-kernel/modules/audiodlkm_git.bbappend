@@ -15,7 +15,7 @@
 SRCREV = "859fcc26b5c49f889fc0a2f7b7fadcbcba80ab0e"
 SRC_REPO = "git://codeaurora.org/platform/vendor/opensource/audio-kernel;branch=LE.UM.3.4.2.r1.9"
 PR = "r0"
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}-files:"
 SRC_URI = "${SRC_REPO}"
 S = "${WORKDIR}/git"
 BASEMACHINE = "${BASEMACHINE_QCOM}"
@@ -62,19 +62,19 @@ INITSCRIPT_PARAMS = ""
 # KERNEL_CC += "-DMDM9607_AUDIO_TOMTOM"
 
 # Use update-rc.d directly here.
-DEPENDS_append = " update-rc.d-native"
+DEPENDS:append = " update-rc.d-native"
 
 do_unpack[deptask] = "do_populate_sysroot"
 
 # Do not execute
-do_install_append_mdm[noexec] = "1"
+do_install:append:mdm[noexec] = "1"
 
 # Under normal circumstances audiodlkm would not be included
 # into final rootfs image if kernel version does not match.
 # However, we should prevent time waste if someone tries to
 # "bitbake" this package on its own, and required kernel
 # version does not match with base system requirements.
-do_fetch_prepend() {
+do_fetch:prepend() {
 
     kernel_provider = d.getVar("PREFERRED_PROVIDER_virtual/kernel", True)
     kernel_version = d.getVar('PREFERRED_VERSION_%s' % kernel_provider, True)
@@ -90,10 +90,10 @@ do_configure() {
 	cp -f ${WORKDIR}/wm8944.{c,h} ${WORKDIR}/git/asoc/codecs/.
 }
 
-# This is here in order to add to whatever is in audiodlkm_git.bb:do_install_append()
+# This is here in order to add to whatever is in audiodlkm_git.bb:do_install:append()
 # so we do not have to have same code in two places. It will be added __after__ the
-# content of audiodlkm_git.bb:do_install_append() .
-do_install_append() {
+# content of audiodlkm_git.bb:do_install:append() .
+do_install:append() {
 
 	install -d ${D}${sysconfdir}/init.d
 
@@ -102,7 +102,7 @@ do_install_append() {
 }
 
 # Delayed: Will execute at the time of rootfs installation
-pkg_postinst_${PN}() {
+pkg_postinst:${PN}() {
 
 	[ -n "$D" ] && OPT="-r $D" || OPT="-s"
 
@@ -115,7 +115,7 @@ pkg_postinst_${PN}() {
 }
 
 # DM, FIXME: Remove this override once audio is fully working.
-# pkg_postinst_${PN}() {
+# pkg_postinst:${PN}() {
 #	:
 # }
 
@@ -127,7 +127,7 @@ pkg_postinst_${PN}() {
 # Otherwise, bitbake would complain that nothing provides
 # kernel-module-apr-dlkm-${KERNEL_VERSION}, even though this kernel module
 # really exists.
-RPROVIDES_${PN} += "\
+RPROVIDES:${PN} += "\
 	kernel-module-apr-dlkm-${KERNEL_VERSION} \
 	kernel-module-adsp-loader-dlkm-${KERNEL_VERSION} \
 	kernel-module-q6-dlkm-${KERNEL_VERSION} \

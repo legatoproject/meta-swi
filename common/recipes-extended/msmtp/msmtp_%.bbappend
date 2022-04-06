@@ -1,1 +1,1 @@
-DEPENDS_remove = "gnutls"
+DEPENDS:remove = "gnutls"

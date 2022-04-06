@@ -11,60 +11,60 @@ inherit ubi-image
 inherit dm-verity-hash
 inherit set-files-attr
 
-IMAGE_INSTALL_append = " start-scripts-find-partitions"
-IMAGE_INSTALL_append = " start-scripts-firmware-links"
-IMAGE_INSTALL_append = " cryptsetup"
+IMAGE_INSTALL:append = " start-scripts-find-partitions"
+IMAGE_INSTALL:append = " start-scripts-firmware-links"
+IMAGE_INSTALL:append = " cryptsetup"
 
 # Install busybox mdev instead of udev. This is
 # here just as a reminder, because we are doing
 # manual installation of mdev.
-# IMAGE_INSTALL_append = " busybox-mdev"
+# IMAGE_INSTALL:append = " busybox-mdev"
 
 # Add WiFi tools and scripts
-IMAGE_INSTALL_append = " wpa-supplicant"
-IMAGE_INSTALL_append = " hostapd"
-IMAGE_INSTALL_append = " iw"
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' ti-wifi-utils-wl18xx', '', d)}"
-IMAGE_INSTALL_append = " crda"
-IMAGE_INSTALL_append = " i2cgpioctl"
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' sierra-init-tiwifi', '', d)}"
+IMAGE_INSTALL:append = " wpa-supplicant"
+IMAGE_INSTALL:append = " hostapd"
+IMAGE_INSTALL:append = " iw"
+IMAGE_INSTALL:append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' ti-wifi-utils-wl18xx', '', d)}"
+IMAGE_INSTALL:append = " crda"
+IMAGE_INSTALL:append = " i2cgpioctl"
+IMAGE_INSTALL:append = " ${@bb.utils.contains('MACHINE_FEATURES', 'tiwifi', ' sierra-init-tiwifi', '', d)}"
 
 #================
 # QCA9377 support
 #================
 # Install: kernel module, firmware, bluez (for Bluetooth), and init scripts
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcawifi', \
+IMAGE_INSTALL:append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcawifi', \
   ' qcacld-hl', '', d)}"
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcabt', \
+IMAGE_INSTALL:append = " ${@bb.utils.contains('MACHINE_FEATURES', 'qcabt', \
   ' bluez5', '', d)}"
-IMAGE_INSTALL_append = " ${@bb.utils.contains_any('MACHINE_FEATURES', 'qcawifi qcabt', \
+IMAGE_INSTALL:append = " ${@bb.utils.contains_any('MACHINE_FEATURES', 'qcawifi qcabt', \
   ' sierra-init-qca9377', '', d)}"
 # Add kernel audio
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'msmaudio', ' audiodlkm', '', d)}"
+IMAGE_INSTALL:append = " ${@bb.utils.contains('MACHINE_FEATURES', 'msmaudio', ' audiodlkm', '', d)}"
 
 # Add eventual legato dependency
 DEPENDS += "${@check_legato_pkg(d, "legato-image")}"
 
-IMAGE_INSTALL_append = " embms-kernel"
-IMAGE_INSTALL_append = " kernel-modules"
+IMAGE_INSTALL:append = " embms-kernel"
+IMAGE_INSTALL:append = " kernel-modules"
 
 # Add linkmon app to monitor USB link
-IMAGE_INSTALL_append = " linkmon"
+IMAGE_INSTALL:append = " linkmon"
 
 # Add timezone related packages
-IMAGE_INSTALL_append = " tzdata"
-IMAGE_INSTALL_append = " tzone-utils"
+IMAGE_INSTALL:append = " tzdata"
+IMAGE_INSTALL:append = " tzone-utils"
 
 # Add replacements for busybox utils in order to properly handle
 # extended file attributes.
-IMAGE_INSTALL_append = " libarchive"
+IMAGE_INSTALL:append = " libarchive"
 
 # Add tinyalsa utils. We are primarily adding it because of kernel 4.14 audio modules. It does not
 # hurt to have it on all mdm9x28 based platforms.
-IMAGE_INSTALL_append = " ${@bb.utils.contains('MACHINE_FEATURES', 'alsa', ' tinyalsa', '', d)}"
+IMAGE_INSTALL:append = " ${@bb.utils.contains('MACHINE_FEATURES', 'alsa', ' tinyalsa', '', d)}"
 
 # Add Linux containers if required by configuration
-IMAGE_INSTALL_append = " ${@bb.utils.contains('DISTRO_FEATURES', 'lxc', ' lxc', '', d)}"
+IMAGE_INSTALL:append = " ${@bb.utils.contains('DISTRO_FEATURES', 'lxc', ' lxc', '', d)}"
 
 create_ubinize_config() {
     local cfg_path=$1

@@ -7,8 +7,8 @@ SRC_URI = "file://init.sh \
           "
 
 # init.sh requires run.env
-RDEPENDS_${PN} += "initscripts-runenv"
-RDEPENDS_${PN} += "busybox"
+RDEPENDS:${PN} += "initscripts-runenv"
+RDEPENDS:${PN} += "busybox"
 
 PR = "r11"
 
@@ -17,7 +17,7 @@ do_install() {
     install -m 0755 ${WORKDIR}/init.sh ${D}/init
 }
 
-FILES_${PN} += " /init "
+FILES:${PN} += " /init "
 
 # Due to kernel depdendency
 PACKAGE_ARCH = "${MACHINE_ARCH}"

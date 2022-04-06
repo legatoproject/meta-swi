@@ -8,7 +8,7 @@ S = "${WORKDIR}/fakeroot-${PV}"
 
 # Fix "QA Issue: -dev package contains non-symlink .so"
 FILES_SOLIBSDEV = ""
-FILES_${PN} += "${libdir}/*.so"
+FILES:${PN} += "${libdir}/*.so"
 
 # Archives can be deleted from the latest mirror, so pick a snapshot
 # corresponding to this fakeroot version.
@@ -29,11 +29,11 @@ EXTRA_OECONF = " --with-ipc=tcp --program-prefix="
 
 EXTRA_OEMAKE = "'CFLAGS=-I${STAGING_INCDIR} -DHAVE_LINUX_CAPABILITY_H'"
 
-do_configure_prepend() {
+do_configure:prepend() {
     mkdir -p "${S}/build-aux"
 }
 
-do_install_append() {
+do_install:append() {
     install -d ${D}${includedir}/fakeroot
     install -m 644 *.h ${D}${includedir}/fakeroot
 }
@@ -41,7 +41,7 @@ do_install_append() {
 # fakeroot needs getopt which is provided by the util-linux package,
 # it also needs libcap.
 DEPENDS = "libcap"
-RDEPENDS_${PN} = "util-linux libcap"
+RDEPENDS:${PN} = "util-linux libcap"
 
 # for snaphot debian - orig
 SRC_URI[md5sum] = "964e5f438f1951e5a515dd54edd50fa6"

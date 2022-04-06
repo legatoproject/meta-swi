@@ -17,7 +17,7 @@ SRC_REPO = "git://android.googlesource.com/platform/external/tinyalsa;protocol=h
 SRC_URI[md5sum] = "27fac0657e9eb8bc99206ed523a23839"
 SRC_URI[sha256sum] = "b1d448828b6f8df45bc5b0eda2e849d11e5c01df8c551f41687555764b168099"
 PR = "r0"
-FILESEXTRAPATHS_prepend := "${THISDIR}/${PN}-files:"
+FILESEXTRAPATHS:prepend := "${THISDIR}/${PN}-files:"
 SRC_URI = "${SRC_REPO}"
 S = "${WORKDIR}/git"
 B = "${S}"
@@ -107,5 +107,5 @@ do_install () {
 
 }
 
-FILES_${PN}-dev = "${libdir}/lib*.so ${includedir}/tinyalsa/tinyalsa_lib.h"
-FILES_${PN} = "${bindir}/* ${libdir}/lib*.so.*"
+FILES:${PN}-dev = "${libdir}/lib*.so ${includedir}/tinyalsa/tinyalsa_lib.h"
+FILES:${PN} = "${bindir}/* ${libdir}/lib*.so.*"

@@ -1,1 +1,1 @@
-PACKAGECONFIG_remove = "gnutls"
+PACKAGECONFIG:remove = "gnutls"
