@@ -19,7 +19,6 @@ SRC_URI = "file://functions \
            file://find-touchscreen.sh \
            file://rcS \
            file://rcK \
-           file://GPLv2.patch \
            file://confighw.sh \
            file://swiapplaunch.sh.in \
            file://restart_swi_apps.in \

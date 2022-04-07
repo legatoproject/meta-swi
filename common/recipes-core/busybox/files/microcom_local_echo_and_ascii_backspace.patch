@@ -1,4 +1,4 @@
-From cef57573ce2339d8c30f8b657dde33567250fdb3 Mon Sep 17 00:00:00 2001
+From 7522412ffab6eab068e068da9a0995703a704587 Mon Sep 17 00:00:00 2001
 From: Bertrand Roussel <broussel@sierrawireless.com>
 Date: Tue, 19 Jun 2018 06:09:08 -0700
 Subject: [PATCH] microcom: add 'local echo' parameter
@@ -8,44 +8,44 @@ Subject: [PATCH] microcom: add 'local echo' parameter
  1 file changed, 12 insertions(+), 2 deletions(-)
 
 diff --git a/miscutils/microcom.c b/miscutils/microcom.c
-index 5a4bbef..ee2f429 100644
+index 97b4634..5250864 100644
 --- a/miscutils/microcom.c
 +++ b/miscutils/microcom.c
 @@ -18,7 +18,7 @@
  //kbuild:lib-$(CONFIG_MICROCOM) += microcom.o
  
  //usage:#define microcom_trivial_usage
--//usage:       "[-d DELAY] [-t TIMEOUT] [-s SPEED] [-X] TTY"
-+//usage:       "[-d DELAY] [-t TIMEOUT] [-s SPEED] [-X] [-E] TTY"
+-//usage:       "[-d DELAY_MS] [-t TIMEOUT_MS ] [-s SPEED] [-X] TTY"
++//usage:       "[-d DELAY_MS] [-t TIMEOUT_MS ] [-s SPEED] [-X] [-E] TTY"
  //usage:#define microcom_full_usage "\n\n"
- //usage:       "Copy bytes for stdin to TTY and from TTY to stdout\n"
- //usage:     "\n	-d	Wait up to DELAY ms for TTY output before sending every"
+ //usage:       "Copy bytes from stdin to TTY and from TTY to stdout\n"
+ //usage:     "\n	-d DELAY	Wait up to DELAY ms for TTY output before sending"
 @@ -26,6 +26,7 @@
- //usage:     "\n	-t	Exit if both stdin and TTY are silent for TIMEOUT ms"
- //usage:     "\n	-s	Set serial line to SPEED"
- //usage:     "\n	-X	Disable special meaning of NUL and Ctrl-X from stdin"
+ //usage:     "\n	-t TIMEOUT	Exit if both stdin and TTY are silent for TIMEOUT ms"
+ //usage:     "\n	-s SPEED	Set serial line to SPEED"
+ //usage:     "\n	-X		Disable special meaning of NUL and Ctrl-X from stdin"
 +//usage:     "\n	-E	Enable local echo and use ASCII code (08) for BACKSPACE char"
  
  #include "libbb.h"
  #include "common_bufsiz.h"
-@@ -67,6 +68,7 @@ int microcom_main(int argc UNUSED_PARAM, char **argv)
+@@ -63,6 +64,7 @@ int microcom_main(int argc UNUSED_PARAM, char **argv)
  		OPT_s = 1 << 1, // baudrate
  		OPT_d = 1 << 2, // wait for device response, ms
  		OPT_t = 1 << 3, // timeout, ms
-+		OPT_E = 1 << 4, // local echo and ASCII backspace char 
++		OPT_E = 1 << 4, // local echo and ASCII backspace char
  	};
  	speed_t speed = 9600;
  	int delay = -1;
-@@ -74,7 +76,7 @@ int microcom_main(int argc UNUSED_PARAM, char **argv)
+@@ -70,7 +72,7 @@ int microcom_main(int argc UNUSED_PARAM, char **argv)
  	unsigned opts;
  
  	// fetch options
--	opts = getopt32(argv, "Xs:+d:+t:+", &speed, &delay, &timeout);
-+	opts = getopt32(argv, "Xs:+d:+t:+E", &speed, &delay, &timeout);
+-	opts = getopt32(argv, "^" "Xs:+d:+t:+" "\0" "=1",
++	opts = getopt32(argv, "^" "Xs:+d:+t:+E" "\0" "=1",
+ 				&speed, &delay, &timeout
+ 	);
  //	argc -= optind;
- 	argv += optind;
- 
-@@ -159,6 +161,14 @@ int microcom_main(int argc UNUSED_PARAM, char **argv)
+@@ -157,6 +159,14 @@ int microcom_main(int argc UNUSED_PARAM, char **argv)
  				if (24 == c)
  					break;
  			}
@@ -61,5 +61,5 @@ index 5a4bbef..ee2f429 100644
  			if (delay >= 0)
  				safe_poll(pfd, 1, delay);
 -- 
-2.11.0
+2.17.1
 
