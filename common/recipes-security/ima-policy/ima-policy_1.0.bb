@@ -2,8 +2,8 @@ SUMMARY = "ima-policy"
 DESCRIPTION = "IMA policy file."
 
 # Location of non-default policy file (if any). In order for this to work,
-# add IMA_POLICY_DIR variable to BB_ENV_EXTRAWHITE list. For example:
-#    export BB_ENV_EXTRAWHITE="IMA_POLICY_DIR"
+# add IMA_POLICY_DIR variable to BB_ENV_PASSTHROUGH_ADDITIONS list. For example:
+#    export BB_ENV_PASSTHROUGH_ADDITIONS="IMA_POLICY_DIR"
 # COPYING file must be located in the same directory. Do not forget to
 # change its md5sum below.
 IMA_POLICY_DIR ?= "."

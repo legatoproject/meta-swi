@@ -48,6 +48,6 @@ SRC_URI[md5sum] = "964e5f438f1951e5a515dd54edd50fa6"
 SRC_URI[sha256sum] = "2e045b3160370b8ab4d44d1f8d267e5d1d555f1bb522d650e7167b09477266ed"
 
 # http://errors.yoctoproject.org/Errors/Details/35143/
-PNBLACKLIST[fakeroot] ?= "BROKEN: QA Issue: -dev package contains non-symlink .so"
+SKIP_RECIPE[fakeroot] ?= "BROKEN: QA Issue: -dev package contains non-symlink .so"
 
 BBCLASSEXTEND = "native nativesdk"
