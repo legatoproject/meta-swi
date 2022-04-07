@@ -22,8 +22,8 @@ PR = "r8"
 RDEPENDS:${PN} = "ltp-testsuite open-posix-testsuite python python-textutils binutils-symlinks"
 
 DEPENDS = "libaio"
-DEPENDS:append:x86-64 += "numactl"
-DEPENDS:append:x86 += "numactl"
+DEPENDS:append:x86-64 = " numactl"
+DEPENDS:append:x86 = " numactl"
 
 SRC_URI = "git://github.com/linux-test-project/ltp.git;protocol=git \
            file://README \

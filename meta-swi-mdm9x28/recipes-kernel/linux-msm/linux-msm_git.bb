@@ -13,7 +13,7 @@ DEPENDS += "dtc-native"
 
 LDFLAGS:aarch64 = "-O1 --hash-style=gnu --as-needed"
 TARGET_CXXFLAGS += "-Wno-format"
-EXTRA_OEMAKE:append += "INSTALL_MOD_STRIP=1"
+EXTRA_OEMAKE:append = " INSTALL_MOD_STRIP=1"
 
 # Determine linux version from sources
 def determine_linux_version(d):

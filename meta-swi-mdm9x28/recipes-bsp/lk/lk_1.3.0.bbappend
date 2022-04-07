@@ -9,7 +9,7 @@ LK_HASH_MODE = "android_signing"
 
 EXTRA_OEMAKE += "LINUX_KERNEL_DIR='${LINUX_REPO_DIR}'"
 EXTRA_OEMAKE:append = " SIGNED_KERNEL=1"
-CC:append += " -Wno-error=format-security"
+CC:append = " -Wno-error=format-security"
 
 do_configure:prepend() {
     if [ -d "${LINUX_REPO_DIR}/arch/arm/mach-msm/sierra" ]; then

@@ -6,7 +6,7 @@ SYSTEMCORE_REPO = "git://codeaurora.org/platform/system/core;branch=mdm"
 DEPENDS += "zlib openssl libcap"
 
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
-SRC_URI:append:swi-mdm9x28 += "file://0001-Fix-build-without-liblog.patch"
+SRC_URI:append:swi-mdm9x28 = " file://0001-Fix-build-without-liblog.patch"
 SRC_URI += "file://composition-sierra_dev"
 SRC_URI += "file://start_usb"
 SRC_URI += "file://0002-QTI9X07-125-Do-not-start-adb-if-not-enabled.patch"

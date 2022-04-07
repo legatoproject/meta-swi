@@ -62,4 +62,4 @@ fakeroot do_label_files() {
 }
 
 IMAGE_PREPROCESS_COMMAND:append = " do_rm_unused_files; "
-IMAGE_PREPROCESS_COMMAND:append += " ${@ "do_label_files" if bb.utils.to_boolean(d.getVar('LEGATO_BUILD', True)) else "" }"
+IMAGE_PREPROCESS_COMMAND:append = " ${@ "do_label_files" if bb.utils.to_boolean(d.getVar('LEGATO_BUILD', True)) else "" }"
