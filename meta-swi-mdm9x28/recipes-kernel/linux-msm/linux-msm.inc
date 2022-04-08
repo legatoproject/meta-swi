@@ -8,7 +8,7 @@ do_deploy[depends] += "dtbtool-native:do_populate_sysroot mkbootimg-native:do_po
 
 DEPENDS += "ima-support-tools-native gcc"
 DEPENDS += " mkbootimg-native dtbtool-native openssl-native kern-tools-native"
-RDEPENDS:${KERNEL_PACKAGE_NAME}-base = ""
+RRECOMMENDS:${KERNEL_PACKAGE_NAME}-base = ""
 
 LDFLAGS:aarch64 = "-O1 --hash-style=gnu --as-needed"
 
