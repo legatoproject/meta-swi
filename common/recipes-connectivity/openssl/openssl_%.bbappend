@@ -1,12 +1,6 @@
 # Look for files in the layer first
 FILESEXTRAPATHS:prepend := "${THISDIR}/files:"
 
-VER_1_0_2p_PATCHES := "file://CVE-2018-0734.patch \
-                       file://CVE-2019-1559_1.patch \
-                       file://CVE-2019-1559_2.patch"
-
-SRC_URI += "${@oe.utils.conditional('PV', '1.0.2p', '${VER_1_0_2p_PATCHES}', '', d)}"
-
 PACKAGECONFIG[no-tls1] = "no-tls1 no-tls1-method"
 PACKAGECONFIG[no-tls1_1] = "no-tls1_1 no-tls1_1-method"
 
@@ -24,8 +18,9 @@ PACKAGECONFIG[no-tls1_1] = "no-tls1_1 no-tls1_1-method"
 # rc2 (mailx)
 # psk (qt5)
 # srp (libest)
+# scrypt (python)
 # whirlpool (qca)
-DEPRECATED_CRYPTO_FLAGS = "no-ssl no-idea no-rc5 no-md2 no-camellia no-mdc2 no-scrypt no-seed no-siphash no-sm2 no-sm3 no-sm4"
+DEPRECATED_CRYPTO_FLAGS = "no-ssl no-idea no-rc5 no-md2 no-camellia no-mdc2 no-seed no-siphash no-sm2 no-sm3 no-sm4"
 
 EXTRA_OECONF += "${DEPRECATED_CRYPTO_FLAGS}"
 
