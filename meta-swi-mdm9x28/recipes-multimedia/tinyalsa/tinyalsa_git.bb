@@ -8,7 +8,7 @@
 #
 # #############################################################################
 
-LICENSE = "BSD"
+LICENSE = "BSD-3-Clause"
 LIC_FILES_CHKSUM = "file://NOTICE;md5=e04cd6fa58488e016f7fb648ebea1db4"
 DESCRIPTION = "Simplified Linux ALSA Utils"
 

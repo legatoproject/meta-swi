@@ -6,7 +6,7 @@ MY_PN = "mincrypt"
 MY_LPN = "libmincrypt"
 
 DESCRIPTION = "Minimalistic encryption library from Android"
-LICENSE = "BSD"
+LICENSE = "BSD-3-Clause"
 LIC_FILES_CHKSUM = "file://NOTICE;md5=c19179f3430fd533888100ab6616e114"
 
 # Tag LNX.LE.2.0.2-61193-9x15

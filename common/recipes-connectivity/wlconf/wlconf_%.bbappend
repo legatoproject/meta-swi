@@ -13,7 +13,7 @@ WLCONF_BIN = '${@wl_conf_bin(d)}'
 
 # Install only the conf binary into rootfs
 SRC_URI = "file://${WLCONF_BIN}"
-LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/GPL-2.0;md5=801f80980d171dd6425610833a22dbe6"
+LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/${LICENSE};md5=801f80980d171dd6425610833a22dbe6"
 
 do_configure[noexec] = "1"
 do_compile[noexec] = "1"

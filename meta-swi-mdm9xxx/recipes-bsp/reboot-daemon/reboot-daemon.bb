@@ -1,6 +1,6 @@
 DESCRIPTION = "Rebooter daemon"
-LICENSE = "BSD"
-LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=3775480a712fc46a69647678acb234cb"
+LICENSE = "BSD-3-Clause"
+LIC_FILES_CHKSUM = "file://${COREBASE}/meta/files/common-licenses/${LICENSE};md5=550794465ba0ec5312d6919e203a55f9"
 HOMEPAGE = "https://www.codeaurora.org/cgit/quic/le/mdm/reboot-daemon/"
 
 PR = "r0"

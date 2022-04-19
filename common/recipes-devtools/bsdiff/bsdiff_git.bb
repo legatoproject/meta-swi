@@ -3,7 +3,7 @@ DESCRIPTION = "This is Debian version of bsdiff and bspatch originally written b
                Colin Percival. The only difference is that Debian applied important \
 	       patches to make tools more secure and hardened."
 HOMEPAGE = "http://www.daemonology.net/bsdiff/"
-LICENSE = "BSD"
+LICENSE = "BSD-3-Clause"
 LIC_FILES_CHKSUM = "file://debian/copyright;md5=c372de180ddb86b67ed1494b0fcf459c"
 SRC_REPO = "git://salsa.debian.org/debian/bsdiff.git;protocol=https"
 SRCREV = "b800a816106270f2c4e7619bf384005c8f85daec"
