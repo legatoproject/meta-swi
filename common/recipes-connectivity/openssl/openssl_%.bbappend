@@ -22,7 +22,9 @@ PACKAGECONFIG[no-tls1_1] = "no-tls1_1 no-tls1_1-method"
 # whirlpool (qca)
 DEPRECATED_CRYPTO_FLAGS = "no-ssl no-idea no-rc5 no-md2 no-camellia no-mdc2 no-seed no-siphash no-sm2 no-sm3 no-sm4"
 
-EXTRA_OECONF += "${DEPRECATED_CRYPTO_FLAGS}"
+EXTRA_OECONF += "--api=1.1.1 ${DEPRECATED_CRYPTO_FLAGS}"
+EXTRA_OECONF:class-native += " --api=1.1.1"
+EXTRA_OECONF:class-nativesdk += " --api=1.1.1"
 
 # Disable algorithms and protocols not in Sierra Wireless approved list:
 # TLS1.0, TLS1.1 and DTSL1.
