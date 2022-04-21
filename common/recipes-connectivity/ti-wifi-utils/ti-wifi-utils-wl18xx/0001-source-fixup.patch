@@ -1,0 +1,30 @@
+From 62b08de415327a9ed64a1890c3ec344283196095 Mon Sep 17 00:00:00 2001
+From: Zoran Markovic <zmarkovic@sierrawireless.com>
+Date: Thu, 21 Apr 2022 13:09:45 -0700
+Subject: [PATCH] build: Fix enum typedef interpreted as declaration
+
+When compiling with GCC-11.2.0, an intended enum typedef was
+interpreted as an enum variable declaration. Fix it by adding a
+'typedef' keyword.
+
+Signed-off-by: Zoran Markovic <zmarkovic@sierrawireless.com>
+---
+ plt.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/plt.h b/plt.h
+index 8b534a9..cfdb92a 100644
+--- a/plt.h
++++ b/plt.h
+@@ -364,7 +364,7 @@ enum wl1271_nvs_type_info {
+ 		(eNUMBER_RADIO_TYPE_PARAMETERS_INFO - 1)
+ };
+ 
+-enum EFUSE_PARAMETER_TYPE_ENMT {
++typedef enum EFUSE_PARAMETER_TYPE_ENMT {
+ 	EFUSE_FIRST_PARAMETER_E,
+ 	/* RX PARAMETERS */
+ 	EFUSE_FIRST_RX_PARAMETER_E = EFUSE_FIRST_PARAMETER_E,
+-- 
+2.25.1
+
