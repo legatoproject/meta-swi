@@ -33,6 +33,7 @@ PACKAGECONFIG[pam] = ",,libpam,libpam"
 
 do_install:append() {
     # These conflict with initscripts
+    rm -rf ${D}${sysconfdir}/default/rcS
     rm -rf ${D}${sysconfdir}/init.d/rcS
     rm -rf ${D}${sysconfdir}/init.d/rcK
     rm -rf ${D}${sysconfdir}/inittab
