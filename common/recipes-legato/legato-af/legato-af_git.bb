@@ -7,6 +7,7 @@ inherit legato
 require legato.inc
 
 # Host dependencies
+DEPENDS += "autoconf-native"
 DEPENDS += "squashfs-tools-native"
 DEPENDS += "mtd-utils-native"
 DEPENDS += "ima-support-tools-native"
