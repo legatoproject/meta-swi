@@ -2,6 +2,9 @@ SUMMARY = "Sierra Software Image common content"
 LICENSE = "MIT"
 PR = "r0"
 
+# Set target for package group
+PACKAGE_ARCH = "${MACHINE_ARCH}"
+
 inherit packagegroup
 
 RDEPENDS:${PN} += "shadow"

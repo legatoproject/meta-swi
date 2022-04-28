@@ -2,6 +2,9 @@ SUMMARY = "Sierra Software Development Kit"
 LICENSE = "MIT"
 PR = "r1"
 
+# Set target for package group
+PACKAGE_ARCH = "${SDK_ARCH}-${SDKPKGSUFFIX}"
+
 inherit packagegroup nativesdk
 
 PACKAGEGROUP_DISABLE_COMPLEMENTARY = "1"
