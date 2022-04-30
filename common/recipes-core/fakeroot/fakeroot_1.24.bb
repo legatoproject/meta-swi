@@ -19,15 +19,17 @@ https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT_VERSION}/pool/main/
 "
 
 # Sierra Wireless home grown ...
-SRC_URI += "file://0001-cability-Fix-libfakeroot.c-related-compilation-error.patch"
+SRC_URI += "file://0001-cability-Fix-libfakeroot.c-related-compilation-error.patch \
+            file://0002-libfakeroot-define-_STAT_VER.patch \
+           "
 
 inherit autotools
 
-# Compatability for the rare systems not using or having SYSV
-# Use tcp instead of unix sockets to work on Windows.
-EXTRA_OECONF = " --with-ipc=tcp --program-prefix="
+# Use native compiler and libraries for SDK build
+EXTRA_OECONF:prepend:class-nativesdk = "CC=$BUILD_CC"
+EXTRA_OECONF:append:class-nativesdk = "--program-prefix="
 
-EXTRA_OEMAKE = "'CFLAGS=-I${STAGING_INCDIR} -DHAVE_LINUX_CAPABILITY_H'"
+CFLAGS:append = " -DHAVE_LINUX_CAPABILITY_H"
 
 do_configure:prepend() {
     mkdir -p "${S}/build-aux"
