@@ -15,7 +15,7 @@
 
 # Usage message
 #
-USAGE="`basename $0` [-o <filename>] [-z] [-fbt <Fast Boot>] [-rfs <root fs>] [-kernel <Linux Kernel>] [-ufs <GOS2 elf>] [-uapp <fs>] [-pid <package ID>]\n\n
+USAGE="`basename -- $0` [-o <filename>] [-z] [-fbt <Fast Boot>] [-rfs <root fs>] [-kernel <Linux Kernel>] [-ufs <GOS2 elf>] [-uapp <fs>] [-pid <package ID>]\n\n
 
 All arguments are optional: \n
 -o    <filename> output file(default output file yocto.cwe or yoctoz.cwe)\n

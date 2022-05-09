@@ -12,7 +12,7 @@
 source /etc/run.env
 
 # The name of this script
-this_e=$( basename $0 )
+this_e=$( basename -- $0 )
 
 # The script of control msm_watchdog
 CONTROL_WDT=/etc/init.d/control_msm_watchdog.sh

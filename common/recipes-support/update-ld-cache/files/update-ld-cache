@@ -33,7 +33,7 @@
 source /etc/run.env
 
 # This executable
-this_e=$( basename $0 )
+this_e=$( basename -- $0 )
 
 # Update operation is not atomic, and needs to be protected.
 lock_file_g=/tmp/.$this_e.lock

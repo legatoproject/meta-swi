@@ -10,7 +10,7 @@
 source /etc/run.env
 
 # This executable
-this_e=$( basename $0 )
+this_e=$( basename -- $0 )
 
 # UBIFS mount options. Platforms may or may not have quota support. Hence, quota
 # support must be separated from the rest of the default options.

@@ -47,7 +47,7 @@ index 004e33d..af71b33 100755
  }
  export WRPOSIXROOT=${PWD}
  export POSIXROOT=$(dirname $WRPOSIXROOT)
-+binary_name=$(basename $0)
++binary_name=$(basename -- $0)
  
  BASEDIR="$POSIXROOT/conformance/interfaces"
  EXECUTION_TIME=`date +"%Y_%b_%d-%Hh_%Mm_%Ss"`

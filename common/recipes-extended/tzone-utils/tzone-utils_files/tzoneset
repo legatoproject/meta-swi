@@ -20,7 +20,7 @@ source /etc/run.env
 version="0.90"
 
 # This executable
-this_e=$( basename $0 )
+this_e=$( basename -- $0 )
 
 # Operation must be atomic, and lock file is necessary.
 lock_file_g=/var/lock/.$this_e.lock

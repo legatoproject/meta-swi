@@ -31,7 +31,7 @@
 source /etc/run.env
 
 # The name of this script. This is mandatory for 'swi_log' as well.
-this_e=$( basename $0 )
+this_e=$( basename -- $0 )
 
 # Serial port and BT communication.
 bt_chipset=qca

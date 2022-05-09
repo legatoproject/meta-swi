@@ -5,7 +5,7 @@
 . /etc/run.env
 
 # This executable
-this_e=$( basename $0 )
+this_e=$( basename -- $0 )
 
 # Set global variables (e.g. outside of functions).
 flash_mntpt_g=${UFS_ROOT}
