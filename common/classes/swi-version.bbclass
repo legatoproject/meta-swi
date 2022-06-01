@@ -70,14 +70,15 @@ determine_fw_version() {
 
 determine_kernel_versions() {
     cd "${IMGDEPLOYDIR}"
+    MANIFEST_LINK=${IMAGE_LINK_NAME}.manifest
 
-    if [ ! -e "${IMAGE_MANIFEST}" ]; then
+    if [ ! -e "${MANIFEST_LINK}" ]; then
         echo "Image manifest does not exist."
         exit 1
     fi
 
     # Retreive generic version name from manifest
-    VERSION_kernel_image=$(grep -e '^kernel' "${IMAGE_MANIFEST}" | grep -v 'module' \
+    VERSION_kernel_image=$(grep -e '^kernel' "${MANIFEST_LINK}"  | grep -v 'module' \
                                                                  | awk '{print $3}' \
                                                                  | sed 's/-r[0-9]*$//' \
                                                                  | head -1)
