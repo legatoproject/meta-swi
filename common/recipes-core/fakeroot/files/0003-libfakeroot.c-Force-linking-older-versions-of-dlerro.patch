@@ -1,0 +1,33 @@
+From 83eebd6118a129249aae116ed80b891401f0893c Mon Sep 17 00:00:00 2001
+From: Zoran Markovic <zmarkovic@sierrawireless.com>
+Date: Wed, 8 Jun 2022 10:30:08 -0700
+Subject: [PATCH] libfakeroot.c: Force linking older versions of dlerror and
+ dlsym
+
+For compatibility with older libc versions, use default version
+of dlerror and dlsym on target systems.
+
+Signed-off-by: Zoran Markovic <zmarkovic@sierrawireless.com>
+---
+ libfakeroot.c       | 4 ++++
+ scripts/fakeroot.in | 2 +-
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/libfakeroot.c b/libfakeroot.c
+index f5e3ed4..ddc8c89 100644
+--- a/libfakeroot.c
++++ b/libfakeroot.c
+@@ -189,6 +189,10 @@ extern int unsetenv (const char *name);
+ // wrapstruct.h, included below
+ */
+ 
++/* Link to default version of dlerror() and dlsym() on target */
++__asm__(".symver dlerror,dlerror@");
++__asm__(".symver dlsym,dlsym@");
++
+ struct next_wrap_st{
+   void **doit;
+   char *name;
+-- 
+2.25.1
+

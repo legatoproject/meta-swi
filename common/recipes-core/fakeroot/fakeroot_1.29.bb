@@ -12,7 +12,7 @@ FILES:${PN} += "${libdir}/*.so"
 
 # Archives can be deleted from the latest mirror, so pick a snapshot
 # corresponding to this fakeroot version.
-DEBIAN_SNAPSHOT_VERSION = "20190908T172415Z"
+DEBIAN_SNAPSHOT_VERSION = "20220607T090313Z"
 
 SRC_URI = "\
 https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT_VERSION}/pool/main/f/fakeroot/fakeroot_${PV}.orig.tar.gz \
@@ -20,19 +20,21 @@ https://snapshot.debian.org/archive/debian/${DEBIAN_SNAPSHOT_VERSION}/pool/main/
 
 # Sierra Wireless home grown ...
 SRC_URI += "file://0001-cability-Fix-libfakeroot.c-related-compilation-error.patch \
-            file://0002-libfakeroot-define-_STAT_VER.patch \
+            file://0003-libfakeroot.c-Force-linking-older-versions-of-dlerro.patch \
            "
 
 inherit autotools
-
-# Use native compiler and libraries for SDK build
-EXTRA_OECONF:prepend:class-nativesdk = "CC=$BUILD_CC"
-EXTRA_OECONF:append:class-nativesdk = "--program-prefix="
 
 CFLAGS:append = " -DHAVE_LINUX_CAPABILITY_H"
 
 do_configure:prepend() {
     mkdir -p "${S}/build-aux"
+}
+
+do_configure:prepend:class-nativesdk() {
+    pushd "${STAGING_DIR_TARGET}${SDKPATHNATIVE}/lib/"
+    ln -sf libdl.so.2 libdl.so
+    popd
 }
 
 do_install:append() {
@@ -46,8 +48,8 @@ DEPENDS = "libcap"
 RDEPENDS:${PN} = "util-linux libcap"
 
 # for snaphot debian - orig
-SRC_URI[md5sum] = "964e5f438f1951e5a515dd54edd50fa6"
-SRC_URI[sha256sum] = "2e045b3160370b8ab4d44d1f8d267e5d1d555f1bb522d650e7167b09477266ed"
+SRC_URI[md5sum] = "cab9604a7dc1d58346e0d15bb285bd0f"
+SRC_URI[sha256sum] = "8fbbafb780c9173e3ace4a04afbc1d900f337f3216883939f5c7db3431be7c20"
 
 # http://errors.yoctoproject.org/Errors/Details/35143/
 SKIP_RECIPE[fakeroot] ?= "BROKEN: QA Issue: -dev package contains non-symlink .so"
