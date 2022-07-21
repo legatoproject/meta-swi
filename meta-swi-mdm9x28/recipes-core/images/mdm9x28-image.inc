@@ -133,7 +133,10 @@ prepare_ubi_ps() {
 
     mkdir -p "${IMGDEPLOYDIR}"
 
-    for rootfs_type in ubifs squashfs; do
+    rootfs_types="${@bb.utils.contains_any('IMAGE_FSTYPES', 'ubifs 2k.ubifs 4k.ubifs', 'ubifs', '', d)}"
+    rootfs_types+=" ${@bb.utils.filter('IMAGE_FSTYPES', 'squashfs', d)}"
+
+    for rootfs_type in ${rootfs_types}; do
         image_type=${rootfs_type}
         if [[ "${rootfs_type}" != "squashfs" ]]; then
             image_type=${page_size}.${rootfs_type}
