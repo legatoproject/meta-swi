@@ -178,7 +178,7 @@ ifneq ($(SDK_PREFIX),0)
 endif
 
 ifneq ($(CVE_NVD_MIRROR_URL),0)
-  CVE_CHECK_ARGS := --recipe-args="CVE_NVD_MIRROR_URL=${CVE_NVD_MIRROR_URL}"
+  CVE_CHECK_ARGS := --recipe-args="NVDCVE_URL=${CVE_NVD_MIRROR_URL}/feeds/json/cve/1.1/nvdcve-1.1-"
 endif
 
 ifdef TARGET_HOSTNAME
